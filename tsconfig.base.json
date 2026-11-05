@@ -1,0 +1,27 @@
+{
+  // 所有包共享的编译选项。各包的 tsconfig.json 用于类型检查（含测试，noEmit），
+  // tsconfig.build.json 用于构建（只含 src，输出到 dist/）。
+  "compilerOptions": {
+    "target": "ES2023",
+    "lib": ["ES2023"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    // 类型检查时按 package.json exports 的 "source" 条件直接解析各 workspace 包的 TS 源码，
+    // 因此 typecheck / test 不需要先 build。构建配置把它清空，改为解析 dist/*.d.ts。
+    "customConditions": ["source"],
+    "types": ["node"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noImplicitOverride": true,
+    "noImplicitReturns": true,
+    "noFallthroughCasesInSwitch": true,
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
+  }
+}

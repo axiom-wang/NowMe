@@ -1,0 +1,33 @@
+{
+  "name": "@nowme/render",
+  "version": "0.0.0",
+  "private": true,
+  "description": "NOWMe 无头渲染、截图、字体子集化与本地预览服务器",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nowme/contracts": "workspace:*",
+    "@nowme/kit": "workspace:*",
+    "playwright": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

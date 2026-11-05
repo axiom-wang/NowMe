@@ -1,0 +1,38 @@
+{
+  "name": "@nowme/pages-host",
+  "version": "0.0.0",
+  "private": true,
+  "description": "NOWMe 用户页面托管（独立源）",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/app.ts",
+      "types": "./dist/app.d.ts",
+      "default": "./dist/app.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "dev": "tsx watch --conditions=source src/main.ts",
+    "start": "node dist/main.js",
+    "start:source": "tsx --conditions=source src/main.ts"
+  },
+  "dependencies": {
+    "@hono/node-server": "catalog:",
+    "@nowme/contracts": "workspace:*",
+    "@nowme/kit": "workspace:*",
+    "hono": "catalog:"
+  },
+  "devDependencies": {
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

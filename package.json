@@ -1,0 +1,28 @@
+{
+  "name": "nowme",
+  "private": true,
+  "type": "module",
+  "description": "NOWMe 社区墙原型（本地路线）monorepo",
+  "packageManager": "pnpm@12.8.1",
+  "engines": {
+    "node": ">=22.13.0"
+  },
+  "scripts": {
+    "dev": "pnpm --parallel --filter @nowme/web --filter @nowme/pages-host dev",
+    "build": "pnpm -r build",
+    "clean": "pnpm -r clean",
+    "typecheck": "tsc -p tsconfig.json && pnpm -r typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:security": "vitest run security --passWithNoTests",
+    "test:e2e": "playwright test",
+    "nowme": "tsx --conditions=source packages/cli/src/bin.ts"
+  },
+  "devDependencies": {
+    "@playwright/test": "catalog:",
+    "@types/node": "catalog:",
+    "tsx": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

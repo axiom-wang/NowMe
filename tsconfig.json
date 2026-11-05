@@ -1,0 +1,9 @@
+{
+  // 仓库根的配置文件（vitest / playwright）与 e2e 用例的类型检查。各包由 `pnpm -r typecheck` 单独检查。
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "noEmit": true,
+    "allowImportingTsExtensions": true
+  },
+  "include": ["*.ts", "apps/*/e2e/**/*.ts"]
+}
