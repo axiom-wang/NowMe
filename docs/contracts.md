@@ -194,20 +194,28 @@ readPageDir(dir: string): Promise<PageFiles>;                                   
 
 ## 3. 数据模型（SQLite）
 
-ID 一律为 `<前缀>_<16 字节随机 base32 小写>`；时间为 ISO 8601 UTC 字符串。所有令牌类数据**只存 SHA-256 哈希**。
+ID 一律为 `<前缀>_<16 字节随机 base32 小写>`；时间为 ISO 8601 UTC 字符串。一次性 token、页面凭证、会话令牌、登录验证码**只存 SHA-256 哈希**；邀请码与公开链接令牌是需要反复展示给组织者/主人的可分享链接，明文保存，可随时轮换。
+
+| 令牌 | 格式 |
+| --- | --- |
+| 一次性 token | `nmt_` + 32 字节 base64url |
+| 页面凭证 | `nmc_` + 32 字节 base64url |
+| 会话令牌 | `nms_` + 32 字节 base64url |
+| 邀请码 | `inv_` + 16 字节 base32 小写 |
+| 公开链接令牌 | `pub_` + 24 字节 base64url（注意与 publication ID 前缀区分：publication ID 用 `pbl_`） |
 
 | 表 | 主要字段 | 说明 |
 | --- | --- | --- |
 | `users` | `id usr_`、`email` 唯一（小写）、`nickname`、`created_at` | 首次登录时填写昵称 |
 | `login_codes` | `id`、`email`、`code_hash`、`attempts`、`expires_at`、`used_at` | 6 位数字，10 分钟，最多 5 次尝试 |
 | `sessions` | `id`（会话令牌哈希）、`user_id`、`csrf_token`、`created_at`、`expires_at` | 30 天 |
-| `walls` | `id wal_`、`name`、`description`、`scene_type`、`organizer_note`、`organizer_id`、`invite_code_hash`、`status open\|closed`、`created_at`、`closed_at` | |
+| `walls` | `id wal_`、`name`、`description`、`scene_type`、`organizer_note`、`organizer_id`、`invite_code`、`status open\|closed`、`created_at`、`closed_at` | |
 | `memberships` | `id mem_`、`wall_id`、`user_id`、`role organizer\|member`、`status active\|left\|removed`、`joined_at`、`ended_at` | (`wall_id`,`user_id`) 唯一；组织者建墙时自动成为成员 |
-| `pages` | `id pg_`、`membership_id` 唯一、`wall_id`、`owner_id`、`contact_channel`、`contact_value`、`contact_public`、`public_token_hash`（空=未开启）、`created_at`、`updated_at` | 加入墙时创建 |
+| `pages` | `id pg_`、`membership_id` 唯一、`wall_id`、`owner_id`、`contact_channel`、`contact_value`、`contact_public`、`public_token`（空=未开启）、`created_at`、`updated_at` | 加入墙时创建 |
 | `agent_tokens` | `id`、`page_id`、`token_hash`、`expires_at`、`used_at`、`created_at` | 一次性 token |
 | `page_credentials` | `id`、`page_id`、`credential_hash`、`created_at`、`last_used_at`、`revoked_at` | 每页同时最多一个有效凭证 |
 | `revisions` | `id rev_`、`page_id`、`number`（页内递增）、`source`（`local-agent`）、`credential_id`、`status accepted\|rejected`、`report_json`、`card_json`、`manifest_json`、`rendered_text`、`render_json`、`created_at` | 文件存 `revisions/<id>/`；rejected 版本只存报告 |
-| `publications` | `id pub_`、`page_id`、`revision_id`、`card_json`（主人确认后的）、`contact_json`（发布时快照）、`published_at`、`ended_at`、`end_reason superseded\|withdrawn\|removed\|closed\|deleted` | 不可变快照；每页至多一个 `ended_at IS NULL` |
+| `publications` | `id pbl_`、`page_id`、`revision_id`、`card_json`（主人确认后的）、`contact_json`（发布时快照）、`published_at`、`ended_at`、`end_reason superseded\|withdrawn\|removed\|closed\|deleted` | 不可变快照；每页至多一个 `ended_at IS NULL` |
 | `events` | `id evt_`、`type`、`wall_id`、`page_id`、`actor_id`、`props_json`、`created_at` | 只存类型、ID、数值/布尔属性，**不存内容** |
 
 页面的展示状态由数据推导：有活跃 publication → `published`；有 publication 历史但当前无 → `withdrawn`；否则 `unpublished`。
