@@ -1,0 +1,26 @@
+# OS / editor
+.DS_Store
+.history/
+.vscode/
+.idea/
+
+# deps & build
+node_modules/
+dist/
+*.tsbuildinfo
+coverage/
+
+# local runtime data (db, revisions, outbox, secrets)
+.data/
+.env
+.env.local
+
+# test artifacts
+test-results/
+playwright-report/
+.nowme-test-home/
+
+# downloaded fonts (fetched by script, not committed)
+packages/kit/fonts/*.ttf
+packages/kit/fonts/*.otf
+packages/kit/fonts/*.woff2

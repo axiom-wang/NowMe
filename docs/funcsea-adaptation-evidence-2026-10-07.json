@@ -1,0 +1,145 @@
+{
+  "date": "2026-10-07",
+  "scope": "/Users/axiom/DeepWisdom/FuncSea/func-sea-templates",
+  "snapshot": {
+    "head": "f035895865d61384d8d9cbd66260df7c285cf8a1",
+    "last_commit_date": "2026-01-22",
+    "working_tree_status_before": "",
+    "working_tree_status_after": ""
+  },
+  "method": "Standard-library isolated assembly and source-contract inspection. No dependencies installed; no provider calls; no application or browser runtime tests.",
+  "probes": {
+    "nowme_foundation": {
+      "requested_modules": [
+        "database",
+        "auth",
+        "storage",
+        "aihub",
+        "image_upload"
+      ],
+      "installer_return": true,
+      "assembled_backend_python_files": 44,
+      "backend_syntax_errors": [],
+      "auth_frontend_context_installed": false,
+      "auth_frontend_provider_injected": false,
+      "main_database_startup_injected": true,
+      "lambda_database_startup_injected": false,
+      "lambda_unchanged_from_base": true,
+      "unresolved_config_placeholder_occurrences": 16,
+      "unresolved_config_placeholder_names": [
+        "ADMIN_EMAIL",
+        "ADMIN_UID",
+        "APP_AI_BASE_URL",
+        "APP_AI_KEY",
+        "BACKEND_DOMAIN",
+        "BACKEND_PORT",
+        "DATABASE_URL",
+        "DEV_BASE_URL",
+        "FRONTEND_DOMAIN",
+        "JWT_SECRET_KEY",
+        "OIDC_CLIENT_ID",
+        "OIDC_CLIENT_SECRET",
+        "OIDC_ISSUER_URL",
+        "OSS_API_KEY",
+        "OSS_SERVICE_URL",
+        "SERVER_ADDR"
+      ]
+    },
+    "auth_reinstall": {
+      "installer_return": true,
+      "oidc_issuer_url_declaration_count": 2,
+      "oidc_issuer_url_env_entry_count": 2
+    },
+    "auth_only": {
+      "installer_return": true,
+      "database_dependency_installed": false
+    },
+    "image_upload_only": {
+      "installer_return": true,
+      "storage_dependency_installed": false,
+      "database_dependency_installed": false
+    },
+    "unknown_module": {
+      "installer_return": true
+    },
+    "image_storage_contract": {
+      "method": "AST source inspection; no Pydantic or HTTP execution",
+      "storage_request_required_fields": [
+        "bucket_name",
+        "object_key"
+      ],
+      "image_service_request_construction": [
+        {
+          "line": 49,
+          "keywords": [
+            "filename"
+          ]
+        },
+        {
+          "line": 63,
+          "keywords": [
+            "filename"
+          ]
+        }
+      ],
+      "storage_response_fields": [
+        "upload_url",
+        "download_url",
+        "expires_at"
+      ],
+      "image_service_expects_response_fields_not_declared": [
+        "file_key",
+        "access_url"
+      ]
+    },
+    "image_user_ownership": {
+      "model_columns": [
+        "__tablename__",
+        "id",
+        "upload_id",
+        "filename",
+        "original_filename",
+        "file_key",
+        "thumbnail_file_key",
+        "access_url",
+        "thumbnail_access_url",
+        "file_size",
+        "content_type",
+        "image_format",
+        "width",
+        "height",
+        "description",
+        "tags",
+        "status",
+        "created_at",
+        "updated_at"
+      ],
+      "user_or_owner_column_present": false,
+      "route_dependencies": {
+        "create_upload_url": [
+          "get_db"
+        ],
+        "handle_upload_callback": [
+          "get_db"
+        ],
+        "get_upload_records": [
+          "get_db"
+        ],
+        "get_upload_record": [
+          "get_db"
+        ],
+        "update_upload_record": [
+          "get_db"
+        ],
+        "delete_upload_record": [
+          "get_db"
+        ],
+        "create_batch_upload_urls": [
+          "get_db"
+        ]
+      },
+      "scope_limit": "Local routes and model only; external gateway authorization unknown."
+    }
+  },
+  "source_unchanged": true
+}
