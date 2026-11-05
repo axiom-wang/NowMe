@@ -1,0 +1,344 @@
+# NOWMe 接口约定（原型试跑 · 本地路线）
+
+> 本文是所有模块共同遵守的契约：页面输出契约、数据模型、API、校验规则、安全不变量。
+> 需求来源：[MVP 需求](product-mvp-community-wall.md)、[页面生成方案](page-generation-byo-agent.md)、[信息收集与 brief](brief-collection.md)。
+> 范围：只做原型试跑的**本地路线**；平台托管路线、付费、派生（W18）不做。
+> 修改本文需要总规划师同意；实现与本文冲突时，以本文为准并提出修改建议。
+> 文中标 **[原型默认]** 的数值是需求文档里 [待定] 项的临时取值，统一放在 `packages/contracts` 的常量里，便于以后调整。
+
+## 0. 技术基线
+
+| 项 | 约定 |
+| --- | --- |
+| 运行时 | Node 22，TypeScript（ESM，`"type": "module"`，strict），pnpm workspace |
+| 测试 | vitest（单元、集成）；Playwright（浏览器行为、渲染、e2e），使用本机已缓存的 Chromium |
+| 主站 `apps/web` | Hono + `@hono/node-server`，服务端渲染（`hono/jsx`），原生 CSS，少量原生客户端 JS；中文界面，移动端优先 |
+| 数据库 | SQLite（优先 `node:sqlite`，M0 验证在 vitest 下可用，否则用 `better-sqlite3`），SQL 迁移文件 |
+| 页面托管 `apps/pages-host` | 独立进程、独立源，只做静态托管 + 票据校验 + 安全响应头，不读主站 cookie、不连数据库 |
+| 本地数据 | `NOWME_DATA_DIR`（默认仓库根 `.data/`）：`db.sqlite`、`revisions/<revisionId>/`、`outbox.log`、`secret` |
+
+### 0.1 源（origin）[原型默认]
+
+| 用途 | 默认值 | 环境变量 |
+| --- | --- | --- |
+| 主站 | `http://localhost:3000` | `NOWME_WEB_ORIGIN` |
+| 页面托管 | `http://127.0.0.1:4000` | `NOWME_PAGES_ORIGIN` |
+| CLI 预览外壳 / 页面 | `http://localhost:4100` / `http://127.0.0.1:4101` | `nowme preview --port` |
+
+主站和页面托管故意使用 `localhost` 与 `127.0.0.1` 两个不同的**站点**（cookie 不按端口隔离，同主机不同端口会共享 cookie）。
+
+### 0.2 模块与目录归属
+
+| 目录 | 内容 | 依赖 |
+| --- | --- | --- |
+| `packages/contracts` | 本文的类型、zod schema、常量、错误码；安全原语：票据签发/校验、页面 CSP 构造、沙箱属性常量 | 无 |
+| `packages/validator` | 页面静态校验（纯函数，不碰浏览器、不碰网络） | contracts |
+| `packages/kit` | NOWMe Kit：`nowme.css`、`nowme.js`、组件、`fonts.json`、字体下载脚本 | contracts |
+| `packages/render` | 无头渲染（Playwright）、截图、渲染后文字提取、CSP 违规检测、字体子集化、本地双源预览服务器 | contracts, kit |
+| `packages/cli` | `nowme` 命令行：fetch / validate / preview / submit / status / event | contracts, validator, render |
+| `skill/` | `SKILL.md`、场景指南 JSON、brief 与画像模板、自查清单、示例页 | （内容，引用 kit 的类名与 API） |
+| `apps/pages-host` | 用户页面托管 | contracts, kit |
+| `apps/web` | 主站：登录、墙、邀请、创作工作区、发布、浏览、想聊这个、组织者后台、Agent API | contracts, validator, render |
+
+## 1. 页面输出契约（`page/` 目录）
+
+```
+page/
+├── index.html      # 必需。自包含单文件，HTML/CSS/JS 内联
+├── card.json       # 必需。缩略卡
+├── manifest.json   # 必需。版本与声明
+├── cover.png       # 可选。缺省时由 preview / 平台截图生成
+└── assets/         # 可选。页面用到的图片
+```
+
+只有上面这些路径会被提交；`page/` 里的其他文件（例如 `brief.md`、草稿）校验时给警告，**提交时不上传**。
+
+### 1.1 `index.html`
+
+- 必须有 `<!doctype html>`、`<meta charset="utf-8">`、`<meta name="viewport" content="width=device-width, ...">`；建议 `<html lang="zh-CN">`。
+- 体积 ≤ **300 KB**（307 200 字节，含内联 base64 图片，不含 `assets/` 与字体）。
+- 只能引用：
+  - 相对路径 `assets/<file>`；
+  - Kit：`/_nowme/kit/v1/nowme.css`、`/_nowme/kit/v1/nowme.js` 及 `/_nowme/kit/v1/` 下其他文件（以根路径引用）；
+  - `data:image/*` 图片、页内锚点 `#...`、运行时生成的 `blob:`。
+- 外部链接**只能**通过 Kit：元素属性 `data-nm-href="https://..."`（Kit 自动绑定点击）或脚本调用 `nowme.openLink("https://...")`。只允许 `https:`。
+- 主要区块带稳定标识 `data-nm-id`：至少 **3** 个，值匹配 `^[a-z][a-z0-9-]{0,39}$`，页面内唯一。
+- 页面有动效（`@keyframes`、`animation`、`transition`、`requestAnimationFrame`、`.animate(`）时，必须处理 `prefers-reduced-motion`（CSS 媒体查询或 `matchMedia`，或只使用 Kit 已处理的动效类）。
+- 字体：只按名称选用 Kit 字体清单中的字体（`var(--nm-font-*)` 或清单中的 family 名），不写 `@font-face`，不内联字体。
+- 移动端优先：以 375px 宽为基准。
+
+### 1.2 `card.json`
+
+```json
+{
+  "schemaVersion": 1,
+  "displayName": "阿柚",
+  "tagline": "做过 3 个校园小程序的前端，想找能一起熬夜的设计",
+  "hooks": [
+    { "id": "help-frontend", "kind": "can-help", "text": "我能帮你把原型变成能点的页面", "opener": "你好！我在墙上看到你说能把原型变成能点的页面，我们队正好缺前端，想聊聊吗？" },
+    { "id": "find-designer", "kind": "looking-for", "text": "找会做视觉的队友", "opener": "嗨，我是做设计的，看到你在找会做视觉的队友～" }
+  ]
+}
+```
+
+| 字段 | 规则 |
+| --- | --- |
+| `displayName` | 1–24 字符 |
+| `tagline` | 1–40 字符，一行介绍 |
+| `hooks` | 2–3 个；`id` 匹配 `^[a-z][a-z0-9-]{0,39}$` 且唯一；`text` 2–32 字符；`opener` 1–80 字符（开场白，由 Agent 起草，主人在应用内确认或改写）；`kind` 可选，取场景指南中的接话点类型 |
+
+### 1.3 `manifest.json`
+
+```json
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "medium",
+  "fonts": [{ "id": "lxgw-wenkai", "weights": [400] }],
+  "extraChars": "",
+  "blocks": ["hero", "projects", "teammate"],
+  "generator": { "agent": "claude-code", "skillVersion": "0.1.0" }
+}
+```
+
+| 字段 | 规则 |
+| --- | --- |
+| `sceneType` | `hackathon` / `interest` / `club` / `general` |
+| `kitVersion` | 目前只有 `"1"` |
+| `motionLevel` | 三档：`calm` / `medium` / `lively` |
+| `fonts` | 只能是 Kit `fonts.json` 中的 `id` 与其支持的字重；**中文字体每个字重计 1 款，合计 ≤ 2** |
+| `extraChars` | 脚本动态生成、静态 HTML 中没有的字；`nowme validate` 自动补全 |
+| `blocks` | 可选；给出时应与页面中 `data-nm-id` 一致（不一致为警告） |
+| `generator` | 可选，自由填写 |
+
+### 1.4 `cover.png` 与 `assets/` [原型默认]
+
+- `cover.png`：PNG，750×1000（375×500 CSS 像素、DPR 2 的首屏截图），≤ 600 KB。
+- `assets/`：只允许 `png` / `jpg` / `jpeg` / `webp` / `gif`；文件名匹配 `^[a-z0-9][a-z0-9._-]{0,63}$`，最多一层子目录；单个 ≤ 2 MB，合计 ≤ 8 MB，最多 20 个。字体文件、SVG、HTML、脚本一律拒绝（SVG 请内联在 `index.html`）。
+
+## 2. 校验规则（`packages/validator`）
+
+### 2.1 接口
+
+```ts
+type PageFiles = Map<string, Uint8Array>;           // key 为 page/ 内的相对路径，用 "/" 分隔
+interface ValidationIssue {
+  code: string;                // 见 2.2，大写蛇形
+  severity: 'error' | 'warning';
+  file: string;                // 例如 "index.html"
+  line?: number;               // 1 起
+  message: string;             // 中文：哪里有什么问题
+  hint: string;                // 中文：怎么修（W19：给出修复指引或替代方案）
+}
+interface ValidationReport {
+  ok: boolean;                 // 没有 error 即为 true
+  errors: ValidationIssue[];
+  warnings: ValidationIssue[];
+  stats: {
+    indexHtmlBytes: number; assetBytes: number; assetCount: number;
+    blocks: string[]; fontsUsed: string[]; cjkFontCount: number;
+    scriptOnlyChars: string;   // 脚本字符串里出现、静态文本里没有的中文字符
+    ignoredFiles: string[];    // 不会上传的文件
+  };
+  validatorVersion: string;
+}
+validatePage(files: PageFiles, opts?: { kitFonts?: KitFont[] }): ValidationReport;  // 纯函数，服务端复用
+readPageDir(dir: string): Promise<PageFiles>;                                         // node 辅助
+```
+
+静态校验是**尽早发现问题**的手段，真正的安全边界是第 5 节的沙箱与 CSP；校验宁可多报警告，也不能因启发式误判放过明确违规。
+
+### 2.2 规则与错误码
+
+| 码 | 级别 | 规则 |
+| --- | --- | --- |
+| `MISSING_FILE` | error | 缺 `index.html` / `card.json` / `manifest.json` |
+| `HTML_TOO_LARGE` | error | `index.html` > 300 KB |
+| `HTML_MISSING_VIEWPORT` / `HTML_MISSING_CHARSET` / `HTML_MISSING_DOCTYPE` | error | 见 1.1 |
+| `HTML_MISSING_LANG` | warning | 缺 `lang` |
+| `EXTERNAL_RESOURCE` | error | 资源属性（`src`、`href`、`srcset`、`poster`、`background`、`xlink:href`、`data`、`action`、`formaction`）或 CSS `url()` / `@import` 中出现 `http:`、`https:`、`//`、`ws:`、`file:` 等非允许引用 |
+| `FORBIDDEN_LINK_HREF` | error | `<a href>` 不是 `#...`（外链请用 `data-nm-href` 或 `nowme.openLink`） |
+| `INSECURE_OPEN_LINK` | error | `data-nm-href` / `openLink` 的地址不是 `https:` |
+| `EXTERNAL_URL_IN_SCRIPT` | warning | 脚本字符串中有 `http(s)://`，且不在 `nowme.openLink(...)` 的参数里 |
+| `FORBIDDEN_ELEMENT` | error | `<form>`、`<iframe>`、`<frame>`、`<object>`、`<embed>`、`<base>`、`<portal>`、`<meta http-equiv="refresh">`；`<link>` 除指向 Kit 的 `rel=stylesheet` 外一律禁止；`<script src>` 只能指向 Kit |
+| `FORBIDDEN_API` | error | 脚本（含 `on*` 属性）中出现：`fetch(`、`XMLHttpRequest`、`WebSocket`、`EventSource`、`sendBeacon`、`RTCPeerConnection`、`WebTransport`、`localStorage`、`sessionStorage`、`indexedDB`、`caches.`、`document.cookie`、`cookieStore`、`window.open`、`window.top`、`top.location`、`parent.location`、`location.href =`、`location.assign`、`location.replace`、`serviceWorker`、`importScripts`、`new Worker`、`new SharedWorker`、动态 `import(`、`eval(`、`new Function`、`setTimeout("..."`、`getUserMedia`、`geolocation` |
+| `JS_SYNTAX_ERROR` | error | 内联脚本无法解析 |
+| `NM_ID_TOO_FEW` / `NM_ID_INVALID` / `NM_ID_DUPLICATE` | error | 见 1.1 |
+| `NM_BLOCKS_MISMATCH` | warning | `manifest.blocks` 与页面 `data-nm-id` 不一致 |
+| `MOTION_WITHOUT_REDUCED` | error | 有自写动效但没有处理 `prefers-reduced-motion` |
+| `FONT_FACE_FORBIDDEN` | error | 出现 `@font-face`、字体 data URI |
+| `FONT_UNDECLARED` | error | 用了 Kit 字体但 `manifest.fonts` 未声明 |
+| `FONT_NOT_IN_KIT` | warning | `font-family` 中出现既非 Kit 字体、也非通用族名 / 常见系统字体的名字（会回退到系统字体） |
+| `FONT_TOO_MANY_CJK` | error | 中文字体字重合计 > 2 |
+| `FONT_UNKNOWN` | error | `manifest.fonts` 中的 id 或字重不在 Kit 清单里 |
+| `EXTRA_CHARS_MISSING` | warning | 脚本中的中文字符不在静态文本或 `extraChars` 中（`nowme validate` 会自动补全） |
+| `CARD_INVALID` / `MANIFEST_INVALID` | error | JSON 解析失败或不符合 1.2 / 1.3 |
+| `COVER_INVALID` | error | 不是 PNG、尺寸不对或超过体积 |
+| `ASSET_TYPE_FORBIDDEN` / `ASSET_TOO_LARGE` / `ASSETS_TOO_MANY` / `ASSET_NAME_INVALID` | error | 见 1.4 |
+| `ASSET_MISSING` | error | `index.html` 引用了不存在的 `assets/` 文件 |
+| `ASSET_UNUSED` | warning | `assets/` 里有未被引用的文件 |
+| `CREDENTIAL_LEAK` | error | 任意文件中出现形如 `nmc_` / `nmt_` 的凭证，或出现名为 `credentials` 的文件 |
+| `IGNORED_FILE` | warning | 不在 1 节白名单中的文件（不会上传） |
+
+### 2.3 服务端额外检查（渲染阶段，`packages/render`）
+
+| 码 | 级别 | 规则 |
+| --- | --- | --- |
+| `RENDER_SCRIPT_ERROR` | error | 渲染时出现未捕获异常 |
+| `RENDER_CSP_VIOLATION` | error | 渲染时出现 `securitypolicyviolation` |
+| `RENDER_CONSOLE_ERROR` | warning | `console.error` |
+| `RENDER_SLOW` | warning | 375×667 视口下 `load` 超过 3000 ms [原型默认] |
+| `RENDER_BLANK` | warning | 渲染后文字为空 |
+| `RENDER_FAILED` | error | 渲染超时（10 s）或浏览器崩溃 |
+
+## 3. 数据模型（SQLite）
+
+ID 一律为 `<前缀>_<16 字节随机 base32 小写>`；时间为 ISO 8601 UTC 字符串。所有令牌类数据**只存 SHA-256 哈希**。
+
+| 表 | 主要字段 | 说明 |
+| --- | --- | --- |
+| `users` | `id usr_`、`email` 唯一（小写）、`nickname`、`created_at` | 首次登录时填写昵称 |
+| `login_codes` | `id`、`email`、`code_hash`、`attempts`、`expires_at`、`used_at` | 6 位数字，10 分钟，最多 5 次尝试 |
+| `sessions` | `id`（会话令牌哈希）、`user_id`、`csrf_token`、`created_at`、`expires_at` | 30 天 |
+| `walls` | `id wal_`、`name`、`description`、`scene_type`、`organizer_note`、`organizer_id`、`invite_code_hash`、`status open\|closed`、`created_at`、`closed_at` | |
+| `memberships` | `id mem_`、`wall_id`、`user_id`、`role organizer\|member`、`status active\|left\|removed`、`joined_at`、`ended_at` | (`wall_id`,`user_id`) 唯一；组织者建墙时自动成为成员 |
+| `pages` | `id pg_`、`membership_id` 唯一、`wall_id`、`owner_id`、`contact_channel`、`contact_value`、`contact_public`、`public_token_hash`（空=未开启）、`created_at`、`updated_at` | 加入墙时创建 |
+| `agent_tokens` | `id`、`page_id`、`token_hash`、`expires_at`、`used_at`、`created_at` | 一次性 token |
+| `page_credentials` | `id`、`page_id`、`credential_hash`、`created_at`、`last_used_at`、`revoked_at` | 每页同时最多一个有效凭证 |
+| `revisions` | `id rev_`、`page_id`、`number`（页内递增）、`source`（`local-agent`）、`credential_id`、`status accepted\|rejected`、`report_json`、`card_json`、`manifest_json`、`rendered_text`、`render_json`、`created_at` | 文件存 `revisions/<id>/`；rejected 版本只存报告 |
+| `publications` | `id pub_`、`page_id`、`revision_id`、`card_json`（主人确认后的）、`contact_json`（发布时快照）、`published_at`、`ended_at`、`end_reason superseded\|withdrawn\|removed\|closed\|deleted` | 不可变快照；每页至多一个 `ended_at IS NULL` |
+| `events` | `id evt_`、`type`、`wall_id`、`page_id`、`actor_id`、`props_json`、`created_at` | 只存类型、ID、数值/布尔属性，**不存内容** |
+
+页面的展示状态由数据推导：有活跃 publication → `published`；有 publication 历史但当前无 → `withdrawn`；否则 `unpublished`。
+
+`revisions/<id>/` 布局：`original/`（提交的原文件）、`served/index.html`（注入字体 `@font-face` 后的版本）、`served/assets/...`、`served/_fonts/<fontId>-<weight>.woff2`、`cover.png`、`render/full.png`。
+
+## 4. API
+
+### 4.1 Agent API（CLI 使用，JSON）
+
+认证：`Authorization: Bearer nmc_...`（页面凭证）。错误统一 `{"error": {"code": "...", "message": "中文说明"}}`。
+
+| 方法与路径 | 认证 | 请求 | 响应 |
+| --- | --- | --- | --- |
+| `POST /api/agent/exchange` | 无 | `{ wallId, token }` | `200 { credential, page: {id}, context }`；失败 `401 TOKEN_INVALID`（不存在、已用、过期、墙不匹配一律同一码，`message` 可区分原因） |
+| `GET /api/agent/context` | 凭证 | — | `200 context` |
+| `POST /api/agent/revisions` | 凭证 | `{ files: { "<相对路径>": "<base64>" } }`，体积上限 12 MB | 通过 `201 { revision }`；校验不通过 `422 { revision }`（`status: "rejected"`，含报告） |
+| `POST /api/agent/events` | 凭证 | `{ type, props? }`；`type ∈ fetch / validate / preview / generate / submit`；`props` 只接受数字和布尔值 | `204` |
+
+```ts
+interface AgentContext {
+  wall: { id: string; name: string; description: string; sceneType: SceneType; organizerNote: string | null };
+  page: { id: string; revisionCount: number; lastSubmittedAt: string | null; workspaceUrl: string };
+  kit: { version: '1'; basePath: '/_nowme/kit/v1/'; fonts: KitFont[] };
+  limits: { htmlMaxBytes: number; assetMaxBytes: number; assetsTotalMaxBytes: number; assetsMaxCount: number; maxCjkFonts: number };
+}
+interface RevisionSummary { id: string; number: number; status: 'accepted' | 'rejected'; report: ValidationReport; createdAt: string; workspaceUrl: string }
+```
+
+规则：
+
+- exchange 成功：token 标记已用；该页已有的有效凭证全部吊销；签发新凭证（明文只在这次响应中出现）。
+- 凭证在以下情况吊销：主人在应用内断开、重新生成指令并被换取、主人退出墙、页面被删除、主人被移除、墙被关闭。
+- 墙已关闭或成员关系不再有效时，所有 Agent API 返回 `401 CREDENTIAL_INVALID`。
+- 提交时服务端只接受第 1 节白名单路径；忽略其他路径；重新运行全部静态校验（不信任客户端结果）与渲染检查；任何一步失败都存为 `rejected`，不影响已有的 `accepted` 版本与发布。
+- 每页每日提交上限 [原型默认] 50 次，超出 `429 RATE_LIMITED`。
+
+### 4.2 主站页面与表单（服务端渲染，会话 cookie 认证）
+
+会话：cookie `nowme_session`，`HttpOnly; SameSite=Lax; Path=/`，host-only（不设 `Domain`）。所有改变状态的请求必须是 `POST`，并同时满足：有效会话、表单字段 `_csrf` 与会话一致、`Origin`（或 `Referer`）等于 `NOWME_WEB_ORIGIN`。**这些路由一律忽略 `Authorization` 头**，页面凭证在这里无效。
+
+| 路径 | 谁能访问 | 作用 |
+| --- | --- | --- |
+| `GET /login`、`POST /login`、`POST /login/verify`、`POST /logout` | 任何人 | 邮箱 + 6 位验证码；首次登录填昵称 |
+| `GET /dev/outbox` | 仅非生产环境 | 本地查看发出的验证码（代替真实邮件） |
+| `GET /` | 登录用户 | “我的”：我加入的墙、每页发布状态、入口 |
+| `GET /walls/new`、`POST /walls` | 登录用户 | 建墙：名称、简介、场景类型、可选一句话 |
+| `GET /join/:inviteCode`、`POST /join/:inviteCode` | 登录用户 | 加入墙（已被移除的成员不能再加入；已关闭的墙不能加入） |
+| `GET /w/:wallId` | 墙内有效成员 | 墙：名称、简介、随机排序的缩略卡网格、“我的页面”入口 |
+| `GET /w/:wallId/p/:pageId` | 墙内有效成员 | 成员页面（沙箱 iframe）+ 接话点 + “想聊这个” |
+| `POST /w/:wallId/p/:pageId/chat` | 墙内有效成员 | 记录事件，返回联系方式与开场白（主人未公开联系方式时不显示入口，且接口返回 404） |
+| `GET /w/:wallId/me` | 页面主人 | 创作工作区：Agent 指令、连接状态、版本列表（含校验结果）、版本预览、发布确认 |
+| `POST /w/:wallId/me/instruction` | 页面主人 | 生成新的一次性 token 与指令（旧的未使用 token 作废） |
+| `POST /w/:wallId/me/disconnect` | 页面主人 | 吊销页面凭证 |
+| `POST /w/:wallId/me/publish` | 页面主人 | `revisionId`、确认后的 `tagline`、`hooks[]`（text/opener）、联系方式、`contactPublic`、确认勾选 → 新 publication（旧的 `superseded`）。也用于“恢复旧版本” |
+| `POST /w/:wallId/me/withdraw` | 页面主人 | 撤下 |
+| `POST /w/:wallId/me/public-link` | 页面主人 | `enabled=1/0`；开启生成新链接，关闭立即使旧链接失效 |
+| `POST /w/:wallId/me/delete` | 页面主人 | 先展示影响范围确认页，确认后删除所有版本文件与发布，保留成员关系 |
+| `POST /w/:wallId/leave` | 成员（组织者除外） | 退出墙：撤下页面、吊销凭证 |
+| `GET /w/:wallId/admin` | 组织者 | 邀请链接与二维码、成员列表（昵称、加入时间、发布状态）、移除、关闭墙 |
+| `POST /w/:wallId/admin/remove`、`POST /w/:wallId/admin/close` | 组织者 | 移除成员（其页面立即下墙、凭证吊销）；关闭墙 |
+| `GET /s/:publicToken` | 任何人 | 公开链接：只显示当前发布版本的页面，不显示联系方式与“想聊这个” |
+| `GET /w/:wallId/covers/:pageId.png` | 墙内有效成员 | 已发布版本的封面图 |
+
+无权访问时一律返回 `404`（不暴露墙或页面是否存在）；未登录访问需登录的页面重定向到 `/login?next=...`。
+
+### 4.3 Agent 指令格式（W05）
+
+```
+/nowme-page wal_xxx nmt_xxx --server http://localhost:3000
+```
+
+工作区同时显示一段等价的纯文本说明，给不支持 Skill 的 Agent。token 有效期 [原型默认] 72 小时（覆盖“现场拿到、当晚执行”），`NOWME_AGENT_TOKEN_TTL_HOURS` 可调。
+
+### 4.4 页面托管（`apps/pages-host`）
+
+| 路径 | 说明 |
+| --- | --- |
+| `GET /v/:ticket/` 与 `GET /v/:ticket/index.html` | 返回该版本的 `served/index.html` |
+| `GET /v/:ticket/assets/*`、`GET /v/:ticket/_fonts/*` | 该版本的图片与字体子集 |
+| `GET /_nowme/kit/v1/*` | Kit 静态文件（公开） |
+| 其他 | `404` |
+
+**票据**：`<revisionId>.<expUnix>.<sig>`，`sig = base64url(HMAC-SHA256(secret, "<revisionId>.<expUnix>"))`，有效期 [原型默认] 30 分钟；共享密钥 `NOWME_TICKET_SECRET`（开发默认读写 `.data/secret`）。主站只在授权检查通过后签发：主人 → 自己页面的任意 `accepted` 版本；墙内有效成员 → 当前发布版本；公开链接 → 当前发布版本。签发与校验函数在 `packages/contracts`，两边共用。
+
+## 5. 安全不变量（必须有自动化测试）
+
+| # | 不变量 | 最低测试要求 |
+| --- | --- | --- |
+| S1 | 展示用户页面的 iframe 只有 `sandbox="allow-scripts"`，不含 `allow-same-origin`、`allow-top-navigation*`、`allow-forms`、`allow-popups*`、`allow-modals`；`src` 指向 `NOWME_PAGES_ORIGIN` | 解析所有展示页面的路由（成员页、工作区预览、公开链接）输出的 HTML；**浏览器测试**：恶意页面在 iframe 内尝试读 cookie、`fetch` 主站与外部、`localStorage`、改 `top.location`、提交表单、`window.open`，全部失败，主站 URL 不变，探针服务器收不到请求 |
+| S2 | 页面托管对页面文档返回严格 CSP：`default-src 'none'`；`script-src 'unsafe-inline' <pages>/_nowme/kit/`；`style-src 'unsafe-inline' <pages>/_nowme/kit/`；`img-src <pages>/v/<ticket>/assets/ <pages>/_nowme/kit/ data: blob:`；`media-src` 同 `img-src`；`font-src <pages>/v/<ticket>/_fonts/`；`connect-src 'none'`；`form-action 'none'`；`base-uri 'none'`；`frame-ancestors <web>`（预览时为预览外壳源）；`sandbox allow-scripts`；无 `'unsafe-eval'`。另加 `X-Content-Type-Options: nosniff`、`Referrer-Policy: no-referrer`、`Permissions-Policy` 禁用摄像头/麦克风/定位等、不设任何 cookie | 对 pages-host 响应头逐项断言；CSP 构造函数单测；渲染管线用同一构造函数 |
+| S3 | 一次性 token：只能换取一次；过期无效；只对签发它的那一页、那一面墙有效；换取后该页旧凭证全部失效；数据库只存哈希 | API 集成测试覆盖每一条 |
+| S4 | 页面凭证不能发布：凭证调用发布、恢复、撤下、公开链接、删除、组织者操作等任何主站路由都无效且不改变状态；凭证不能当会话用；凭证不写进 `page/`、不随提交上传；校验器拦截凭证字符串 | 用凭证逐个调用所有改变状态的主站路由并断言数据库无变化；CLI 测试断言 `page/` 中无凭证、上传内容无凭证 |
+| S5 | 组织者看不到私密内容：组织者后台只有昵称、加入时间、发布状态；组织者无法访问他人的工作区、版本、未发布内容、未公开的联系方式；本地路线的 brief / 画像从不上传 | 组织者身份请求他人工作区、版本预览、票据签发 → 404；后台 HTML 不含版本 ID、未发布 card 内容、私密联系方式；提交接口丢弃白名单外文件 |
+| S6 | 非成员看不到墙：未登录、非成员、已退出、已移除的用户访问墙、成员页、封面、chat 接口都拿不到内容；pages-host 无票据、票据伪造、过期、篡改版本 ID 时拒绝；被移除成员立即失去访问且其页面立即下墙；关闭的墙对所有人不可见；关闭公开链接后旧链接失效 | 集成测试覆盖每种身份 × 每个路由；pages-host 票据测试 |
+
+主站自身也设 CSP：`frame-src <pages>`、`script-src 'self'`、`object-src 'none'`、`base-uri 'none'`、`frame-ancestors 'none'`。
+
+### 5.1 `nowme.openLink` 协议
+
+Kit 调用 `parent.postMessage({ type: 'nowme:open-link', url }, '*')`。主站监听时校验 `event.source === iframe.contentWindow`、`url` 为 `https:`，弹出确认（显示目标域名），用户确认后 `window.open(url, '_blank', 'noopener,noreferrer')`。其他消息一律忽略。
+
+## 6. 事件（W20）
+
+| 来源 | 类型 |
+| --- | --- |
+| CLI（凭证上报，不含内容） | `agent_fetch`、`agent_validate`、`agent_preview`、`agent_generate`、`agent_submit` |
+| 主站 | `wall_view`、`page_open`、`want_to_chat`、`publish`、`withdraw`、`public_link_on`、`public_link_off`、`join`、`leave`、`member_removed`、`wall_closed` |
+
+`props` 只含数字与布尔值（例如 `ok`、`durationMs`、`errorCount`）。按墙聚合统计由 `pnpm --filter @nowme/web stats <wallId>` 输出；组织者界面不提供个人层面的浏览轨迹。
+
+## 7. 场景指南配置（`skill/scenes/<sceneType>.json`）
+
+每个场景一份，主站与 Skill 读取同一份文件（主站只用 `id`、`label`、`defaults.contactPublic`、`hookKinds`）。
+
+```ts
+interface SceneGuide {
+  id: SceneType; label: string; goal: string; interviewBudgetSeconds: number;
+  assetPrompt: string;
+  choiceQuestions: { id: string; question: string; options: string[]; multi: boolean; required: boolean }[];
+  followUps: { direction: string; examples: string[] }[]; maxFollowUps: number;
+  mustHave: { id: string; description: string }[];
+  hookKinds: { kind: string; pattern: string }[];
+  defaults: { showSchool: boolean; useNickname: boolean; contactPublic: boolean };
+  pageGoal: string; suggestedBlocks: string[]; visualTone: string;
+  examples: string[];            // skill/examples/ 下的目录名
+}
+```
+
+内容取自[信息收集与 brief](brief-collection.md)第 4 节与[页面生成方案](page-generation-byo-agent.md)第 3 节。
+
+## 8. 原型试跑不做
+
+平台托管路线（含应用内采访、对话修改、W09 应用内素材管理）、付费、派生到新墙（W18）、真实邮件发送、外部内容审核接入（只保存渲染文字和截图供人工审核）、部署。
