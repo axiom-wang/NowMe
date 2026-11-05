@@ -24,3 +24,4 @@ playwright-report/
 packages/kit/fonts/*.ttf
 packages/kit/fonts/*.otf
 packages/kit/fonts/*.woff2
+.claude/worktrees/
