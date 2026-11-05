@@ -63,8 +63,11 @@ page/
   - `data:image/*` 图片、页内锚点 `#...`、运行时生成的 `blob:`。
 - 外部链接**只能**通过 Kit：元素属性 `data-nm-href="https://..."`（Kit 自动绑定点击）或脚本调用 `nowme.openLink("https://...")`。只允许 `https:`。
 - 主要区块带稳定标识 `data-nm-id`：至少 **3** 个，值匹配 `^[a-z][a-z0-9-]{0,39}$`，页面内唯一。
-- 页面有动效（`@keyframes`、`animation`、`transition`、`requestAnimationFrame`、`.animate(`）时，必须处理 `prefers-reduced-motion`（CSS 媒体查询或 `matchMedia`，或只使用 Kit 已处理的动效类）。
-- 字体：只按名称选用 Kit 字体清单中的字体（`var(--nm-font-*)` 或清单中的 family 名），不写 `@font-face`，不内联字体。
+- 动效与 `prefers-reduced-motion`：
+  - `nowme.css` 内置全局规则：`@media (prefers-reduced-motion: reduce)` 下关闭所有 CSS `animation` 与 `transition`。因此**引入了 `nowme.css` 的页面，CSS 动效视为已处理**。
+  - 没有引入 `nowme.css` 而使用 CSS 动效（`@keyframes`、`animation`、`transition`）时，页面自己必须写 `prefers-reduced-motion` 媒体查询。
+  - 脚本动效（`requestAnimationFrame`、`.animate(`、Canvas/WebGL 循环）必须检查 `nowme.reducedMotion` 或 `matchMedia('(prefers-reduced-motion: reduce)')`，减少动效时给出静态画面。
+- 字体：只按名称选用 Kit 字体清单中的字体，不写 `@font-face`，不内联字体。Kit 为清单中每款字体提供变量 `--nm-font-<fontId>`（例如 `--nm-font-lxgw-wenkai`，值为该字体 family 名加系统回退）；页面使用该变量或直接写 family 名。Kit 的语义变量 `--nm-font-sans` / `--nm-font-serif` / `--nm-font-mono` 只指向系统字体栈，不引用清单字体（这样校验器能准确知道页面用了哪款清单字体）。
 - 移动端优先：以 375px 宽为基准。
 
 ### 1.2 `card.json`
@@ -117,6 +120,32 @@ page/
 - `cover.png`：PNG，750×1000（375×500 CSS 像素、DPR 2 的首屏截图），≤ 600 KB。
 - `assets/`：只允许 `png` / `jpg` / `jpeg` / `webp` / `gif`；文件名匹配 `^[a-z0-9][a-z0-9._-]{0,63}$`，最多一层子目录；单个 ≤ 2 MB，合计 ≤ 8 MB，最多 20 个。字体文件、SVG、HTML、脚本一律拒绝（SVG 请内联在 `index.html`）。
 
+### 1.5 本地工作目录与 `nowme` 命令
+
+```
+<工作目录>/                 # 主人为这面墙新建的目录，例如 ~/nowme/<墙名>/
+├── nowme.json              # 关联信息 { server, wallId, pageId }，不含任何密钥
+├── context.json            # nowme fetch 拉取的墙情境（AgentContext）
+├── brief.md                # 主人确认后的 brief，只在本地，永不上传
+└── page/                   # 第 1 节的输出契约
+~/.nowme/profile.md         # 长期画像，只在本地，永不上传
+~/.nowme/credentials        # 页面凭证（JSON，按 pageId 索引），目录 0700、文件 0600
+```
+
+`~/.nowme` 可用环境变量 `NOWME_HOME` 改到别处（测试与演练用）。
+
+| 命令 | 作用 |
+| --- | --- |
+| `nowme fetch <wallId> <token> [--server URL]` | 用一次性 token 换取页面凭证，写 `nowme.json`、`context.json`、凭证；上报 `agent_fetch` |
+| `nowme fetch` | 已有凭证时刷新 `context.json` |
+| `nowme validate [dir=page] [--json] [--no-fix]` | 静态校验；默认自动补全 `manifest.extraChars`；有 error 时退出码 1 |
+| `nowme preview [dir=page] [--serve] [--cover]` | 双源本地沙箱渲染、截图（缺 `cover.png` 或带 `--cover` 时写入 750×1000 封面）、渲染检查、字体子集化；`--serve` 保持服务器供主人在浏览器中查看 |
+| `nowme submit [dir=page]` | 先本地校验，再只上传白名单文件；打印版本号、校验结果与工作区链接，并提醒“发布需要你在应用内确认” |
+| `nowme status` | 显示关联的墙、页面、凭证是否存在（不显示凭证内容） |
+| `nowme event <type>` | 供 Skill 上报 `generate` 等事件，只带数字/布尔属性 |
+
+所有命令默认输出中文的人类可读文本，`--json` 输出机器可读结果。凭证永远不打印完整内容。
+
 ## 2. 校验规则（`packages/validator`）
 
 ### 2.1 接口
@@ -143,7 +172,8 @@ interface ValidationReport {
   };
   validatorVersion: string;
 }
-validatePage(files: PageFiles, opts?: { kitFonts?: KitFont[] }): ValidationReport;  // 纯函数，服务端复用
+validatePage(files: PageFiles, opts?: { kitFonts?: KitFont[] }): ValidationReport;  // 纯函数，服务端复用；kitFonts 由调用方从 @nowme/kit 传入
+computeExtraChars(files: PageFiles): string;                                        // 供 nowme validate 自动补全 manifest.extraChars
 readPageDir(dir: string): Promise<PageFiles>;                                         // node 辅助
 ```
 
@@ -166,7 +196,7 @@ readPageDir(dir: string): Promise<PageFiles>;                                   
 | `JS_SYNTAX_ERROR` | error | 内联脚本无法解析 |
 | `NM_ID_TOO_FEW` / `NM_ID_INVALID` / `NM_ID_DUPLICATE` | error | 见 1.1 |
 | `NM_BLOCKS_MISMATCH` | warning | `manifest.blocks` 与页面 `data-nm-id` 不一致 |
-| `MOTION_WITHOUT_REDUCED` | error | 有自写动效但没有处理 `prefers-reduced-motion` |
+| `MOTION_WITHOUT_REDUCED` | error | 按 1.1 的动效规则未处理 `prefers-reduced-motion`（没引入 `nowme.css` 的 CSS 动效；或脚本动效没有检查 `nowme.reducedMotion` / `prefers-reduced-motion`） |
 | `FONT_FACE_FORBIDDEN` | error | 出现 `@font-face`、字体 data URI |
 | `FONT_UNDECLARED` | error | 用了 Kit 字体但 `manifest.fonts` 未声明 |
 | `FONT_NOT_IN_KIT` | warning | `font-family` 中出现既非 Kit 字体、也非通用族名 / 常见系统字体的名字（会回退到系统字体） |
@@ -312,7 +342,7 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 | S5 | 组织者看不到私密内容：组织者后台只有昵称、加入时间、发布状态；组织者无法访问他人的工作区、版本、未发布内容、未公开的联系方式；本地路线的 brief / 画像从不上传 | 组织者身份请求他人工作区、版本预览、票据签发 → 404；后台 HTML 不含版本 ID、未发布 card 内容、私密联系方式；提交接口丢弃白名单外文件 |
 | S6 | 非成员看不到墙：未登录、非成员、已退出、已移除的用户访问墙、成员页、封面、chat 接口都拿不到内容；pages-host 无票据、票据伪造、过期、篡改版本 ID 时拒绝；被移除成员立即失去访问且其页面立即下墙；关闭的墙对所有人不可见；关闭公开链接后旧链接失效 | 集成测试覆盖每种身份 × 每个路由；pages-host 票据测试 |
 
-主站自身也设 CSP：`frame-src <pages>`、`script-src 'self'`、`object-src 'none'`、`base-uri 'none'`、`frame-ancestors 'none'`。
+主站自身也设 CSP：`default-src 'self'`、`frame-src <pages>`、`script-src 'self'`、`style-src 'self'`、`img-src 'self' data:`、`form-action 'self'`、`object-src 'none'`、`base-uri 'none'`、`frame-ancestors 'none'`（主站不用内联脚本和内联样式）。主站校验 `Host` 头：不等于 `NOWME_WEB_ORIGIN` 的主机时返回 421 或重定向到 `NOWME_WEB_ORIGIN`（cookie 不按端口隔离，不能让主站在页面托管的主机名下签发 cookie）。
 
 ### 5.1 `nowme.openLink` 协议
 
@@ -347,6 +377,14 @@ interface SceneGuide {
 
 内容取自[信息收集与 brief](brief-collection.md)第 4 节与[页面生成方案](page-generation-byo-agent.md)第 3 节。
 
-## 8. 原型试跑不做
+## 8. 已采纳的实现细节（T0.2）
+
+- `kitFontSchema` 用 `files`（字重 → 文件名）代替 `file`；授权限 OFL-1.1 / Apache-2.0 / MIT；family 只能是 ASCII；字重为 100–900 整百。
+- 其他表的 ID 前缀：`login_codes` 用 `lgc_`、`agent_tokens` 用 `agt_`、`page_credentials` 用 `crd_`。
+- 文本长度按 Unicode 码点计算，不能全为空白、不能含控制字符；所有 JSON 对象拒绝未知字段（`manifest.generator` 内部除外）；`manifest.fonts`（可为空数组）与 `extraChars`（可为空字符串）必填。
+- API 错误码增加 `INTERNAL_ERROR`（500）；事件 `props` 最多 16 个键；一次提交最多 64 个文件。
+- `loadConfig` 拒绝主站与页面托管同主机名、TTL 只接受 1–720 小时、票据密钥至少 32 字符。
+
+## 9. 原型试跑不做
 
 平台托管路线（含应用内采访、对话修改、W09 应用内素材管理）、付费、派生到新墙（W18）、真实邮件发送、外部内容审核接入（只保存渲染文字和截图供人工审核）、部署。

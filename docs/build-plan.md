@@ -3,7 +3,7 @@
 > 总规划师维护。每完成一项更新状态并提交。
 > 需求：[MVP 需求](product-mvp-community-wall.md)、[页面生成方案](page-generation-byo-agent.md)、[信息收集与 brief](brief-collection.md)。
 > 接口约定：[contracts.md](contracts.md)（所有任务的共同依据）。
-> 范围：只做本地路线；平台托管路线、付费、派生（W18）、部署不做（contracts 第 8 节）。
+> 范围：只做本地路线；平台托管路线、付费、派生（W18）、部署不做（contracts 第 9 节）。
 
 状态：⬜ 未开始 · 🟡 进行中 · ✅ 完成（已由总规划师亲自验收）· ⛔ 阻塞
 
@@ -19,7 +19,7 @@
 
 | 里程碑 | 目标 | 检查点 | 状态 |
 | --- | --- | --- | --- |
-| M0 | 接口约定、monorepo 架子、CLAUDE.md | `pnpm install && pnpm typecheck && pnpm test` 全绿 | ⬜ |
+| M0 | 接口约定、monorepo 架子、CLAUDE.md | `pnpm install && pnpm typecheck && pnpm test` 全绿 | ✅ |
 | M1 | Skill + Kit + 示例页 + `nowme validate` / `nowme preview` | 6 个示例页校验 0 错误，preview 产出封面且无渲染错误 | ⬜ |
 | M2 | 提交、服务端校验与沙箱展示 | `nowme fetch` → `nowme submit` → 主人在工作区的沙箱 iframe 中看到页面；S2、S3、S4 测试通过 | ⬜ |
 | M3 | 墙的闭环 | 登录 → 建墙 → 邀请 → 加入 → 提交 → 发布 → 浏览 → 想聊这个 → 组织者后台，e2e 通过；S1–S6 全部有测试；安全审查完成且高危问题已修复 | ⬜ |
@@ -30,8 +30,8 @@
 | 任务 | 负责 | 范围（只改） | 验收标准 | 状态 |
 | --- | --- | --- | --- | --- |
 | T0.1 接口约定 | 总规划师 | `docs/contracts.md` | 覆盖页面输出契约、校验规则与错误码、数据模型、API、票据、CSP、安全不变量、事件、场景配置 | ✅ |
-| T0.2 Monorepo 脚手架 + `packages/contracts` | 子 Agent | 根配置、`packages/*`、`apps/*` 骨架 | 见下 | ⬜ |
-| T0.3 CLAUDE.md | 总规划师 | `CLAUDE.md` | 命令经过亲自运行；写明目录归属、约定与安全红线 | ⬜ |
+| T0.2 Monorepo 脚手架 + `packages/contracts` | 子 Agent | 根配置、`packages/*`、`apps/*` 骨架 | 见下 | ✅ |
+| T0.3 CLAUDE.md | 总规划师 | `CLAUDE.md` | 命令经过亲自运行；写明目录归属、约定与安全红线 | ✅ |
 
 T0.2 验收：
 
@@ -40,6 +40,8 @@ T0.2 验收：
 3. 单测：票据（正确、过期、篡改签名、篡改版本 ID、错误密钥）；CSP（逐项包含 contracts S2 的指令，不含 `unsafe-eval`）；schema（合法与非法样例）。
 4. 冒烟测试：SQLite 驱动可在 vitest 中使用；Playwright 能启动本机 Chromium。
 5. 每个包/应用有可运行的占位入口与至少一个测试。
+
+T0.2 验收记录（2026-11-06，总规划师亲自运行）：`pnpm install --frozen-lockfile`、`pnpm typecheck`（8 个项目）、`pnpm test`（14 文件 / 203 用例）、`pnpm test:security`（40 用例）、`pnpm test:e2e`（2 用例）、`pnpm build`、`node packages/cli/dist/bin.js --help` 全部通过。SQLite 用 `node:sqlite`；Playwright 锁定 1.58.2（匹配本机 Chromium 1208）。采纳的实现细节记入 contracts 第 8 节。
 
 ## M1 Skill + Kit + 示例页 + validate / preview
 
@@ -112,3 +114,5 @@ T0.2 验收：
 | 2026-11-06 | 开场白由 Agent 写进 `card.json`，主人在应用内确认；平台不调用模型，保持本地路线零模型费用 |
 | 2026-11-06 | 公开链接只显示页面，不显示联系方式与“想聊这个” |
 | 2026-11-06 | 被组织者移除的成员不能通过邀请重新加入；关闭的墙对所有人不可见 |
+| 2026-11-06 | 采纳 T0.2 建议：主站 CSP 增加 `default-src`/`style-src`/`img-src`/`form-action`，主站校验 `Host` 头（contracts 第 5 节） |
+| 2026-11-06 | `nowme.css` 内置全局减少动效规则；每款 Kit 字体提供 `--nm-font-<id>` 变量；本地工作目录与 CLI 命令见 contracts 1.5 |
