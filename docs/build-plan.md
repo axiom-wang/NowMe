@@ -20,7 +20,7 @@
 | 里程碑 | 目标 | 检查点 | 状态 |
 | --- | --- | --- | --- |
 | M0 | 接口约定、monorepo 架子、CLAUDE.md | `pnpm install && pnpm typecheck && pnpm test` 全绿 | ✅ |
-| M1 | Skill + Kit + 示例页 + `nowme validate` / `nowme preview` | 6 个示例页校验 0 错误，preview 产出封面且无渲染错误 | ⬜ |
+| M1 | Skill + Kit + 示例页 + `nowme validate` / `nowme preview` | 6 个示例页校验 0 错误，preview 产出封面且无渲染错误 | 🟡 |
 | M2 | 提交、服务端校验与沙箱展示 | `nowme fetch` → `nowme submit` → 主人在工作区的沙箱 iframe 中看到页面；S2、S3、S4 测试通过 | ⬜ |
 | M3 | 墙的闭环 | 登录 → 建墙 → 邀请 → 加入 → 提交 → 发布 → 浏览 → 想聊这个 → 组织者后台，e2e 通过；S1–S6 全部有测试；安全审查完成且高危问题已修复 | ⬜ |
 | M4 | 端到端演练 | 子 Agent 扮演“用户的 Agent”按 Skill 完整走通，产出演练报告 | ⬜ |
@@ -47,8 +47,8 @@ T0.2 验收记录（2026-11-06，总规划师亲自运行）：`pnpm install --f
 
 | 任务 | 负责 | 范围（只改） | 依赖 | 状态 |
 | --- | --- | --- | --- | --- |
-| T1.1 页面校验器 | 子 Agent（worktree） | `packages/validator` | T0.2 | ⬜ |
-| T1.2 Kit + Skill + 示例页 | 子 Agent（worktree） | `packages/kit`、`skill/` | T0.2 | ⬜ |
+| T1.1 页面校验器 | 子 Agent（worktree） | `packages/validator` | T0.2 | 🟡 |
+| T1.2 Kit + Skill + 示例页 | 子 Agent（worktree） | `packages/kit`、`skill/` | T0.2 | 🟡 |
 | T1.3 渲染与 CLI validate / preview | 子 Agent | `packages/render`、`packages/cli` | T1.1、T1.2 | ⬜ |
 | T1.4 M1 验收 | 总规划师 | — | T1.3 | ⬜ |
 
