@@ -91,8 +91,8 @@ T1.3 / T1.4 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm te
 | --- | --- | --- | --- | --- |
 | T3.1 墙、邀请、加入、浏览、想聊这个、组织者后台、统计 | 子 Agent（worktree A） | `apps/web` 中墙与组织者相关路由/视图 | M2 | ✅ |
 | T3.2 工作区闭环：发布确认、撤下、恢复、公开链接、断开、退出、删除 | 子 Agent（worktree B） | `apps/web` 中工作区与公开链接相关路由/视图 | M2 | ✅ |
-| T3.3 安全不变量测试集 + 全流程 e2e + `pnpm demo` | 子 Agent（Sonnet） | `tests/`、`apps/web/test/security`、`apps/web/scripts`、根脚本 | T3.1、T3.2 | 🟡 |
-| ⏸ 用户预览检查点 | 总规划师 | 准备 `pnpm demo`（演示墙 + 6 个示例页已发布）并停下来，等用户看过预览效果再继续 | T3.3 | ⬜ |
+| T3.3 安全不变量测试集 + 全流程 e2e + `pnpm demo` | 子 Agent（Sonnet） | `tests/`、`apps/web/test/security`、`apps/web/scripts`、根脚本 | T3.1、T3.2 | ✅ |
+| ⏸ 用户预览检查点 | 总规划师 | 准备 `pnpm demo`（演示墙 + 6 个示例页已发布）并停下来，等用户看过预览效果再继续 | T3.3 | ⏸ 等待用户 |
 | T3.4 独立安全审查 | 子 Agent（只读） | `docs/security-review.md` | 用户预览检查点 | ⬜ |
 | T3.5 修复审查问题 | 子 Agent | 按问题所在目录 | T3.4 | ⬜ |
 
@@ -103,6 +103,7 @@ T1.3 / T1.4 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm te
 - T3.1 / T3.2 验收记录（2026-11-07）：两个任务的原子 Agent 被额度上限中断后，由新 Agent 在原 worktree 接手完成。合并后无冲突；`pnpm typecheck`、`pnpm test`（69 文件 / 1404 用例）、`pnpm test:security`（25 文件 / 682 用例）通过；核对发布快照 `{channel, value}` 与墙页解析一致。遗留：工作区/公开页手机框在 375px 宽下超出卡片（`app.css`），交给 T3.3 修。删除页面暂记 `withdraw` + `public_link_off`（带 `pageDeleted`）；版本墓碑以 `report_json.validatorVersion = "deleted"` 标记、发布墓碑 `card_json = {"deleted":true}`；退出墙时同时关闭公开链接；被移除成员打开邀请链接得到 403 友好提示。
 - **T3.3**：`pnpm test:security` 覆盖 S1–S6 的全部最低测试要求；`pnpm test:e2e` 走通完整闭环。
 - **用户预览检查点**（2026-11-06 用户要求）：M3 安全审查（T3.4）和 M4 之前停下，由用户亲自看预览效果再决定。需要一条命令启动可浏览的演示：主站 + 页面托管 + 一面演示墙（组织者 + 6 名成员，各自发布一个 Skill 示例页），并给出登录方式。
+- T3.3 验收记录（2026-11-07）：合并后 `pnpm typecheck`、`pnpm test`（71 文件 / 1406 用例）、`pnpm test:security`（26 文件 / 683 用例）、`pnpm test:e2e`（5 用例：全流程、S1/S2 恶意页探测、5.2 自我导航拦截、2 冒烟）全部通过。S1–S6 覆盖表见 T3.3 汇报，未发现需标记的真实缺陷。补充发现：服务端渲染阶段已会拒绝加载即自我导航或触发 CSP 违规的页面。总规划师亲自运行 `pnpm demo`（种子约 40 秒）并用 Chromium 走路线：墙上 5 张卡片（周一鸣未发布未出现）、成员页沙箱渲染正常、“想聊这个”显示邮箱与开场白、组织者后台只有昵称/加入时间/发布状态且 HTML 不含 `rev_` 与联系方式、0 个控制台错误。
 - **T3.4**：审查报告逐条对照 S1–S6 与 OWASP 常见问题，给出严重度、位置、复现方式。
 - **T3.5**：高、中危问题修复并补测试；低危问题记录在案。
 
