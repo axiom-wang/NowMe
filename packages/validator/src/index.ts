@@ -1,38 +1,21 @@
 /**
- * @nowme/validator：页面静态校验（contracts 2）。纯函数，不碰浏览器、不碰网络，服务端复用。
+ * @nowme/validator：页面静态校验（contracts 2）。
  *
- * 占位（T0.2）：校验规则、validatePage、computeExtraChars、readPageDir 由 T1.1 实现。
- * 这里只提供报告的组装工具，保证报告结构与 contracts 2.1 一致。
+ * - `validatePage(files, { kitFonts })`：纯函数，不碰文件系统、浏览器与网络，服务端提交管线直接复用；
+ * - `computeExtraChars(files)`：`nowme validate` 自动补全 manifest.extraChars；
+ * - `readPageDir(dir)`：读取本地 page/ 目录（node 辅助；实现在 `@nowme/validator/node`，
+ *   这里按需动态加载，因此本入口不静态依赖 node:fs）。
  */
-import {
-  severityOf,
-  type ValidationIssue,
-  type ValidationReport,
-  type ValidationStats,
-} from '@nowme/contracts';
+import type { PageDirFiles } from './page-files.js';
 
-export const VALIDATOR_VERSION = '0.0.0';
+export { VALIDATOR_VERSION, createReport, emptyStats } from './report.js';
+export { validatePage } from './validate.js';
+export { computeExtraChars } from './extra-chars.js';
+export { PageDirFiles, skippedEntriesOf, type SkippedEntry, type SkippedReason } from './page-files.js';
+export type { PageFiles, ValidateOptions, ValidationIssue, ValidationReport, ValidationStats } from '@nowme/contracts';
 
-export function emptyStats(): ValidationStats {
-  return {
-    indexHtmlBytes: 0,
-    assetBytes: 0,
-    assetCount: 0,
-    blocks: [],
-    fontsUsed: [],
-    cjkFontCount: 0,
-    scriptOnlyChars: '',
-    ignoredFiles: [],
-  };
-}
-
-/**
- * 把问题列表组装成报告：按错误码的级别分到 errors / warnings（以 contracts 的级别为准），
- * 没有 error 即 ok。
- */
-export function createReport(issues: readonly ValidationIssue[], stats: ValidationStats = emptyStats()): ValidationReport {
-  const normalized = issues.map((issue) => ({ ...issue, severity: severityOf(issue.code) }));
-  const errors = normalized.filter((issue) => issue.severity === 'error');
-  const warnings = normalized.filter((issue) => issue.severity === 'warning');
-  return { ok: errors.length === 0, errors, warnings, stats, validatorVersion: VALIDATOR_VERSION };
+/** 读取本地 page/ 目录为 PageFiles（不跟随符号链接；跳过的条目会在校验报告里给出 IGNORED_FILE 警告）。 */
+export async function readPageDir(dir: string): Promise<PageDirFiles> {
+  const node = await import('./node.js');
+  return node.readPageDir(dir);
 }
