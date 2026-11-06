@@ -136,7 +136,7 @@ page/
 
 | 命令 | 作用 |
 | --- | --- |
-| `nowme fetch <wallId> <token> [--server URL]` | 用一次性 token 换取页面凭证，写 `nowme.json`、`context.json`、凭证；上报 `agent_fetch` |
+| `nowme fetch <wallId> <token> [--server URL]` | 用一次性 token 换取页面凭证，写 `nowme.json`、`context.json`、凭证；上报 `fetch` 事件（请求体 `type: "fetch"`，服务端存为 `agent_fetch`） |
 | `nowme fetch` | 已有凭证时刷新 `context.json` |
 | `nowme validate [dir=page] [--json] [--no-fix]` | 静态校验；默认自动补全 `manifest.extraChars`；有 error 时退出码 1 |
 | `nowme preview [dir=page] [--serve] [--cover]` | 双源本地沙箱渲染、截图（缺 `cover.png` 或带 `--cover` 时写入 750×1000 封面）、渲染检查、字体子集化；`--serve` 保持服务器供主人在浏览器中查看 |
