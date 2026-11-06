@@ -70,9 +70,9 @@ T1.3 / T1.4 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm te
 
 | 任务 | 负责 | 范围（只改） | 依赖 | 状态 |
 | --- | --- | --- | --- | --- |
-| T2.1 主站核心：数据库、登录、Agent API、提交管线、工作区预览 | 子 Agent（worktree A） | `apps/web` | M1 | ⬜ |
+| T2.1 主站核心：数据库、登录、Agent API、提交管线、工作区预览 | 子 Agent（worktree A） | `apps/web`（另：`packages/contracts` 的 `buildWebCsp`） | M1 | 🟡 |
 | T2.2 页面托管 | 子 Agent（worktree，Sonnet） | `apps/pages-host` | T0.2、T1.2（只依赖 contracts 与 Kit，提前与 T1.3 并行） | ✅ |
-| T2.3 CLI fetch / submit / status / event | 子 Agent（worktree C） | `packages/cli` | M1 | ⬜ |
+| T2.3 CLI fetch / submit / status / event | 子 Agent（worktree C，Sonnet） | `packages/cli` | M1 | 🟡 |
 | T2.4 M2 集成与浏览器沙箱测试 | 子 Agent | `tests/e2e`、根脚本 | T2.1–T2.3 | ⬜ |
 
 验收标准：
