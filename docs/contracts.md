@@ -118,7 +118,7 @@ page/
 ### 1.4 `cover.png` 与 `assets/` [原型默认]
 
 - `cover.png`：PNG，750×1000（375×500 CSS 像素、DPR 2 的首屏截图），≤ 600 KB。
-- `assets/`：只允许 `png` / `jpg` / `jpeg` / `webp` / `gif`；文件名匹配 `^[a-z0-9][a-z0-9._-]{0,63}$`，最多一层子目录；单个 ≤ 2 MB，合计 ≤ 8 MB，最多 20 个。字体文件、SVG、HTML、脚本一律拒绝（SVG 请内联在 `index.html`）。
+- `assets/`：系统文件（`.DS_Store`、`Thumbs.db`、`desktop.ini`、`._*`）一律忽略、不上传、不报错；其余只允许 `png` / `jpg` / `jpeg` / `webp` / `gif`；文件名匹配 `^[a-z0-9][a-z0-9._-]{0,63}$`，最多一层子目录；单个 ≤ 2 MB，合计 ≤ 8 MB，最多 20 个。字体文件、SVG、HTML、脚本一律拒绝（SVG 请内联在 `index.html`）。
 
 ### 1.5 本地工作目录与 `nowme` 命令
 
@@ -208,7 +208,7 @@ readPageDir(dir: string): Promise<PageFiles>;                                   
 | `ASSET_TYPE_FORBIDDEN` / `ASSET_TOO_LARGE` / `ASSETS_TOO_MANY` / `ASSET_NAME_INVALID` | error | 见 1.4 |
 | `ASSET_MISSING` | error | `index.html` 引用了不存在的 `assets/` 文件 |
 | `ASSET_UNUSED` | warning | `assets/` 里有未被引用的文件 |
-| `CREDENTIAL_LEAK` | error | 任意文件中出现形如 `nmc_` / `nmt_` 的凭证，或出现名为 `credentials` 的文件 |
+| `CREDENTIAL_LEAK` | error | 任意文件中出现形如 `nm[ct]_[A-Za-z0-9_-]{16,}` 的凭证，或出现名为 `credentials` 的文件 |
 | `IGNORED_FILE` | warning | 不在 1 节白名单中的文件（不会上传） |
 
 ### 2.3 服务端额外检查（渲染阶段，`packages/render`）
@@ -335,7 +335,7 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 
 | # | 不变量 | 最低测试要求 |
 | --- | --- | --- |
-| S1 | 展示用户页面的 iframe 只有 `sandbox="allow-scripts"`，不含 `allow-same-origin`、`allow-top-navigation*`、`allow-forms`、`allow-popups*`、`allow-modals`；`src` 指向 `NOWME_PAGES_ORIGIN` | 解析所有展示页面的路由（成员页、工作区预览、公开链接）输出的 HTML；**浏览器测试**：恶意页面在 iframe 内尝试读 cookie、`fetch` 主站与外部、`localStorage`、改 `top.location`、提交表单、`window.open`，全部失败，主站 URL 不变，探针服务器收不到请求 |
+| S1 | 展示用户页面的 iframe 只有 `sandbox="allow-scripts"`，不含 `allow-same-origin`、`allow-top-navigation*`、`allow-forms`、`allow-popups*`、`allow-modals`；`src` 指向 `NOWME_PAGES_ORIGIN` | 解析所有展示页面的路由（成员页、工作区预览、公开链接）输出的 HTML；**浏览器测试**：恶意页面在 iframe 内尝试读 cookie、`fetch` 主站与外部、`localStorage`、改 `top.location`、提交表单、`window.open`，全部失败，主站 URL 不变，探针服务器收不到请求；iframe 自我导航（`location = 'https://...'`）被主站检测并重置（见 5.2） |
 | S2 | 页面托管对页面文档返回严格 CSP：`default-src 'none'`；`script-src 'unsafe-inline' <pages>/_nowme/kit/`；`style-src 'unsafe-inline' <pages>/_nowme/kit/`；`img-src <pages>/v/<ticket>/assets/ <pages>/_nowme/kit/ data: blob:`；`media-src` 同 `img-src`；`font-src <pages>/v/<ticket>/_fonts/`；`connect-src 'none'`；`form-action 'none'`；`base-uri 'none'`；`frame-ancestors <web>`（预览时为预览外壳源）；`sandbox allow-scripts`；无 `'unsafe-eval'`。另加 `X-Content-Type-Options: nosniff`、`Referrer-Policy: no-referrer`、`Permissions-Policy` 禁用摄像头/麦克风/定位等、不设任何 cookie | 对 pages-host 响应头逐项断言；CSP 构造函数单测；渲染管线用同一构造函数 |
 | S3 | 一次性 token：只能换取一次；过期无效；只对签发它的那一页、那一面墙有效；换取后该页旧凭证全部失效；数据库只存哈希 | API 集成测试覆盖每一条 |
 | S4 | 页面凭证不能发布：凭证调用发布、恢复、撤下、公开链接、删除、组织者操作等任何主站路由都无效且不改变状态；凭证不能当会话用；凭证不写进 `page/`、不随提交上传；校验器拦截凭证字符串 | 用凭证逐个调用所有改变状态的主站路由并断言数据库无变化；CLI 测试断言 `page/` 中无凭证、上传内容无凭证 |
@@ -347,6 +347,10 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 ### 5.1 `nowme.openLink` 协议
 
 Kit 调用 `parent.postMessage({ type: 'nowme:open-link', url }, '*')`。主站监听时校验 `event.source === iframe.contentWindow`、`url` 为 `https:`，弹出确认（显示目标域名），用户确认后 `window.open(url, '_blank', 'noopener,noreferrer')`。其他消息一律忽略。
+
+### 5.2 iframe 自我导航
+
+沙箱允许 iframe 导航它自己，CSP 也不管导航，所以页面脚本运行时拼出的 `location = '...'` 能把 iframe 带到外部网站（钓鱼、记录访客 IP）。主站展示页面时监听 iframe 的 `load` 事件：第一次加载之后再次触发 `load`，即视为页面自我导航，立即把 `src` 重置为空白页并在 iframe 外提示“这个页面试图跳转，已拦截”。需要浏览器测试覆盖。
 
 ## 6. 事件（W20）
 
@@ -382,6 +386,7 @@ interface SceneGuide {
 - `kitFontSchema` 用 `files`（字重 → 文件名）代替 `file`；授权限 OFL-1.1 / Apache-2.0 / MIT；family 只能是 ASCII；字重为 100–900 整百。
 - 其他表的 ID 前缀：`login_codes` 用 `lgc_`、`agent_tokens` 用 `agt_`、`page_credentials` 用 `crd_`。
 - 文本长度按 Unicode 码点计算，不能全为空白、不能含控制字符；所有 JSON 对象拒绝未知字段（`manifest.generator` 内部除外）；`manifest.fonts`（可为空数组）与 `extraChars`（可为空字符串）必填。
+- 校验器（T1.1）额外拦截：`importmap` / `speculationrules` 脚本、`fencedframe`、`applet`、脚本动态创建的禁用元素、`ping` / `lowsrc` 等资源属性、`navigation.navigate`。`card.json` 中 hook 的 `kind` 不做场景匹配检查（自由文本）。SVG SMIL 动画暂不纳入减少动效规则（已知缺口）。
 - API 错误码增加 `INTERNAL_ERROR`（500）；事件 `props` 最多 16 个键；一次提交最多 64 个文件。
 - `loadConfig` 拒绝主站与页面托管同主机名、TTL 只接受 1–720 小时、票据密钥至少 32 字符。
 

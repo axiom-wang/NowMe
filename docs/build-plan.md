@@ -48,7 +48,7 @@ T0.2 验收记录（2026-11-06，总规划师亲自运行）：`pnpm install --f
 
 | 任务 | 负责 | 范围（只改） | 依赖 | 状态 |
 | --- | --- | --- | --- | --- |
-| T1.1 页面校验器 | 子 Agent（worktree） | `packages/validator` | T0.2 | 🟡 |
+| T1.1 页面校验器 | 子 Agent（worktree） | `packages/validator` | T0.2 | ✅ |
 | T1.2 Kit + Skill + 示例页 | 子 Agent（worktree） | `packages/kit`、`skill/` | T0.2 | 🟡 |
 | T1.3 渲染与 CLI validate / preview | 子 Agent | `packages/render`、`packages/cli` | T1.1、T1.2 | ⬜ |
 | T1.4 M1 验收 | 总规划师 | — | T1.3 | ⬜ |
@@ -59,6 +59,8 @@ T0.2 验收记录（2026-11-06，总规划师亲自运行）：`pnpm install --f
 - **T1.2**：`nowme.css`（CSS 变量、字体变量、基础排版、若干动效与组件类，全部处理 `prefers-reduced-motion`）、`nowme.js`（`openLink`、`data-nm-href` 自动绑定、`reducedMotion`、少量组件）、`fonts.json`（全部为允许子集化与网页分发的开源授权）与字体下载脚本；`skill/SKILL.md` 完整覆盖采访 → brief 确认 → 生成 → validate → preview 自查 → 修改 → submit 的流程、隐私规则与禁止事项；4 份场景 JSON 通过 `SceneGuide` schema；6 个示例页（黑客松、兴趣社群、社团招新各 2 个，风格差异大）附设计思路；Kit 行为测试。
 - **T1.3**：`nowme validate` 输出中文错误与修复指引、错误时退出码 1、自动补全 `extraChars`；`nowme preview` 用 contracts 的 CSP 构造函数与沙箱属性在双源本地服务器中渲染，产出 750×1000 `cover.png` 与整页截图，报告 2.3 的渲染问题，执行与平台一致的字体子集化；测试覆盖恶意页（CSP 违规、脚本异常）与子集化结果。
 - **T1.4**：总规划师亲自对 6 个示例页运行 validate 与 preview，查看封面截图。
+
+T1.1 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm test`（27 文件 / 531 用例）、`pnpm test:security`（9 文件 / 240 用例）通过；总规划师用一份恶意页面手工抽查，外链、`window['local'+'Storage']`、`fetch`、凭证、缺少减少动效、`data-nm-id` 不足、card/manifest 非法均正确报出，中文提示可操作。遗留给 T1.3：校验器忽略 `.DS_Store` 等系统文件（contracts 1.4）。
 
 ## M2 提交、校验与沙箱展示
 
