@@ -1,20 +1,207 @@
 /**
- * 墙、邀请、加入、浏览、想聊这个（T3.1 填充，contracts 4.2）。
+ * 墙、邀请、加入、浏览、想聊这个（T3.1，contracts 4.2、W02、W04、W13、W14）。
  *
  * | 路径 | 谁能访问 |
  * | --- | --- |
- * | GET /walls/new、POST /walls | 登录用户 |
- * | GET /join/:inviteCode、POST /join/:inviteCode | 登录用户（已移除不能再加入；关闭的墙不能加入） |
+ * | GET /walls/new、POST /walls | 登录用户（建好后跳到组织者后台） |
+ * | GET /join/:inviteCode、POST /join/:inviteCode | 登录用户（邀请码无效 / 墙关闭 → 404；已移除 → 友好提示，不能加入；已是成员 → 直接进墙） |
  * | GET /w/:wallId | 墙内有效成员 |
- * | GET /w/:wallId/p/:pageId | 墙内有效成员（页面用 views/page-frame.tsx 的 PageFrame，票据只给当前发布版本） |
- * | POST /w/:wallId/p/:pageId/chat | 墙内有效成员（主人未公开联系方式时 404） |
- * | GET /w/:wallId/covers/:pageId.png | 墙内有效成员（已发布版本的封面） |
+ * | GET /w/:wallId/p/:pageId | 墙内有效成员；页面有活跃发布且主人成员关系有效（PageFrame，票据只给当前发布版本） |
+ * | POST /w/:wallId/p/:pageId/chat | 墙内有效成员；发布快照里公开了联系方式、接话点存在、不是自己的页面，否则 404 |
+ * | GET /w/:wallId/covers/:pageId.png | 墙内有效成员（墙上可见页面的当前发布版本封面） |
  *
- * 约定：GET 页面用 `requireUser(deps)`；POST 用 `requireForm(deps)`；无权访问一律 `renderNotFound(c)`；
- * 授权检查放进 services/access.ts（例如 `findMemberWall`）；建墙 / 加入用 services/walls.ts。
+ * GET 用 `requireUser`（未登录 → /login?next=）；POST 用 `requireForm`（会话 + CSRF + Origin，忽略 Authorization）。
+ * 无权访问一律 `renderNotFound(c)`，不暴露墙或页面是否存在。授权检查在 services/access.ts。
  */
+import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { isTokenFormat, PAGE_ID_PATTERN, SCENE_TYPES } from '@nowme/contracts';
 import type { AppDeps, AppHono } from '../context.js';
+import type { Wall } from '../db/walls.js';
+import { requireForm } from '../security/forms.js';
+import { authOf, requireUser } from '../security/session.js';
+import { findMemberWall, findPublishedMemberPage } from '../services/access.js';
+import { coverFilePath, loadMemberPageModel, loadWallModel, resolveChat } from '../services/wall-view.js';
+import { createWall, joinState, joinWall, parseWallForm } from '../services/walls.js';
+import { renderNotFound } from '../views/errors.js';
+import { JoinView, RemovedFromWallView } from '../views/join.js';
+import { renderPage } from '../views/layout.js';
+import { ChatView, MemberPageView } from '../views/member-page.js';
+import { NewWallView, type SceneChoice } from '../views/wall-new.js';
+import { WallView, type WallNotice } from '../views/wall.js';
+import { sceneLabels } from './home.js';
 
-export function registerWallRoutes(_app: AppHono, _deps: AppDeps): void {
-  // T3.1
+const WALL_NOTICES: ReadonlySet<string> = new Set<WallNotice>(['joined', 'rejoined']);
+
+export function wallPath(wallId: string): string {
+  return `/w/${wallId}`;
+}
+
+export function invitePath(inviteCode: string): string {
+  return `/join/${inviteCode}`;
+}
+
+export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
+  const user = requireUser(deps);
+  const form = requireForm(deps);
+  const labels = sceneLabels();
+  const scenes: SceneChoice[] = SCENE_TYPES.map((type) => ({ type, label: labels[type] }));
+
+  // -------------------------------------------------------------------------
+  // 建墙（W02）
+  // -------------------------------------------------------------------------
+
+  app.get('/walls/new', user, (c) =>
+    renderPage(c, { title: '建一面墙', body: <NewWallView csrf={authOf(c).session.csrfToken} scenes={scenes} /> }),
+  );
+
+  app.post('/walls', form, (c) => {
+    const auth = authOf(c);
+    const parsed = parseWallForm(c.get('form'));
+    if (!parsed.ok) {
+      return renderPage(c, {
+        title: '建一面墙',
+        status: 400,
+        body: <NewWallView csrf={auth.session.csrfToken} scenes={scenes} values={parsed.values} errors={parsed.errors} />,
+      });
+    }
+    const { wall } = createWall(deps, { organizerId: auth.user.id, ...parsed.input });
+    return c.redirect(`${wallPath(wall.id)}/admin?notice=created`, 303);
+  });
+
+  // -------------------------------------------------------------------------
+  // 邀请与加入（W04）
+  // -------------------------------------------------------------------------
+
+  /** 邀请码对应的、开启的墙；格式不对、不存在、墙已关闭都返回 null（404）。 */
+  function invitedWall(inviteCode: string): Wall | null {
+    if (!isTokenFormat(inviteCode, 'invite')) return null;
+    const wall = deps.repos.walls.findByInviteCode(inviteCode);
+    return wall && wall.status === 'open' ? wall : null;
+  }
+
+  app.get('/join/:inviteCode', user, (c) => {
+    const auth = authOf(c);
+    const wall = invitedWall(c.req.param('inviteCode'));
+    if (!wall) return renderNotFound(c);
+    const state = joinState(deps, wall, auth.user.id);
+    if (state.kind === 'member') return c.redirect(wallPath(wall.id), 303);
+    if (state.kind === 'removed') {
+      return renderPage(c, { title: '暂时不能加入', status: 403, body: <RemovedFromWallView wall={wall} /> });
+    }
+    return renderPage(c, {
+      title: `加入「${wall.name}」`,
+      body: <JoinView wall={wall} sceneLabel={labels[wall.sceneType]} csrf={auth.session.csrfToken} rejoin={state.rejoin} />,
+    });
+  });
+
+  app.post('/join/:inviteCode', form, (c) => {
+    const auth = authOf(c);
+    const wall = invitedWall(c.req.param('inviteCode'));
+    if (!wall) return renderNotFound(c);
+    const result = joinWall(deps, wall, auth.user.id);
+    switch (result.kind) {
+      case 'closed':
+        return renderNotFound(c);
+      case 'removed':
+        return renderPage(c, { title: '暂时不能加入', status: 403, body: <RemovedFromWallView wall={wall} /> });
+      case 'already':
+        return c.redirect(wallPath(wall.id), 303);
+      case 'joined':
+      case 'rejoined':
+        return c.redirect(`${wallPath(wall.id)}?notice=${result.kind}`, 303);
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // 墙（W13）
+  // -------------------------------------------------------------------------
+
+  app.get('/w/:wallId', user, (c) => {
+    const auth = authOf(c);
+    const member = findMemberWall(deps.repos, auth.user.id, c.req.param('wallId'));
+    if (!member) return renderNotFound(c);
+    const model = loadWallModel(deps, member);
+    deps.repos.events.record({
+      type: 'wall_view',
+      wallId: member.wall.id,
+      pageId: null,
+      actorId: auth.user.id,
+      props: { cards: model.cards.length },
+      createdAt: deps.now().toISOString(),
+    });
+    const notice = c.req.query('notice');
+    return renderPage(c, {
+      title: member.wall.name,
+      bodyClass: 'page--wall',
+      body: (
+        <WallView
+          model={model}
+          sceneLabel={labels[member.wall.sceneType]}
+          notice={notice && WALL_NOTICES.has(notice) ? (notice as WallNotice) : null}
+        />
+      ),
+    });
+  });
+
+  app.get('/w/:wallId/covers/:file', user, async (c) => {
+    const auth = authOf(c);
+    const file = c.req.param('file');
+    const pageId = file.endsWith('.png') ? file.slice(0, -'.png'.length) : '';
+    if (!PAGE_ID_PATTERN.test(pageId)) return renderNotFound(c);
+    const found = findPublishedMemberPage(deps, auth.user.id, c.req.param('wallId'), pageId);
+    if (!found) return renderNotFound(c);
+    let body: Buffer;
+    try {
+      body = await readFile(coverFilePath(deps.config.dataDir, found.entry.revisionId));
+    } catch {
+      return renderNotFound(c);
+    }
+    // ETag 用版本 ID 的哈希（不在响应里暴露版本 ID）；每次都重新做授权检查（no-cache），移除 / 关闭后立即失效
+    const etag = `"${createHash('sha256').update(found.entry.revisionId).digest('base64url').slice(0, 22)}"`;
+    const headers = { ETag: etag, 'Cache-Control': 'private, no-cache' };
+    if (c.req.header('if-none-match') === etag) return c.body(null, 304, headers);
+    return c.body(new Uint8Array(body), 200, { ...headers, 'Content-Type': 'image/png' });
+  });
+
+  // -------------------------------------------------------------------------
+  // 成员页与想聊这个（W14）
+  // -------------------------------------------------------------------------
+
+  app.get('/w/:wallId/p/:pageId', user, (c) => {
+    const auth = authOf(c);
+    const found = findPublishedMemberPage(deps, auth.user.id, c.req.param('wallId'), c.req.param('pageId'));
+    if (!found) return renderNotFound(c);
+    const model = loadMemberPageModel(deps, found);
+    if (!found.own) {
+      deps.repos.events.record({
+        type: 'page_open',
+        wallId: found.wall.id,
+        pageId: found.entry.pageId,
+        actorId: auth.user.id,
+        createdAt: deps.now().toISOString(),
+      });
+    }
+    return renderPage(c, {
+      title: `${model.card.displayName} · ${found.wall.name}`,
+      body: <MemberPageView model={model} csrf={auth.session.csrfToken} />,
+    });
+  });
+
+  app.post('/w/:wallId/p/:pageId/chat', form, (c) => {
+    const auth = authOf(c);
+    const found = findPublishedMemberPage(deps, auth.user.id, c.req.param('wallId'), c.req.param('pageId'));
+    if (!found) return renderNotFound(c);
+    const chat = resolveChat(deps, found, c.get('form').hookId ?? '');
+    if (!chat) return renderNotFound(c);
+    deps.repos.events.record({
+      type: 'want_to_chat',
+      wallId: found.wall.id,
+      pageId: found.entry.pageId,
+      actorId: auth.user.id,
+      props: { hookIndex: chat.hook.index },
+      createdAt: deps.now().toISOString(),
+    });
+    return renderPage(c, { title: `想和 ${chat.displayName} 聊聊`, body: <ChatView model={chat} /> });
+  });
 }

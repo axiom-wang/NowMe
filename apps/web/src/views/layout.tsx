@@ -4,13 +4,21 @@
  *
  * - `page-frame.js` 放在 `<head>` 里同步加载：它要在 iframe 第一次 `load` 之前注册监听（contracts 5.2）。
  * - `app.js` defer：复制按钮（`data-copy`）与危险操作确认（`form[data-confirm]`）。
+ * - 样式：`app.css`（基础，T2.1）、`wall.css`（墙、加入、组织者后台、“我的”，T3.1）、`workspace.css`（工作区，T3.2）。
+ *   只链接 `static/` 里确实存在的样式文件（启动时检查一次），避免缺文件时浏览器报 404。
  */
+import { existsSync } from 'node:fs';
+import { join } from 'node:path';
 import type { Context } from 'hono';
 import { raw } from 'hono/html';
 import type { Child, FC, PropsWithChildren } from 'hono/jsx';
 import { STATIC_PATH_PREFIX } from '../constants.js';
 import type { AppEnv, SessionAuth } from '../context.js';
+import { STATIC_DIR } from '../routes/static.js';
 import { CsrfField } from './forms.js';
+
+/** 页面链接的样式表（按顺序；`app.css` 总是链接）。 */
+export const STYLESHEETS: readonly string[] = ['app.css', ...['wall.css', 'workspace.css'].filter((name) => existsSync(join(STATIC_DIR, name)))];
 
 export interface LayoutProps {
   title: string;
@@ -48,7 +56,9 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="referrer" content="same-origin" />
         <title>{title === 'NOWMe' ? title : `${title} · NOWMe`}</title>
-        <link rel="stylesheet" href={`${STATIC_PATH_PREFIX}app.css`} />
+        {STYLESHEETS.map((name) => (
+          <link rel="stylesheet" href={`${STATIC_PATH_PREFIX}${name}`} />
+        ))}
         <script src={`${STATIC_PATH_PREFIX}page-frame.js`}></script>
         <script src={`${STATIC_PATH_PREFIX}app.js`} defer></script>
       </head>

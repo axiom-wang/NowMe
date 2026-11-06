@@ -28,6 +28,9 @@ catalog:
   fontverter: ^2.0.0
   upng-js: ^2.1.0
   "@types/upng-js": ^2.1.5
+  # @nowme/web（T3.1）：邀请二维码（服务端生成 SVG）
+  qrcode: ^1.5.4
+  "@types/qrcode": ^1.5.6
 
 # pnpm 11+ 默认拒绝依赖的构建脚本且安装失败（strictDepBuilds）。这里显式批准：
 # esbuild（tsx 依赖）的 postinstall 只校验 / 链接本平台的预编译二进制。
