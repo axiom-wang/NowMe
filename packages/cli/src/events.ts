@@ -5,18 +5,17 @@
  * 且 `NOWME_HOME/credentials` 里有这个页面的凭证时才会交给 `send`；否则静默跳过。
  * 上报失败一律忽略，不影响命令本身。props 只保留数字与布尔值（最多 16 个键），不带任何内容。
  *
- * T1.3 只提供钩子：默认没有 `send`（不联网）。T2.3 实现 fetch / submit 时提供真正的发送函数。
+ * 默认的发送函数见 api-client.ts 的 sendEventHttp（CliContext 默认使用）。
  */
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import {
   EVENT_PROPS_MAX_KEYS,
   EVENT_PROP_KEY_PATTERN,
-  NOWME_HOME_CREDENTIALS_FILE,
   WORKDIR_LINK_FILE,
   type AgentEventType,
 } from '@nowme/contracts';
-import { nowmeHome } from './workdir.js';
+import { readStoredCredential } from './credentials.js';
 
 export type EventProps = Record<string, number | boolean>;
 
@@ -68,16 +67,9 @@ export async function readWorkdirLink(workDir: string): Promise<WorkdirLink | nu
   return { server, wallId, pageId };
 }
 
-/** 读取某个页面的凭证（`credentials` 按 pageId 索引）；没有时返回 null。 */
+/** 读取某个页面的凭证（`credentials` 的 `pages[pageId]`）；没有时返回 null。 */
 export async function readPageCredential(env: NodeJS.ProcessEnv, pageId: string): Promise<string | null> {
-  const value = await readJson(join(nowmeHome(env), NOWME_HOME_CREDENTIALS_FILE));
-  if (typeof value !== 'object' || value === null) return null;
-  const entry = (value as Record<string, unknown>)[pageId];
-  if (typeof entry === 'string') return entry;
-  if (typeof entry === 'object' && entry !== null && typeof (entry as Record<string, unknown>).credential === 'string') {
-    return (entry as Record<string, string>).credential as string;
-  }
-  return null;
+  return (await readStoredCredential(env, pageId))?.credential ?? null;
 }
 
 /** 创建上报函数：没有关联信息、没有凭证或没有发送函数时什么也不做。 */

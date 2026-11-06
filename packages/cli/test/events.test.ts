@@ -25,7 +25,7 @@ const CREDENTIAL = `nmc_${'A'.repeat(43)}`;
 async function link(): Promise<void> {
   await writeFile(join(workdir.root, 'nowme.json'), JSON.stringify({ server: 'http://localhost:3000', wallId: 'wal_x', pageId: 'pg_x' }));
   await mkdir(home, { recursive: true });
-  await writeFile(join(home, 'credentials'), JSON.stringify({ pg_x: { credential: CREDENTIAL } }));
+  await writeFile(join(home, 'credentials'), JSON.stringify({ version: 1, pages: { pg_x: { server: 'http://localhost:3000', wallId: 'wal_x', credential: CREDENTIAL, createdAt: '2026-01-01T00:00:00Z' } } }));
 }
 
 describe('事件上报钩子', () => {
