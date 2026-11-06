@@ -23,7 +23,7 @@
 | M0 | 接口约定、monorepo 架子、CLAUDE.md | `pnpm install && pnpm typecheck && pnpm test` 全绿 | ✅ |
 | M1 | Skill + Kit + 示例页 + `nowme validate` / `nowme preview` | 6 个示例页校验 0 错误，preview 产出封面且无渲染错误 | ✅ |
 | M2 | 提交、服务端校验与沙箱展示 | `nowme fetch` → `nowme submit` → 主人在工作区的沙箱 iframe 中看到页面；S2、S3、S4 测试通过 | ✅ |
-| M3 | 墙的闭环 | 登录 → 建墙 → 邀请 → 加入 → 提交 → 发布 → 浏览 → 想聊这个 → 组织者后台，e2e 通过；S1–S6 全部有测试；安全审查完成且高危问题已修复 | ⬜ |
+| M3 | 墙的闭环 | 登录 → 建墙 → 邀请 → 加入 → 提交 → 发布 → 浏览 → 想聊这个 → 组织者后台，e2e 通过；S1–S6 全部有测试；安全审查完成且高危问题已修复 | 🟡 |
 | M4 | 端到端演练 | 子 Agent 扮演“用户的 Agent”按 Skill 完整走通，产出演练报告 | ⬜ |
 
 ## M0 架子与 CLAUDE.md
@@ -89,8 +89,8 @@ T1.3 / T1.4 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm te
 
 | 任务 | 负责 | 范围（只改） | 依赖 | 状态 |
 | --- | --- | --- | --- | --- |
-| T3.1 墙、邀请、加入、浏览、想聊这个、组织者后台、统计 | 子 Agent（worktree A） | `apps/web` 中墙与组织者相关路由/视图 | M2 | ⬜ |
-| T3.2 工作区闭环：发布确认、撤下、恢复、公开链接、断开、退出、删除 | 子 Agent（worktree B） | `apps/web` 中工作区与公开链接相关路由/视图 | M2 | ⬜ |
+| T3.1 墙、邀请、加入、浏览、想聊这个、组织者后台、统计 | 子 Agent（worktree A） | `apps/web` 中墙与组织者相关路由/视图 | M2 | 🟡 |
+| T3.2 工作区闭环：发布确认、撤下、恢复、公开链接、断开、退出、删除 | 子 Agent（worktree B） | `apps/web` 中工作区与公开链接相关路由/视图 | M2 | 🟡 |
 | T3.3 安全不变量测试集 + 全流程 e2e | 子 Agent | `tests/`、`apps/web/test/security` | T3.1、T3.2 | ⬜ |
 | ⏸ 用户预览检查点 | 总规划师 | 准备 `pnpm demo`（演示墙 + 6 个示例页已发布）并停下来，等用户看过预览效果再继续 | T3.3 | ⬜ |
 | T3.4 独立安全审查 | 子 Agent（只读） | `docs/security-review.md` | 用户预览检查点 | ⬜ |
