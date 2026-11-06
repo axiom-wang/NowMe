@@ -5,8 +5,14 @@ import type { KitFont } from '@nowme/contracts';
 
 /** Kit 字体变量前缀：`--nm-font-<fontId>`（contracts 1.1）。 */
 export const KIT_FONT_VAR_PREFIX = '--nm-font-';
-/** Kit 的语义变量只指向系统字体栈，不引用清单字体。 */
-export const KIT_SEMANTIC_FONT_VARS: ReadonlySet<string> = new Set(['sans', 'serif', 'mono']);
+/**
+ * Kit 的语义变量（`--nm-font-sans/serif/mono`）与角色变量（`--nm-font-body/display/code/hand`）：
+ * 默认只指向系统字体栈，不引用清单字体，校验器把它们视为已知（不报 FONT_NOT_IN_KIT）。
+ * 页面把角色变量改成清单字体时（`--nm-font-display: var(--nm-font-lxgw-wenkai)` 或写 family 名），
+ * 赋值里的清单字体照常计入 fontsUsed（contracts 1.1）。与 @nowme/kit 的
+ * KIT_SYSTEM_FONT_VARIABLES / KIT_FONT_ROLE_VARIABLES 一致（校验器不依赖 kit 包，这里单独列出）。
+ */
+export const KIT_SEMANTIC_FONT_VARS: ReadonlySet<string> = new Set(['sans', 'serif', 'mono', 'body', 'display', 'code', 'hand']);
 
 /** CSS 通用族名与全局关键字。 */
 const GENERIC_FAMILIES = [

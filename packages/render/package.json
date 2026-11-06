@@ -23,10 +23,16 @@
   "dependencies": {
     "@nowme/contracts": "workspace:*",
     "@nowme/kit": "workspace:*",
-    "playwright": "catalog:"
+    "@nowme/validator": "workspace:*",
+    "fontverter": "catalog:",
+    "parse5": "catalog:",
+    "playwright": "catalog:",
+    "subset-font": "catalog:",
+    "upng-js": "catalog:"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "@types/upng-js": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

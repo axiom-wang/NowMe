@@ -121,12 +121,12 @@ nowme fetch <wallId> <token> --server <url>
 ## 第 5 步：校验与截图自查
 
 1. `nowme validate page`：逐条按报告里的 `hint` 修复，重复直到 0 个错误。警告也尽量处理；`EXTRA_CHARS_MISSING` 会被自动补全。错误码对照见 `reference/page-contract.md`。
-2. `nowme preview page`：生成封面 `cover.png`（页面顶部 375×500）和整页截图，并报告渲染问题（脚本报错、CSP 违规、加载慢、空白）。
+2. `nowme preview page`：在和平台一样的沙箱里渲染，报告渲染问题（脚本报错、CSP 违规、加载慢、空白），并做与提交后一致的字体子集化。`page/` 里还没有 `cover.png` 时会把封面（页面顶部 375×500，存成 750×1000）写进去；之后改了首屏要重新生成封面就加 `--cover`。其他截图（封面副本、整页、减少动态效果的整页、按 `data-nm-id` 切开的区块图）和 `report.json` 写在工作目录的 `.nowme-preview/` 里（不会进 `page/`），命令会打印每张图的绝对路径。
 3. **看截图**，按 `reference/self-check.md` 逐项检查，至少做一轮“截图 → 审视 → 修改 → 再截图”。你看不了图片时，如实告诉主人，请他用 `nowme preview page --serve` 在浏览器里看，再按他的反馈改。
 
 ## 第 6 步：交给主人，按意见修改（详见 `reference/editing.md`）
 
-1. 运行 `nowme preview page --serve`，把地址给主人；用两三句话说明你的设计构想，以及缩略卡上的一行介绍和接话点。
+1. 运行 `nowme preview page --serve`（默认 `http://localhost:4100/`，端口被占用时加 `--port <端口>`），把地址给主人；用两三句话说明你的设计构想，以及缩略卡上的一行介绍和接话点。
 2. 主人提修改时，先确定改哪个区块（`data-nm-id`），**只改那个区块**，其他部分保持不变。范围不清时先问（例如列出区块编号让主人选）。
 3. 主人在修改时补充的新信息属于“主人明确表达”，可以直接用；其中的长期信息按第 3 步写回画像。
 4. 每次修改后重新 `validate` 与 `preview`。做不到的请求如实说明，并给替代方案。

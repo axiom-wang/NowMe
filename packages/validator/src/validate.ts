@@ -30,6 +30,7 @@ import { HINTS } from './messages.js';
 import { skippedEntriesOf, type SkippedReason } from './page-files.js';
 import { DYNAMIC_PLACEHOLDER, classifyDynamicRef, classifyRef } from './refs.js';
 import { IssueCollector, createReport, emptyStats } from './report.js';
+import { isSystemFile } from './system-files.js';
 import { clip, decodeUtf8, listPreview, sortChars } from './text.js';
 
 /** 超过这个体积不再做深入分析（只报 HTML_TOO_LARGE），避免服务端被超大文件拖慢。 */
@@ -44,13 +45,15 @@ const SKIPPED_MESSAGES: Record<SkippedReason, string> = {
   unreadable: '无法读取，已跳过',
 };
 
-export function validatePage(files: PageFiles, opts: ValidateOptions = {}): ValidationReport {
+export function validatePage(input: PageFiles, opts: ValidateOptions = {}): ValidationReport {
   const kit = new KitFontIndex(opts.kitFonts ?? []);
   const issues = new IssueCollector();
   const stats = emptyStats();
+  // 系统文件（.DS_Store、Thumbs.db、desktop.ini、._*）当作不存在：不报任何问题，也不计入 ignoredFiles（contracts 1.4）
+  const files = withoutSystemFiles(input);
 
   // 读取目录时跳过的条目（符号链接等）
-  for (const entry of skippedEntriesOf(files)) {
+  for (const entry of skippedEntriesOf(input).filter((item) => !isSystemFile(item.path))) {
     issues.add('IGNORED_FILE', entry.path, undefined, `${entry.path} ${SKIPPED_MESSAGES[entry.reason]}`, entry.reason === 'symlink' ? HINTS.symlink : HINTS.ignoredFile);
     stats.ignoredFiles.push(entry.path);
     if (isCredentialsFileName(entry.path)) {
@@ -131,6 +134,11 @@ export function validatePage(files: PageFiles, opts: ValidateOptions = {}): Vali
   }
 
   return createReport(issues.list(), stats);
+}
+
+function withoutSystemFiles(files: PageFiles): PageFiles {
+  if (![...files.keys()].some(isSystemFile)) return files;
+  return new Map([...files].filter(([path]) => !isSystemFile(path)));
 }
 
 function missingFileHint(name: string): string {

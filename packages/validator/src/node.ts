@@ -1,6 +1,7 @@
 /**
  * @nowme/validator/node：读取本地 page/ 目录（node 辅助，CLI 使用）。
  *
+ * - 系统文件（`.DS_Store`、`Thumbs.db`、`desktop.ini`、`._*`，任意层级）直接跳过，不读也不记录；
  * - 不跟随任何符号链接（包括指向目录内的），符号链接、设备、管道等特殊文件跳过并记录，
  *   validatePage 会把它们报成 IGNORED_FILE 警告；
  * - 打开文件时带 O_NOFOLLOW，防止检查与读取之间被替换成符号链接；
@@ -10,6 +11,7 @@ import { constants } from 'node:fs';
 import { lstat, open, readdir, realpath } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PageDirFiles, type SkippedReason } from './page-files.js';
+import { isSystemFileName } from './system-files.js';
 
 export * from './index.js';
 export { PageDirFiles, type SkippedEntry, type SkippedReason } from './page-files.js';
@@ -32,6 +34,8 @@ export async function readPageDir(dir: string): Promise<PageDirFiles> {
     const entries = await readdir(absDir, { withFileTypes: true });
     entries.sort((x, y) => (x.name < y.name ? -1 : x.name > y.name ? 1 : 0));
     for (const entry of entries) {
+      // .DS_Store、Thumbs.db、desktop.ini、._*：不读、不记录（contracts 1.4）
+      if (isSystemFileName(entry.name)) continue;
       const rel = relDir === '' ? entry.name : `${relDir}/${entry.name}`;
       const abs = join(absDir, entry.name);
       if (entry.isSymbolicLink()) {

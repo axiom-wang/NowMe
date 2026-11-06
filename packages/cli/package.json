@@ -25,6 +25,7 @@
   },
   "dependencies": {
     "@nowme/contracts": "workspace:*",
+    "@nowme/kit": "workspace:*",
     "@nowme/render": "workspace:*",
     "@nowme/validator": "workspace:*"
   },

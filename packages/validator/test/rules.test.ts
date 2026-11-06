@@ -309,10 +309,10 @@ describe('cover.png 与 assets/', () => {
 });
 
 describe('IGNORED_FILE 与跳过的条目', () => {
-  it('白名单外的文件列进 stats.ignoredFiles', () => {
+  it('白名单外的文件列进 stats.ignoredFiles（系统文件 .DS_Store 等完全忽略，见 role-vars-and-system-files.test.ts）', () => {
     const report = run(makePage({ files: { 'brief.md': '#', 'draft/old.html': '<p>', '.DS_Store': 'x', 'Index.html': 'x' } }));
-    expect(report.stats.ignoredFiles.sort()).toEqual(['.DS_Store', 'Index.html', 'brief.md', 'draft/old.html']);
-    expect(issuesOf(report, 'IGNORED_FILE')).toHaveLength(4);
+    expect(report.stats.ignoredFiles.sort()).toEqual(['Index.html', 'brief.md', 'draft/old.html']);
+    expect(issuesOf(report, 'IGNORED_FILE')).toHaveLength(3);
     expect(report.ok).toBe(true);
   });
 

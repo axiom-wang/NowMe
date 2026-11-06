@@ -23,6 +23,11 @@ catalog:
   postcss: ^8.5.32
   postcss-safe-parser: ^7.1.0
   postcss-value-parser: ^4.2.0
+  # @nowme/render（T1.3）：字体子集化（harfbuzz wasm）与 WOFF2 转换（wasm）、封面 PNG 量化压缩（纯 JS）
+  subset-font: ^2.9.0
+  fontverter: ^2.0.0
+  upng-js: ^2.1.0
+  "@types/upng-js": ^2.1.5
 
 # pnpm 11+ 默认拒绝依赖的构建脚本且安装失败（strictDepBuilds）。这里显式批准：
 # esbuild（tsx 依赖）的 postinstall 只校验 / 链接本平台的预编译二进制。

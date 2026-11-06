@@ -14,7 +14,7 @@ import {
 } from '@nowme/contracts';
 
 /** 校验器版本，写进每份报告。规则有实质变化时递增。 */
-export const VALIDATOR_VERSION = '0.1.0';
+export const VALIDATOR_VERSION = '0.1.1';
 
 export function emptyStats(): ValidationStats {
   return {
