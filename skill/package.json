@@ -1,0 +1,37 @@
+{
+  "name": "@nowme/skill",
+  "version": "0.1.0",
+  "private": true,
+  "description": "NOWMe Skill：SKILL.md、场景指南、brief 与画像模板、示例页",
+  "type": "module",
+  "exports": {
+    ".": {
+      "source": "./src/index.ts",
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "SKILL.md",
+    "reference",
+    "scenes",
+    "templates",
+    "examples"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.build.json",
+    "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@nowme/contracts": "workspace:*"
+  },
+  "devDependencies": {
+    "@nowme/kit": "workspace:*",
+    "@types/node": "catalog:",
+    "typescript": "catalog:",
+    "vitest": "catalog:"
+  }
+}

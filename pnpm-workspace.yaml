@@ -1,6 +1,7 @@
 packages:
   - packages/*
   - apps/*
+  - skill
 
 # 统一依赖版本。playwright 与 @playwright/test 精确锁定 1.58.2：
 # 它对应 Chromium 构建号 1208（本机 ~/Library/Caches/ms-playwright/chromium-1208 已缓存），
@@ -9,6 +10,8 @@ catalog:
   "@hono/node-server": ^2.1.6
   "@playwright/test": 1.58.2
   "@types/node": ^22.20.5
+  acorn: ^8.19.0
+  happy-dom: ^21.0.4
   hono: ^4.13.16
   playwright: 1.58.2
   tsx: ^4.23.15
