@@ -67,7 +67,7 @@ page/
   - `nowme.css` 内置全局规则：`@media (prefers-reduced-motion: reduce)` 下关闭所有 CSS `animation` 与 `transition`。因此**引入了 `nowme.css` 的页面，CSS 动效视为已处理**。
   - 没有引入 `nowme.css` 而使用 CSS 动效（`@keyframes`、`animation`、`transition`）时，页面自己必须写 `prefers-reduced-motion` 媒体查询。
   - 脚本动效（`requestAnimationFrame`、`.animate(`、Canvas/WebGL 循环）必须检查 `nowme.reducedMotion` 或 `matchMedia('(prefers-reduced-motion: reduce)')`，减少动效时给出静态画面。
-- 字体：只按名称选用 Kit 字体清单中的字体，不写 `@font-face`，不内联字体。Kit 为清单中每款字体提供变量 `--nm-font-<fontId>`（例如 `--nm-font-lxgw-wenkai`，值为该字体 family 名加系统回退）；页面使用该变量或直接写 family 名。Kit 的语义变量 `--nm-font-sans` / `--nm-font-serif` / `--nm-font-mono` 只指向系统字体栈，不引用清单字体（这样校验器能准确知道页面用了哪款清单字体）。
+- 字体：只按名称选用 Kit 字体清单中的字体，不写 `@font-face`，不内联字体。Kit 为清单中每款字体提供变量 `--nm-font-<fontId>`（例如 `--nm-font-lxgw-wenkai`，值为该字体 family 名加系统回退）；页面使用该变量或直接写 family 名。Kit 的角色变量 `--nm-font-sans` / `--nm-font-serif` / `--nm-font-mono` / `--nm-font-body` / `--nm-font-display` / `--nm-font-code` / `--nm-font-hand` 默认只指向系统字体栈，不引用清单字体；页面可以把它们改成清单字体（例如 `--nm-font-display: var(--nm-font-lxgw-wenkai)`），校验器通过这类赋值得知用了哪款清单字体。校验器把这些角色变量视为已知，不报 `FONT_NOT_IN_KIT`。
 - 移动端优先：以 375px 宽为基准。
 
 ### 1.2 `card.json`
@@ -336,7 +336,7 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 | # | 不变量 | 最低测试要求 |
 | --- | --- | --- |
 | S1 | 展示用户页面的 iframe 只有 `sandbox="allow-scripts"`，不含 `allow-same-origin`、`allow-top-navigation*`、`allow-forms`、`allow-popups*`、`allow-modals`；`src` 指向 `NOWME_PAGES_ORIGIN` | 解析所有展示页面的路由（成员页、工作区预览、公开链接）输出的 HTML；**浏览器测试**：恶意页面在 iframe 内尝试读 cookie、`fetch` 主站与外部、`localStorage`、改 `top.location`、提交表单、`window.open`，全部失败，主站 URL 不变，探针服务器收不到请求；iframe 自我导航（`location = 'https://...'`）被主站检测并重置（见 5.2） |
-| S2 | 页面托管对页面文档返回严格 CSP：`default-src 'none'`；`script-src 'unsafe-inline' <pages>/_nowme/kit/`；`style-src 'unsafe-inline' <pages>/_nowme/kit/`；`img-src <pages>/v/<ticket>/assets/ <pages>/_nowme/kit/ data: blob:`；`media-src` 同 `img-src`；`font-src <pages>/v/<ticket>/_fonts/`；`connect-src 'none'`；`form-action 'none'`；`base-uri 'none'`；`frame-ancestors <web>`（预览时为预览外壳源）；`sandbox allow-scripts`；无 `'unsafe-eval'`。另加 `X-Content-Type-Options: nosniff`、`Referrer-Policy: no-referrer`、`Permissions-Policy` 禁用摄像头/麦克风/定位等、不设任何 cookie | 对 pages-host 响应头逐项断言；CSP 构造函数单测；渲染管线用同一构造函数 |
+| S2 | 页面托管对页面文档返回严格 CSP：`default-src 'none'`；`script-src 'unsafe-inline' <pages>/_nowme/kit/`；`style-src 'unsafe-inline' <pages>/_nowme/kit/`；`img-src <pages>/v/<ticket>/assets/ <pages>/_nowme/kit/ data: blob:`；`media-src` 同 `img-src`；`font-src <pages>/v/<ticket>/_fonts/`；`connect-src 'none'`；`form-action 'none'`；`base-uri 'none'`；`frame-ancestors <web>`（预览时为预览外壳源）；`sandbox allow-scripts`；无 `'unsafe-eval'`。字体子集响应（`/v/<ticket>/_fonts/*`）必须带 `Access-Control-Allow-Origin: *`（沙箱文档的源是 `null`，没有 CORS 头时 Chromium 拒绝加载字体）。另加 `X-Content-Type-Options: nosniff`、`Referrer-Policy: no-referrer`、`Permissions-Policy` 禁用摄像头/麦克风/定位等、不设任何 cookie | 对 pages-host 响应头逐项断言；CSP 构造函数单测；渲染管线用同一构造函数 |
 | S3 | 一次性 token：只能换取一次；过期无效；只对签发它的那一页、那一面墙有效；换取后该页旧凭证全部失效；数据库只存哈希 | API 集成测试覆盖每一条 |
 | S4 | 页面凭证不能发布：凭证调用发布、恢复、撤下、公开链接、删除、组织者操作等任何主站路由都无效且不改变状态；凭证不能当会话用；凭证不写进 `page/`、不随提交上传；校验器拦截凭证字符串 | 用凭证逐个调用所有改变状态的主站路由并断言数据库无变化；CLI 测试断言 `page/` 中无凭证、上传内容无凭证 |
 | S5 | 组织者看不到私密内容：组织者后台只有昵称、加入时间、发布状态；组织者无法访问他人的工作区、版本、未发布内容、未公开的联系方式；本地路线的 brief / 画像从不上传 | 组织者身份请求他人工作区、版本预览、票据签发 → 404；后台 HTML 不含版本 ID、未发布 card 内容、私密联系方式；提交接口丢弃白名单外文件 |
@@ -388,6 +388,9 @@ interface SceneGuide {
 - 文本长度按 Unicode 码点计算，不能全为空白、不能含控制字符；所有 JSON 对象拒绝未知字段（`manifest.generator` 内部除外）；`manifest.fonts`（可为空数组）与 `extraChars`（可为空字符串）必填。
 - 校验器（T1.1）额外拦截：`importmap` / `speculationrules` 脚本、`fencedframe`、`applet`、脚本动态创建的禁用元素、`ping` / `lowsrc` 等资源属性、`navigation.navigate`。`card.json` 中 hook 的 `kind` 不做场景匹配检查（自由文本）。SVG SMIL 动画暂不纳入减少动效规则（已知缺口）。
 - API 错误码增加 `INTERNAL_ERROR`（500）；事件 `props` 最多 16 个键；一次提交最多 64 个文件。
+- Kit（T1.2）：`fonts.json` 的 `sourceUrl` 要么是以 `/` 结尾的目录地址（文件地址 = `sourceUrl` + 文件名），要么是 `.zip`（按文件名解压）；字体源文件由 `pnpm --filter @nowme/kit fonts:fetch` 下载，不入库。场景指南中“默认勾选”的边界选项暂时写在选项文字里（`（默认勾选）`）。
+- 字体子集的取字范围：`index.html` 源码中出现的全部字符（含属性和脚本）+ 渲染后文字 + `manifest.extraChars`。因此 `extraChars` 只需覆盖源码中完全没有出现的字。
+- 截图前调用 `nowme.revealAll()`，避免首屏以下的 `.nm-reveal` 内容在整页截图中不可见。
 - `loadConfig` 拒绝主站与页面托管同主机名、TTL 只接受 1–720 小时、票据密钥至少 32 字符。
 
 ## 9. 原型试跑不做
