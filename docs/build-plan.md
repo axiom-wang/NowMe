@@ -69,7 +69,7 @@ T1.2 验收记录（2026-11-06）：合并后（解决 lockfile 与重复 catalo
 | 任务 | 负责 | 范围（只改） | 依赖 | 状态 |
 | --- | --- | --- | --- | --- |
 | T2.1 主站核心：数据库、登录、Agent API、提交管线、工作区预览 | 子 Agent（worktree A） | `apps/web` | M1 | ⬜ |
-| T2.2 页面托管 | 子 Agent（worktree，Sonnet） | `apps/pages-host` | T0.2、T1.2（只依赖 contracts 与 Kit，提前与 T1.3 并行） | 🟡 |
+| T2.2 页面托管 | 子 Agent（worktree，Sonnet） | `apps/pages-host` | T0.2、T1.2（只依赖 contracts 与 Kit，提前与 T1.3 并行） | ✅ |
 | T2.3 CLI fetch / submit / status / event | 子 Agent（worktree C） | `packages/cli` | M1 | ⬜ |
 | T2.4 M2 集成与浏览器沙箱测试 | 子 Agent | `tests/e2e`、根脚本 | T2.1–T2.3 | ⬜ |
 
@@ -78,6 +78,7 @@ T1.2 验收记录（2026-11-06）：合并后（解决 lockfile 与重复 catalo
 - **T2.1**：迁移建出 contracts 第 3 节全部表；邮箱验证码登录（dev outbox）、会话、CSRF 与 Origin 校验；Agent API 四个接口；提交时服务端重新校验 + 渲染 + 字体子集 + 按约定布局存储；rejected 不影响已有版本；工作区显示指令、版本与校验报告、沙箱 iframe 预览；开发种子脚本；S3、S4 集成测试。
 - **T2.2**：S2 响应头逐项测试；票据缺失/伪造/过期/篡改 → 拒绝；路径穿越测试；只提供 `served/` 与 Kit；不设 cookie。
 - **T2.3**：对模拟服务器的测试：凭证写入 `NOWME_HOME/credentials`（权限 0600），从不写入 `page/`；提交前先本地校验，只上传白名单文件；422 报告可读输出；事件上报不含内容、失败不影响主流程。
+- T2.2 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm test`（38 文件 / 1031 用例）、`pnpm test:security`（15 文件 / 549 用例）、pages-host 自身 47 用例通过。总规划师实际启动 pages-host 冒烟：真实票据 200 且 CSP 与 contracts S2 逐项一致、无 `Set-Cookie`；伪造票据、`../`、`%2e%2e` 穿越均 404；Kit 返回正确 content-type。遗留：`apps/pages-host/test/fixtures/test-font.woff2` 来源授权未核实，T1.3 合并后换成其提交的开源授权测试字体。
 - **T2.4**：`pnpm test:e2e`：种子 → `nowme fetch` → `nowme submit` 示例页 → 浏览器打开工作区 → iframe 属性与 CSP 断言；恶意页在 iframe 内的 S1 探测全部失败。
 
 ## M3 墙的闭环

@@ -327,7 +327,9 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 | `GET /v/:ticket/` 与 `GET /v/:ticket/index.html` | 返回该版本的 `served/index.html` |
 | `GET /v/:ticket/assets/*`、`GET /v/:ticket/_fonts/*` | 该版本的图片与字体子集 |
 | `GET /_nowme/kit/v1/*` | Kit 静态文件（公开） |
-| 其他 | `404` |
+| 其他 | `404`；非 GET/HEAD 返回 `405` |
+
+`/v/:ticket`（无结尾斜杠）`308` 重定向到 `/v/:ticket/`。页面、图片、字体响应 `Cache-Control: no-store`；Kit `public, max-age=300`。
 
 **票据**：`<revisionId>.<expUnix>.<sig>`，`sig = base64url(HMAC-SHA256(secret, "<revisionId>.<expUnix>"))`，有效期 [原型默认] 30 分钟；共享密钥 `NOWME_TICKET_SECRET`（开发默认读写 `.data/secret`）。主站只在授权检查通过后签发：主人 → 自己页面的任意 `accepted` 版本；墙内有效成员 → 当前发布版本；公开链接 → 当前发布版本。签发与校验函数在 `packages/contracts`，两边共用。
 
