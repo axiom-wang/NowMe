@@ -382,6 +382,8 @@ summary:focus-visible {
 /* 手机框：页面以 375px 为基准 */
 .page-frame {
   margin: 0;
+  width: 100%;
+  min-width: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -389,8 +391,9 @@ summary:focus-visible {
 }
 
 .page-frame__phone {
-  max-width: calc(100vw - 16px);
-  overflow-x: auto;
+  box-sizing: border-box;
+  width: min(395px, 100%);
+  max-width: 100%;
   padding: 10px;
   border-radius: 32px;
   background: #1d1b18;
@@ -399,7 +402,9 @@ summary:focus-visible {
 
 .page-frame__screen {
   display: block;
-  width: 375px;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 375px;
   height: 667px;
   border: 0;
   border-radius: 22px;

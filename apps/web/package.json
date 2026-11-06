@@ -25,6 +25,7 @@
     "start": "node --disable-warning=ExperimentalWarning dist/main.js",
     "start:source": "tsx --conditions=source --disable-warning=ExperimentalWarning src/main.ts",
     "seed": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/seed.ts",
+    "demo": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/demo.ts",
     "stats": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/stats.ts"
   },
   "dependencies": {

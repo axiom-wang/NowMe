@@ -15,10 +15,12 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:security": "vitest run security --passWithNoTests",
-    "test:e2e": "playwright test",
+    "test:e2e": "NODE_OPTIONS=--conditions=source playwright test",
+    "demo": "pnpm --filter @nowme/web demo",
     "nowme": "tsx --conditions=source packages/cli/src/bin.ts"
   },
   "devDependencies": {
+    "@nowme/contracts": "workspace:*",
     "@playwright/test": "catalog:",
     "@types/node": "catalog:",
     "tsx": "catalog:",
