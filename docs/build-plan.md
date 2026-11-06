@@ -22,7 +22,7 @@
 | --- | --- | --- | --- |
 | M0 | 接口约定、monorepo 架子、CLAUDE.md | `pnpm install && pnpm typecheck && pnpm test` 全绿 | ✅ |
 | M1 | Skill + Kit + 示例页 + `nowme validate` / `nowme preview` | 6 个示例页校验 0 错误，preview 产出封面且无渲染错误 | 🟡 |
-| M2 | 提交、服务端校验与沙箱展示 | `nowme fetch` → `nowme submit` → 主人在工作区的沙箱 iframe 中看到页面；S2、S3、S4 测试通过 | ⬜ |
+| M2 | 提交、服务端校验与沙箱展示 | `nowme fetch` → `nowme submit` → 主人在工作区的沙箱 iframe 中看到页面；S2、S3、S4 测试通过 | 🟡 |
 | M3 | 墙的闭环 | 登录 → 建墙 → 邀请 → 加入 → 提交 → 发布 → 浏览 → 想聊这个 → 组织者后台，e2e 通过；S1–S6 全部有测试；安全审查完成且高危问题已修复 | ⬜ |
 | M4 | 端到端演练 | 子 Agent 扮演“用户的 Agent”按 Skill 完整走通，产出演练报告 | ⬜ |
 
@@ -50,7 +50,7 @@ T0.2 验收记录（2026-11-06，总规划师亲自运行）：`pnpm install --f
 | --- | --- | --- | --- | --- |
 | T1.1 页面校验器 | 子 Agent（worktree） | `packages/validator` | T0.2 | ✅ |
 | T1.2 Kit + Skill + 示例页 | 子 Agent（worktree） | `packages/kit`、`skill/` | T0.2 | ✅ |
-| T1.3 渲染与 CLI validate / preview | 子 Agent | `packages/render`、`packages/cli` | T1.1、T1.2 | ⬜ |
+| T1.3 渲染与 CLI validate / preview | 子 Agent（worktree） | `packages/render`、`packages/cli`（另：校验器两处小修、示例封面） | T1.1、T1.2 | 🟡 |
 | T1.4 M1 验收 | 总规划师 | — | T1.3 | ⬜ |
 
 验收标准：
@@ -69,7 +69,7 @@ T1.2 验收记录（2026-11-06）：合并后（解决 lockfile 与重复 catalo
 | 任务 | 负责 | 范围（只改） | 依赖 | 状态 |
 | --- | --- | --- | --- | --- |
 | T2.1 主站核心：数据库、登录、Agent API、提交管线、工作区预览 | 子 Agent（worktree A） | `apps/web` | M1 | ⬜ |
-| T2.2 页面托管 | 子 Agent（worktree B） | `apps/pages-host` | M1 | ⬜ |
+| T2.2 页面托管 | 子 Agent（worktree，Sonnet） | `apps/pages-host` | T0.2、T1.2（只依赖 contracts 与 Kit，提前与 T1.3 并行） | 🟡 |
 | T2.3 CLI fetch / submit / status / event | 子 Agent（worktree C） | `packages/cli` | M1 | ⬜ |
 | T2.4 M2 集成与浏览器沙箱测试 | 子 Agent | `tests/e2e`、根脚本 | T2.1–T2.3 | ⬜ |
 
