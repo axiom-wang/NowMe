@@ -82,3 +82,19 @@ export async function writeRevisionFiles(dataDir: string, revisionId: string, fi
 export async function removeRevisionFiles(dataDir: string, revisionId: string): Promise<void> {
   await rm(revisionDir(dataDir, revisionId), { recursive: true, force: true });
 }
+
+/**
+ * 删除页面（T3.2）：逐个删除这些版本的目录（不存在的跳过）。不会因为某一个失败而停下，
+ * 返回删除失败的版本 ID（调用方记日志；数据库里这些版本已是墓碑，不会再签发票据）。
+ */
+export async function removeAllRevisionFiles(dataDir: string, revisionIds: readonly string[]): Promise<string[]> {
+  const failed: string[] = [];
+  for (const id of revisionIds) {
+    try {
+      await removeRevisionFiles(dataDir, id);
+    } catch {
+      failed.push(id);
+    }
+  }
+  return failed;
+}

@@ -1,6 +1,9 @@
 /**
  * `pages` 表（contracts 3）：加入墙时创建，一个成员关系一页。
- * T3.2 在这里补充联系方式、公开链接令牌等函数。
+ *
+ * - 联系方式（`contact_*`）：主人每次发布时确认，保存“上次的选择”（不公开时也保存，只给主人自己预填）；
+ *   墙上可见的是发布时的快照 `publications.contact_json`，不是这里的值。
+ * - 公开链接令牌 `public_token`（`pub_...`，明文，可轮换）：null 表示未开启；关闭即置空，旧链接立即失效。
  */
 import { toBool, type Database } from './database.js';
 
@@ -55,6 +58,14 @@ export function createPagesRepo(db: Database) {
   const byId = db.prepare('SELECT * FROM pages WHERE id = ?');
   const byMembership = db.prepare('SELECT * FROM pages WHERE membership_id = ?');
   const touch = db.prepare('UPDATE pages SET updated_at = ? WHERE id = ?');
+  const byPublicToken = db.prepare('SELECT * FROM pages WHERE public_token = ?');
+  const setContact = db.prepare(
+    'UPDATE pages SET contact_channel = ?, contact_value = ?, contact_public = ?, updated_at = ? WHERE id = ?',
+  );
+  const setPublicToken = db.prepare('UPDATE pages SET public_token = ?, updated_at = ? WHERE id = ?');
+  const clearPersonal = db.prepare(
+    'UPDATE pages SET contact_channel = NULL, contact_value = NULL, contact_public = 0, public_token = NULL, updated_at = ? WHERE id = ?',
+  );
 
   return {
     create(page: Page): Page {
@@ -80,6 +91,22 @@ export function createPagesRepo(db: Database) {
     },
     touch(id: string, now: string): void {
       touch.run(now, id);
+    },
+    /** 公开链接令牌对应的页面（调用方先检查令牌格式）。 */
+    findByPublicToken(publicToken: string): Page | null {
+      return toPage(byPublicToken.get(publicToken) as PageRow | undefined);
+    },
+    /** 保存主人确认的联系方式（发布时）。`value` 为空时存 null。 */
+    setContact(id: string, contact: { channel: string; value: string | null; isPublic: boolean }, now: string): void {
+      setContact.run(contact.channel, contact.value, contact.isPublic ? 1 : 0, now, id);
+    },
+    /** 开启（新令牌）或关闭（null）公开链接。 */
+    setPublicToken(id: string, publicToken: string | null, now: string): void {
+      setPublicToken.run(publicToken, now, id);
+    },
+    /** 删除页面：清空联系方式与公开链接（页面行本身保留，可以重新开始）。 */
+    clearContactAndPublicLink(id: string, now: string): void {
+      clearPersonal.run(now, id);
     },
   };
 }
