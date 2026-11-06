@@ -1,0 +1,1 @@
+test-font.woff2: WOFF2 conversion of packages/render/test/fixtures/fonts/NotoSansSC-Regular-test-subset.otf (subset of Noto Sans SC). License: SIL Open Font License 1.1, see OFL.txt.

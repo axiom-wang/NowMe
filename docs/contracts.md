@@ -34,7 +34,7 @@
 | `packages/contracts` | 本文的类型、zod schema、常量、错误码；安全原语：票据签发/校验、页面 CSP 构造、沙箱属性常量 | 无 |
 | `packages/validator` | 页面静态校验（纯函数，不碰浏览器、不碰网络） | contracts |
 | `packages/kit` | NOWMe Kit：`nowme.css`、`nowme.js`、组件、`fonts.json`、字体下载脚本 | contracts |
-| `packages/render` | 无头渲染（Playwright）、截图、渲染后文字提取、CSP 违规检测、字体子集化、本地双源预览服务器 | contracts, kit |
+| `packages/render` | 无头渲染（Playwright）、截图、渲染后文字提取、CSP 违规检测、字体子集化、本地双源预览服务器；入口 `buildRevision()`（`mode: 'submit' \| 'preview'`）、`createRenderer()` | contracts, validator, kit |
 | `packages/cli` | `nowme` 命令行：fetch / validate / preview / submit / status / event | contracts, validator, render |
 | `skill/` | `SKILL.md`、场景指南 JSON、brief 与画像模板、自查清单、示例页 | （内容，引用 kit 的类名与 API） |
 | `apps/pages-host` | 用户页面托管 | contracts, kit |
@@ -392,6 +392,8 @@ interface SceneGuide {
 - API 错误码增加 `INTERNAL_ERROR`（500）；事件 `props` 最多 16 个键；一次提交最多 64 个文件。
 - Kit（T1.2）：`fonts.json` 的 `sourceUrl` 要么是以 `/` 结尾的目录地址（文件地址 = `sourceUrl` + 文件名），要么是 `.zip`（按文件名解压）；字体源文件由 `pnpm --filter @nowme/kit fonts:fetch` 下载，不入库。场景指南中“默认勾选”的边界选项暂时写在选项文字里（`（默认勾选）`）。
 - 字体子集的取字范围：`index.html` 源码中出现的全部字符（含属性和脚本）+ 渲染后文字 + `manifest.extraChars`。因此 `extraChars` 只需覆盖源码中完全没有出现的字。
+- 系统文件（`isSystemFile`，在 `@nowme/validator` 导出）在提交时由 CLI 过滤、服务端丢弃，不算白名单路径。
+- 渲染（T1.3）：页面自我导航和被拦截的请求目前归入 `RENDER_CSP_VIOLATION`；主站 CSP 的 `frame-src <pages>` 已能阻止 iframe 跳到外部地址，5.2 的 `load` 检测用于拦截页面源内部的跳转。服务端渲染不要用 Playwright 的 `serviceWorkers: 'block'`（在沙箱文档中会误报脚本异常）。
 - 截图前调用 `nowme.revealAll()`，避免首屏以下的 `.nm-reveal` 内容在整页截图中不可见。
 - `loadConfig` 拒绝主站与页面托管同主机名、TTL 只接受 1–720 小时、票据密钥至少 32 字符。
 

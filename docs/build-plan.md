@@ -21,7 +21,7 @@
 | 里程碑 | 目标 | 检查点 | 状态 |
 | --- | --- | --- | --- |
 | M0 | 接口约定、monorepo 架子、CLAUDE.md | `pnpm install && pnpm typecheck && pnpm test` 全绿 | ✅ |
-| M1 | Skill + Kit + 示例页 + `nowme validate` / `nowme preview` | 6 个示例页校验 0 错误，preview 产出封面且无渲染错误 | 🟡 |
+| M1 | Skill + Kit + 示例页 + `nowme validate` / `nowme preview` | 6 个示例页校验 0 错误，preview 产出封面且无渲染错误 | ✅ |
 | M2 | 提交、服务端校验与沙箱展示 | `nowme fetch` → `nowme submit` → 主人在工作区的沙箱 iframe 中看到页面；S2、S3、S4 测试通过 | 🟡 |
 | M3 | 墙的闭环 | 登录 → 建墙 → 邀请 → 加入 → 提交 → 发布 → 浏览 → 想聊这个 → 组织者后台，e2e 通过；S1–S6 全部有测试；安全审查完成且高危问题已修复 | ⬜ |
 | M4 | 端到端演练 | 子 Agent 扮演“用户的 Agent”按 Skill 完整走通，产出演练报告 | ⬜ |
@@ -50,8 +50,8 @@ T0.2 验收记录（2026-11-06，总规划师亲自运行）：`pnpm install --f
 | --- | --- | --- | --- | --- |
 | T1.1 页面校验器 | 子 Agent（worktree） | `packages/validator` | T0.2 | ✅ |
 | T1.2 Kit + Skill + 示例页 | 子 Agent（worktree） | `packages/kit`、`skill/` | T0.2 | ✅ |
-| T1.3 渲染与 CLI validate / preview | 子 Agent（worktree） | `packages/render`、`packages/cli`（另：校验器两处小修、示例封面） | T1.1、T1.2 | 🟡 |
-| T1.4 M1 验收 | 总规划师 | — | T1.3 | ⬜ |
+| T1.3 渲染与 CLI validate / preview | 子 Agent（worktree） | `packages/render`、`packages/cli`（另：校验器两处小修、示例封面） | T1.1、T1.2 | ✅ |
+| T1.4 M1 验收 | 总规划师 | — | T1.3 | ✅ |
 
 验收标准：
 
@@ -63,6 +63,8 @@ T0.2 验收记录（2026-11-06，总规划师亲自运行）：`pnpm install --f
 T1.1 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm test`（27 文件 / 531 用例）、`pnpm test:security`（9 文件 / 240 用例）通过；总规划师用一份恶意页面手工抽查，外链、`window['local'+'Storage']`、`fetch`、凭证、缺少减少动效、`data-nm-id` 不足、card/manifest 非法均正确报出，中文提示可操作。遗留给 T1.3：校验器忽略 `.DS_Store` 等系统文件（contracts 1.4）。
 
 T1.2 验收记录（2026-11-06）：合并后（解决 lockfile 与重复 catalog 键冲突，根 vitest 加入 `skill` 项目）`pnpm typecheck`、`pnpm test`（34 文件 / 987 用例）、`pnpm test:security`（11 文件 / 509 用例）通过；`fonts:fetch` 24 个 OFL 字体文件就位。总规划师用合并后的真实校验器跑 6 个示例页：**全部 0 错误**；警告为 `IGNORED_FILE`（`DESIGN.md`，预期）和 `FONT_NOT_IN_KIT`（Kit 新增的角色变量 `--nm-font-display` 等校验器不认识）。遗留给 T1.3：校验器识别 Kit 角色变量（contracts 1.1 已更新）。
+
+T1.3 / T1.4 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm test`（48 文件 / 1151 用例）、`pnpm test:security`（16 文件 / 575 用例）通过。总规划师逐个运行 `pnpm nowme validate` 与 `pnpm nowme preview` 于 6 个示例：全部“通过”，唯一警告为 `DESIGN.md` 的 `IGNORED_FILE`（预期），0 个 `RENDER_*` 问题；查看 6 张封面，字体生效、风格差异明显、场景侧重正确。已知小问题：club-senior-quest 封面截在打字机动画中途（“欢迎来到|”），建议之后封面改用减少动效下的静态终态。pages-host 测试字体已换成 T1.3 提交的 Noto Sans SC 子集（OFL-1.1，附授权文件）。
 
 ## M2 提交、校验与沙箱展示
 
