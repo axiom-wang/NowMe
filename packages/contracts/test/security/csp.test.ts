@@ -166,14 +166,51 @@ describe('PAGE_SECURITY_HEADERS（S2）', () => {
 });
 
 describe('buildWebCsp（主站 CSP）', () => {
-  it('精确等于 contracts 第 5 节末尾的五条指令', () => {
+  it('精确等于 contracts 第 5 节末尾的九条指令', () => {
     const csp = buildWebCsp({ pagesOrigin: PAGES });
-    expect(csp).toBe(`frame-src ${PAGES}; script-src 'self'; object-src 'none'; base-uri 'none'; frame-ancestors 'none'`);
+    expect(csp).toBe(
+      [
+        "default-src 'self'",
+        `frame-src ${PAGES}`,
+        "script-src 'self'",
+        "style-src 'self'",
+        "img-src 'self' data:",
+        "form-action 'self'",
+        "object-src 'none'",
+        "base-uri 'none'",
+        "frame-ancestors 'none'",
+      ].join('; '),
+    );
     const directives = parseCsp(csp);
-    expect([...directives.keys()]).toEqual(['frame-src', 'script-src', 'object-src', 'base-uri', 'frame-ancestors']);
+    expect([...directives.keys()]).toEqual([
+      'default-src',
+      'frame-src',
+      'script-src',
+      'style-src',
+      'img-src',
+      'form-action',
+      'object-src',
+      'base-uri',
+      'frame-ancestors',
+    ]);
+    expect(directives.get('frame-src')).toEqual([PAGES]);
+    expect(directives.get('img-src')).toEqual(["'self'", 'data:']);
+  });
+
+  it('不放开内联脚本 / 样式、eval、通配符或任意 scheme', () => {
+    const csp = buildWebCsp({ pagesOrigin: PAGES });
     expect(csp).not.toContain('unsafe-eval');
     expect(csp).not.toContain('unsafe-inline');
+    expect(csp).not.toContain('unsafe-hashes');
+    expect(csp).not.toContain('strict-dynamic');
     expect(csp).not.toContain('*');
+    expect(csp).not.toContain('blob:');
+    // 只有 img-src 的 data: 一个裸 scheme 源
+    expect(tokensOf(csp).filter((token) => /^[a-z]+:$/.test(token))).toEqual(['data:']);
+    // 页面托管源只出现在 frame-src（不能让页面托管源的脚本、样式在主站上运行）
+    for (const [name, values] of parseCsp(csp)) {
+      if (name !== 'frame-src') expect(values, name).not.toContain(PAGES);
+    }
   });
 
   it('拒绝非法的页面托管源', () => {

@@ -281,9 +281,15 @@ importers:
       '@nowme/contracts':
         specifier: workspace:*
         version: link:../../packages/contracts
+      '@nowme/kit':
+        specifier: workspace:*
+        version: link:../../packages/kit
       '@nowme/render':
         specifier: workspace:*
         version: link:../../packages/render
+      '@nowme/skill':
+        specifier: workspace:*
+        version: link:../../skill
       '@nowme/validator':
         specifier: workspace:*
         version: link:../../packages/validator
@@ -291,9 +297,18 @@ importers:
         specifier: 'catalog:'
         version: 4.13.16
     devDependencies:
+      '@nowme/pages-host':
+        specifier: workspace:*
+        version: link:../pages-host
       '@types/node':
         specifier: 'catalog:'
         version: 22.20.5
+      parse5:
+        specifier: 'catalog:'
+        version: 8.1.0
+      playwright:
+        specifier: 'catalog:'
+        version: 1.58.2
       tsx:
         specifier: 'catalog:'
         version: 4.23.15
