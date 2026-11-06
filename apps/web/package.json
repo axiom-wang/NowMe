@@ -24,7 +24,8 @@
     "dev": "tsx watch --conditions=source --disable-warning=ExperimentalWarning src/main.ts",
     "start": "node --disable-warning=ExperimentalWarning dist/main.js",
     "start:source": "tsx --conditions=source --disable-warning=ExperimentalWarning src/main.ts",
-    "seed": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/seed.ts"
+    "seed": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/seed.ts",
+    "stats": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/stats.ts"
   },
   "dependencies": {
     "@hono/node-server": "catalog:",
@@ -33,11 +34,13 @@
     "@nowme/render": "workspace:*",
     "@nowme/skill": "workspace:*",
     "@nowme/validator": "workspace:*",
-    "hono": "catalog:"
+    "hono": "catalog:",
+    "qrcode": "catalog:"
   },
   "devDependencies": {
     "@nowme/pages-host": "workspace:*",
     "@types/node": "catalog:",
+    "@types/qrcode": "catalog:",
     "parse5": "catalog:",
     "playwright": "catalog:",
     "tsx": "catalog:",

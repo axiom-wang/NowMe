@@ -1,6 +1,6 @@
 /**
- * `walls` 表（contracts 3）。T2.1 只用到建墙与按 ID / 邀请码查询；
- * T3.1 在这里补充关闭墙、轮换邀请码等函数。
+ * `walls` 表（contracts 3）：建墙、按 ID / 邀请码查询、关闭墙。
+ * 关闭的墙对所有人不可见（services/access.ts 只认 status = open 的墙）。
  */
 import type { SceneType } from '@nowme/contracts';
 import type { Database } from './database.js';
@@ -63,6 +63,7 @@ export function createWallsRepo(db: Database) {
   const byOrganizerName = db.prepare(
     "SELECT * FROM walls WHERE organizer_id = ? AND name = ? AND status = 'open' ORDER BY created_at LIMIT 1",
   );
+  const close = db.prepare("UPDATE walls SET status = 'closed', closed_at = ? WHERE id = ? AND status = 'open'");
 
   return {
     create(wall: Wall): Wall {
@@ -89,6 +90,10 @@ export function createWallsRepo(db: Database) {
     /** 某组织者名下同名的、未关闭的墙（开发种子脚本复用已有的墙）。 */
     findOpenByOrganizerAndName(organizerId: string, name: string): Wall | null {
       return maybeWall(byOrganizerName.get(organizerId, name));
+    },
+    /** 关闭墙（只对 open 的墙生效）。返回是否改变了状态。 */
+    close(id: string, now: string): boolean {
+      return Number(close.run(now, id).changes) > 0;
     },
   };
 }
