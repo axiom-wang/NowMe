@@ -1,30 +1,65 @@
-import { describe, expect, it } from 'vitest';
-import { buildWebCsp, loadConfig } from '@nowme/contracts';
-import { createApp } from '../src/app.js';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { buildWebCsp } from '@nowme/contracts';
+import { createTestWeb, get, login, seedWall, type TestWeb } from './helpers.js';
 
-describe('主站（占位）', () => {
-  const config = loadConfig({});
-  const app = createApp(config);
-
-  it('首页返回占位页', async () => {
-    const response = await app.request('/');
-    expect(response.status).toBe(200);
-    expect(response.headers.get('content-type')).toContain('text/html');
-    const html = await response.text();
-    expect(html.startsWith('<!doctype html>')).toBe(true);
-    expect(html).toContain('<title>NOWMe</title>');
-    expect(html).toContain('lang="zh-CN"');
+describe('主站基础', () => {
+  let t: TestWeb;
+  beforeEach(() => {
+    t = createTestWeb();
+  });
+  afterEach(async () => {
+    await t.close();
   });
 
-  it('所有响应都带主站 CSP', async () => {
-    for (const path of ['/', '/missing']) {
-      const response = await app.request(path);
-      expect(response.headers.get('content-security-policy')).toBe(buildWebCsp({ pagesOrigin: config.pagesOrigin }));
-      expect(response.headers.get('x-content-type-options')).toBe('nosniff');
+  it('未登录访问 / 重定向到登录页', async () => {
+    const response = await get(t, '/');
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toBe('/login');
+  });
+
+  it('登录页是完整的中文 HTML 文档，带主站 CSP', async () => {
+    const response = await get(t, '/login');
+    expect(response.status).toBe(200);
+    expect(response.headers.get('content-type')).toContain('text/html');
+    expect(response.headers.get('content-security-policy')).toBe(buildWebCsp({ pagesOrigin: t.config.pagesOrigin }));
+    const html = await response.text();
+    expect(html.startsWith('<!doctype html>')).toBe(true);
+    expect(html).toContain('lang="zh-CN"');
+    expect(html).toContain('<title>登录 · NOWMe</title>');
+    expect(html).toContain('href="/static/app.css"');
+  });
+
+  it('提供 static/ 下的样式与脚本，拒绝其他路径', async () => {
+    const css = await get(t, '/static/app.css');
+    expect(css.status).toBe(200);
+    expect(css.headers.get('content-type')).toBe('text/css; charset=utf-8');
+    const js = await get(t, '/static/page-frame.js');
+    expect(js.status).toBe(200);
+    expect(js.headers.get('content-type')).toBe('text/javascript; charset=utf-8');
+    for (const path of ['/static/missing.css', '/static/..%2Fpackage.json', '/static/%2e%2e%2fsrc%2fapp.tsx', '/static/.hidden.js']) {
+      expect((await get(t, path)).status, path).toBe(404);
     }
   });
 
-  it('未知路径 404', async () => {
-    expect((await app.request('/missing')).status).toBe(404);
+  it('未知路径：页面 404 HTML，API 404 JSON', async () => {
+    const page = await get(t, '/nope');
+    expect(page.status).toBe(404);
+    expect(await page.text()).toContain('找不到这个页面');
+    const api = await get(t, '/api/agent/nope');
+    expect(api.status).toBe(404);
+    expect(await api.json()).toEqual({ error: { code: 'NOT_FOUND', message: '接口不存在' } });
+  });
+
+  it('“我的”列出加入的墙与工作区入口', async () => {
+    const session = await login(t, 'ayou@example.com', '阿柚');
+    const { wall } = seedWall(t, session.userId, '周末黑客松');
+    const response = await get(t, '/', { cookie: session.cookie });
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain('你好，阿柚');
+    expect(html).toContain('周末黑客松');
+    expect(html).toContain(`href="/w/${wall.id}/me"`);
+    expect(html).toContain('未发布');
+    expect(html).toContain('黑客松');
   });
 });

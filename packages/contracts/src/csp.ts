@@ -146,12 +146,19 @@ export interface WebCspInput {
   pagesOrigin: string;
 }
 
-/** 主站 CSP 指令（contracts 第 5 节末尾）。 */
+/**
+ * 主站 CSP 指令（contracts 第 5 节末尾）。主站不用内联脚本和内联样式：脚本与样式都是同源的外部文件，
+ * 图片只允许同源与 data:，表单只能提交回主站，只能嵌入页面托管源的 iframe。
+ */
 export function webCspDirectives({ pagesOrigin }: WebCspInput): CspDirectives {
   const pages = normalizeOrigin(pagesOrigin, 'pagesOrigin');
   return [
+    ['default-src', ["'self'"]],
     ['frame-src', [pages]],
     ['script-src', ["'self'"]],
+    ['style-src', ["'self'"]],
+    ['img-src', ["'self'", 'data:']],
+    ['form-action', ["'self'"]],
     ['object-src', ["'none'"]],
     ['base-uri', ["'none'"]],
     ['frame-ancestors', ["'none'"]],

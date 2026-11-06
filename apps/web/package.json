@@ -12,26 +12,34 @@
     }
   },
   "files": [
-    "dist"
+    "dist",
+    "migrations",
+    "static"
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
-    "dev": "tsx watch --conditions=source src/main.ts",
-    "start": "node dist/main.js",
-    "start:source": "tsx --conditions=source src/main.ts"
+    "dev": "tsx watch --conditions=source --disable-warning=ExperimentalWarning src/main.ts",
+    "start": "node --disable-warning=ExperimentalWarning dist/main.js",
+    "start:source": "tsx --conditions=source --disable-warning=ExperimentalWarning src/main.ts",
+    "seed": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/seed.ts"
   },
   "dependencies": {
     "@hono/node-server": "catalog:",
     "@nowme/contracts": "workspace:*",
+    "@nowme/kit": "workspace:*",
     "@nowme/render": "workspace:*",
+    "@nowme/skill": "workspace:*",
     "@nowme/validator": "workspace:*",
     "hono": "catalog:"
   },
   "devDependencies": {
+    "@nowme/pages-host": "workspace:*",
     "@types/node": "catalog:",
+    "parse5": "catalog:",
+    "playwright": "catalog:",
     "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
