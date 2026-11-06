@@ -1,13 +1,18 @@
 /**
  * nowme 命令行入口（contracts 1.5）。
  *
- * 已实现：validate、preview（T1.3）。fetch / submit / status / event 由 T2.3 实现：在 COMMANDS 中给对应命令
- * 加上 `flags` 与 `run` 即可；事件上报用 CliContext.reportEvent（RunOptions.sendEvent 提供真正的发送函数）。
+ * 命令：fetch / validate / preview / submit / status / event。所有输出经 redactCredentials 兜底，
+ * 任何形如 nmc_… 的完整凭证都只会显示前缀。
  */
 import { WORKDIR_PAGE_DIR } from '@nowme/contracts';
 import { parseArgs, type FlagSpec, type ParsedArgs } from './args.js';
+import { runEvent } from './commands/event.js';
+import { runFetch } from './commands/fetch.js';
 import { runPreview } from './commands/preview.js';
+import { runStatus } from './commands/status.js';
+import { runSubmit } from './commands/submit.js';
 import { runValidate } from './commands/validate.js';
+import { redactCredentials } from './credentials.js';
 import { createContext, type CliContext, type CliIo, type RunOptions } from './context.js';
 
 export type { CliIo, RunOptions } from './context.js';
@@ -31,7 +36,16 @@ export interface CommandSpec {
 
 /** contracts 1.5 的命令表。 */
 export const COMMANDS: readonly CommandSpec[] = [
-  { name: 'fetch', usage: 'nowme fetch <wallId> <token> [--server URL]', summary: '用一次性 token 换取页面凭证并拉取墙情境；已有凭证时刷新 context.json' },
+  {
+    name: 'fetch',
+    usage: 'nowme fetch [<wallId> <token>] [--server URL] [--json]',
+    summary: '用一次性 token 换取页面凭证并拉取墙情境（--server 默认 http://localhost:3000）；不带参数时刷新 context.json',
+    flags: [
+      { name: 'server', type: 'string' },
+      { name: 'json', type: 'boolean' },
+    ],
+    run: runFetch,
+  },
   {
     name: 'validate',
     usage: `nowme validate [dir=${WORKDIR_PAGE_DIR}] [--json] [--no-fix]`,
@@ -54,9 +68,33 @@ export const COMMANDS: readonly CommandSpec[] = [
     ],
     run: runPreview,
   },
-  { name: 'submit', usage: `nowme submit [dir=${WORKDIR_PAGE_DIR}]`, summary: '本地校验后只上传白名单文件；发布需要你在应用内确认' },
-  { name: 'status', usage: 'nowme status', summary: '显示关联的墙、页面与凭证是否存在（不显示凭证内容）' },
-  { name: 'event', usage: 'nowme event <type>', summary: '上报 generate 等事件（只带数字 / 布尔属性）' },
+  {
+    name: 'submit',
+    usage: `nowme submit [dir=${WORKDIR_PAGE_DIR}] [--json]`,
+    summary: '本地校验后只上传白名单文件；发布需要你在应用内确认缩略卡和联系方式',
+    flags: [{ name: 'json', type: 'boolean' }],
+    run: runSubmit,
+  },
+  {
+    name: 'status',
+    usage: 'nowme status [--json]',
+    summary: '显示工作目录、关联的墙与页面、凭证是否存在（不显示凭证内容）',
+    flags: [{ name: 'json', type: 'boolean' }],
+    run: runStatus,
+  },
+  {
+    name: 'event',
+    usage: 'nowme event <type> [--ok|--no-ok] [--duration-ms N] [--count N] [--json]',
+    summary: '上报 fetch / validate / preview / generate / submit 事件（只带数字 / 布尔属性；无凭证时静默）',
+    flags: [
+      { name: 'ok', type: 'boolean' },
+      { name: 'no-ok', type: 'boolean' },
+      { name: 'duration-ms', type: 'number' },
+      { name: 'count', type: 'number' },
+      { name: 'json', type: 'boolean' },
+    ],
+    run: runEvent,
+  },
 ];
 
 export function helpText(): string {
@@ -82,7 +120,12 @@ export function helpText(): string {
 }
 
 /** 运行 CLI，返回退出码。 */
-export async function run(argv: readonly string[], io: CliIo = defaultIo, options: RunOptions = {}): Promise<number> {
+export async function run(argv: readonly string[], rawIo: CliIo = defaultIo, options: RunOptions = {}): Promise<number> {
+  // 输出层兜底：任何完整凭证都只显示前缀
+  const io: CliIo = {
+    stdout: (text) => rawIo.stdout(redactCredentials(text)),
+    stderr: (text) => rawIo.stderr(redactCredentials(text)),
+  };
   const [first, ...rest] = argv;
   if (first === undefined || first === '-h' || first === '--help' || first === 'help') {
     io.stdout(helpText());

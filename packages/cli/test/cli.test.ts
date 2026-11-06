@@ -31,16 +31,11 @@ describe('nowme CLI', () => {
     expect(io.stdout().trim()).toBe(CLI_VERSION);
   });
 
-  it('尚未实现的命令（T2.3）退出码 1；命令帮助退出码 0', async () => {
-    for (const name of ['fetch', 'submit', 'status', 'event']) {
-      const io = capture();
-      expect(await run([name], io.io)).toBe(1);
-      expect(io.stderr()).toContain('尚未实现');
-    }
+  it('命令帮助退出码 0', async () => {
     const help = capture();
     expect(await run(['validate', '--help'], help.io)).toBe(0);
     expect(help.stdout()).toContain('nowme validate');
-    expect(COMMANDS.filter((command) => command.run).map((command) => command.name)).toEqual(['validate', 'preview']);
+    expect(COMMANDS.filter((command) => command.run).map((command) => command.name)).toEqual(['fetch', 'validate', 'preview', 'submit', 'status', 'event']);
   });
 
   it('未知选项与多余参数：退出码 1，提示用法', async () => {
