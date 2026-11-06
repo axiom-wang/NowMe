@@ -11,6 +11,7 @@ import type { PageDirFiles } from './page-files.js';
 export { VALIDATOR_VERSION, createReport, emptyStats } from './report.js';
 export { validatePage } from './validate.js';
 export { computeExtraChars } from './extra-chars.js';
+export { isSystemFile, isSystemFileName } from './system-files.js';
 export { PageDirFiles, skippedEntriesOf, type SkippedEntry, type SkippedReason } from './page-files.js';
 export type { PageFiles, ValidateOptions, ValidationIssue, ValidationReport, ValidationStats } from '@nowme/contracts';
 

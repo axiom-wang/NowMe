@@ -1,6 +1,11 @@
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import {
   cardSchema,
+  COVER_HEIGHT,
+  COVER_MAX_BYTES,
+  COVER_WIDTH,
   countCjkFontFaces,
   HTML_MAX_BYTES,
   MAX_CJK_FONTS,
@@ -66,12 +71,19 @@ describe.each(dirs)('示例 %s', (dir) => {
   const card = page.card as Card;
   const manifest = page.manifest as Manifest;
 
-  it('是完整的 page/ 目录：index.html、card.json、manifest.json、DESIGN.md，没有 cover.png', () => {
-    for (const file of ['index.html', 'card.json', 'manifest.json', 'DESIGN.md']) expect(page.files).toContain(file);
-    expect(page.files).not.toContain('cover.png');
+  it('是完整的 page/ 目录：index.html、card.json、manifest.json、DESIGN.md，以及 nowme preview 生成的 cover.png', () => {
+    for (const file of ['index.html', 'card.json', 'manifest.json', 'DESIGN.md', 'cover.png']) expect(page.files).toContain(file);
     for (const file of page.files) {
-      expect(['index.html', 'card.json', 'manifest.json', 'DESIGN.md'].includes(file) || file.startsWith('assets/'), file).toBe(true);
+      expect(['index.html', 'card.json', 'manifest.json', 'DESIGN.md', 'cover.png'].includes(file) || file.startsWith('assets/'), file).toBe(true);
     }
+  });
+
+  it('cover.png 是 750×1000 的 PNG，≤ 600 KB（采访时“风格选择题”给主人看的封面）', () => {
+    const cover = readFileSync(join(page.path, 'cover.png'));
+    expect([...cover.subarray(0, 8)]).toEqual([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]);
+    expect(cover.toString('ascii', 12, 16)).toBe('IHDR');
+    expect([cover.readUInt32BE(16), cover.readUInt32BE(20)]).toEqual([COVER_WIDTH, COVER_HEIGHT]);
+    expect(cover.byteLength).toBeLessThanOrEqual(COVER_MAX_BYTES);
   });
 
   it('card.json 通过 cardSchema，接话点类型取自场景指南', () => {

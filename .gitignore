@@ -19,6 +19,8 @@ coverage/
 test-results/
 playwright-report/
 .nowme-test-home/
+# nowme preview 的产物（写在页面目录的上一级，例如 skill/examples/.nowme-preview/）
+.nowme-preview/
 
 # downloaded fonts (fetched by script, not committed)
 packages/kit/fonts/*.ttf

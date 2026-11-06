@@ -1,6 +1,6 @@
 # 截图自查清单（第 5 步）
 
-`nowme preview page` 之后，打开封面 `cover.png` 和整页截图，逐项过一遍。每一项不满足就改，改完重新 `validate` + `preview`，至少做一轮。
+`nowme preview page` 之后，打开它打印出的截图（都在工作目录的 `.nowme-preview/` 里：封面 `cover.png`、整页 `full.png`、减少动态效果的整页 `full-reduced-motion.png`、按区块切开的 `blocks/NN-<data-nm-id>.png`），逐项过一遍。每一项不满足就改，改完重新 `validate` + `preview`，至少做一轮。
 
 ## 封面（页面顶部 375×500）
 
@@ -39,7 +39,7 @@
 ## 技术
 
 - [ ] `nowme validate` 0 错误；警告都看过。
-- [ ] `nowme preview` 没有渲染错误（脚本异常、CSP 违规），加载不慢。
-- [ ] 打开“减少动态效果”（`prefers-reduced-motion`）时内容完整、没有卡在隐藏状态。
+- [ ] `nowme preview` 没有渲染错误（脚本异常、CSP 违规），加载不慢；字体子集里没有“字体本身没有”的字。
+- [ ] 打开“减少动态效果”（`prefers-reduced-motion`）时内容完整、没有卡在隐藏状态（看 `full-reduced-motion.png`）。
 - [ ] 互动元素可以点、键盘可以操作；外链都用 `data-nm-href` 且是 https。
 - [ ] 横滑、拖动在手机宽度下不妨碍上下滚动。

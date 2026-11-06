@@ -53,10 +53,10 @@ export function loadExamplesIndex(): ExamplesIndex {
   return JSON.parse(readFileSync(EXAMPLES_INDEX_FILE, 'utf8')) as ExamplesIndex;
 }
 
-/** `examples/` 下的示例目录（不含 index.json 等文件）。 */
+/** `examples/` 下的示例目录（不含 index.json 等文件，也不含 `nowme preview` 生成的 `.nowme-preview/` 等隐藏目录）。 */
 export function listExampleDirs(): string[] {
   return readdirSync(EXAMPLES_DIR, { withFileTypes: true })
-    .filter((entry) => entry.isDirectory())
+    .filter((entry) => entry.isDirectory() && !entry.name.startsWith('.'))
     .map((entry) => entry.name)
     .sort();
 }
