@@ -20,13 +20,17 @@
     "build": "tsc -p tsconfig.build.json",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "fonts:fetch": "tsx --conditions=source scripts/fetch-fonts.ts"
   },
   "dependencies": {
     "@nowme/contracts": "workspace:*"
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "acorn": "catalog:",
+    "happy-dom": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

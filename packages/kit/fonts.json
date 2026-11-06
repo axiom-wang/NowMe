@@ -1,4 +1,109 @@
 {
   "schemaVersion": 1,
-  "fonts": []
+  "fonts": [
+    {
+      "id": "lxgw-wenkai",
+      "family": "LXGW WenKai",
+      "cjk": true,
+      "weights": [300, 400, 500],
+      "license": "OFL-1.1",
+      "sourceUrl": "https://github.com/lxgw/LxgwWenKai/releases/download/v1.530/",
+      "files": {
+        "300": "LXGWWenKai-Light.ttf",
+        "400": "LXGWWenKai-Regular.ttf",
+        "500": "LXGWWenKai-Medium.ttf"
+      }
+    },
+    {
+      "id": "smiley-sans",
+      "family": "Smiley Sans",
+      "cjk": true,
+      "weights": [400],
+      "license": "OFL-1.1",
+      "sourceUrl": "https://github.com/atelier-anchor/smiley-sans/releases/download/v2.0.1/smiley-sans-v2.0.1.zip",
+      "files": {
+        "400": "SmileySans-Oblique.ttf"
+      }
+    },
+    {
+      "id": "noto-sans-sc",
+      "family": "Noto Sans SC",
+      "cjk": true,
+      "weights": [400, 500, 700, 900],
+      "license": "OFL-1.1",
+      "sourceUrl": "https://raw.githubusercontent.com/notofonts/noto-cjk/523d033d6cb47f4a80c58a35753646f5c3608a78/Sans/SubsetOTF/SC/",
+      "files": {
+        "400": "NotoSansSC-Regular.otf",
+        "500": "NotoSansSC-Medium.otf",
+        "700": "NotoSansSC-Bold.otf",
+        "900": "NotoSansSC-Black.otf"
+      }
+    },
+    {
+      "id": "noto-serif-sc",
+      "family": "Noto Serif SC",
+      "cjk": true,
+      "weights": [400, 700, 900],
+      "license": "OFL-1.1",
+      "sourceUrl": "https://raw.githubusercontent.com/notofonts/noto-cjk/9b0f1436e455d902de067a2501422e5dc71ad16b/Serif/SubsetOTF/SC/",
+      "files": {
+        "400": "NotoSerifSC-Regular.otf",
+        "700": "NotoSerifSC-Bold.otf",
+        "900": "NotoSerifSC-Black.otf"
+      }
+    },
+    {
+      "id": "inter",
+      "family": "Inter",
+      "cjk": false,
+      "weights": [400, 500, 700, 900],
+      "license": "OFL-1.1",
+      "sourceUrl": "https://github.com/rsms/inter/releases/download/v4.1/Inter-4.1.zip",
+      "files": {
+        "400": "Inter-Regular.ttf",
+        "500": "Inter-Medium.ttf",
+        "700": "Inter-Bold.ttf",
+        "900": "Inter-Black.ttf"
+      }
+    },
+    {
+      "id": "space-grotesk",
+      "family": "Space Grotesk",
+      "cjk": false,
+      "weights": [300, 400, 500, 700],
+      "license": "OFL-1.1",
+      "sourceUrl": "https://raw.githubusercontent.com/floriankarsten/space-grotesk/7220f5d04813fe83babe76d4fd23e02275021280/fonts/ttf/static/",
+      "files": {
+        "300": "SpaceGrotesk-Light.ttf",
+        "400": "SpaceGrotesk-Regular.ttf",
+        "500": "SpaceGrotesk-Medium.ttf",
+        "700": "SpaceGrotesk-Bold.ttf"
+      }
+    },
+    {
+      "id": "jetbrains-mono",
+      "family": "JetBrains Mono",
+      "cjk": false,
+      "weights": [400, 500, 700, 800],
+      "license": "OFL-1.1",
+      "sourceUrl": "https://raw.githubusercontent.com/JetBrains/JetBrainsMono/cd5227bd1f61dff3bbd6c814ceaf7ffd95e947d9/fonts/ttf/",
+      "files": {
+        "400": "JetBrainsMono-Regular.ttf",
+        "500": "JetBrainsMono-Medium.ttf",
+        "700": "JetBrainsMono-Bold.ttf",
+        "800": "JetBrainsMono-ExtraBold.ttf"
+      }
+    },
+    {
+      "id": "instrument-serif",
+      "family": "Instrument Serif",
+      "cjk": false,
+      "weights": [400],
+      "license": "OFL-1.1",
+      "sourceUrl": "https://raw.githubusercontent.com/Instrument/instrument-serif/65c0ef225f386a3c7e87570a4aa9cc0262c2fd81/fonts/ttf/",
+      "files": {
+        "400": "InstrumentSerif-Regular.ttf"
+      }
+    }
+  ]
 }
