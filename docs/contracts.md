@@ -290,6 +290,7 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 | 路径 | 谁能访问 | 作用 |
 | --- | --- | --- |
 | `GET /login`、`POST /login`、`POST /login/verify`、`POST /logout` | 任何人 | 邮箱 + 6 位验证码；首次登录填昵称 |
+| `GET/POST /welcome` | 登录用户 | 首次登录填写昵称 |
 | `GET /dev/outbox` | 仅非生产环境 | 本地查看发出的验证码（代替真实邮件） |
 | `GET /` | 登录用户 | “我的”：我加入的墙、每页发布状态、入口 |
 | `GET /walls/new`、`POST /walls` | 登录用户 | 建墙：名称、简介、场景类型、可选一句话 |

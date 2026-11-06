@@ -22,7 +22,7 @@
 | --- | --- | --- | --- |
 | M0 | 接口约定、monorepo 架子、CLAUDE.md | `pnpm install && pnpm typecheck && pnpm test` 全绿 | ✅ |
 | M1 | Skill + Kit + 示例页 + `nowme validate` / `nowme preview` | 6 个示例页校验 0 错误，preview 产出封面且无渲染错误 | ✅ |
-| M2 | 提交、服务端校验与沙箱展示 | `nowme fetch` → `nowme submit` → 主人在工作区的沙箱 iframe 中看到页面；S2、S3、S4 测试通过 | 🟡 |
+| M2 | 提交、服务端校验与沙箱展示 | `nowme fetch` → `nowme submit` → 主人在工作区的沙箱 iframe 中看到页面；S2、S3、S4 测试通过 | ✅ |
 | M3 | 墙的闭环 | 登录 → 建墙 → 邀请 → 加入 → 提交 → 发布 → 浏览 → 想聊这个 → 组织者后台，e2e 通过；S1–S6 全部有测试；安全审查完成且高危问题已修复 | ⬜ |
 | M4 | 端到端演练 | 子 Agent 扮演“用户的 Agent”按 Skill 完整走通，产出演练报告 | ⬜ |
 
@@ -70,10 +70,10 @@ T1.3 / T1.4 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm te
 
 | 任务 | 负责 | 范围（只改） | 依赖 | 状态 |
 | --- | --- | --- | --- | --- |
-| T2.1 主站核心：数据库、登录、Agent API、提交管线、工作区预览 | 子 Agent（worktree A） | `apps/web`（另：`packages/contracts` 的 `buildWebCsp`） | M1 | 🟡 |
+| T2.1 主站核心：数据库、登录、Agent API、提交管线、工作区预览 | 子 Agent（worktree A） | `apps/web`（另：`packages/contracts` 的 `buildWebCsp`） | M1 | ✅ |
 | T2.2 页面托管 | 子 Agent（worktree，Sonnet） | `apps/pages-host` | T0.2、T1.2（只依赖 contracts 与 Kit，提前与 T1.3 并行） | ✅ |
 | T2.3 CLI fetch / submit / status / event | 子 Agent（worktree C，Sonnet） | `packages/cli` | M1 | ✅ |
-| T2.4 M2 集成与浏览器沙箱测试 | 子 Agent | `tests/e2e`、根脚本 | T2.1–T2.3 | ⬜ |
+| T2.4 M2 集成与浏览器沙箱测试 | — | 并入 T3.3（见决策记录） | — | ➡️ |
 
 验收标准：
 
@@ -82,6 +82,7 @@ T1.3 / T1.4 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm te
 - **T2.3**：对模拟服务器的测试：凭证写入 `NOWME_HOME/credentials`（权限 0600），从不写入 `page/`；提交前先本地校验，只上传白名单文件；422 报告可读输出；事件上报不含内容、失败不影响主流程。
 - T2.2 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm test`（38 文件 / 1031 用例）、`pnpm test:security`（15 文件 / 549 用例）、pages-host 自身 47 用例通过。总规划师实际启动 pages-host 冒烟：真实票据 200 且 CSP 与 contracts S2 逐项一致、无 `Set-Cookie`；伪造票据、`../`、`%2e%2e` 穿越均 404；Kit 返回正确 content-type。遗留：`apps/pages-host/test/fixtures/test-font.woff2` 来源授权未核实，T1.3 合并后换成其提交的开源授权测试字体。
 - T2.3 验收记录（2026-11-06）：合并后 `pnpm typecheck` 通过，CLI 包 76 用例、`pnpm test:security`（17 文件 / 582 用例）通过；凭证文件 0600/目录 0700、输出统一脱敏、`page/` 内拒绝运行。与真实服务端的联调放在 T2.1 合并后由总规划师亲自走一遍。
+- T2.1 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm test`（62 文件 / 1301 用例）、`pnpm test:security`（22 文件 / 645 用例）通过。总规划师亲自端到端：启动 `pnpm dev` → 种子脚本 → 在临时工作目录用真实 CLI `nowme fetch`（凭证 0600，`nowme.json`/`context.json` 无凭证）→ 复制示例页并夹带 `brief.md` 后 `nowme submit`（第 1 版通过，`brief.md`/`DESIGN.md` 未上传）→ 再用同一 token `fetch` 被拒 → Chromium 登录（outbox 验证码）打开工作区：iframe `sandbox="allow-scripts"`、src 指向 127.0.0.1:4000、页面字体与版式正确、iframe 内读 cookie 抛 `SecurityError`、主站 0 个控制台错误。
 - **T2.4**：`pnpm test:e2e`：种子 → `nowme fetch` → `nowme submit` 示例页 → 浏览器打开工作区 → iframe 属性与 CSP 断言；恶意页在 iframe 内的 S1 探测全部失败。
 
 ## M3 墙的闭环
@@ -126,6 +127,10 @@ T1.3 / T1.4 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm te
 | 2026-11-06 | 公开链接只显示页面，不显示联系方式与“想聊这个” |
 | 2026-11-06 | 被组织者移除的成员不能通过邀请重新加入；关闭的墙对所有人不可见 |
 | 2026-11-06 | 采纳 T0.2 建议：主站 CSP 增加 `default-src`/`style-src`/`img-src`/`form-action`，主站校验 `Host` 头（contracts 第 5 节） |
+| 2026-11-06 | T2.4 并入 T3.3：M2 的端到端已由总规划师亲自走通，T2.1 已含 openLink 与自我导航的浏览器测试；恶意页 S1 探测与 CLI 全流程 e2e 在 T3.3 中一次写全，节省一个子 Agent |
+| 2026-11-06 | 删除页面：删除所有版本文件；版本与发布记录保留为“墓碑”（清空 card/contact/报告/渲染文字等内容，活跃发布以 `deleted` 结束）；清空公开链接、吊销凭证与 token；保留成员关系与页面行，可重新开始 |
+| 2026-11-06 | 退出墙：成员关系 `left`、活跃发布以 `withdrawn` 结束、吊销凭证；之后可用邀请重新加入（重新激活原成员关系，页面保持未发布）。被移除（`removed`）不能重新加入 |
+| 2026-11-06 | 首次登录填昵称用 `/welcome`；未登录的表单 POST 返回 401 页面；时间按 Asia/Shanghai 显示；`revisionCount` 含未通过版本 |
 | 2026-11-06 | 用户要求：M3 安全审查与 M4 之前停下，先看预览效果 |
 | 2026-11-06 | 子 Agent 模型分配：机械性任务用 Sonnet，规划、安全审查、Skill/示例页等需要判断的任务用 Opus（见“工作方式”） |
 | 2026-11-06 | `nowme.css` 内置全局减少动效规则；每款 Kit 字体提供 `--nm-font-<id>` 变量；本地工作目录与 CLI 命令见 contracts 1.5 |
