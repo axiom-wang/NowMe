@@ -107,6 +107,7 @@ export function createWall(deps: WallDeps, input: CreateWallInput): { wall: Wall
       createdAt: nowIso,
       closedAt: null,
     });
+    deps.repos.chat.ensureGroup(wall.id, nowIso);
     return { wall, ...addMember(deps, wall, input.organizerId, 'organizer') };
   });
 }

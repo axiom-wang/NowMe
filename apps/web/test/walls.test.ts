@@ -355,34 +355,37 @@ describe('墙（W13）、成员页与想聊这个（W14）', () => {
     expect(events).toEqual([expect.objectContaining({ actorId: viewer.userId, pageId: ayou.page.id, props: {} })]);
   });
 
-  it('主人没有公开联系方式：没有“想聊这个”入口，chat 接口 404 且不记事件', async () => {
+  it('主人没有公开联系方式：仍可站内聊天，但不能查看联系方式', async () => {
     const quiet = publishedMember(t, wall, { name: '安静的人', contact: null });
     const html = await (await get(t, `/w/${wall.id}/p/${quiet.page.id}`, { cookie: viewer.cookie })).text();
-    expect(html).not.toContain('想聊这个</button>');
-    expect(html).not.toContain('/chat"');
-    expect(html).toContain('TA 没有公开联系方式');
+    expect(html).toContain('想聊这个</button>');
+    expect(html).toContain('/chat"');
+    expect(html).not.toContain('查看公开联系方式');
     const chat = await postForm(t, `/w/${wall.id}/p/${quiet.page.id}/chat`, { _csrf: viewer.csrf, hookId: 'can-help' }, { cookie: viewer.cookie });
-    expect(chat.status).toBe(404);
-    expect(t.repos.events.listForWall(wall.id).filter((event) => event.type === 'want_to_chat')).toEqual([]);
+    expect(chat.status).toBe(303);
+    expect((await postForm(t, `/w/${wall.id}/p/${quiet.page.id}/contact`, { _csrf: viewer.csrf, hookId: 'can-help' }, { cookie: viewer.cookie })).status).toBe(404);
   });
 
-  it('想聊这个：显示公开的联系方式与该接话点的开场白（带复制按钮），记 want_to_chat（props 不含内容）', async () => {
+  it('想聊这个：进入站内私聊并预填发布快照中的开场白，不自动发送或泄露联系方式', async () => {
     const ayou = publishedMember(t, wall, { name: '阿柚', contact: CONTACT });
     const response = await postForm(t, `/w/${wall.id}/p/${ayou.page.id}/chat`, { _csrf: viewer.csrf, hookId: 'looking-for' }, { cookie: viewer.cookie });
-    expect(response.status).toBe(200);
-    const html = await response.text();
-    expect(html).toContain(CONTACT.value);
-    expect(html).toContain('微信');
+    expect(response.status).toBe(303);
+    const html = await (await get(t, response.headers.get('location')!, { cookie: viewer.cookie })).text();
+    expect(html).not.toContain(CONTACT.value);
     expect(html).toContain('嗨阿柚，我是做设计的～');
     expect(html).not.toContain('你好阿柚，我看到你能帮忙做前端');
-    expect(html).toContain('不提供站内聊天');
-    const copyTargets = elements(html)
+    expect(t.db.prepare('SELECT * FROM chat_messages').all()).toHaveLength(0);
+    const contact = await postForm(t, `/w/${wall.id}/p/${ayou.page.id}/contact`, { _csrf: viewer.csrf, hookId: 'looking-for' }, { cookie: viewer.cookie });
+    expect(contact.status).toBe(200);
+    const contactHtml = await contact.text();
+    expect(contactHtml).toContain(CONTACT.value);
+    const copyTargets = elements(contactHtml)
       .filter((element) => element.attrs['data-copy'])
       .map((element) => element.attrs['data-copy']);
     expect(copyTargets).toEqual(['nm-chat-contact', 'nm-chat-opener']);
 
     const events = t.repos.events.listForWall(wall.id).filter((event) => event.type === 'want_to_chat');
-    expect(events).toEqual([expect.objectContaining({ actorId: viewer.userId, pageId: ayou.page.id, props: { hookIndex: 1 } })]);
+    expect(events).toEqual([expect.objectContaining({ actorId: viewer.userId, pageId: ayou.page.id, props: { hookIndex: 1 } }), expect.objectContaining({ props: { hookIndex: 1 } })]);
     const stored = JSON.stringify(t.db.prepare("SELECT * FROM events WHERE type = 'want_to_chat'").all());
     expect(stored).not.toContain(CONTACT.value);
     expect(stored).not.toContain('设计');
@@ -396,8 +399,8 @@ describe('墙（W13）、成员页与想聊这个（W14）', () => {
     }
     expect(t.repos.events.listForWall(wall.id).filter((event) => event.type === 'want_to_chat')).toEqual([]);
     const byIndex = await postForm(t, `/w/${wall.id}/p/${ayou.page.id}/chat`, { _csrf: viewer.csrf, hookId: '0' }, { cookie: viewer.cookie });
-    expect(byIndex.status).toBe(200);
-    expect(await byIndex.text()).toContain('你好阿柚，我看到你能帮忙做前端');
+    expect(byIndex.status).toBe(303);
+    expect(await (await get(t, byIndex.headers.get('location')!, { cookie: viewer.cookie })).text()).toContain('你好阿柚，我看到你能帮忙做前端');
   });
 
   it('自己的页面：可以看，但没有“想聊这个”，chat 404，不记 page_open', async () => {

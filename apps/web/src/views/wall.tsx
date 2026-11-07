@@ -71,6 +71,7 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
         <div class="wall-head__main">
           <p class="wall-head__meta">
             <span class="chip">{sceneLabel}</span>
+            <a class="btn btn--accent btn--small" href={`/messages/wall/${wall.id}`}>全员群聊</a>
             {model.role === 'organizer' ? (
               <a class="btn btn--ghost btn--small wall-head__admin" href={`/w/${wall.id}/admin`}>
                 组织者后台 <span aria-hidden="true">→</span>

@@ -19,11 +19,13 @@ import { createRevisionsRepo } from './revisions.js';
 import { createSessionsRepo } from './sessions.js';
 import { createUsersRepo } from './users.js';
 import { createWallsRepo } from './walls.js';
+import { createChatRepo } from './chat.js';
 
 export { migrate, openDatabase, transaction, MIGRATIONS_DIR, type Database } from './database.js';
 
 export function createRepos(db: Database) {
   return {
+    chat: createChatRepo(db),
     users: createUsersRepo(db),
     loginCodes: createLoginCodesRepo(db),
     sessions: createSessionsRepo(db),

@@ -19,7 +19,7 @@ import { STATIC_DIR } from '../routes/static.js';
 import { CsrfField } from './forms.js';
 
 /** 页面链接的样式表（按顺序；`app.css` 总是链接）。 */
-export const STYLESHEETS: readonly string[] = ['app.css', ...['wall.css', 'workspace.css', 'hosted.css'].filter((name) => existsSync(join(STATIC_DIR, name)))];
+export const STYLESHEETS: readonly string[] = ['app.css', ...['wall.css', 'workspace.css', 'hosted.css', 'messages.css'].filter((name) => existsSync(join(STATIC_DIR, name)))];
 
 export interface LayoutProps {
   title: string;
@@ -56,6 +56,7 @@ const Header: FC<{ auth: SessionAuth | null }> = ({ auth }) => (
           <a class="nav-link" href="/">
             我的
           </a>
+          <a class="nav-link" href="/messages">消息 <span class="message-badge" data-message-unread hidden aria-label="未读消息"></span></a>
           <a class="nav-link nav-link--quiet" href="/account/data">
             我的资料
           </a>
@@ -101,6 +102,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
         ))}
         <script src={`${STATIC_PATH_PREFIX}page-frame.js`}></script>
         <script src={`${STATIC_PATH_PREFIX}app.js`} defer></script>
+        {auth?.user.nickname ? <script src={`${STATIC_PATH_PREFIX}messages.js`} defer></script> : null}
       </head>
       <body class={bodyClass ? `site ${bodyClass}` : 'site'}>
         <Header auth={auth} />

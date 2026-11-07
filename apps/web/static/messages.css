@@ -1,0 +1,50 @@
+.messages-page, .conversation-page { max-width: 1040px; min-width: 0; }
+.messages-heading { margin-bottom: 28px; }
+.messages-heading .hero__title { margin-bottom: 12px; }
+.inbox-layout { display: grid; gap: 20px; grid-template-columns: minmax(0, 1fr) 260px; align-items: start; }
+.inbox h2, .inbox-walls h2 { margin: 0 0 18px; font-size: 1.05rem; }
+.conversation-list, .inbox-walls ul, .message-list, .chat-members ul { padding: 0; margin: 0; list-style: none; }
+.conversation-link { display: flex; align-items: center; gap: 14px; padding: 20px 0; text-decoration: none; color: var(--ink); border-bottom: 1px solid var(--line); }
+.conversation-link:hover strong { text-decoration: underline; }
+.conversation-copy { display: grid; gap: 5px; min-width: 0; flex: 1; }
+.conversation-copy .muted { font-size: .75rem; }
+.conversation-preview { font-size: .9rem; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--ink-2); }
+.conversation-icon { width: 42px; height: 42px; border-radius: 14px; display: grid; place-items: center; background: var(--paper-2); flex-shrink: 0; font-weight: 700; }
+.conversation-copy strong { overflow-wrap: anywhere; }
+.message-badge { display: inline-flex; align-items: center; justify-content: center; min-width: 22px; padding: 2px 6px; border-radius: 999px; background: var(--lime); color: var(--ink); font-size: .75rem; font-weight: 700; margin-left: 4px; }
+.inbox-walls li + li { margin-top: 14px; }
+.inbox-walls a { overflow-wrap: anywhere; }
+.conversation-page > .back-link { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.conversation-panel.card { padding: 0; overflow: hidden; }
+.conversation-heading { padding: 22px 28px; border-bottom: 1px solid var(--line); }
+.conversation-heading h1 { margin: 5px 0 0; font-size: clamp(1.3rem, 4vw, 1.8rem); overflow-wrap: anywhere; }
+.chat-members { margin-top: 14px; font-size: .9rem; }
+.chat-members summary { cursor: pointer; padding: 6px 0; }
+.chat-members ul { max-height: 220px; overflow: auto; }
+.chat-members li { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); padding: 8px 0; }
+.chat-members li > span { overflow-wrap: anywhere; min-width: 0; }
+.chat-history { height: clamp(220px, 45dvh, 520px); overflow-y: auto; overflow-x: hidden; padding: 20px 28px; overscroll-behavior: contain; overflow-anchor: none; }
+.chat-empty { text-align: center; padding: 55px 0; }
+.message { display: flex; flex-direction: column; align-items: flex-start; margin: 0 0 20px; }
+.message--mine { align-items: flex-end; }
+.message-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: .72rem; margin: 0 0 6px; color: var(--muted); }
+.message-text { margin: 0; padding: 11px 15px; max-width: 85%; white-space: pre-wrap; overflow-wrap: anywhere; border-radius: 4px 16px 16px; background: var(--paper-2); color: var(--ink); line-height: 1.65; }
+.message--mine .message-text { background: var(--lime-soft); border-radius: 16px 4px 16px 16px; }
+.chat-compose { padding: 18px 28px; border-top: 1px solid var(--line); background: var(--surface); }
+.chat-compose label { display: block; font-size: .8rem; font-weight: 600; margin-bottom: 7px; }
+.chat-compose textarea { display: block; width: 100%; min-height: 80px; max-height: 200px; resize: vertical; font: inherit; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 12px; background: var(--surface); color: var(--ink); }
+.chat-compose-actions { margin-top: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.chat-compose-actions .muted { font-size: .75rem; }
+.chat-status { min-height: 1.4em; margin: 10px 0 0; font-size: .82rem; color: var(--muted); overflow-wrap: anywhere; }
+.chat-new { display: block; margin: 0 auto 10px; }
+.inbox > .btn { margin-top: 14px; }
+@media (max-width: 639px) {
+  .inbox-layout { grid-template-columns: minmax(0, 1fr); }
+  .inbox-walls { order: -1; }
+  .inbox-walls ul { display: flex; flex-wrap: wrap; gap: 10px 20px; }
+  .inbox-walls li + li { margin: 0; }
+  .conversation-heading, .chat-history, .chat-compose { padding-left: 16px; padding-right: 16px; }
+  .conversation-link { gap: 10px; }
+  .message-text { max-width: 92%; }
+  .site-header__nav .nav-link { padding-inline: 8px; }
+}

@@ -404,7 +404,7 @@ describe('S4 补充：T3.1 的 POST 路由不认页面凭证，必须有会话 +
 
   it('正向对照：会话 + CSRF + 同源时成功（凭证在 Authorization 里也不影响）', async () => {
     const chat = await postForm(t, routes[2]?.path ?? '', { _csrf: organizer.csrf, hookId: 'can-help' }, { cookie: organizer.cookie, headers: { authorization: `Bearer ${credential}` } });
-    expect(chat.status).toBe(200);
+    expect(chat.status).toBe(303);
     const removed = await postForm(t, routes[3]?.path ?? '', { _csrf: organizer.csrf, membershipId: target.membership.id }, { cookie: organizer.cookie });
     expect(removed.status).toBe(303);
   });

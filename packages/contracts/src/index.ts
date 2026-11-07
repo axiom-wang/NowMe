@@ -14,3 +14,4 @@ export * from './schemas.js';
 export * from './api.js';
 export * from './version.js';
 export type * from './types.js';
+export * from './chat.js';

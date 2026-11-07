@@ -55,10 +55,15 @@ test('全流程：建墙、CLI 提交、发布确认、浏览与接话、组织�
     await expect(iframe).toHaveAttribute('src', new RegExp(`^${PAGES_ORIGIN}/v/`));
     await expect(b.page.frameLocator('iframe[data-nm-page-frame]').locator('body')).toContainText('林舟');
 
-    // 7. 想聊这个：联系方式与开场白
-    await b.page.getByRole('button', { name: '想聊这个' }).first().click();
+    // 7. 联系方式保留为独立入口；想聊这个进入站内会话，开场白不自动发送。
+    const memberUrl = b.page.url();
+    await b.page.getByRole('button', { name: '查看公开联系方式' }).click();
     await expect(b.page.locator('#nm-chat-contact')).toHaveText('linzhou_e2e');
-    await expect(b.page.locator('#nm-chat-opener')).not.toBeEmpty();
+    await b.page.goto(memberUrl);
+    await b.page.getByRole('button', { name: '想聊这个' }).first().click();
+    await expect(b.page).toHaveURL(/\/messages\/cnv_/);
+    await expect(b.page.getByLabel('消息内容')).not.toHaveValue('');
+    await expect(b.page.locator('.message')).toHaveCount(0);
 
     // 8. 组织者后台：A 已发布，看不到私密内容
     await organizer.page.goto(`/w/${wallId}/admin`);

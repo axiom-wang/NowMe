@@ -252,6 +252,9 @@ ID 一律为 `<前缀>_<16 字节随机 base32 小写>`；时间为 ISO 8601 UTC
 | `revisions` | `id rev_`、`page_id`、`number`（页内递增）、`source`（`local-agent`）、`credential_id`、`status accepted\|rejected`、`report_json`、`card_json`、`manifest_json`、`rendered_text`、`render_json`、`created_at` | 文件存 `revisions/<id>/`；rejected 版本只存报告 |
 | `publications` | `id pbl_`、`page_id`、`revision_id`、`card_json`（主人确认后的）、`contact_json`（发布时快照）、`published_at`、`ended_at`、`end_reason superseded\|withdrawn\|removed\|closed\|deleted` | 不可变快照；每页至多一个 `ended_at IS NULL` |
 | `events` | `id evt_`、`type`、`wall_id`、`page_id`、`actor_id`、`props_json`、`created_at` | 只存类型、ID、数值/布尔属性，**不存内容** |
+| `conversations` | `id cnv_`、`wall_id`、`kind group\|direct`、`user_a`、`user_b`、`created_at` | 每墙唯一群；私聊用户 ID 排序后与墙组成唯一键；群 ID 复用墙 ID 的随机后缀 |
+| `chat_messages` | `sequence` 整数递增主键、`conversation_id`、`sender_id`、`client_id`、`body`、`created_at` | `(conversation_id,sender_id,client_id)` 唯一，消息按 sequence 排序；正文只存纯文字 |
+| `chat_reads` | `conversation_id`、`user_id`、`last_sequence` | 联合主键；已读位置仅允许单调前进 |
 
 页面的展示状态由数据推导：有活跃 publication → `published`；有 publication 历史但当前无 → `withdrawn`；否则 `unpublished`。
 
@@ -309,7 +312,9 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 | `GET /join/:inviteCode`、`POST /join/:inviteCode` | 登录用户 | 加入墙（已被移除的成员不能再加入；已关闭的墙不能加入） |
 | `GET /w/:wallId` | 墙内有效成员 | 墙：名称、简介、随机排序的缩略卡网格、“我的页面”入口 |
 | `GET /w/:wallId/p/:pageId` | 墙内有效成员 | 成员页面（沙箱 iframe）+ 接话点 + “想聊这个” |
-| `POST /w/:wallId/p/:pageId/chat` | 墙内有效成员 | 记录事件，返回联系方式与开场白（主人未公开联系方式时不显示入口，且接口返回 404） |
+| `POST /w/:wallId/p/:pageId/chat` | 墙内有效成员 | `hookId` 取当前发布快照；记录事件，303 进入私聊并预填开场白，不自动发送；不依赖外部联系方式 |
+| `POST /w/:wallId/p/:pageId/direct` | 墙内有效成员 | 303 进入与页面主人的同墙私聊；自己页面或未发布页面返回 404 |
+| `POST /w/:wallId/p/:pageId/contact` | 墙内有效成员 | `hookId` 或 `contactHookId`；只返回发布快照中公开的联系方式和开场白；未公开时返回 404 |
 | `GET /w/:wallId/me` | 页面主人 | 创作工作区：Agent 指令、连接状态、版本列表（含校验结果）、版本预览、发布确认 |
 | `POST /w/:wallId/me/instruction` | 页面主人 | 生成新的一次性 token 与指令（旧的未使用 token 作废） |
 | `POST /w/:wallId/me/disconnect` | 页面主人 | 吊销页面凭证 |
@@ -324,6 +329,30 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 | `GET /w/:wallId/covers/:pageId.png` | 墙内有效成员 | 已发布版本的封面图 |
 
 无权访问时一律返回 `404`（不暴露墙或页面是否存在）；未登录访问需登录的页面重定向到 `/login?next=...`。
+
+### 4.2.1 墙内聊天（2026-11-07）
+
+本次需求替代原“不提供站内聊天”的范围限制。共享类型与常量见 `packages/contracts/src/chat.ts`。主站 cookie 认证；聊天接口位于 `/messages`，不改变 `/api/agent` 的凭证认证。
+
+每墙自动拥有唯一全员群，迁移 `005_chat.sql` 回填已有墙，新墙在创建事务内建群。群成员实时取墙内 `active` 成员，无独立群成员状态。私聊双方必须都是同墙有效成员，且只有双方可读写；组织者无额外权限。退出、移除后该用户不能读取该墙会话、历史、摘要、未读数或继续发送；墙关闭后所有人不可访问。私聊任一方成员关系失效后，该私聊不可访问。公开链接与页面沙箱不提供聊天数据。
+
+| 路由 | 输入 | 返回 |
+| --- | --- | --- |
+| `GET /messages` | 可选 `before=<lastSequence>:<conversationId>` | 会话列表页面；每页 50 个 |
+| `GET /messages/list` | 同上 | `{conversations: ConversationSummary[], hasMore}`；按最后消息序号倒序、ID 倒序排列；摘要正文最多 100 字符 |
+| `GET /messages/unread` | 无 | `{unread: number}`，仅计有权访问会话中的他人未读消息 |
+| `GET /messages/wall/:wallId` | 无 | 303 进入墙内全员群 |
+| `POST /messages/direct` | 表单 `_csrf, wallId, userId` | 幂等创建或复用私聊，303 进入会话；不允许自己与自己聊天 |
+| `GET /messages/:id` | 可选 `pageId, hookId` | 聊天页面；仅从当前会话对方在该墙的有效发布快照解析开场白，作为未发送草稿 |
+| `GET /messages/:id/items` | 可选 `before` 或 `after`，不能同时使用 | `{messages: ChatMessage[], hasMore}`；每页最多 50 条，响应内按 sequence 升序排列；默认最近 50 条，before 取更早消息，after 取之后最早一批消息 |
+| `POST /messages/:id/send` | 表单 `_csrf, clientId, text` | `Accept: application/json` 时返回 `{message: ChatMessage}`；普通表单成功 303 返回会话；失败保留草稿 |
+| `POST /messages/:id/read` | 表单 `_csrf, sequence` | `{ok:true}`；序号必须为 0 或属于该会话的真实消息，不能倒退 |
+
+`ConversationSummary`：`id, wallId, wallName, kind, title, unread, lastSequence, lastText, lastAt`。`ChatMessage`：`sequence, conversationId, senderId, senderName, clientId, text, createdAt`，不包含邮箱、私密联系方式或页面创作数据。序号为非负安全整数，不接受负数、浮点或超过安全整数范围的游标。
+
+`text` 统一换行并去除首尾空白后须为 1–2000 个 Unicode 码点，拒绝控制字符（允许换行与制表符）。`clientId` 为 16–100 位字母、数字、下划线或短横线；相同会话、发送者与标识重试返回原消息，正文不一致返回 409。所有 POST 沿用同源、会话和 CSRF 校验、64KB 主站请求体上限。JSON 数据读取未登录返回 401；来源或 CSRF 错误 403；无权访问与不存在统一 404；字段或游标无效 400。认证中间件的错误响应沿用主站错误页，其余聊天数据接口错误返回 `{error:string}`；客户端按状态码处理认证失败。
+
+前端每 2500ms 增量轮询，隐藏时暂停、恢复后从上次序号补齐，hasMore 时连续取下一批；不依赖整页刷新。只有页面可见、有焦点且滚动到消息底部时标记已读。阅读旧消息时不抢滚动位置。消息在 SSR 中转义，客户端使用 textContent，不执行 HTML；脚本和样式为同源静态资源，不改变 iframe 沙箱或 CSP。动态数据响应均 `no-store`。
 
 ### 4.3 Agent 指令格式（W05）
 

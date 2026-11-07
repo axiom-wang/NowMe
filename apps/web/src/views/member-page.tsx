@@ -1,10 +1,8 @@
 /**
- * 成员页面（`GET /w/:wallId/p/:pageId`）与“想聊这个”的结果（`POST /w/:wallId/p/:pageId/chat`，W14）。
+ * 成员页面、“想聊这个”站内私聊入口与独立的公开联系方式结果（W14）。
  *
  * - 页面用 PageFrame 展示当前发布版本（S1）；名字、介绍、接话点来自发布快照；
- * - 只有发布快照里公开了联系方式、且不是自己的页面时，接话点旁才有“想聊这个”；
- * - 联系方式只出现在“想聊这个”的结果里（记录 want_to_chat 事件之后），成员页 HTML 里没有；
- * - 不提供站内聊天：提示复制开场白，去微信等外部渠道继续。
+ * - “想聊这个”进入站内私聊并预填开场白；公开联系方式使用独立入口。
  */
 import type { FC } from 'hono/jsx';
 import type { ChatModel, MemberPageModel } from '../services/wall-view.js';
@@ -26,7 +24,7 @@ function ordinal(index: number): string {
 
 export const MemberPageView: FC<{ model: MemberPageModel; csrf: string }> = ({ model, csrf }) => {
   const { wall, card, contact, own } = model;
-  const canChat = contact !== null && !own;
+  const canChat = !own;
   const base = `/w/${wall.id}/p/${model.pageId}`;
   return (
     <div class="container container--wide">
@@ -39,6 +37,7 @@ export const MemberPageView: FC<{ model: MemberPageModel; csrf: string }> = ({ m
             {own ? <span class="sticker sticker--orange member-head__me">我的页面</span> : null}
           </h1>
           {card.tagline ? <p class="member-head__tagline">{card.tagline}</p> : null}
+          {!own ? <form method="post" action={`${base}/direct`}><CsrfField token={csrf} /><button type="submit" class="btn btn--accent">发私信</button></form> : null}
         </header>
         <div class="member-layout__frame">
           <PageFrame ticket={model.ticket} title={`${card.displayName}的页面`} />
@@ -69,12 +68,11 @@ export const MemberPageView: FC<{ model: MemberPageModel; csrf: string }> = ({ m
             </ol>
           ) : null}
           {own ? (
-            <p class="muted topics__note">这是你自己的页面。别人点“想聊这个”时，会看到你发布时公开的联系方式和对应的开场白。</p>
-          ) : contact === null ? (
-            <p class="muted topics__note">TA 没有公开联系方式，可以在活动现场找 TA 聊聊。</p>
+            <p class="muted topics__note">这是你自己的页面。别人点“想聊这个”时，会进入站内私聊，并带入你确认的开场白。</p>
           ) : (
-            <p class="muted topics__note">点“想聊这个”，会看到 TA 公开的联系方式和一句开场白。</p>
+            <p class="muted topics__note">点“想聊这个”，把话题带入站内私聊。开场白可以修改后再发送。</p>
           )}
+          {!own && contact && card.hooks[0] ? <form method="post" action={`${base}/contact`}><CsrfField token={csrf} /><input type="hidden" name="contactHookId" value={card.hooks[0].id} /><button type="submit" class="btn btn--ghost btn--small">查看公开联系方式</button></form> : null}
         </section>
       </div>
     </div>
@@ -94,7 +92,7 @@ export const ChatView: FC<{ model: ChatModel }> = ({ model }) => (
       <h1 class="chat__title">
         想和 {model.displayName} 聊「{model.hook.text}」
       </h1>
-      <p class="muted">NOWMe 不提供站内聊天。复制下面的联系方式和开场白，到{model.contact.channelLabel}里找 TA 继续聊吧。</p>
+      <p class="muted">这是 TA 主动公开的联系方式。也可以回到成员页，使用站内私聊。</p>
       <div class="chat__steps">
         <div class="chat__block">
           <h2 class="chat__label">

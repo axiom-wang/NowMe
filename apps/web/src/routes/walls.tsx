@@ -7,7 +7,9 @@
  * | GET /join/:inviteCode、POST /join/:inviteCode | 登录用户（邀请码无效 / 墙关闭 → 404；已移除 → 友好提示，不能加入；已是成员 → 直接进墙） |
  * | GET /w/:wallId | 墙内有效成员 |
  * | GET /w/:wallId/p/:pageId | 墙内有效成员；页面有活跃发布且主人成员关系有效（PageFrame，票据只给当前发布版本） |
- * | POST /w/:wallId/p/:pageId/chat | 墙内有效成员；发布快照里公开了联系方式、接话点存在、不是自己的页面，否则 404 |
+ * | POST /w/:wallId/p/:pageId/chat | 墙内有效成员；接话点存在且不是自己 → 进入站内私聊，预填开场白 |
+ * | POST /w/:wallId/p/:pageId/direct | 墙内有效成员；不是自己的已发布页面 → 进入私聊 |
+ * | POST /w/:wallId/p/:pageId/contact | 墙内有效成员；公开联系方式、接话点存在且不是自己 → 查看联系方式 |
  * | GET /w/:wallId/covers/:pageId.png | 墙内有效成员（墙上可见页面的当前发布版本封面） |
  *
  * GET 用 `requireUser`（未登录 → /login?next=）；POST 用 `requireForm`（会话 + CSRF + Origin，忽略 Authorization）。
@@ -21,8 +23,9 @@ import type { Wall } from '../db/walls.js';
 import { requireForm } from '../security/forms.js';
 import { authOf, requireUser } from '../security/session.js';
 import { findMemberWall, findPublishedMemberPage } from '../services/access.js';
-import { coverFilePath, loadMemberPageModel, loadWallModel, resolveChat } from '../services/wall-view.js';
+import { coverFilePath, loadMemberPageModel, loadWallModel, parsePublishedCard, resolveChat } from '../services/wall-view.js';
 import { createWall, joinState, joinWall, parseWallForm } from '../services/walls.js';
+import { openDirect } from '../services/chat.js';
 import { renderNotFound } from '../views/errors.js';
 import { JoinView, RemovedFromWallView } from '../views/join.js';
 import { renderPage } from '../views/layout.js';
@@ -191,8 +194,30 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
   app.post('/w/:wallId/p/:pageId/chat', form, (c) => {
     const auth = authOf(c);
     const found = findPublishedMemberPage(deps, auth.user.id, c.req.param('wallId'), c.req.param('pageId'));
+    if (!found || found.own) return renderNotFound(c);
+    const hookId = c.get('form').hookId ?? '';
+    const hooks = parsePublishedCard(found.entry.cardJson, '').hooks;
+    const hook = hooks.find((item) => item.id === hookId) ?? (/^\d{1,2}$/.test(hookId) ? hooks.find((item) => item.index === Number(hookId)) : undefined);
+    if (!hook) return renderNotFound(c);
+    const id = openDirect(deps, auth.user.id, found.wall.id, found.entry.ownerId);
+    if (!id) return renderNotFound(c);
+    deps.repos.events.record({ type: 'want_to_chat', wallId: found.wall.id, pageId: found.entry.pageId, actorId: auth.user.id, props: { hookIndex: hook.index }, createdAt: deps.now().toISOString() });
+    return c.redirect(`/messages/${id}?pageId=${found.entry.pageId}&hookId=${encodeURIComponent(hook.id)}`, 303);
+  });
+
+  app.post('/w/:wallId/p/:pageId/direct', form, (c) => {
+    const auth = authOf(c);
+    const found = findPublishedMemberPage(deps, auth.user.id, c.req.param('wallId'), c.req.param('pageId'));
+    if (!found || found.own) return renderNotFound(c);
+    const id = openDirect(deps, auth.user.id, found.wall.id, found.entry.ownerId);
+    return id ? c.redirect(`/messages/${id}`, 303) : renderNotFound(c);
+  });
+
+  app.post('/w/:wallId/p/:pageId/contact', form, (c) => {
+    const auth = authOf(c);
+    const found = findPublishedMemberPage(deps, auth.user.id, c.req.param('wallId'), c.req.param('pageId'));
     if (!found) return renderNotFound(c);
-    const chat = resolveChat(deps, found, c.get('form').hookId ?? '');
+    const chat = resolveChat(deps, found, c.get('form').hookId ?? c.get('form').contactHookId ?? '');
     if (!chat) return renderNotFound(c);
     deps.repos.events.record({
       type: 'want_to_chat',

@@ -59,6 +59,7 @@ export const ID_RANDOM_LENGTH = base32Length(ID_RANDOM_BYTES); // 26
  */
 export const ID_PREFIXES = {
   user: 'usr',
+  conversation: 'cnv',
   wall: 'wal',
   membership: 'mem',
   page: 'pg',

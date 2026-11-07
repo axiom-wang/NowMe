@@ -20,6 +20,7 @@ import { registerAdminRoutes } from './admin.js';
 import { registerAgentApiRoutes } from './agent-api.js';
 import { registerAuthRoutes } from './auth.js';
 import { registerHomeRoutes } from './home.js';
+import { registerMessageRoutes } from './messages.js';
 import { registerHostedRoutes } from './hosted.js';
 import { registerPublicRoutes } from './public.js';
 import { registerSkillRoutes } from './skill.js';
@@ -33,6 +34,7 @@ export function registerRoutes(app: AppHono, deps: AppDeps): void {
   registerAgentApiRoutes(app, deps);
   registerSkillRoutes(app, deps);
   registerHomeRoutes(app, deps);
+  registerMessageRoutes(app, deps);
   registerWorkspaceRoutes(app, deps);
   registerHostedRoutes(app, deps);
   registerAiSettingsRoutes(app, deps);

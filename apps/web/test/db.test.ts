@@ -10,6 +10,9 @@ const NOW = '2026-11-06T08:00:00.000Z';
 
 /** contracts 第 3 节的表与“主要字段”（实现可以多出字段，但必须包含这些）。 */
 const CONTRACT_TABLES: Record<string, string[]> = {
+  conversations: ['id', 'wall_id', 'kind', 'user_a', 'user_b', 'created_at'],
+  chat_messages: ['sequence', 'conversation_id', 'sender_id', 'client_id', 'body', 'created_at'],
+  chat_reads: ['conversation_id', 'user_id', 'last_sequence'],
   // contracts 9 / hosted-route 4（迁移 002_hosted.sql）
   profile_entries: ['id', 'user_id', 'category', 'text', 'source', 'confirmation', 'created_at', 'updated_at'],
   briefs: ['id', 'page_id', 'owner_id', 'status', 'answers_json', 'followups_json', 'brief_json', 'brief_md', 'confirmed_at', 'created_at', 'updated_at'],
@@ -131,7 +134,7 @@ describe('数据库迁移', () => {
     expect(migrate(db)).toEqual([]);
     db.close();
     const again = open(file);
-    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }, { version: '004_user_models.sql' }]);
+    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }, { version: '004_user_models.sql' }, { version: '005_chat.sql' }]);
   });
 
   it('从旧数据库增量升级保留用户、页面、brief、版本、发布与历史任务', () => {
