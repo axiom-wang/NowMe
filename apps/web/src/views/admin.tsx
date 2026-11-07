@@ -10,6 +10,7 @@ import type { Wall } from '../db/walls.js';
 import { formatDateTime } from '../format.js';
 import { CsrfField, Notice } from './forms.js';
 import { PAGE_STATE_LABEL } from './home.js';
+import { initialOf } from './layout.js';
 
 export type AdminNotice = 'created' | 'removed';
 
@@ -38,6 +39,9 @@ export interface AdminViewProps {
 
 const MemberItem: FC<{ member: AdminMemberRow; wallId: string; csrf: string }> = ({ member, wallId, csrf }) => (
   <li class="member-row">
+    <span class="avatar" aria-hidden="true">
+      {initialOf(member.nickname)}
+    </span>
     <div class="member-row__main">
       <span class="member-row__name">{member.nickname}</span>
       {member.role === 'organizer' ? <span class="badge badge--accent">组织者</span> : null}
@@ -64,88 +68,100 @@ const MemberItem: FC<{ member: AdminMemberRow; wallId: string; csrf: string }> =
 export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError }) => {
   const { wall } = model;
   return (
-    <>
+    <div class="container container--wide">
       <nav class="back-link" aria-label="返回">
-        <a href={`/w/${wall.id}`}>← 回到墙</a>
+        <a href={`/w/${wall.id}`}>
+          <span aria-hidden="true">←</span> 回到墙
+        </a>
       </nav>
-      <section class="page-intro">
-        <p class="muted admin-eyebrow">组织者后台</p>
-        <h1>{wall.name}</h1>
-        <p>
-          <span class="badge badge--muted">{model.sceneLabel}</span>
-        </p>
+      <section class={`hero admin-hero scene--${wall.sceneType}`}>
+        <div>
+          <p class="eyebrow admin-eyebrow">组织者后台</p>
+          <h1 class="hero__title">{wall.name}</h1>
+          <p>
+            <span class="chip">{model.sceneLabel}</span>
+          </p>
+        </div>
       </section>
       {notice ? <Notice tone="success">{NOTICE_TEXT[notice]}</Notice> : null}
 
-      <section class="card invite" aria-labelledby="invite-heading">
-        <h2 id="invite-heading">邀请成员</h2>
-        <p class="muted">把链接或二维码发到群公告、报名表或现场物料里。打开并登录就能加入，不需要先做好页面。</p>
-        <div class="invite__link">
-          <code class="invite__url" id="nm-invite-link">
-            {model.inviteUrl}
-          </code>
-          <button type="button" class="btn btn--primary" data-copy="nm-invite-link">
-            复制邀请链接
-          </button>
+      <div class="admin-layout">
+        <div class="admin-layout__main">
+          <section class="card invite" aria-labelledby="invite-heading">
+            <div class="invite__text">
+              <h2 id="invite-heading">邀请成员</h2>
+              <p class="muted">把链接或二维码发到群公告、报名表或现场物料里。打开并登录就能加入，不需要先做好页面。</p>
+              <div class="invite__link">
+                <code class="invite__url" id="nm-invite-link">
+                  {model.inviteUrl}
+                </code>
+                <button type="button" class="btn btn--primary" data-copy="nm-invite-link">
+                  复制邀请链接
+                </button>
+              </div>
+            </div>
+            <figure class="invite__qr">
+              <img src={model.inviteQr} alt={`「${wall.name}」的邀请二维码`} width="200" height="200" />
+              <figcaption>
+                <a href={model.inviteQr} download="nowme-invite-qr.svg">
+                  下载二维码
+                </a>
+              </figcaption>
+            </figure>
+          </section>
+
+          <section class="card" aria-labelledby="members-heading">
+            <h2 id="members-heading">成员</h2>
+            <p class="muted">这里只显示昵称、加入时间和发布状态。成员的草稿、版本和联系方式只有本人看得到。</p>
+            <ul class="member-list">
+              {model.members.map((member) => (
+                <MemberItem member={member} wallId={wall.id} csrf={csrf} />
+              ))}
+            </ul>
+          </section>
         </div>
-        <figure class="invite__qr">
-          <img src={model.inviteQr} alt={`「${wall.name}」的邀请二维码`} width="200" height="200" />
-          <figcaption>
-            <a href={model.inviteQr} download="nowme-invite-qr.svg">
-              下载二维码
-            </a>
-          </figcaption>
-        </figure>
-      </section>
 
-      <section class="card" aria-labelledby="overview-heading">
-        <h2 id="overview-heading">概况</h2>
-        <dl class="stat-tiles">
-          <div class="stat-tile">
-            <dt>成员</dt>
-            <dd>{model.counts.members}</dd>
-          </div>
-          <div class="stat-tile">
-            <dt>已发布</dt>
-            <dd>{model.counts.published}</dd>
-          </div>
-        </dl>
-      </section>
+        <aside class="admin-layout__side">
+          <section class="card overview" aria-labelledby="overview-heading">
+            <h2 id="overview-heading">概况</h2>
+            <dl class="stat-tiles">
+              <div class="stat-tile">
+                <dt>成员</dt>
+                <dd>{model.counts.members}</dd>
+              </div>
+              <div class="stat-tile stat-tile--accent">
+                <dt>已发布</dt>
+                <dd>{model.counts.published}</dd>
+              </div>
+            </dl>
+          </section>
 
-      <section class="card" aria-labelledby="members-heading">
-        <h2 id="members-heading">成员</h2>
-        <p class="muted">这里只显示昵称、加入时间和发布状态。成员的草稿、版本和联系方式只有本人看得到。</p>
-        <ul class="member-list">
-          {model.members.map((member) => (
-            <MemberItem member={member} wallId={wall.id} csrf={csrf} />
-          ))}
-        </ul>
-      </section>
-
-      <section class="card danger-zone" aria-labelledby="close-heading">
-        <h2 id="close-heading">关闭这面墙</h2>
-        <p>
-          关闭后所有人（包括你）都看不到这面墙，成员的页面全部下墙，大家本地 Agent 的连接全部断开，邀请链接失效。关闭后不能重新打开。
-        </p>
-        {closeError ? <Notice tone="error">请先勾选确认，再关闭墙。</Notice> : null}
-        <form
-          method="post"
-          action={`/w/${wall.id}/admin/close`}
-          class="stack"
-          data-confirm={`确定关闭「${wall.name}」吗？关闭后不能重新打开。`}
-        >
-          <CsrfField token={csrf} />
-          <label class="check">
-            <input type="checkbox" name="confirm" value="1" required />
-            <span>我确认关闭这面墙</span>
-          </label>
-          <div>
-            <button type="submit" class="btn btn--danger">
-              关闭墙
-            </button>
-          </div>
-        </form>
-      </section>
-    </>
+          <section class="card danger-zone" aria-labelledby="close-heading">
+            <h2 id="close-heading">关闭这面墙</h2>
+            <p>
+              关闭后所有人（包括你）都看不到这面墙，成员的页面全部下墙，大家本地 Agent 的连接全部断开，邀请链接失效。关闭后不能重新打开。
+            </p>
+            {closeError ? <Notice tone="error">请先勾选确认，再关闭墙。</Notice> : null}
+            <form
+              method="post"
+              action={`/w/${wall.id}/admin/close`}
+              class="stack"
+              data-confirm={`确定关闭「${wall.name}」吗？关闭后不能重新打开。`}
+            >
+              <CsrfField token={csrf} />
+              <label class="check">
+                <input type="checkbox" name="confirm" value="1" required />
+                <span>我确认关闭这面墙</span>
+              </label>
+              <div>
+                <button type="submit" class="btn btn--danger">
+                  关闭墙
+                </button>
+              </div>
+            </form>
+          </section>
+        </aside>
+      </div>
+    </div>
   );
 };

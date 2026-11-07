@@ -13,6 +13,7 @@ import {
   isTokenFormat,
   KIT_BASE_PATH,
   KIT_VERSION,
+  type AgentClient,
   type AgentContext,
 } from '@nowme/contracts';
 import type { AgentAuth, AppDeps } from '../context.js';
@@ -21,6 +22,7 @@ import type { PageCredential } from '../db/credentials.js';
 import type { Repos } from '../db/index.js';
 import type { Page } from '../db/pages.js';
 import type { Wall } from '../db/walls.js';
+import { skillInstallPageUrl } from './skill-package.js';
 
 /** 页面工作区地址（`/w/<wallId>/me`）。 */
 export function workspacePath(wallId: string): string {
@@ -59,7 +61,12 @@ export function revalidateAgentAuth(repos: Repos, credentialId: string): AgentAu
   return credential ? resolveAgentAuth(repos, credential) : null;
 }
 
-export function buildAgentContext(deps: Pick<AppDeps, 'repos' | 'config' | 'kitFonts'>, wall: Wall, page: Page): AgentContext {
+/** `skillPackage` 可选：托管路线内部调用时不需要 Skill 信息（为 null）。 */
+export function buildAgentContext(
+  deps: Pick<AppDeps, 'repos' | 'config' | 'kitFonts'> & Partial<Pick<AppDeps, 'skillPackage'>>,
+  wall: Wall,
+  page: Page,
+): AgentContext {
   const stats = deps.repos.revisions.statsForPage(page.id);
   return {
     wall: {
@@ -77,6 +84,7 @@ export function buildAgentContext(deps: Pick<AppDeps, 'repos' | 'config' | 'kitF
     },
     kit: { version: KIT_VERSION, basePath: KIT_BASE_PATH, fonts: deps.kitFonts },
     limits: { ...AGENT_CONTEXT_LIMITS },
+    skill: deps.skillPackage ? { version: deps.skillPackage.manifest.version, installUrl: skillInstallPageUrl(deps.config.webOrigin) } : null,
   };
 }
 
@@ -89,7 +97,10 @@ export type ExchangeResult =
  * 成员关系与墙仍有效）→ 标记已用 → 吊销该页全部旧凭证 → 签发新凭证。
  * 失败时不改变任何状态（墙不匹配不会消耗 token）。
  */
-export function exchangeAgentToken(deps: Pick<AppDeps, 'db' | 'repos' | 'now'>, input: { wallId: string; token: string }): ExchangeResult {
+export function exchangeAgentToken(
+  deps: Pick<AppDeps, 'db' | 'repos' | 'now'>,
+  input: { wallId: string; token: string; client?: AgentClient },
+): ExchangeResult {
   const nowIso = deps.now().toISOString();
   const { repos } = deps;
   return transaction(deps.db, (): ExchangeResult => {
@@ -112,7 +123,14 @@ export function exchangeAgentToken(deps: Pick<AppDeps, 'db' | 'repos' | 'now'>, 
     repos.credentials.revokeAllForPage(page.id, nowIso);
     const credential = generateToken('pageCredential');
     const credentialId = generateId('crd');
-    repos.credentials.create({ id: credentialId, pageId: page.id, credentialHash: hashToken(credential), createdAt: nowIso });
+    repos.credentials.create({
+      id: credentialId,
+      pageId: page.id,
+      credentialHash: hashToken(credential),
+      createdAt: nowIso,
+      clientCliVersion: input.client?.cliVersion ?? null,
+      clientSkillVersion: input.client?.skillVersion ?? null,
+    });
     const stored = repos.credentials.findById(credentialId);
     if (!stored) throw new Error('凭证写入失败');
     return { ok: true, credential, auth: { credential: stored, page, wall, membership } };

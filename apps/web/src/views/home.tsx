@@ -40,31 +40,36 @@ const ENDED_LABEL: Record<Exclude<HomeEntryStatus, 'active'>, { badge: string; t
 
 const ActiveItem: FC<{ item: HomeItem }> = ({ item }) => {
   const base = `/w/${item.wall.id}`;
+  const published = item.pageState === 'published';
   return (
-    <li class="card wall-list__item">
-      <div class="wall-list__head">
-        <h2>{item.wall.name}</h2>
-        <span class="badge badge--muted">{item.sceneLabel}</span>
+    <li class={`wall-tile scene--${item.wall.sceneType}`}>
+      <div class="wall-tile__band">
+        <span class="chip chip--on-band">{item.sceneLabel}</span>
         {item.role === 'organizer' ? <span class="badge badge--accent">组织者</span> : null}
       </div>
-      {item.wall.description ? <p class="muted wall-list__desc">{item.wall.description}</p> : null}
-      <p class="wall-list__state">
-        <span class={`badge ${item.pageState === 'published' ? 'badge--ok' : 'badge--muted'}`}>
-          我的页面：{PAGE_STATE_LABEL[item.pageState ?? 'unpublished']}
-        </span>
-      </p>
-      <div class="actions">
-        <a class="btn btn--primary" href={base}>
-          进入墙
-        </a>
-        <a class="btn btn--ghost" href={`${base}/me`}>
-          创作工作区
-        </a>
-        {item.role === 'organizer' ? (
-          <a class="btn btn--ghost" href={`${base}/admin`}>
-            组织者后台
+      <div class="wall-tile__body">
+        <h2 class="wall-tile__name">
+          <a href={base}>{item.wall.name}</a>
+        </h2>
+        {item.wall.description ? <p class="muted wall-list__desc">{item.wall.description}</p> : null}
+        <p class="wall-list__state">
+          <span class={`badge ${published ? 'badge--ok' : 'badge--muted'}`}>
+            <span class="dot" aria-hidden="true"></span>我的页面：{PAGE_STATE_LABEL[item.pageState ?? 'unpublished']}
+          </span>
+        </p>
+        <div class="actions">
+          <a class="btn btn--primary" href={base}>
+            进入墙
           </a>
-        ) : null}
+          <a class="btn btn--ghost" href={`${base}/me`}>
+            创作工作区
+          </a>
+          {item.role === 'organizer' ? (
+            <a class="btn btn--ghost" href={`${base}/admin`}>
+              组织者后台
+            </a>
+          ) : null}
+        </div>
       </div>
     </li>
   );
@@ -74,7 +79,7 @@ const EndedItem: FC<{ item: HomeItem }> = ({ item }) => {
   const label = ENDED_LABEL[item.status === 'active' ? 'closed' : item.status];
   return (
     <li class="ended-list__item">
-      <div class="wall-list__head">
+      <div class="ended-list__head">
         <h3>{item.wall.name}</h3>
         <span class="badge badge--muted">{label.badge}</span>
       </div>
@@ -87,32 +92,51 @@ export const HomeView: FC<{ nickname: string; items: HomeItem[]; notice: HomeNot
   const active = items.filter((item) => item.status === 'active');
   const ended = items.filter((item) => item.status !== 'active');
   return (
-    <>
-      <section class="page-intro home-intro">
+    <div class="container">
+      <section class="hero home-hero">
         <div>
-          <h1>你好，{nickname}</h1>
-          <p class="muted">这里是你加入的墙。每面墙上你都有一页属于自己的页面。</p>
+          <p class="eyebrow">我的</p>
+          <h1 class="hero__title">你好，{nickname}</h1>
+          <p class="hero__lead">这里是你加入的墙。每面墙上你都有一页属于自己的页面。</p>
         </div>
-        <a class="btn btn--primary" href="/walls/new">
-          建一面墙
+        <a class="btn btn--primary btn--lg" href="/walls/new">
+          <span aria-hidden="true">+</span> 建一面墙
         </a>
       </section>
       {notice ? <Notice tone="success">{NOTICE_TEXT[notice]}</Notice> : null}
       {active.length === 0 ? (
-        <section class="card empty-state">
-          <h2>还没有加入任何墙</h2>
+        <section class="empty-state">
+          <div class="empty-state__art" aria-hidden="true">
+            <span class="sticker sticker--lime">你</span>
+            <span class="sticker sticker--paper">？</span>
+            <span class="sticker sticker--orange">墙</span>
+          </div>
+          <h2 class="display">还没有加入任何墙</h2>
           <p class="muted">拿到组织者的邀请链接或二维码，打开就能加入。你也可以自己建一面墙，把邀请发到群里。</p>
+          <a class="btn btn--ghost" href="/walls/new">
+            自己建一面墙
+          </a>
         </section>
       ) : (
-        <ul class="wall-list">
-          {active.map((item) => (
-            <ActiveItem item={item} />
-          ))}
-        </ul>
+        <section aria-labelledby="walls-heading">
+          <div class="section-head">
+            <h2 id="walls-heading" class="section-title display">
+              我加入的墙
+            </h2>
+            <span class="section-head__count">{active.length}</span>
+          </div>
+          <ul class="wall-list">
+            {active.map((item) => (
+              <ActiveItem item={item} />
+            ))}
+          </ul>
+        </section>
       )}
       {ended.length > 0 ? (
-        <section class="card ended-list" aria-labelledby="ended-heading">
-          <h2 id="ended-heading">已结束的墙</h2>
+        <section class="ended-list" aria-labelledby="ended-heading">
+          <h2 id="ended-heading" class="section-title section-title--quiet">
+            已结束的墙
+          </h2>
           <ul class="ended-list__items">
             {ended.map((item) => (
               <EndedItem item={item} />
@@ -120,6 +144,6 @@ export const HomeView: FC<{ nickname: string; items: HomeItem[]; notice: HomeNot
           </ul>
         </section>
       ) : null}
-    </>
+    </div>
   );
 };

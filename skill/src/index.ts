@@ -17,7 +17,9 @@ export const TEMPLATES_DIR = join(SKILL_DIR, 'templates');
 export const REFERENCE_DIR = join(SKILL_DIR, 'reference');
 export const EXAMPLES_DIR = join(SKILL_DIR, 'examples');
 export const EXAMPLES_INDEX_FILE = join(EXAMPLES_DIR, 'index.json');
-/** Skill 版本（写进示例与生成页面的 manifest.generator.skillVersion）。 */
+/** 打包产物目录（contracts 4.5）：`manifest.json` 与 `nowme-page-<version>.tar.gz`，由主站托管下载。 */
+export const SKILL_PACKAGE_DIR = join(SKILL_DIR, 'dist-package');
+/** Skill 版本（写进示例与生成页面的 manifest.generator.skillVersion；也是 Skill 包与内置 CLI 报告的版本）。 */
 export const SKILL_VERSION = '0.1.0';
 
 /** 读取并校验一份场景指南（`scenes/<sceneType>.json`）。 */

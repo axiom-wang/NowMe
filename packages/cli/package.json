@@ -9,6 +9,11 @@
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./bundle": {
+      "source": "./src/bundle.ts",
+      "types": "./dist/bundle.d.ts",
+      "default": "./dist/bundle.js"
     }
   },
   "bin": {
@@ -31,6 +36,7 @@
   },
   "devDependencies": {
     "@types/node": "catalog:",
+    "esbuild": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

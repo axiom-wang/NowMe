@@ -1,8 +1,8 @@
-# NOWMe 接口约定（原型试跑 · 本地路线）
+# NOWMe 接口约定（原型试跑 · 本地路线 + 平台托管路线）
 
 > 本文是所有模块共同遵守的契约：页面输出契约、数据模型、API、校验规则、安全不变量。
 > 需求来源：[MVP 需求](product-mvp-community-wall.md)、[页面生成方案](page-generation-byo-agent.md)、[信息收集与 brief](brief-collection.md)。
-> 范围：只做原型试跑的**本地路线**；平台托管路线、付费、派生（W18）不做。
+> 范围：原型试跑的**本地路线**，以及平台托管路线的应用内采访、托管生成、应用内修改与免费额度（第 9 节，正文见 [hosted-route.md](hosted-route.md)）；付费、派生（W18）不做。
 > 修改本文需要总规划师同意；实现与本文冲突时，以本文为准并提出修改建议。
 > 文中标 **[原型默认]** 的数值是需求文档里 [待定] 项的临时取值，统一放在 `packages/contracts` 的常量里，便于以后调整。
 
@@ -139,12 +139,17 @@ page/
 | `nowme fetch <wallId> <token> [--server URL]` | 用一次性 token 换取页面凭证，写 `nowme.json`、`context.json`、凭证；上报 `fetch` 事件（请求体 `type: "fetch"`，服务端存为 `agent_fetch`） |
 | `nowme fetch` | 已有凭证时刷新 `context.json` |
 | `nowme validate [dir=page] [--json] [--no-fix]` | 静态校验；默认自动补全 `manifest.extraChars`；有 error 时退出码 1 |
-| `nowme preview [dir=page] [--serve] [--cover]` | 双源本地沙箱渲染、截图（缺 `cover.png` 或带 `--cover` 时写入 750×1000 封面）、渲染检查、字体子集化；`--serve` 保持服务器供主人在浏览器中查看 |
+| `nowme preview [dir=page] [--serve] [--cover] [--remote]` | 双源本地沙箱渲染、截图（缺 `cover.png` 或带 `--cover` 时写入 750×1000 封面）、渲染检查、字体子集化；`--serve` 保持服务器供主人在浏览器中查看；`--remote` 改由服务端渲染（`POST /api/agent/previews`，产物写在同样的位置） |
 | `nowme submit [dir=page]` | 先本地校验，再只上传白名单文件；打印版本号、校验结果与工作区链接，并提醒“发布需要你在应用内确认” |
 | `nowme status` | 显示关联的墙、页面、凭证是否存在（不显示凭证内容） |
 | `nowme event <type>` | 供 Skill 上报 `generate` 等事件，只带数字/布尔属性 |
 
 所有命令默认输出中文的人类可读文本，`--json` 输出机器可读结果。凭证永远不打印完整内容。
+
+**两种分发形式**（4.5）：
+
+- 源码 / `dist/`（NOWMe 开发者在仓库里运行）：完整命令，`preview` 默认本机 Playwright 渲染；`nowme --version` 输出 `nowme <版本>（源码方式运行）`。
+- 随 Skill 包分发的单文件 `scripts/nowme.mjs`（真实用户；`@nowme/cli/bundle` 用 esbuild 打出，只需要 Node ≥ 22.13）：不含 Playwright，`preview` 一律由服务端渲染；校验用 `context.json` 里的 `kit.fonts`（包里没有 fonts.json，没有 context.json 时提示先 fetch）；`--version` 输出 `nowme <CLI 版本> · NOWMe Skill <Skill 版本>`；exchange 时自报版本（4.1），`fetch` 发现 `context.skill.version` 更新时提示主人更新（只提示，不报错）。
 
 ## 2. 校验规则（`packages/validator`）
 
@@ -243,7 +248,7 @@ ID 一律为 `<前缀>_<16 字节随机 base32 小写>`；时间为 ISO 8601 UTC
 | `memberships` | `id mem_`、`wall_id`、`user_id`、`role organizer\|member`、`status active\|left\|removed`、`joined_at`、`ended_at` | (`wall_id`,`user_id`) 唯一；组织者建墙时自动成为成员 |
 | `pages` | `id pg_`、`membership_id` 唯一、`wall_id`、`owner_id`、`contact_channel`、`contact_value`、`contact_public`、`public_token`（空=未开启）、`created_at`、`updated_at` | 加入墙时创建 |
 | `agent_tokens` | `id`、`page_id`、`token_hash`、`expires_at`、`used_at`、`created_at` | 一次性 token |
-| `page_credentials` | `id`、`page_id`、`credential_hash`、`created_at`、`last_used_at`、`revoked_at` | 每页同时最多一个有效凭证 |
+| `page_credentials` | `id`、`page_id`、`credential_hash`、`created_at`、`last_used_at`、`revoked_at`、`client_cli_version`、`client_skill_version`（T3.6，迁移 003：exchange 时 CLI 自报的版本，可空，只用于显示） | 每页同时最多一个有效凭证 |
 | `revisions` | `id rev_`、`page_id`、`number`（页内递增）、`source`（`local-agent`）、`credential_id`、`status accepted\|rejected`、`report_json`、`card_json`、`manifest_json`、`rendered_text`、`render_json`、`created_at` | 文件存 `revisions/<id>/`；rejected 版本只存报告 |
 | `publications` | `id pbl_`、`page_id`、`revision_id`、`card_json`（主人确认后的）、`contact_json`（发布时快照）、`published_at`、`ended_at`、`end_reason superseded\|withdrawn\|removed\|closed\|deleted` | 不可变快照；每页至多一个 `ended_at IS NULL` |
 | `events` | `id evt_`、`type`、`wall_id`、`page_id`、`actor_id`、`props_json`、`created_at` | 只存类型、ID、数值/布尔属性，**不存内容** |
@@ -260,10 +265,11 @@ ID 一律为 `<前缀>_<16 字节随机 base32 小写>`；时间为 ISO 8601 UTC
 
 | 方法与路径 | 认证 | 请求 | 响应 |
 | --- | --- | --- | --- |
-| `POST /api/agent/exchange` | 无 | `{ wallId, token }` | `200 { credential, page: {id}, context }`；失败 `401 TOKEN_INVALID`（不存在、已用、过期、墙不匹配一律同一码，`message` 可区分原因） |
+| `POST /api/agent/exchange` | 无 | `{ wallId, token, client? }`；`client = { cliVersion, skillVersion \| null }`（版本号 `主.次.修订[-预发布]`；格式不对时 `400 BAD_REQUEST` 且 token 不被使用） | `200 { credential, page: {id}, context }`；失败 `401 TOKEN_INVALID`（不存在、已用、过期、墙不匹配一律同一码，`message` 可区分原因） |
 | `GET /api/agent/context` | 凭证 | — | `200 context` |
 | `POST /api/agent/revisions` | 凭证 | `{ files: { "<相对路径>": "<base64>" } }`，体积上限 12 MB | 通过 `201 { revision }`；校验不通过 `422 { revision }`（`status: "rejected"`，含报告） |
 | `POST /api/agent/events` | 凭证 | `{ type, props? }`；`type ∈ fetch / validate / preview / generate / submit`；`props` 只接受数字和布尔值 | `204` |
+| `POST /api/agent/previews` | 凭证 | 与 `/revisions` 相同（体积上限、白名单过滤） | `200 RemotePreviewResponse`：服务端用与提交相同的沙箱渲染管线（`mode: 'preview'`）渲染并返回报告与截图，**什么都不存**（不建版本、不写文件，只记一条不含内容的 `remote_preview` 事件）；每页每 24 小时 [原型默认] 100 次，超出 `429 RATE_LIMITED` |
 
 ```ts
 interface AgentContext {
@@ -271,6 +277,12 @@ interface AgentContext {
   page: { id: string; revisionCount: number; lastSubmittedAt: string | null; workspaceUrl: string };
   kit: { version: '1'; basePath: '/_nowme/kit/v1/'; fonts: KitFont[] };
   limits: { htmlMaxBytes: number; assetMaxBytes: number; assetsTotalMaxBytes: number; assetsMaxCount: number; maxCjkFonts: number };
+  skill: { version: string; installUrl: string } | null; // 主站分发的 Skill 版本与安装页（4.5）；没有 Skill 包时为 null
+}
+interface RemotePreviewResponse {
+  report: ValidationReport; rendered: boolean;
+  cover: string | null; full: string | null; reducedMotion: string | null; // PNG base64
+  blocks: { id: string; top: number; height: number; png: string }[];     // 最多 12 块
 }
 interface RevisionSummary { id: string; number: number; status: 'accepted' | 'rejected'; report: ValidationReport; createdAt: string; workspaceUrl: string }
 ```
@@ -319,7 +331,7 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 /nowme-page wal_xxx nmt_xxx --server http://localhost:3000
 ```
 
-工作区同时显示一段等价的纯文本说明，给不支持 Skill 的 Agent。token 有效期 [原型默认] 72 小时（覆盖“现场拿到、当晚执行”），`NOWME_AGENT_TOKEN_TTL_HOURS` 可调。
+工作区同时显示一段等价的纯文本说明，给不支持 Skill 的 Agent（第 0 步让它按 `/skill/install.md` 下载工具包，用里面的单文件 CLI，不需要装成 Skill）。工作区还始终显示「安装 NOWMe Skill」（4.5）：让 Agent 自己安装的一句话、重开会话、自检方法、`Unknown command` 的原因与解决办法；这块说明里没有 token，没连接过且没有版本时默认展开。已连接时连接状态显示 CLI 自报的 Skill 版本，落后于主站分发的版本时提示更新。token 有效期 [原型默认] 72 小时（覆盖“现场拿到、当晚执行”），`NOWME_AGENT_TOKEN_TTL_HOURS` 可调。
 
 ### 4.4 页面托管（`apps/pages-host`）
 
@@ -333,6 +345,23 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 `/v/:ticket`（无结尾斜杠）`308` 重定向到 `/v/:ticket/`。页面、图片、字体响应 `Cache-Control: no-store`；Kit `public, max-age=300`。
 
 **票据**：`<revisionId>.<expUnix>.<sig>`，`sig = base64url(HMAC-SHA256(secret, "<revisionId>.<expUnix>"))`，有效期 [原型默认] 30 分钟；共享密钥 `NOWME_TICKET_SECRET`（开发默认读写 `.data/secret`）。主站只在授权检查通过后签发：主人 → 自己页面的任意 `accepted` 版本；墙内有效成员 → 当前发布版本；公开链接 → 当前发布版本。签发与校验函数在 `packages/contracts`，两边共用。
+
+### 4.5 Skill 分发（T3.6）
+
+真实用户手里没有本仓库：主站托管 Skill 包，包里自带单文件 CLI（1.5），装好 Skill 就能用。所有地址都由 `NOWME_WEB_ORIGIN` 拼出，本地与上线走同一套代码。
+
+| 路径 | 认证 | 内容 |
+| --- | --- | --- |
+| `GET /skill` | 无 | 给人看的安装页：让 Agent 自己安装的一句话（推荐）、市场渠道（配置了才显示）、手动下载与 sha256、重开会话、自检、不支持 Skill 时怎么办、常见问题 |
+| `GET /skill/install.md` | 无 | 给 Agent 读的安装说明（`text/markdown`，`max-age=300`）：下载 → 核对 sha256 → 解压 → 以 `nowme-page` 为目录名放进**它自己的用户级 Skill 目录**（不确定就问用户，不要猜）→ 提醒重开会话 → `node <目录>/scripts/nowme.mjs --version` 自检 |
+| `GET /skill/manifest.json` | 无 | `{ name: "nowme-page", version, file, sha256, bytes, minNode, url }`（`max-age=300`） |
+| `GET /skill/nowme-page-<version>.tar.gz` | 无 | Skill 包（`application/gzip`，`max-age=31536000, immutable`）；文件名不对 `404` |
+
+- **Skill 包**：`pnpm --filter @nowme/skill pack:skill` 打到 `skill/dist-package/`（`build` 与主站 `dev` / `start:source` 会先打包）。只含 `SKILL.md`、`reference/`、`scenes/`、`templates/`、`examples/` 与 `scripts/nowme.mjs`；根目录 `nowme-page/`；ustar + gzip，可复现（排序、固定时间戳）；打包时发现 token / 凭证样式的字符串就失败。主站启动时读取并核对 sha256，不一致或没有打包时当作没有 Skill 包（安装页提示，manifest `404`）。
+- **版本**：`skill/package.json` 的 `version` = `SKILL_VERSION` = SKILL.md 里写的“Skill 版本”（测试保证一致）。
+- **通用写法**：安装页、install.md、工作区都不写具体 Agent 的名字和 Skill 目录。
+- **市场渠道**：`NOWME_SKILL_MARKET_LABEL` 与 `NOWME_SKILL_MARKET_COMMAND`（同时设置或都不设，一行、长度有上限）配置后，安装页与 install.md 多显示一种安装方式。
+- **不含秘密**：这些路由与工作区的安装说明里没有任何 token 或凭证（安全测试守住）。
 
 ## 5. 安全不变量（必须有自动化测试）
 
@@ -360,7 +389,7 @@ Kit 调用 `parent.postMessage({ type: 'nowme:open-link', url }, '*')`。主站�
 | 来源 | 类型 |
 | --- | --- |
 | CLI（凭证上报，不含内容） | `agent_fetch`、`agent_validate`、`agent_preview`、`agent_generate`、`agent_submit` |
-| 主站 | `wall_view`、`page_open`、`want_to_chat`、`publish`、`withdraw`、`public_link_on`、`public_link_off`、`join`、`leave`、`member_removed`、`wall_closed` |
+| 主站 | `wall_view`、`page_open`、`want_to_chat`、`publish`、`withdraw`、`public_link_on`、`public_link_off`、`join`、`leave`、`member_removed`、`wall_closed`；`remote_preview`（服务端远程预览，用于限流，4.1） |
 
 `props` 只含数字与布尔值（例如 `ok`、`durationMs`、`errorCount`）。按墙聚合统计由 `pnpm --filter @nowme/web stats <wallId>` 输出；组织者界面不提供个人层面的浏览轨迹。
 
@@ -398,6 +427,10 @@ interface SceneGuide {
 - 截图前调用 `nowme.revealAll()`，避免首屏以下的 `.nm-reveal` 内容在整页截图中不可见。
 - `loadConfig` 拒绝主站与页面托管同主机名、TTL 只接受 1–720 小时、票据密钥至少 32 字符。
 
-## 9. 原型试跑不做
+## 9. 平台托管路线
 
-平台托管路线（含应用内采访、对话修改、W09 应用内素材管理）、付费、派生到新墙（W18）、真实邮件发送、外部内容审核接入（只保存渲染文字和截图供人工审核）、部署。
+正文见 [hosted-route.md](hosted-route.md)（2026-11-07 确认）：配置与模型、应用内采访、托管生成与修改、额度、数据模型（迁移 `002_hosted.sql`）、主站路由、事件、安全不变量 S7（托管资料只属于主人）与 S8（生成环境隔离且结果不受信）。S7、S8 与第 5 节的 S1–S6 同等要求自动化测试。
+
+## 10. 原型试跑不做
+
+付费、W09 应用内素材管理、修改时把新信息写回画像、派生到新墙（W18）、真实邮件发送、外部内容审核接入（只保存渲染文字和截图供人工审核）、部署。

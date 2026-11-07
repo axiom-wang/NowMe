@@ -133,7 +133,8 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
       return renderPage(c, {
         title: '开发发件箱',
         body: (
-          <section class="card">
+          <section class="card container container--narrow">
+            <p class="eyebrow">仅本地开发</p>
             <h1>开发发件箱</h1>
             <p class="muted">本地开发不发真实邮件：验证码写在这里（以及 .data/outbox.log 和主站控制台）。生产环境没有这个页面。</p>
             {messages.length === 0 ? (

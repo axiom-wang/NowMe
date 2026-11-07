@@ -12,8 +12,10 @@ import {
   login,
   postForm,
   postJson,
+  issueInstruction,
   seedWall,
   TEST_SECRET,
+  TEST_SKILL_VERSION,
   type TestSession,
   type TestWeb,
 } from './helpers.js';
@@ -159,5 +161,55 @@ describe('创作工作区', () => {
     const html = await response.text();
     expect(html).not.toContain('<script>alert(1)</script>');
     expect(html).toContain('&lt;script&gt;alert(1)&lt;/script&gt;');
+  });
+
+  describe('安装 NOWMe Skill（T3.6）', () => {
+    const guideOf = (html: string) => /<details class="skill-install" id="skill-install"[^>]*>[\s\S]*?<\/details>/.exec(html)?.[0] ?? '';
+
+    it('新页面：默认展开；让 Agent 安装的一句话（真实地址）、重开会话、自检、不支持 Skill 的替代、Unknown command 的原因', async () => {
+      const { html } = await open();
+      const guide = guideOf(html);
+      expect(guide).toMatch(/^<details class="skill-install" id="skill-install" open/);
+      expect(guide).toContain(`请按 ${t.config.webOrigin}/skill/install.md 的说明安装 NOWMe Skill（版本 ${TEST_SKILL_VERSION}）`);
+      expect(guide).toContain(`href="${t.config.webOrigin}/skill"`);
+      expect(guide).toContain('重新打开一个会话');
+      expect(guide).toContain(`NOWMe Skill ${TEST_SKILL_VERSION}`);
+      expect(guide).toContain('scripts/nowme.mjs --version');
+      expect(guide).toContain('Agent 不支持 Skill？复制这段纯文本说明');
+      expect(guide).toContain('Unknown command: /nowme-page');
+      expect(guide).toContain('同一条');
+      expect(guide).toContain('data-copy="nm-skill-install"');
+      expect(guide).toContain('data-copy="nm-skill-check"');
+      // 通用写法：整个工作区都不点名具体的 Agent 产品
+      expect(html).not.toMatch(/Claude Code|Cursor|Codex|Copilot|\.claude\//);
+    });
+
+    it('生成指令的响应里：指令旁边有指向安装说明的链接，安装说明也在', async () => {
+      const response = await postForm(t, `/w/${wall.id}/me/instruction`, { _csrf: owner.csrf }, { cookie: owner.cookie });
+      const html = await response.text();
+      expect(html).toContain('href="#skill-install"');
+      expect(guideOf(html)).toContain('install.md');
+    });
+
+    it('连接后：安装说明折叠；显示 Skill 版本（最新 / 过旧 / 未知）', async () => {
+      const connectWith = async (client?: { cliVersion: string; skillVersion: string | null }) => {
+        const instruction = issueInstruction(t, wall, page);
+        const response = await postJson(t, '/api/agent/exchange', { wallId: wall.id, token: instruction.token, ...(client ? { client } : {}) });
+        expect(response.status).toBe(200);
+        return (await open()).html;
+      };
+
+      let html = await connectWith({ cliVersion: '0.1.0', skillVersion: TEST_SKILL_VERSION });
+      expect(guideOf(html)).toMatch(/^<details class="skill-install" id="skill-install">/);
+      expect(html).toContain('Skill 版本');
+      expect(html).not.toContain('有新版本');
+
+      html = await connectWith({ cliVersion: '0.1.0', skillVersion: '0.0.1' });
+      expect(html).toContain(`有新版本 ${TEST_SKILL_VERSION}`);
+      expect(html).toContain('去更新');
+
+      html = await connectWith();
+      expect(html).toContain('未知（Agent 用的不是随 Skill 分发的命令行）');
+    });
   });
 });

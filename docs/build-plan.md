@@ -25,6 +25,7 @@
 | M2 | 提交、服务端校验与沙箱展示 | `nowme fetch` → `nowme submit` → 主人在工作区的沙箱 iframe 中看到页面；S2、S3、S4 测试通过 | ✅ |
 | M3 | 墙的闭环 | 登录 → 建墙 → 邀请 → 加入 → 提交 → 发布 → 浏览 → 想聊这个 → 组织者后台，e2e 通过；S1–S6 全部有测试；安全审查完成且高危问题已修复 | 🟡 |
 | M4 | 端到端演练 | 子 Agent 扮演“用户的 Agent”按 Skill 完整走通，产出演练报告 | ⬜ |
+| M5 | 平台托管路线（不收费） | 应用内采访 → brief 确认 → 托管生成（同一 Skill + 平台重新校验）→ 预览 → 按区块修改 → 发布；免费额度；S7、S8 测试；假 Claude 客户端 e2e | 🟡 |
 
 ## M0 架子与 CLAUDE.md
 
@@ -95,6 +96,7 @@ T1.3 / T1.4 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm te
 | ⏸ 用户预览检查点 | 总规划师 | 准备 `pnpm demo`（演示墙 + 6 个示例页已发布）并停下来，等用户看过预览效果再继续 | T3.3 | ⏸ 等待用户 |
 | T3.4 独立安全审查 | 子 Agent（只读） | `docs/security-review.md` | 用户预览检查点 | ⬜ |
 | T3.5 修复审查问题 | 子 Agent | 按问题所在目录 | T3.4 | ⬜ |
+| T3.6 Skill 分发：主站托管 Skill 包 + 内置单文件 CLI + 服务端预览 + 通用安装说明 | 总规划师（本会话直接实现） | `packages/contracts`、`packages/cli`、`skill/`、`apps/web`、`tests/e2e`、`docs/` | M3 | 🟡 待用户验收 |
 
 验收标准：
 
@@ -104,8 +106,14 @@ T1.3 / T1.4 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm te
 - **T3.3**：`pnpm test:security` 覆盖 S1–S6 的全部最低测试要求；`pnpm test:e2e` 走通完整闭环。
 - **用户预览检查点**（2026-11-06 用户要求）：M3 安全审查（T3.4）和 M4 之前停下，由用户亲自看预览效果再决定。需要一条命令启动可浏览的演示：主站 + 页面托管 + 一面演示墙（组织者 + 6 名成员，各自发布一个 Skill 示例页），并给出登录方式。
 - T3.3 验收记录（2026-11-07）：合并后 `pnpm typecheck`、`pnpm test`（71 文件 / 1406 用例）、`pnpm test:security`（26 文件 / 683 用例）、`pnpm test:e2e`（5 用例：全流程、S1/S2 恶意页探测、5.2 自我导航拦截、2 冒烟）全部通过。S1–S6 覆盖表见 T3.3 汇报，未发现需标记的真实缺陷。补充发现：服务端渲染阶段已会拒绝加载即自我导航或触发 CSP 违规的页面。总规划师亲自运行 `pnpm demo`（种子约 40 秒）并用 Chromium 走路线：墙上 5 张卡片（周一鸣未发布未出现）、成员页沙箱渲染正常、“想聊这个”显示邮箱与开场白、组织者后台只有昵称/加入时间/发布状态且 HTML 不含 `rev_` 与联系方式、0 个控制台错误。
-- **T3.4**：审查报告逐条对照 S1–S6 与 OWASP 常见问题，给出严重度、位置、复现方式。
+- **T3.4**：审查报告逐条对照 S1–S6 与 OWASP 常见问题，给出严重度、位置、复现方式。审查范围包含 T3.6 新增的公开路由（`/skill*`）与 `POST /api/agent/previews`。
 - **T3.5**：高、中危问题修复并补测试；低危问题记录在案。
+- **T3.6**（2026-11-07 用户提出：工作区要让用户知道怎么安装 Skill；用户进一步要求面向上线后的真实用户、通用于各种 Agent）：
+  - 工作区始终显示「安装 NOWMe Skill」：让 Agent 自己安装的一句话（主站真实地址）、重开会话、自检方法、不支持 Skill 时用纯文本说明、`Unknown command` 的原因与解决办法；不含 token；不点名任何 Agent 产品。
+  - 主站托管 Skill 包（`/skill`、`/skill/install.md`、`/skill/manifest.json`、归档），sha256 可核对、可复现；可配置市场渠道。
+  - Skill 包自带单文件 CLI（只需 Node 22），`preview` 由服务端渲染（`POST /api/agent/previews`，不存任何东西、按页限流）；纯文本说明第 0 步也指向同一工具包。
+  - 连接后工作区显示 CLI 自报的 Skill 版本，落后时提示更新；`nowme fetch` 也会提示。
+  - 验收：`pnpm typecheck`、`pnpm test`、`pnpm test:security`、`pnpm test:e2e`（新增 `skill-install.e2e.ts`：从主站下载、核对、解压，用 Skill 自带的 CLI 走完 fetch → validate → 服务端预览 → submit）全部通过。
 
 ## M4 端到端演练
 
@@ -118,6 +126,22 @@ T1.3 / T1.4 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm te
 
 - **T4.1**：只凭工作区给出的指令与 `skill/`，完成 fetch → 采访（按给定人设回答）→ brief 确认 → 生成 → validate → preview 自查 → 至少一轮修改 → submit；之后在应用内发布、另一成员浏览并使用想聊这个、组织者后台看到发布状态；报告记录卡点、Skill 不清楚的地方和改进建议。
 - **T4.2**：总规划师亲自复核演练产物，汇总后停下来汇报。
+
+## M5 平台托管路线（contracts 9 / [hosted-route.md](hosted-route.md)）
+
+| 任务 | 负责 | 范围（只改） | 状态 |
+| --- | --- | --- | --- |
+| T5.0 contracts 提案与确认 | 总规划师 | `docs/hosted-route.md`、`docs/contracts.md` | ✅（2026-11-07 确认 D1–D8） |
+| T5.1 配置、迁移、仓储 | — | `packages/contracts`（config、常量、ID 前缀、事件、校验码）、`apps/web/migrations/002_hosted.sql`、`apps/web/src/db/hosted.ts` | ✅ |
+| T5.2 采访与 brief | — | `apps/web/src/hosted/{claude,prompts,interview,brief}.ts`、路由与视图 | ✅ |
+| T5.3 托管生成与修改、额度 | — | `apps/web/src/hosted/{tools,runner,previewer,service}.ts`、`services/submissions.ts`（共用存储） | ✅ |
+| T5.4 隐私：查看与删除 | — | `apps/web/src/hosted/data.ts`、`/account/*`、删除页面时清除 | ✅ |
+| T5.5 测试与 e2e、演示社团墙 | — | `apps/web/test/hosted*.ts`、`apps/web/test/security/hosted.security.test.ts`、`tests/e2e/hosted.e2e.ts`、`apps/web/scripts/demo*.ts` | ✅ |
+| T5.6 M5 验收 | 总规划师 | — | 🟡 |
+
+验收标准：`pnpm typecheck`、`pnpm test`、`pnpm test:security` 通过；S7、S8 的最低测试要求全部覆盖；`pnpm test:e2e` 中的托管用例走通采访、生成、预览、修改、发布；`pnpm demo` 多一面社团墙。
+
+T5.1–T5.5 记录（2026-11-07）：`pnpm test`（74 文件 / 1447 用例）、`pnpm test:security`（27 文件 / 696 用例）、`pnpm test:e2e`（6 用例，含托管全流程）通过。`pnpm typecheck` 唯一的错误来自同一工作树里另一项进行中的工作（contracts 4.5 Skill 分发：`AgentContext.skill` 已加到类型，`services/agent.ts` 还没跟上），与 M5 无关。
 
 ## 决策与偏差记录
 
@@ -136,3 +160,5 @@ T1.3 / T1.4 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm te
 | 2026-11-06 | 用户要求：M3 安全审查与 M4 之前停下，先看预览效果 |
 | 2026-11-06 | 子 Agent 模型分配：机械性任务用 Sonnet，规划、安全审查、Skill/示例页等需要判断的任务用 Opus（见“工作方式”） |
 | 2026-11-06 | `nowme.css` 内置全局减少动效规则；每款 Kit 字体提供 `--nm-font-<id>` 变量；本地工作目录与 CLI 命令见 contracts 1.5 |
+| 2026-11-07 | 用户要求实现平台托管路线（不收费）：确认 hosted-route D1–D8；“我的资料”改用 `/account/` 前缀（`/me/data` 会被 S5 的“不含工作区链接”检查误判）；演示加一面社团墙 |
+| 2026-11-07 | T3.6：Skill 由主站托管分发（不依赖外部市场，市场渠道只作为可选配置）；CLI 打成单文件随 Skill 包分发，真实用户只需 Node 22；本机没有 Playwright 时预览改由服务端渲染（不存储、限流 100 次/页/天） |

@@ -28,7 +28,7 @@ import type { AgentAuth, WebConfig } from '../context.js';
 import { transaction, type Database, type Repos } from '../db/index.js';
 import type { Revision, RevisionListItem } from '../db/revisions.js';
 import { revalidateAgentAuth, workspaceUrl } from './agent.js';
-import type { SubmissionProcessor } from './processor.js';
+import type { ProcessedSubmission, SubmissionProcessor } from './processor.js';
 import { createSerialQueue } from './queue.js';
 import { removeRevisionFiles, writeRevisionFiles } from './revision-storage.js';
 
@@ -40,6 +40,8 @@ export type SubmitOutcome =
 export interface SubmissionService {
   /** `files`：已通过 revisionsRequestSchema 校验的 `{ 路径: base64 }`。 */
   submit(agent: AgentAuth, files: Readonly<Record<string, string>>): Promise<SubmitOutcome>;
+  /** 托管任务的结果：平台重新校验，通过才存为 `hosted` 版本；不通过不写库（hosted-route 3.1）。 */
+  storeHosted(input: HostedStoreInput): Promise<HostedStoreOutcome>;
   /** 等待排队的提交处理完，然后关闭处理器（渲染器）。 */
   close(): Promise<void>;
 }
@@ -122,6 +124,34 @@ export function revisionSummary(webOrigin: string, wallId: string, revision: Rev
   };
 }
 
+/** 托管任务写入版本的结果（hosted-route 3.1 第 4–5 步）。 */
+export type HostedStoreOutcome =
+  | { kind: 'stored'; revisionId: string; number: number; report: ValidationReport }
+  | { kind: 'rejected'; report: ValidationReport }
+  | { kind: 'rate_limited' }
+  | { kind: 'page_invalid' };
+
+export interface HostedStoreInput {
+  pageId: string;
+  /** 写库前在事务里调用：成员关系仍有效、墙未关闭、页面未删除时返回 true。 */
+  stillValid: () => boolean;
+  files: PageFiles;
+  /** 平台附加的信息性警告（例如修改任务的 HOSTED_BLOCKS_CHANGED），不影响 ok。 */
+  extraWarnings?: ValidationIssue[];
+}
+
+/** 处理器 + 写文件 + 写库的共用部分。`insertRow` 在事务里执行，返回 null 表示放弃（文件会被删除）。 */
+interface StoreCore<T> {
+  files: PageFiles;
+  ignored: readonly string[];
+  extraWarnings?: readonly ValidationIssue[];
+  /** 只有 accepted 才存？false：rejected 也存一条记录（Agent API）；true：rejected 不写库（托管任务）。 */
+  acceptedOnly: boolean;
+  insertRow: (row: { id: string; status: 'accepted' | 'rejected'; report: ValidationReport; processed: ProcessedSubmission }) => T | null;
+  onRejected: (report: ValidationReport) => T;
+  onAborted: () => T;
+}
+
 export function createSubmissionService(options: SubmissionServiceOptions): SubmissionService {
   const { config, db, repos, now, kitFonts, processor } = options;
   const log = options.log ?? ((message: string) => console.warn(`[web] ${message}`));
@@ -131,6 +161,37 @@ export function createSubmissionService(options: SubmissionServiceOptions): Subm
     const since = new Date(now().getTime() - REVISION_RATE_WINDOW_HOURS * 3600 * 1000).toISOString();
     return repos.revisions.countForPageSince(pageId, since) >= REVISIONS_PER_PAGE_PER_DAY;
   };
+
+  /** 在队列里调用：重新校验（不信任调用方）→ 写文件 → 事务里写库；失败时清理文件。 */
+  async function processAndStore<T>(core: StoreCore<T>): Promise<T> {
+    const processed = await processor.process({ files: core.files, kitFonts });
+    const withIgnored = withIgnoredFiles(processed.report, core.ignored);
+    const report =
+      core.extraWarnings && core.extraWarnings.length > 0 ? { ...withIgnored, warnings: [...withIgnored.warnings, ...core.extraWarnings] } : withIgnored;
+    const status = report.ok ? 'accepted' : 'rejected';
+    if (status === 'rejected' && core.acceptedOnly) return core.onRejected(report);
+    const id = generateId('rev');
+    if (status === 'accepted') {
+      await writeRevisionFiles(config.dataDir, id, {
+        original: core.files,
+        served: processed.served,
+        cover: processed.cover,
+        fullScreenshot: processed.fullScreenshot,
+      });
+    }
+    let outcome: T | null;
+    try {
+      outcome = transaction(db, () => core.insertRow({ id, status, report, processed }));
+    } catch (error) {
+      if (status === 'accepted') await removeRevisionFiles(config.dataDir, id);
+      throw error;
+    }
+    if (outcome === null) {
+      if (status === 'accepted') await removeRevisionFiles(config.dataDir, id);
+      return core.onAborted();
+    }
+    return outcome;
+  }
 
   return {
     async submit(agent, input) {
@@ -142,25 +203,15 @@ export function createSubmissionService(options: SubmissionServiceOptions): Subm
         if (!revalidateAgentAuth(repos, agent.credential.id)) return { kind: 'credential_invalid' };
         if (overLimit(agent.page.id)) return { kind: 'rate_limited' };
 
-        const processed = await processor.process({ files: prepared.files, kitFonts });
-        const report = withIgnoredFiles(processed.report, prepared.ignored);
-        const status = report.ok ? 'accepted' : 'rejected';
-        const id = generateId('rev');
-
-        if (status === 'accepted') {
-          await writeRevisionFiles(config.dataDir, id, {
-            original: prepared.files,
-            served: processed.served,
-            cover: processed.cover,
-            fullScreenshot: processed.fullScreenshot,
-          });
-        }
-
-        let outcome: SubmitOutcome;
-        try {
-          outcome = transaction(db, (): SubmitOutcome => {
+        const outcome = await processAndStore<SubmitOutcome>({
+          files: prepared.files,
+          ignored: prepared.ignored,
+          acceptedOnly: false,
+          onRejected: () => ({ kind: 'credential_invalid' }),
+          onAborted: () => ({ kind: 'credential_invalid' }),
+          insertRow: ({ id, status, report, processed }) => {
             const auth = revalidateAgentAuth(repos, agent.credential.id);
-            if (!auth) return { kind: 'credential_invalid' };
+            if (!auth) return null;
             const createdAt = now().toISOString();
             const accepted = status === 'accepted';
             const number = repos.revisions.insert({
@@ -182,17 +233,49 @@ export function createSubmissionService(options: SubmissionServiceOptions): Subm
               kind: 'stored',
               summary: { id, number, status, report, createdAt, workspaceUrl: workspaceUrl(config.webOrigin, auth.wall.id, id) },
             };
-          });
-        } catch (error) {
-          if (status === 'accepted') await removeRevisionFiles(config.dataDir, id);
-          throw error;
-        }
-        if (outcome.kind !== 'stored' && status === 'accepted') {
-          await removeRevisionFiles(config.dataDir, id);
-        }
+          },
+        });
         if (outcome.kind === 'stored') {
-          log(`提交 ${agent.page.id} #${outcome.summary.number}：${status}（${report.errors.length} 个错误，${report.warnings.length} 个警告）`);
+          const { summary } = outcome;
+          log(`提交 ${agent.page.id} #${summary.number}：${summary.status}（${summary.report.errors.length} 个错误，${summary.report.warnings.length} 个警告）`);
         }
+        return outcome;
+      });
+    },
+    async storeHosted(input) {
+      // 托管任务的结果只取白名单路径（模型工具本来就只能写三个文本文件，这里再过滤一次）
+      const files: PageFiles = new Map([...input.files].filter(([path]) => isPageUploadPath(path) && !isSystemFile(path)));
+      return queue.run(async (): Promise<HostedStoreOutcome> => {
+        if (!input.stillValid()) return { kind: 'page_invalid' };
+        if (overLimit(input.pageId)) return { kind: 'rate_limited' };
+        const outcome = await processAndStore<HostedStoreOutcome>({
+          files,
+          ignored: [],
+          extraWarnings: input.extraWarnings,
+          acceptedOnly: true,
+          onRejected: (report) => ({ kind: 'rejected', report }),
+          onAborted: () => ({ kind: 'page_invalid' }),
+          insertRow: ({ id, report, processed }) => {
+            if (!input.stillValid()) return null;
+            const createdAt = now().toISOString();
+            const number = repos.revisions.insert({
+              id,
+              pageId: input.pageId,
+              source: 'hosted',
+              credentialId: null,
+              status: 'accepted',
+              report,
+              cardJson: normalizedJson(files.get(PAGE_CARD_FILE)),
+              manifestJson: normalizedJson(files.get(PAGE_MANIFEST_FILE)),
+              renderedText: processed.renderedText,
+              renderJson: processed.render ? JSON.stringify(processed.render) : null,
+              createdAt,
+            });
+            repos.pages.touch(input.pageId, createdAt);
+            return { kind: 'stored', revisionId: id, number, report };
+          },
+        });
+        if (outcome.kind === 'stored') log(`托管生成 ${input.pageId} #${outcome.number}：accepted`);
         return outcome;
       });
     },

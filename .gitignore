@@ -27,3 +27,6 @@ packages/kit/fonts/*.ttf
 packages/kit/fonts/*.otf
 packages/kit/fonts/*.woff2
 .claude/worktrees/
+
+# Skill 包（pnpm --filter @nowme/skill pack:skill 生成，由主站 /skill 托管）
+skill/dist-package/

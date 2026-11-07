@@ -13,6 +13,9 @@ import {
   REVISION_MAX_FILE_ENTRIES,
   revisionsRequestSchema,
   sceneGuideSchema,
+  SKILL_MIN_NODE_VERSION,
+  skillArchiveFileName,
+  skillPackageManifestSchema,
   type KitFont,
 } from '../src/index.js';
 
@@ -336,6 +339,36 @@ describe('Agent API 请求体', () => {
     expect(ok(exchangeRequestSchema.safeParse({ wallId, token: generateToken('pageCredential') }))).toBe(false);
     expect(ok(exchangeRequestSchema.safeParse({ wallId, token, extra: 1 }))).toBe(false);
     expect(ok(exchangeRequestSchema.safeParse({ wallId }))).toBe(false);
+  });
+
+  it('exchange：可选的 client 自报版本，版本号格式严格', () => {
+    const wallId = generateId('wal');
+    const token = generateToken('agentToken');
+    const client = { cliVersion: '0.1.0', skillVersion: '0.1.0' };
+    expect(exchangeRequestSchema.parse({ wallId, token, client })).toEqual({ wallId, token, client });
+    expect(ok(exchangeRequestSchema.safeParse({ wallId, token, client: { cliVersion: '0.1.0', skillVersion: null } }))).toBe(true);
+    expect(ok(exchangeRequestSchema.safeParse({ wallId, token, client: { cliVersion: '0.1.0' } }))).toBe(false);
+    expect(ok(exchangeRequestSchema.safeParse({ wallId, token, client: { ...client, extra: 1 } }))).toBe(false);
+    for (const bad of ['1', '1.0', 'v1.0.0', '1.0.0-<script>', '1.0.0-' + 'a'.repeat(25), '99999.0.0']) {
+      expect(ok(exchangeRequestSchema.safeParse({ wallId, token, client: { ...client, cliVersion: bad } }))).toBe(false);
+    }
+  });
+
+  it('Skill 包清单', () => {
+    const manifest = {
+      name: 'nowme-page',
+      version: '0.1.0',
+      file: skillArchiveFileName('0.1.0'),
+      sha256: 'a'.repeat(64),
+      bytes: 1234,
+      minNode: SKILL_MIN_NODE_VERSION,
+    };
+    expect(manifest.file).toBe('nowme-page-0.1.0.tar.gz');
+    expect(ok(skillPackageManifestSchema.safeParse(manifest))).toBe(true);
+    expect(ok(skillPackageManifestSchema.safeParse({ ...manifest, url: 'http://localhost:3000/skill/nowme-page-0.1.0.tar.gz' }))).toBe(true);
+    expect(ok(skillPackageManifestSchema.safeParse({ ...manifest, name: 'other' }))).toBe(false);
+    expect(ok(skillPackageManifestSchema.safeParse({ ...manifest, file: '../x.tar.gz' }))).toBe(false);
+    expect(ok(skillPackageManifestSchema.safeParse({ ...manifest, sha256: 'A'.repeat(64) }))).toBe(false);
   });
 
   it('revisions：{ files: { 路径: base64 } }', () => {

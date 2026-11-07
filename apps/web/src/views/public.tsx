@@ -10,6 +10,7 @@ import { raw } from 'hono/html';
 import type { FC } from 'hono/jsx';
 import { STATIC_PATH_PREFIX } from '../constants.js';
 import type { IssuedTicket } from '../services/tickets.js';
+import { Brand } from './layout.js';
 import { PageFrame } from './page-frame.js';
 
 export interface PublicPageProps {
@@ -35,13 +36,13 @@ export const PublicPageDocument: FC<PublicPageProps> = ({ displayName, tagline, 
       </head>
       <body class="site site--public">
         <header class="site-header">
-          <a class="site-header__brand" href="/">
-            NOWMe
-          </a>
+          <div class="site-header__inner">
+            <Brand />
+          </div>
         </header>
         <main class="site-main public-page">
           <section class="public-page__intro">
-            <h1>{displayName}</h1>
+            <h1 class="hero__title">{displayName}</h1>
             <p class="public-page__tagline">{tagline}</p>
           </section>
           <PageFrame ticket={ticket} title={`${displayName}的页面`} />

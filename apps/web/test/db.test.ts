@@ -10,6 +10,11 @@ const NOW = '2026-11-06T08:00:00.000Z';
 
 /** contracts 第 3 节的表与“主要字段”（实现可以多出字段，但必须包含这些）。 */
 const CONTRACT_TABLES: Record<string, string[]> = {
+  // contracts 9 / hosted-route 4（迁移 002_hosted.sql）
+  profile_entries: ['id', 'user_id', 'category', 'text', 'source', 'confirmation', 'created_at', 'updated_at'],
+  briefs: ['id', 'page_id', 'owner_id', 'status', 'answers_json', 'followups_json', 'brief_json', 'brief_md', 'confirmed_at', 'created_at', 'updated_at'],
+  brief_assets: ['id', 'brief_id', 'page_id', 'owner_id', 'file_name', 'mime', 'bytes', 'sha256', 'created_at'],
+  generation_jobs: ['id', 'page_id', 'owner_id', 'kind', 'status', 'base_revision_id', 'target_block', 'request_text', 'result_message', 'revision_id', 'error_code', 'charged', 'usage_json', 'created_at', 'started_at', 'finished_at'],
   users: ['id', 'email', 'nickname', 'created_at'],
   login_codes: ['id', 'email', 'code_hash', 'attempts', 'expires_at', 'used_at'],
   sessions: ['id', 'user_id', 'csrf_token', 'created_at', 'expires_at'],
@@ -125,7 +130,7 @@ describe('数据库迁移', () => {
     expect(migrate(db)).toEqual([]);
     db.close();
     const again = open(file);
-    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }]);
+    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }]);
   });
 
   it('关键索引存在（部分唯一索引：每页一个有效凭证、一个活跃发布）', () => {

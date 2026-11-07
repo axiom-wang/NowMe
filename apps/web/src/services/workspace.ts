@@ -3,7 +3,7 @@
  * T3.2：`publish` 是发布状态（当前发布、缩略卡确认、联系方式、公开链接，见 services/publish.ts）；
  * 删除页面后留下的版本墓碑不能预览、不能发布、不签发票据。
  */
-import { REVISION_ID_PATTERN } from '@nowme/contracts';
+import { compareVersions, isVersion, REVISION_ID_PATTERN } from '@nowme/contracts';
 import type { AppDeps } from '../context.js';
 import type { Page } from '../db/pages.js';
 import type { RevisionListItem } from '../db/revisions.js';
@@ -13,6 +13,9 @@ import type { AgentInstruction } from './instruction.js';
 import { isRevisionDeleted, isRevisionUsable } from './page-lifecycle.js';
 import { loadPublishModel, type PublishFormState, type PublishModel } from './publish.js';
 import type { IssuedTicket } from './tickets.js';
+import { skillCheckExpected, skillCheckPrompt, skillInstallPrompt } from './skill-install.js';
+import { skillInstallPageUrl } from './skill-package.js';
+import type { HostedOverview, JobStartError } from '../hosted/service.js';
 
 export interface WorkspaceConnection {
   /** 有有效的页面凭证。 */
@@ -21,6 +24,23 @@ export interface WorkspaceConnection {
   lastUsedAt: string | null;
   /** 有一条尚未使用、未过期的指令。 */
   pendingInstructionExpiresAt: string | null;
+  /** 连接时 CLI 自报的 Skill 版本（contracts 4.5）；没连接或没报（源码方式运行）时为 null。 */
+  skillVersion: string | null;
+  /** 连接时 CLI 自报的 CLI 版本；没连接或旧版 CLI 时为 null。 */
+  cliVersion: string | null;
+}
+
+/** 工作区「安装 NOWMe Skill」用到的信息（contracts 4.5）。这里没有任何 token。 */
+export interface WorkspaceSkill {
+  /** 主站当前分发的 Skill 版本；没有 Skill 包时为 null。 */
+  latestVersion: string | null;
+  installPageUrl: string;
+  installPrompt: string;
+  checkPrompt: string;
+  /** 自检输出里应有的文字（没有 Skill 包时为 null）。 */
+  checkExpected: string | null;
+  /** 已连接的 Agent 用的 Skill 比主站分发的旧。 */
+  outdated: boolean;
 }
 
 /** 工作区顶部的提示（只用固定文案，不回显请求参数）。 */
@@ -56,6 +76,18 @@ export interface WorkspaceModel {
   notice: WorkspaceNotice | null;
   /** 发布状态与选中版本的发布确认（T3.2）。 */
   publish: PublishModel;
+  /** 平台托管路线（contracts 9）；功能未开启时为 null，工作区不显示“在这里创作”。 */
+  hosted: WorkspaceHosted | null;
+  /** Skill 安装说明与版本（T3.6）。 */
+  skill: WorkspaceSkill;
+}
+
+export interface WorkspaceHosted {
+  overview: HostedOverview;
+  /** 选中版本的区块（“修改这一版”的下拉选项）。 */
+  editBlocks: string[];
+  /** 发起任务失败的原因（`?hosted=<码>`，固定文案）。 */
+  error: JobStartError | null;
 }
 
 export interface LoadWorkspaceOptions {
@@ -66,10 +98,11 @@ export interface LoadWorkspaceOptions {
   notice?: WorkspaceNotice | null;
   /** 没通过校验的发布确认：回显主人的输入与错误（只对 `revisionId` 对应的版本）。 */
   publishForm?: PublishFormState | null;
+  hostedError?: JobStartError | null;
 }
 
 export function loadWorkspace(
-  deps: Pick<AppDeps, 'repos' | 'tickets' | 'now' | 'config'>,
+  deps: Pick<AppDeps, 'repos' | 'tickets' | 'now' | 'config' | 'hosted'> & Partial<Pick<AppDeps, 'skillPackage'>>,
   own: OwnPage,
   options: LoadWorkspaceOptions,
 ): WorkspaceModel | null {
@@ -101,6 +134,8 @@ export function loadWorkspace(
       connectedAt: credential?.createdAt ?? null,
       lastUsedAt: credential?.lastUsedAt ?? null,
       pendingInstructionExpiresAt: options.instruction ? null : (pending?.expiresAt ?? null),
+      skillVersion: credential?.clientSkillVersion ?? null,
+      cliVersion: credential?.clientCliVersion ?? null,
     },
     lastSubmittedAt: revisions[0]?.createdAt ?? null,
     revisions,
@@ -110,5 +145,30 @@ export function loadWorkspace(
     instruction: options.instruction ?? null,
     notice,
     publish: loadPublishModel(deps, own, revisions, selected, options.publishForm ?? null),
+    hosted: deps.hosted
+      ? {
+          overview: deps.hosted.overview(own, page.ownerId),
+          editBlocks: selected?.report.stats.blocks ?? [],
+          error: options.hostedError ?? null,
+        }
+      : null,
+    skill: loadWorkspaceSkill(deps.config.webOrigin, deps.skillPackage?.manifest.version ?? null, credential?.clientSkillVersion ?? null),
+  };
+}
+
+export function loadWorkspaceSkill(webOrigin: string, latestVersion: string | null, connectedSkillVersion: string | null): WorkspaceSkill {
+  const outdated =
+    latestVersion !== null &&
+    connectedSkillVersion !== null &&
+    isVersion(latestVersion) &&
+    isVersion(connectedSkillVersion) &&
+    compareVersions(connectedSkillVersion, latestVersion) < 0;
+  return {
+    latestVersion,
+    installPageUrl: skillInstallPageUrl(webOrigin),
+    installPrompt: skillInstallPrompt(webOrigin, latestVersion),
+    checkPrompt: skillCheckPrompt(),
+    checkExpected: latestVersion ? skillCheckExpected(latestVersion) : null,
+    outdated,
   };
 }

@@ -17,6 +17,7 @@ import {
   SCENE_TYPES,
 } from './constants.js';
 import { tokenPattern, WALL_ID_PATTERN } from './ids.js';
+import { VERSION_PATTERN } from './version.js';
 
 // ---------------------------------------------------------------------------
 // 文本工具
@@ -269,9 +270,23 @@ export type SceneGuide = z.infer<typeof sceneGuideSchema>;
  * `POST /api/agent/exchange`。
  * 注意：token 格式不对时，服务端仍应返回 401 TOKEN_INVALID（与不存在、已用、过期一致），不要返回 400。
  */
+const versionSchema = z.string().regex(VERSION_PATTERN, '版本号格式不对');
+
+/**
+ * exchange 时 CLI 自报的版本（contracts 4.1、4.5）：`skillVersion` 为 null 表示 CLI 不是随 Skill 包分发的
+ * （例如源码方式运行），不知道 Skill 版本。只用于在工作区显示与提示更新，不参与授权。
+ */
+export const agentClientSchema = z.strictObject({
+  cliVersion: versionSchema,
+  skillVersion: versionSchema.nullable(),
+});
+
+export type AgentClient = z.infer<typeof agentClientSchema>;
+
 export const exchangeRequestSchema = z.strictObject({
   wallId: z.string().regex(WALL_ID_PATTERN, 'wallId 格式不对'),
   token: z.string().regex(tokenPattern('agentToken'), 'token 格式不对'),
+  client: agentClientSchema.optional(),
 });
 
 export type ExchangeRequest = z.infer<typeof exchangeRequestSchema>;
@@ -305,3 +320,22 @@ export const eventsRequestSchema = z.strictObject({
 });
 
 export type EventsRequest = z.infer<typeof eventsRequestSchema>;
+
+// ---------------------------------------------------------------------------
+// Skill 包清单（contracts 4.5）
+// ---------------------------------------------------------------------------
+
+/** `GET /skill/manifest.json`，也是 Skill 打包时写在归档旁边的 `manifest.json`（此时没有 `url`）。 */
+export const skillPackageManifestSchema = z.strictObject({
+  name: z.literal('nowme-page'),
+  version: versionSchema,
+  /** 归档文件名 `nowme-page-<version>.tar.gz`。 */
+  file: z.string().regex(/^nowme-page-[0-9A-Za-z.-]+\.tar\.gz$/),
+  sha256: z.string().regex(/^[0-9a-f]{64}$/),
+  bytes: z.number().int().positive(),
+  minNode: versionSchema,
+  /** 主站返回时附上的绝对下载地址。 */
+  url: z.url().optional(),
+});
+
+export type SkillPackageManifest = z.infer<typeof skillPackageManifestSchema>;

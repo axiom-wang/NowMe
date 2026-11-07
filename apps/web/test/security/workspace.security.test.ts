@@ -174,4 +174,25 @@ describe('工作区访问控制与沙箱 iframe', () => {
     ];
     for (const html of pages) expectNoInlineCode(html);
   });
+
+  it('安装说明（T3.6）不含 token：#skill-install 里没有 nmt_ 与这次的 token；整页里 token 只出现在指令与纯文本说明各一次', async () => {
+    const response = await postForm(t, `/w/${wall.id}/me/instruction`, { _csrf: owner.csrf }, { cookie: owner.cookie });
+    const html = await response.text();
+    const token = /nmt_[A-Za-z0-9_-]{43}/.exec(html)?.[0] as string;
+    expect(token).toBeDefined();
+    const guide = /<details class="skill-install" id="skill-install"[^>]*>[\s\S]*?<\/details>/.exec(html)?.[0] ?? '';
+    expect(guide.length).toBeGreaterThan(0);
+    expect(guide).not.toContain(token);
+    expect(guide).not.toMatch(/nm[ct]_/);
+    expect(html.split(token)).toHaveLength(3);
+  });
+
+  it('公开的 Skill 分发路由（T3.6）不含任何 token 或凭证，也不需要登录', async () => {
+    await postForm(t, `/w/${wall.id}/me/instruction`, { _csrf: owner.csrf }, { cookie: owner.cookie });
+    for (const path of ['/skill', '/skill/install.md', '/skill/manifest.json']) {
+      const response = await get(t, path);
+      expect(response.status, path).toBe(200);
+      expect(await response.text(), path).not.toMatch(/nm[ct]_[A-Za-z0-9_-]{16,}/);
+    }
+  });
 });

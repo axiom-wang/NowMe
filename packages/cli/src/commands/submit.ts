@@ -8,7 +8,6 @@ import {
   isPageUploadPath,
   type RevisionSummary,
 } from '@nowme/contracts';
-import { loadKitFonts } from '@nowme/kit';
 import { isSystemFile, validatePage } from '@nowme/validator';
 import { NetworkError, apiRequest, readApiError, type ApiResult } from '../api-client.js';
 import type { ParsedArgs } from '../args.js';
@@ -16,6 +15,7 @@ import type { CliContext } from '../context.js';
 import { loadCredentialStore } from '../credentials.js';
 import { readWorkdirLink } from '../events.js';
 import { formatBytes, formatIssues, summaryLine } from '../format.js';
+import { resolveKitFonts } from '../kit-fonts.js';
 import { loadPage } from '../page-dir.js';
 import { fixExtraChars } from './validate.js';
 
@@ -56,7 +56,7 @@ export async function runSubmit(ctx: CliContext, args: ParsedArgs): Promise<numb
 
   // 2. 本地校验（与 validate 相同，含 extraChars 补全）
   const fix = await fixExtraChars(pageDir, files);
-  const local = validatePage(files, { kitFonts: loadKitFonts() });
+  const local = validatePage(files, { kitFonts: await resolveKitFonts(workDir) });
   if (!local.ok) {
     emit(
       ctx,

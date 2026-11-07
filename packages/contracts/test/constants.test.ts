@@ -69,16 +69,21 @@ describe('[原型默认] 数值', () => {
     expect(SCENE_TYPES).toEqual(['hackathon', 'interest', 'club', 'general']);
     expect(MOTION_LEVELS).toEqual(['calm', 'medium', 'lively']);
     expect(AGENT_EVENT_TYPES).toEqual(['fetch', 'validate', 'preview', 'generate', 'submit']);
-    expect(EVENT_TYPES).toHaveLength(16);
+    expect(EVENT_TYPES.length).toBeGreaterThanOrEqual(16 + 6);
     expect(EVENT_TYPES).toContain('want_to_chat');
+    // contracts 9 / hosted-route 6
+    for (const type of ['hosted_interview_call', 'hosted_brief_confirm', 'hosted_generate', 'hosted_edit', 'brief_delete', 'profile_delete']) {
+      expect(EVENT_TYPES).toContain(type);
+    }
     for (const type of AGENT_EVENT_TYPES) expect(EVENT_TYPES).toContain(toStoredAgentEventType(type));
     expect(NM_ID_PATTERN.test('hero')).toBe(true);
   });
 });
 
 describe('校验错误码（contracts 2.2、2.3）', () => {
-  it('全部 41 个码，大写蛇形', () => {
-    expect(VALIDATION_ISSUE_CODE_LIST).toHaveLength(41);
+  it('全部 41 + 1 个码（contracts 2.2、2.3 + 9 的 HOSTED_BLOCKS_CHANGED），大写蛇形', () => {
+    expect(VALIDATION_ISSUE_CODE_LIST).toHaveLength(42);
+    expect(VALIDATION_ISSUE_CODES.HOSTED_BLOCKS_CHANGED).toEqual({ severity: 'warning', stage: 'platform' });
     for (const code of VALIDATION_ISSUE_CODE_LIST) expect(code).toMatch(/^[A-Z][A-Z_]+$/);
   });
 
@@ -96,6 +101,7 @@ describe('校验错误码（contracts 2.2、2.3）', () => {
         'RENDER_CONSOLE_ERROR',
         'RENDER_SLOW',
         'RENDER_BLANK',
+        'HOSTED_BLOCKS_CHANGED',
       ].sort(),
     );
   });

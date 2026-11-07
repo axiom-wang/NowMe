@@ -38,6 +38,31 @@ export async function readForm(c: Context<AppEnv>): Promise<FormFields> {
   return fields;
 }
 
+/**
+ * 解析 multipart 表单（只用于带图片上传的托管采访，contracts 9）：字符串字段同 `readForm`，
+ * `fileField` 的文件按顺序读成字节（空文件忽略）。不是 multipart 时返回空。
+ */
+export async function readMultipartForm(c: Context<AppEnv>, fileField: string): Promise<{ fields: FormFields; files: Uint8Array[] }> {
+  const type = c.req.header('content-type') ?? '';
+  if (!/^multipart\/form-data\b/i.test(type)) return { fields: {}, files: [] };
+  const body = await c.req.parseBody({ all: true });
+  const fields: FormFields = {};
+  const files: Uint8Array[] = [];
+  for (const [key, value] of Object.entries(body)) {
+    const values = Array.isArray(value) ? value : [value];
+    if (key === fileField) {
+      for (const item of values) {
+        if (typeof item === 'string' || item.size === 0) continue;
+        files.push(new Uint8Array(await item.arrayBuffer()));
+      }
+      continue;
+    }
+    const last = values[values.length - 1];
+    if (typeof last === 'string') fields[key] = last;
+  }
+  return { fields, files };
+}
+
 function forbiddenOrigin(c: Context<AppEnv>) {
   return renderError(c, {
     status: 403,
@@ -58,6 +83,8 @@ export function requireOriginForm(deps: Pick<AppDeps, 'config'>): MiddlewareHand
 export interface RequireFormOptions {
   /** 允许还没填昵称的用户（`/welcome`、`/logout`）。 */
   allowMissingNickname?: boolean;
+  /** 接受 multipart 表单，文件字段名（文件在 `c.var.uploads`）。 */
+  multipartFiles?: string;
 }
 
 /** 已登录用户的改变状态的表单（见文件头）。通过后字段在 `c.var.form`。 */
@@ -73,7 +100,14 @@ export function requireForm(deps: Pick<AppDeps, 'config'>, options: RequireFormO
         loginLink: true,
       });
     }
-    const form = await readForm(c);
+    let form: FormFields;
+    if (options.multipartFiles) {
+      const parsed = await readMultipartForm(c, options.multipartFiles);
+      form = parsed.fields;
+      c.set('uploads', parsed.files);
+    } else {
+      form = await readForm(c);
+    }
     const csrf = form[CSRF_FIELD_NAME];
     if (!csrf || !constantTimeEqual(csrf, auth.session.csrfToken)) {
       return renderError(c, { status: 403, title: '页面已过期', message: '这个页面已经过期了。请刷新页面后再操作一次。' });

@@ -1,18 +1,19 @@
 # NOWMe
 
-刚进入新圈子的年轻人，和自己的 AI Agent 一起做一页有个性的自己，挂在这个圈子共同的墙上。当前阶段：**本地开发原型试跑的本地路线，不部署**。
+刚进入新圈子的年轻人，和自己的 AI Agent 一起做一页有个性的自己，挂在这个圈子共同的墙上。当前阶段：**本地开发原型试跑：本地路线 + 平台托管路线（不收费），不部署**。
 
 ## 先读什么
 
 | 文档 | 用途 |
 | --- | --- |
 | `docs/contracts.md` | **接口约定，所有实现的唯一依据**：页面输出契约、校验规则与错误码、数据模型、API、票据、CSP、安全不变量 S1–S6 |
+| `docs/hosted-route.md` | contracts 第 9 节：平台托管路线（采访、托管生成、修改、额度、S7/S8） |
 | `docs/build-plan.md` | 里程碑、任务、验收标准与状态 |
 | `docs/product-mvp-community-wall.md` | 产品需求（功能编号 W01–W21） |
 | `docs/page-generation-byo-agent.md` | Skill、页面生成、凭证、安全与托管 |
 | `docs/brief-collection.md` | 采访流程、场景指南、brief 结构、本地隐私规则 |
 
-范围：只做本地路线。平台托管路线、付费、派生到新墙（W18）、真实邮件、部署都不做。
+范围：本地路线 + 平台托管路线（应用内采访、托管生成、修改、免费额度，见 `docs/hosted-route.md`）。付费、派生到新墙（W18）、真实邮件、部署都不做。
 
 ## 命令
 
@@ -26,6 +27,7 @@ pnpm build              # 各包编译到 dist/
 pnpm dev                # 源码方式启动 web(3000) + pages-host(4000)
 pnpm nowme <命令>        # 源码方式运行 CLI，例如 pnpm nowme validate skill/examples/<名>
 pnpm --filter @nowme/web seed [--json]   # 开发种子：用户 + 黑客松墙 + 页面 + 一条 Agent 指令
+pnpm --filter @nowme/skill pack:skill    # 打 Skill 包（含单文件 CLI）到 skill/dist-package/，主站 /skill 托管下载；dev / start:source 会先自动打包
 pnpm --filter @nowme/<包> test   # 只测一个包
 ```
 

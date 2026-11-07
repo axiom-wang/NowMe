@@ -179,6 +179,15 @@ export const WEB_EVENT_TYPES = [
   'leave',
   'member_removed',
   'wall_closed',
+  // 平台托管路线（hosted-route 6）
+  'hosted_interview_call',
+  'hosted_brief_confirm',
+  'hosted_generate',
+  'hosted_edit',
+  'brief_delete',
+  'profile_delete',
+  // Skill 分发（contracts 4.5）：服务端远程预览，服务端自动记录，用于按页限流
+  'remote_preview',
 ] as const;
 
 export const EVENT_TYPES = [...STORED_AGENT_EVENT_TYPES, ...WEB_EVENT_TYPES] as const;
@@ -192,3 +201,58 @@ export function toStoredAgentEventType(type: AgentEventType): `agent_${AgentEven
 /** [T0.2 暂定] 事件 `props` 的键数量上限与键名格式（只允许数字与布尔值）。 */
 export const EVENT_PROPS_MAX_KEYS = 16;
 export const EVENT_PROP_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]{0,39}$/;
+
+// ---------------------------------------------------------------------------
+// 平台托管路线（contracts 9 / hosted-route.md）
+// ---------------------------------------------------------------------------
+
+/** 默认模型（hosted-route D2）：采访用便宜的模型，生成与修改用更强的模型。 */
+export const DEFAULT_INTERVIEW_MODEL = 'claude-haiku-5-5';
+export const DEFAULT_GENERATE_MODEL = 'claude-sonnet-5-5';
+/** 每页免费次数（D3），`NOWME_HOSTED_FREE_QUOTA`，0–100。 */
+export const DEFAULT_HOSTED_FREE_QUOTA = 3;
+export const HOSTED_FREE_QUOTA_RANGE = { min: 0, max: 100 } as const;
+/** 一次任务最多几轮工具调用（`NOWME_HOSTED_MAX_TURNS`）。 */
+export const DEFAULT_HOSTED_MAX_TURNS = 30;
+export const HOSTED_MAX_TURNS_RANGE = { min: 4, max: 200 } as const;
+/** 每页滚动 24 小时最多发起几次生成 / 修改任务（`NOWME_HOSTED_DAILY_ATTEMPTS`）。 */
+export const DEFAULT_HOSTED_DAILY_ATTEMPTS = 10;
+/** 每页滚动 24 小时最多几次采访模型调用（`NOWME_INTERVIEW_DAILY_CALLS`）。 */
+export const DEFAULT_INTERVIEW_DAILY_CALLS = 20;
+export const HOSTED_DAILY_RANGE = { min: 1, max: 1000 } as const;
+/** 一次托管任务的总时限。 */
+export const HOSTED_JOB_TIMEOUT_MS = 10 * 60 * 1000;
+/** 采访上传图片：类型按文件头魔数判断。 */
+export const BRIEF_ASSET_MAX_BYTES = 2 * MB;
+export const BRIEF_ASSETS_MAX_COUNT = 6;
+/** `POST /w/:wallId/me/create/start`（multipart）请求体上限。 */
+export const HOSTED_UPLOAD_REQUEST_MAX_BYTES = 14 * MB;
+/** 修改要求的长度（Unicode 码点）。 */
+export const EDIT_REQUEST_LIMITS = { min: 1, max: 500 } as const;
+/** 采访素材文本的长度上限。 */
+export const BRIEF_MATERIAL_MAX_CHARS = 4000;
+
+// ---------------------------------------------------------------------------
+// Skill 分发与远程预览（contracts 4.1、4.5）
+// ---------------------------------------------------------------------------
+
+/** Skill 名称（SKILL.md frontmatter 的 `name`，也是 Agent 指令里的命令名与安装目录名）。 */
+export const SKILL_NAME = 'nowme-page';
+/** 主站上 Skill 分发路由的前缀。 */
+export const SKILL_ROUTE_PREFIX = '/skill';
+/** 给 Agent 读的安装说明。 */
+export const SKILL_INSTALL_DOC_PATH = `${SKILL_ROUTE_PREFIX}/install.md`;
+/** Skill 包清单（版本、下载地址、sha256）。 */
+export const SKILL_MANIFEST_PATH = `${SKILL_ROUTE_PREFIX}/manifest.json`;
+/** Skill 包（含内置 CLI `scripts/nowme.mjs`）运行所需的最低 Node 版本。 */
+export const SKILL_MIN_NODE_VERSION = '22.13.0';
+/** Skill 包里内置 CLI 的相对路径。 */
+export const SKILL_BUNDLED_CLI_PATH = 'scripts/nowme.mjs';
+
+/** Skill 包文件名：`nowme-page-<version>.tar.gz`（解压后根目录是 `nowme-page/`）。 */
+export function skillArchiveFileName(version: string): string {
+  return `${SKILL_NAME}-${version}.tar.gz`;
+}
+
+/** [原型默认] 每页每日（滚动 24 小时）远程预览上限。 */
+export const REMOTE_PREVIEWS_PER_PAGE_PER_DAY = 100;

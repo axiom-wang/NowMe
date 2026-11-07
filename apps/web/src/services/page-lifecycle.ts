@@ -23,6 +23,7 @@ import type { Revision, RevisionListItem } from '../db/revisions.js';
 import type { OwnPage } from './access.js';
 import { disconnectAgent } from './agent.js';
 import { removeAllRevisionFiles } from './revision-storage.js';
+import { eraseHostedPageData } from '../hosted/data.js';
 
 /** 删除后版本报告的 `validatorVersion`：标记这是墓碑（报告里没有任何内容）。 */
 export const DELETED_REVISION_MARKER = 'deleted';
@@ -127,6 +128,8 @@ export async function deletePage(deps: LifecycleDeps, own: OwnPage, actorId: str
     };
   });
 
+  // 托管资料（brief、素材、任务内容）一并清除（S7）；不依赖托管功能是否开启
+  await eraseHostedPageData(deps, pageId);
   const failed = await removeAllRevisionFiles(deps.config.dataDir, outcome.fileIds);
   if (failed.length > 0) deps.log(`[web] 删除页面 ${pageId}：${failed.length} 个版本目录没能删除（${failed.join('、')}），请手动清理`);
   return outcome.result;

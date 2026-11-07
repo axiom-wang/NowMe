@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CLI_VERSION, COMMANDS, run } from '../src/index.js';
+import { CLI_VERSION, COMMANDS, run, versionLine } from '../src/index.js';
 
 function capture() {
   const out: string[] = [];
@@ -28,7 +28,9 @@ describe('nowme CLI', () => {
   it('--version', async () => {
     const io = capture();
     expect(await run(['--version'], io.io)).toBe(0);
-    expect(io.stdout().trim()).toBe(CLI_VERSION);
+    expect(io.stdout().trim()).toBe(versionLine());
+    // 源码方式运行不知道 Skill 版本
+    expect(versionLine()).toBe(`nowme ${CLI_VERSION}（源码方式运行）`);
   });
 
   it('命令帮助退出码 0', async () => {

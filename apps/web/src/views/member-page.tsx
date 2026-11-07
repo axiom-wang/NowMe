@@ -13,56 +13,71 @@ import { PageFrame } from './page-frame.js';
 
 const BackLink: FC<{ href: string; label: string }> = ({ href, label }) => (
   <nav class="back-link" aria-label="返回">
-    <a href={href}>← {label}</a>
+    <a href={href}>
+      <span aria-hidden="true">←</span> {label}
+    </a>
   </nav>
 );
+
+/** 两位序号：01、02…… */
+function ordinal(index: number): string {
+  return String(index + 1).padStart(2, '0');
+}
 
 export const MemberPageView: FC<{ model: MemberPageModel; csrf: string }> = ({ model, csrf }) => {
   const { wall, card, contact, own } = model;
   const canChat = contact !== null && !own;
   const base = `/w/${wall.id}/p/${model.pageId}`;
   return (
-    <>
+    <div class="container container--wide">
       <BackLink href={`/w/${wall.id}`} label={`回到墙：${wall.name}`} />
-      <header class="member-head">
-        <h1>
-          {card.displayName}
-          {own ? <span class="badge badge--accent member-head__me">我的页面</span> : null}
-        </h1>
-        {card.tagline ? <p class="member-head__tagline">{card.tagline}</p> : null}
-      </header>
       <div class="member-layout">
-        <PageFrame ticket={model.ticket} title={`${card.displayName}的页面`} />
-        <section class="card hooks" aria-labelledby="hooks-heading">
-          <h2 id="hooks-heading">{own ? '我的接话点' : '可以和 TA 聊这些'}</h2>
+        <header class="member-head">
+          <p class="eyebrow">{wall.name}</p>
+          <h1 class="hero__title">
+            {card.displayName}
+            {own ? <span class="sticker sticker--orange member-head__me">我的页面</span> : null}
+          </h1>
+          {card.tagline ? <p class="member-head__tagline">{card.tagline}</p> : null}
+        </header>
+        <div class="member-layout__frame">
+          <PageFrame ticket={model.ticket} title={`${card.displayName}的页面`} />
+        </div>
+        <section class="card topics" aria-labelledby="hooks-heading">
+          <h2 id="hooks-heading" class="topics__title">
+            {own ? '我的接话点' : '可以和 TA 聊这些'}
+          </h2>
           {card.hooks.length > 0 ? (
-            <ul class="hook-list">
-              {card.hooks.map((hook) => (
-                <li class="hook">
-                  <p class="hook__text">{hook.text}</p>
+            <ol class="topic-list">
+              {card.hooks.map((hook, index) => (
+                <li class="topic">
+                  <span class="topic__index" aria-hidden="true">
+                    {ordinal(index)}
+                  </span>
+                  <p class="topic__text">{hook.text}</p>
                   {canChat ? (
-                    <form method="post" action={`${base}/chat`} class="hook__action">
+                    <form method="post" action={`${base}/chat`} class="topic__action">
                       <CsrfField token={csrf} />
                       <input type="hidden" name="hookId" value={hook.id} />
-                      <button type="submit" class="btn btn--primary">
+                      <button type="submit" class="btn btn--accent btn--small">
                         想聊这个
                       </button>
                     </form>
                   ) : null}
                 </li>
               ))}
-            </ul>
+            </ol>
           ) : null}
           {own ? (
-            <p class="muted hooks__note">这是你自己的页面。别人点“想聊这个”时，会看到你发布时公开的联系方式和对应的开场白。</p>
+            <p class="muted topics__note">这是你自己的页面。别人点“想聊这个”时，会看到你发布时公开的联系方式和对应的开场白。</p>
           ) : contact === null ? (
-            <p class="muted hooks__note">TA 没有公开联系方式，可以在活动现场找 TA 聊聊。</p>
+            <p class="muted topics__note">TA 没有公开联系方式，可以在活动现场找 TA 聊聊。</p>
           ) : (
-            <p class="muted hooks__note">点“想聊这个”，会看到 TA 公开的联系方式和一句开场白。</p>
+            <p class="muted topics__note">点“想聊这个”，会看到 TA 公开的联系方式和一句开场白。</p>
           )}
         </section>
       </div>
-    </>
+    </div>
   );
 };
 
@@ -72,35 +87,48 @@ function openerOf(model: ChatModel): string {
 }
 
 export const ChatView: FC<{ model: ChatModel }> = ({ model }) => (
-  <>
+  <div class="container container--narrow">
     <BackLink href={`/w/${model.wall.id}/p/${model.pageId}`} label={`回到 ${model.displayName} 的页面`} />
     <section class="card chat">
-      <h1>
+      <p class="eyebrow">想聊这个</p>
+      <h1 class="chat__title">
         想和 {model.displayName} 聊「{model.hook.text}」
       </h1>
       <p class="muted">NOWMe 不提供站内聊天。复制下面的联系方式和开场白，到{model.contact.channelLabel}里找 TA 继续聊吧。</p>
-      <div class="chat__block">
-        <h2 class="chat__label">TA 的{model.contact.channelLabel}</h2>
-        <p class="chat__value" id="nm-chat-contact">
-          {model.contact.value}
-        </p>
-        <button type="button" class="btn btn--ghost" data-copy="nm-chat-contact">
-          复制{model.contact.channelLabel}
-        </button>
-      </div>
-      <div class="chat__block">
-        <h2 class="chat__label">开场白</h2>
-        <p class="chat__opener" id="nm-chat-opener">
-          {openerOf(model)}
-        </p>
-        <button type="button" class="btn btn--primary" data-copy="nm-chat-opener">
-          复制开场白
-        </button>
+      <div class="chat__steps">
+        <div class="chat__block">
+          <h2 class="chat__label">
+            <span class="chat__step" aria-hidden="true">
+              1
+            </span>
+            TA 的{model.contact.channelLabel}
+          </h2>
+          <p class="chat__value" id="nm-chat-contact">
+            {model.contact.value}
+          </p>
+          <button type="button" class="btn btn--ghost btn--small" data-copy="nm-chat-contact">
+            复制{model.contact.channelLabel}
+          </button>
+        </div>
+        <div class="chat__block">
+          <h2 class="chat__label">
+            <span class="chat__step" aria-hidden="true">
+              2
+            </span>
+            开场白
+          </h2>
+          <p class="chat__opener" id="nm-chat-opener">
+            {openerOf(model)}
+          </p>
+          <button type="button" class="btn btn--primary btn--small" data-copy="nm-chat-opener">
+            复制开场白
+          </button>
+        </div>
       </div>
       <p class="muted chat__tip">开场白由 TA 的 Agent 起草、TA 自己确认过；可以改成你的语气再发。</p>
-      <p>
-        <a href={`/w/${model.wall.id}`}>回到墙上继续逛</a>
+      <p class="chat__back">
+        <a href={`/w/${model.wall.id}`}>回到墙上继续逛 →</a>
       </p>
     </section>
-  </>
+  </div>
 );

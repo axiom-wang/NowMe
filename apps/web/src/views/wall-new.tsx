@@ -30,8 +30,10 @@ const FieldError: FC<{ id: string; message?: string }> = ({ id, message }) =>
 export const NewWallView: FC<NewWallViewProps> = ({ csrf, scenes, values, errors = {} }) => {
   const hasErrors = Object.keys(errors).length > 0;
   return (
+    <div class="container container--form">
     <section class="card card--form">
-      <h1>建一面墙</h1>
+      <p class="eyebrow">组织者 · 三分钟</p>
+      <h1 class="display form-title">建一面墙</h1>
       <p class="muted">填好名称和简介，点选一种场景，就能拿到邀请链接和二维码。不需要配置模板或字段。</p>
       {hasErrors ? <Notice tone="error">有几处需要改一下，见下面的提示。</Notice> : null}
       <form method="post" action="/walls" class="stack">
@@ -69,8 +71,9 @@ export const NewWallView: FC<NewWallViewProps> = ({ csrf, scenes, values, errors
           <p class="field__hint muted">决定大家的页面默认侧重哪一面，例如黑客松突出能力与项目，兴趣社群突出爱好。</p>
           <div class="scene-picker__options">
             {scenes.map((scene) => (
-              <label class="scene-option">
+              <label class={`scene-option scene--${scene.type}`}>
                 <input type="radio" name="sceneType" value={scene.type} required checked={values?.sceneType === scene.type} />
+                <span class="scene-option__swatch" aria-hidden="true"></span>
                 <span class="scene-option__label">{scene.label}</span>
               </label>
             ))}
@@ -93,10 +96,11 @@ export const NewWallView: FC<NewWallViewProps> = ({ csrf, scenes, values, errors
           <span class="field__hint muted">会显示在墙的顶部，成员的 Agent 生成页面时也会参考。</span>
           <FieldError id="note-error" message={errors.organizerNote} />
         </label>
-        <button type="submit" class="btn btn--primary btn--block">
+        <button type="submit" class="btn btn--primary btn--block btn--lg">
           建好了，生成邀请
         </button>
       </form>
     </section>
+    </div>
   );
 };

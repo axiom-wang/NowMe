@@ -1,0 +1,154 @@
+/* 平台托管路线（contracts 9）：在这里创作、任务状态、我的资料。沿用 app.css 的变量与组件。 */
+
+.hosted-form h2 {
+  margin-top: 0;
+}
+
+.hosted-question {
+  border: 0;
+  padding: 0;
+  margin: 0 0 20px;
+}
+
+.hosted-question .badge {
+  margin-left: 8px;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+}
+
+.chip-check {
+  align-items: center;
+  padding: 6px 12px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: 999px;
+  background: var(--paper);
+  font-size: 0.92rem;
+}
+
+.chip-check:has(input:checked) {
+  border-color: var(--ink);
+  background: var(--lime-soft);
+}
+
+.chip-check input {
+  margin: 0;
+}
+
+.hosted-writein {
+  width: 100%;
+  margin-top: 4px;
+}
+
+.style-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.style-option {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 8px;
+  border: 1.5px solid var(--line-strong);
+  border-radius: var(--radius);
+  background: var(--paper);
+  cursor: pointer;
+  font-size: 0.82rem;
+  line-height: 1.4;
+}
+
+.style-option:has(input:checked) {
+  border-color: var(--ink);
+  box-shadow: var(--shadow-1);
+  background: var(--lime-soft);
+}
+
+.style-option img {
+  width: 100%;
+  height: auto;
+  aspect-ratio: 3 / 4;
+  object-fit: cover;
+  border-radius: var(--radius-sm);
+  background: var(--paper-2);
+}
+
+.hosted-privacy,
+.hosted-quota {
+  font-size: 0.88rem;
+}
+
+.hosted-facts,
+.hosted-profile {
+  margin: 0;
+  padding-left: 1.2em;
+}
+
+.hosted-profile li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.hosted-aiview,
+.hosted-hooks {
+  display: grid;
+  gap: 12px;
+  padding-left: 1.4em;
+}
+
+.hosted-aiview li {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.hosted-aiview input[type='text'] {
+  flex: 1;
+}
+
+.hosted-hooks li {
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+
+.hosted-quote {
+  margin: 0;
+  padding: 12px 16px;
+  border-left: 4px solid var(--lime);
+  background: var(--paper-2);
+  border-radius: var(--radius-sm);
+}
+
+.hosted-quote p {
+  margin: 4px 0;
+}
+
+.hosted-restart {
+  margin-top: 16px;
+  text-align: center;
+}
+
+.ws-hosted__edit {
+  margin: 12px 0;
+}
+
+.ws-hosted__edit summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.hosted-edit select,
+.hosted-edit textarea {
+  width: 100%;
+}

@@ -1,7 +1,7 @@
 /** Agent API（contracts 4.1）：context、events、认证错误体。 */
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import type { AgentContext } from '@nowme/contracts';
-import { agentGet, connectAgent, createTestWeb, createUser, postJson, seedWall, type TestWeb } from './helpers.js';
+import { agentGet, connectAgent, createTestWeb, createUser, postJson, seedWall, TEST_SKILL_VERSION, type TestWeb } from './helpers.js';
 import type { Page } from '../src/db/pages.js';
 import type { Wall } from '../src/db/walls.js';
 
@@ -30,7 +30,8 @@ describe('Agent API', () => {
     const context = (await response.json()) as AgentContext;
     expect(context.wall.id).toBe(wall.id);
     expect(context.page.id).toBe(page.id);
-    expect(Object.keys(context).sort()).toEqual(['kit', 'limits', 'page', 'wall']);
+    expect(Object.keys(context).sort()).toEqual(['kit', 'limits', 'page', 'skill', 'wall']);
+    expect(context.skill).toEqual({ version: TEST_SKILL_VERSION, installUrl: `${t.config.webOrigin}/skill` });
     expect(t.repos.credentials.findActiveForPage(page.id)?.lastUsedAt).toBe(t.clock.now().toISOString());
   });
 

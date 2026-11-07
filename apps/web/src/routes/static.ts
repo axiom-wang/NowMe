@@ -17,9 +17,10 @@ const CONTENT_TYPES: Readonly<Record<string, string>> = {
   svg: 'image/svg+xml',
   png: 'image/png',
   ico: 'image/x-icon',
+  woff2: 'font/woff2',
 };
 
-const NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}\.(css|js|svg|png|ico)$/;
+const NAME_PATTERN = /^[a-z0-9][a-z0-9-]{0,63}\.(css|js|svg|png|ico|woff2)$/;
 
 export function registerStaticRoutes(app: AppHono, staticDir: string = STATIC_DIR): void {
   app.get(`${STATIC_PATH_PREFIX}:name`, async (c) => {

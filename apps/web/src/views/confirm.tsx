@@ -13,10 +13,12 @@ function workspaceHref(wall: Wall): string {
 
 const Breadcrumb: FC<{ wall: Wall; title: string }> = ({ wall, title }) => (
   <section class="page-intro">
-    <p class="muted">
-      <a href="/">我的</a> / <a href={workspaceHref(wall)}>{wall.name}</a>
+    <p class="crumbs">
+      <a href="/">我的</a>
+      <span aria-hidden="true">/</span>
+      <a href={workspaceHref(wall)}>{wall.name}</a>
     </p>
-    <h1>{title}</h1>
+    <h1 class="hero__title">{title}</h1>
   </section>
 );
 
@@ -32,9 +34,9 @@ export const DeleteConfirmView: FC<{ wall: Wall; csrf: string; impact: DeletionI
   impact,
   error,
 }) => (
-  <>
+  <div class="container container--narrow">
     <Breadcrumb wall={wall} title="删除这一页" />
-    <section class="card confirm" aria-labelledby="delete-impact-heading">
+    <section class="card confirm confirm--danger" aria-labelledby="delete-impact-heading">
       <h2 id="delete-impact-heading">删除后会发生什么</h2>
       <p>删除后不能恢复。确认之前，先看看影响范围：</p>
       <ul class="impact">
@@ -52,7 +54,7 @@ export const DeleteConfirmView: FC<{ wall: Wall; csrf: string; impact: DeletionI
         {impact.agentConnected ? <li>断开本地 Agent：页面凭证与未使用的指令立即失效。</li> : null}
         {impact.contactSaved ? <li>清除你保存的联系方式。</li> : null}
       </ul>
-      <h3>不受影响</h3>
+      <h3 class="impact__keep-title">不受影响</h3>
       <ul class="impact impact--keep">
         <li>你仍是「{wall.name}」的成员，可以继续浏览这面墙，也可以重新生成 Agent 指令、从头做一页。</li>
         <LocalFilesNote />
@@ -74,7 +76,7 @@ export const DeleteConfirmView: FC<{ wall: Wall; csrf: string; impact: DeletionI
         </div>
       </form>
     </section>
-  </>
+  </div>
 );
 
 export interface LeaveImpact {
@@ -90,7 +92,7 @@ export const LeaveConfirmView: FC<{ wall: Wall; csrf: string; impact: LeaveImpac
   impact,
   error,
 }) => (
-  <>
+  <div class="container container--narrow">
     <Breadcrumb wall={wall} title={`退出「${wall.name}」`} />
     {impact.isOrganizer ? (
       <section class="card confirm">
@@ -107,7 +109,7 @@ export const LeaveConfirmView: FC<{ wall: Wall; csrf: string; impact: LeaveImpac
         </div>
       </section>
     ) : (
-      <section class="card confirm" aria-labelledby="leave-impact-heading">
+      <section class="card confirm confirm--danger" aria-labelledby="leave-impact-heading">
         <h2 id="leave-impact-heading">退出后会发生什么</h2>
         <ul class="impact">
           <li>你将看不到这面墙和墙上的成员页面。</li>
@@ -115,7 +117,7 @@ export const LeaveConfirmView: FC<{ wall: Wall; csrf: string; impact: LeaveImpac
           {impact.publicLinkOn ? <li>公开链接关闭，旧链接立即失效。</li> : null}
           {impact.agentConnected ? <li>断开本地 Agent：页面凭证与未使用的指令立即失效。</li> : null}
         </ul>
-        <h3>不受影响</h3>
+        <h3 class="impact__keep-title">不受影响</h3>
         <ul class="impact impact--keep">
           <li>
             你的版本会保留：以后用邀请链接重新加入可以找回它们，但需要重新确认发布。想彻底删除内容，请先
@@ -137,12 +139,16 @@ export const LeaveConfirmView: FC<{ wall: Wall; csrf: string; impact: LeaveImpac
         </form>
       </section>
     )}
-  </>
+  </div>
 );
 
 export const LeftView: FC<{ wallName: string; withdrew: boolean }> = ({ wallName, withdrew }) => (
-  <section class="card confirm">
-    <h1>已退出「{wallName}」</h1>
+  <div class="container container--narrow">
+  <section class="card status-card">
+    <p class="status-card__mark" aria-hidden="true">
+      ↗
+    </p>
+    <h1 class="hero__title">已退出「{wallName}」</h1>
     <p>
       {withdrew ? '你的页面已从墙上撤下，' : ''}本地 Agent 已断开。以后拿到邀请链接可以重新加入，之前的版本还在，重新确认后就能再发布。
     </p>
@@ -152,4 +158,5 @@ export const LeftView: FC<{ wallName: string; withdrew: boolean }> = ({ wallName
       </a>
     </p>
   </section>
+  </div>
 );

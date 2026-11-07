@@ -2,11 +2,21 @@
  * 主站测试工具：临时数据目录 + 内存数据库 + 可控时钟 + 内存发件箱 + 假的提交处理器（真实静态校验，不启动浏览器）。
  * 需要真实渲染的测试见 submission-render.test.ts。
  */
-import { mkdtempSync, readdirSync, readFileSync, rmSync } from 'node:fs';
+import { createHash } from 'node:crypto';
+import { mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { parse } from 'parse5';
-import { generateId, hashToken, loadConfig, PAGE_INDEX_FILE, SESSION_COOKIE_NAME, type ExchangeResponse } from '@nowme/contracts';
+import {
+  generateId,
+  hashToken,
+  loadConfig,
+  PAGE_INDEX_FILE,
+  SESSION_COOKIE_NAME,
+  SKILL_MIN_NODE_VERSION,
+  skillArchiveFileName,
+  type ExchangeResponse,
+} from '@nowme/contracts';
 import { loadKitFonts } from '@nowme/kit';
 import { EXAMPLES_DIR } from '@nowme/skill';
 import { validatePage } from '@nowme/validator';
@@ -16,8 +26,11 @@ import type { Repos } from '../src/db/index.js';
 import { createInstruction, type AgentInstruction } from '../src/services/instruction.js';
 import { createMemoryOutbox, type OutboxMessage } from '../src/services/outbox.js';
 import type { ProcessedSubmission, SubmissionProcessor } from '../src/services/processor.js';
+import type { RemoteRenderer, RemoteRenderResult } from '../src/services/remote-preview.js';
 import { addMember, createWall, type MemberPage } from '../src/services/walls.js';
 import type { Wall } from '../src/db/walls.js';
+import type { ClaudeClient } from '../src/hosted/claude.js';
+import type { PagePreviewer } from '../src/hosted/tools.js';
 
 export const TEST_SECRET = 'test-ticket-secret-0123456789abcdefghijklmnop';
 export const START = new Date('2026-11-06T08:00:00.000Z');
@@ -27,6 +40,62 @@ export const KIT_FONTS = loadKitFonts();
 export const TINY_PNG = new Uint8Array(
   Buffer.from('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAwS2OUAAAAABJRU5ErkJggg==', 'base64'),
 );
+
+/** 测试用 Skill 包的版本（与真实 SKILL_VERSION 无关）。 */
+export const TEST_SKILL_VERSION = '0.1.0';
+
+/**
+ * 写一个测试用的 Skill 包目录（`manifest.json` + 内容任意的“归档”，sha256 与大小一致），返回目录。
+ * 主站测试不依赖 `skill/dist-package/` 是否已经打包；真实打包在 skill 包的测试里覆盖。
+ */
+export function writeTestSkillPackage(version: string = TEST_SKILL_VERSION): string {
+  const dir = mkdtempSync(join(tmpdir(), 'nowme-skill-pkg-'));
+  const archive = Buffer.from(`fake nowme-page ${version} archive`);
+  const file = skillArchiveFileName(version);
+  writeFileSync(join(dir, file), archive);
+  const manifest = {
+    name: 'nowme-page',
+    version,
+    file,
+    sha256: createHash('sha256').update(archive).digest('hex'),
+    bytes: archive.byteLength,
+    minNode: SKILL_MIN_NODE_VERSION,
+  };
+  writeFileSync(join(dir, 'manifest.json'), JSON.stringify(manifest));
+  return dir;
+}
+
+let sharedSkillPackageDir: string | null = null;
+function defaultTestSkillPackageDir(): string {
+  sharedSkillPackageDir ??= writeTestSkillPackage();
+  return sharedSkillPackageDir;
+}
+
+export interface StaticRemoteRenderer extends RemoteRenderer {
+  calls: number;
+}
+
+/** 假的远程预览渲染器：真实的静态校验，不启动浏览器；有 index.html 就返回 TINY_PNG 截图。 */
+export function createStaticRemoteRenderer(): StaticRemoteRenderer {
+  const renderer: StaticRemoteRenderer = {
+    calls: 0,
+    async render(files, kitFonts): Promise<RemoteRenderResult> {
+      renderer.calls += 1;
+      const report = validatePage(files, { kitFonts });
+      const rendered = files.has(PAGE_INDEX_FILE);
+      return {
+        report,
+        rendered,
+        cover: rendered ? TINY_PNG : null,
+        full: rendered ? TINY_PNG : null,
+        reducedMotion: rendered ? TINY_PNG : null,
+        blocks: rendered ? [{ id: 'hero', top: 0, height: 100, png: TINY_PNG }] : [],
+      };
+    },
+    async close() {},
+  };
+  return renderer;
+}
 
 export interface TestClock {
   now(): Date;
@@ -97,6 +166,13 @@ export interface TestWebOptions {
   processor?: SubmissionProcessor;
   env?: Record<string, string>;
   clock?: TestClock;
+  /** 平台托管路线（需要 env 里 `NOWME_CLAUDE_FAKE=1` 或 `ANTHROPIC_API_KEY` 才会开启）。 */
+  claude?: ClaudeClient;
+  previewer?: PagePreviewer;
+  hostedTempRoot?: string;
+  remoteRenderer?: RemoteRenderer;
+  /** 默认一个共享的测试 Skill 包；null 表示没有 Skill 包。 */
+  skillPackageDir?: string | null;
 }
 
 export function createTestWeb(options: TestWebOptions = {}): TestWeb {
@@ -107,7 +183,20 @@ export function createTestWeb(options: TestWebOptions = {}): TestWeb {
   const clock = options.clock ?? createClock();
   const outbox = createMemoryOutbox();
   const processor = options.processor ?? createStaticProcessor();
-  const web = createWebApp({ config, db, processor, clock: clock.now, outbox, kitFonts: KIT_FONTS, log: () => {} });
+  const web = createWebApp({
+    config,
+    db,
+    processor,
+    clock: clock.now,
+    outbox,
+    kitFonts: KIT_FONTS,
+    log: () => {},
+    claude: options.claude,
+    previewer: options.previewer,
+    hostedTempRoot: options.hostedTempRoot,
+    remoteRenderer: options.remoteRenderer ?? createStaticRemoteRenderer(),
+    skillPackageDir: options.skillPackageDir === undefined ? defaultTestSkillPackageDir() : options.skillPackageDir,
+  });
   return {
     web,
     db,

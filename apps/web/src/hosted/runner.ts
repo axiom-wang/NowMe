@@ -1,0 +1,99 @@
+/**
+ * 托管生成的 Agent 循环（hosted-route 3.1 第 3 步、3.2）：Messages API + 受限工具，最多 `maxTurns` 轮。
+ * 结束条件：模型调用 `finish`；没有调用工具就停下视为失败（NO_FINISH）；超过轮数（MAX_TURNS）；被取消（TIMEOUT）。
+ * 循环里的校验结果不被信任：调用方在结束后用平台的提交管线重新校验（3.1 第 4 步）。
+ */
+import { addUsage, emptyUsage, type ClaudeClient, type ClaudeMessage, type ToolResultBlock, type UsageTotals } from './claude.js';
+import { generationSystem } from './prompts.js';
+import { GENERATION_TOOLS, type FinishSignal, type GenerationWorkspace } from './tools.js';
+
+export type RunErrorCode = 'MAX_TURNS' | 'NO_FINISH' | 'TIMEOUT' | 'API_ERROR' | 'REFUSED';
+
+export class RunError extends Error {
+  override name = 'RunError';
+  constructor(
+    readonly code: RunErrorCode,
+    readonly turns: number,
+    readonly usage: UsageTotals,
+  ) {
+    super(code);
+  }
+}
+
+export interface RunResult {
+  finish: FinishSignal;
+  turns: number;
+  usage: UsageTotals;
+}
+
+export interface RunOptions {
+  client: ClaudeClient;
+  model: string;
+  maxTurns: number;
+  workspace: GenerationWorkspace;
+  /** 第一条用户消息（墙的情境、场景指南、brief、修改要求，均已用 untrusted() 包好）。 */
+  firstMessage: string;
+  signal?: AbortSignal;
+  maxTokens?: number;
+}
+
+/**
+ * 在最后一条用户消息的最后一块上加缓存断点（滚动）：多轮工具循环里，之前的对话作为缓存前缀复用。
+ * 加上 tools 与 system 的断点共 3 个（API 上限 4 个）。不修改原数组。
+ */
+export function withRollingCache(messages: ClaudeMessage[]): ClaudeMessage[] {
+  const last = messages.at(-1);
+  if (!last || last.role !== 'user' || typeof last.content === 'string' || last.content.length === 0) return messages;
+  const content = last.content.slice();
+  const tail = content[content.length - 1];
+  if (tail) content[content.length - 1] = { ...tail, cache_control: { type: 'ephemeral' } };
+  return [...messages.slice(0, -1), { role: 'user', content }];
+}
+
+export async function runGeneration(options: RunOptions): Promise<RunResult> {
+  const { client, workspace } = options;
+  const usage = emptyUsage();
+  const messages: ClaudeMessage[] = [{ role: 'user', content: [{ type: 'text', text: options.firstMessage }] }];
+  const system = generationSystem();
+
+  for (let turn = 1; turn <= options.maxTurns; turn += 1) {
+    if (options.signal?.aborted) throw new RunError('TIMEOUT', turn - 1, usage);
+    let response;
+    try {
+      response = await client.createMessage(
+        {
+          model: options.model,
+          max_tokens: options.maxTokens ?? 32000,
+          system,
+          messages: withRollingCache(messages),
+          tools: GENERATION_TOOLS,
+          tool_choice: { type: 'auto' },
+        },
+        { signal: options.signal },
+      );
+    } catch {
+      throw new RunError(options.signal?.aborted ? 'TIMEOUT' : 'API_ERROR', turn - 1, usage);
+    }
+    addUsage(usage, response.usage);
+    if (response.stop_reason === 'refusal') throw new RunError('REFUSED', turn, usage);
+    messages.push({ role: 'assistant', content: response.content });
+
+    const calls = response.content.filter((block) => block.type === 'tool_use');
+    if (calls.length === 0) throw new RunError('NO_FINISH', turn, usage);
+
+    const results: ToolResultBlock[] = [];
+    let finish: FinishSignal | undefined;
+    for (const call of calls) {
+      if (finish) {
+        results.push({ type: 'tool_result', tool_use_id: call.id, content: '任务已结束', is_error: true });
+        continue;
+      }
+      const result = await workspace.call(call.name, call.input);
+      results.push({ type: 'tool_result', tool_use_id: call.id, content: result.content, ...(result.isError ? { is_error: true } : {}) });
+      if (result.finish) finish = result.finish;
+    }
+    if (finish) return { finish, turns: turn, usage };
+    messages.push({ role: 'user', content: results });
+  }
+  throw new RunError('MAX_TURNS', options.maxTurns, usage);
+}

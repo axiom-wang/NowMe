@@ -68,6 +68,11 @@ export const ID_PREFIXES = {
   loginCode: 'lgc',
   agentToken: 'agt',
   pageCredential: 'crd',
+  // 平台托管路线（contracts 9 / hosted-route 4）
+  profileEntry: 'pfe',
+  brief: 'brf',
+  briefAsset: 'bas',
+  generationJob: 'gen',
 } as const;
 
 export type IdKind = keyof typeof ID_PREFIXES;
@@ -95,6 +100,10 @@ export function isId(value: unknown, prefix: IdPrefix): value is string {
 export const REVISION_ID_PATTERN = idPattern(ID_PREFIXES.revision);
 export const WALL_ID_PATTERN = idPattern(ID_PREFIXES.wall);
 export const PAGE_ID_PATTERN = idPattern(ID_PREFIXES.page);
+export const PROFILE_ENTRY_ID_PATTERN = idPattern(ID_PREFIXES.profileEntry);
+export const BRIEF_ID_PATTERN = idPattern(ID_PREFIXES.brief);
+export const BRIEF_ASSET_ID_PATTERN = idPattern(ID_PREFIXES.briefAsset);
+export const GENERATION_JOB_ID_PATTERN = idPattern(ID_PREFIXES.generationJob);
 
 // ---------------------------------------------------------------------------
 // 令牌

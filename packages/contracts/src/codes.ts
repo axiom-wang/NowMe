@@ -3,8 +3,8 @@
  */
 
 export type IssueSeverity = 'error' | 'warning';
-/** `static`：packages/validator 的静态校验；`render`：packages/render 的渲染检查。 */
-export type IssueStage = 'static' | 'render';
+/** `static`：packages/validator 的静态校验；`render`：packages/render 的渲染检查；`platform`：平台托管路线附加的检查（contracts 9）。 */
+export type IssueStage = 'static' | 'render' | 'platform';
 
 export interface IssueCodeInfo {
   readonly severity: IssueSeverity;
@@ -61,6 +61,8 @@ export const VALIDATION_ISSUE_CODES = {
   RENDER_SLOW: renderWarning,
   RENDER_BLANK: renderWarning,
   RENDER_FAILED: renderError,
+  // 9 平台托管路线（hosted-route 3.3）：修改任务改动了目标区块以外的区块集合（只提醒，不拦截）
+  HOSTED_BLOCKS_CHANGED: { severity: 'warning', stage: 'platform' },
 } as const satisfies Record<string, IssueCodeInfo>;
 
 export type ValidationIssueCode = keyof typeof VALIDATION_ISSUE_CODES;

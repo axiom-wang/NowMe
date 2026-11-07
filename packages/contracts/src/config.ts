@@ -16,6 +16,15 @@ import {
   DEFAULT_NOWME_HOME_DIR_NAME,
   DEFAULT_PAGES_ORIGIN,
   DEFAULT_WEB_ORIGIN,
+  DEFAULT_GENERATE_MODEL,
+  DEFAULT_HOSTED_DAILY_ATTEMPTS,
+  DEFAULT_HOSTED_FREE_QUOTA,
+  DEFAULT_HOSTED_MAX_TURNS,
+  DEFAULT_INTERVIEW_DAILY_CALLS,
+  DEFAULT_INTERVIEW_MODEL,
+  HOSTED_DAILY_RANGE,
+  HOSTED_FREE_QUOTA_RANGE,
+  HOSTED_MAX_TURNS_RANGE,
 } from './constants.js';
 import { normalizeOrigin } from './csp.js';
 
@@ -50,6 +59,38 @@ export interface NowmeConfig {
   nowmeHome: string;
   /** `NODE_ENV === 'production'`。非生产环境才提供 `/dev/outbox`。 */
   isProduction: boolean;
+  /** 平台托管路线（contracts 9 / hosted-route 1）。不含 API key 本身。 */
+  hosted: HostedConfig;
+  /**
+   * Skill 市场渠道（contracts 4.5）：`NOWME_SKILL_MARKET_LABEL` 与 `NOWME_SKILL_MARKET_COMMAND` 同时设置时，
+   * 安装页与 install.md 多显示一种安装方式；都不设为 null。
+   */
+  skillMarket: SkillMarketConfig | null;
+}
+
+export interface SkillMarketConfig {
+  /** 市场名称，例如 “SkillHub”。 */
+  label: string;
+  /** 在终端运行的安装命令，例如 `npx skills add nowme/nowme-page`。 */
+  command: string;
+}
+
+/**
+ * 平台托管路线的配置。`ANTHROPIC_API_KEY` **不进入配置对象**（只记录有没有），
+ * 由主站进程入口直接从环境变量读取并交给 Claude 客户端，避免随配置被打印或序列化。
+ */
+export interface HostedConfig {
+  /** 托管功能是否开启：有 API key，或非生产环境下 `NOWME_CLAUDE_FAKE=1`。 */
+  enabled: boolean;
+  /** `NOWME_CLAUDE_FAKE=1`：使用确定性的假客户端（只在非生产环境允许）。 */
+  fake: boolean;
+  hasApiKey: boolean;
+  interviewModel: string;
+  generateModel: string;
+  freeQuota: number;
+  maxTurns: number;
+  dailyAttempts: number;
+  interviewDailyCalls: number;
 }
 
 export class ConfigError extends Error {
@@ -86,6 +127,66 @@ function parseTtlHours(raw: string | undefined): number {
     throw new ConfigError(`NOWME_AGENT_TOKEN_TTL_HOURS 应为 ${min}–${max} 的整数：${raw}`);
   }
   return Number(value);
+}
+
+function parseIntRange(env: Env, name: string, fallback: number, range: { min: number; max: number }): number {
+  const value = nonEmpty(env[name]);
+  if (value === undefined) return fallback;
+  if (!/^\d+$/.test(value) || Number(value) < range.min || Number(value) > range.max) {
+    throw new ConfigError(`${name} 应为 ${range.min}–${range.max} 的整数：${value}`);
+  }
+  return Number(value);
+}
+
+const MODEL_ID_PATTERN = /^[a-z0-9][a-z0-9.\-:@\[\]]{1,99}$/;
+
+function parseModel(env: Env, name: string, fallback: string): string {
+  const value = nonEmpty(env[name]) ?? fallback;
+  if (!MODEL_ID_PATTERN.test(value)) throw new ConfigError(`${name} 不是合法的模型 ID：${value}`);
+  return value;
+}
+
+/** 托管路线配置（hosted-route 1）。生产环境拒绝 `NOWME_CLAUDE_FAKE=1`。 */
+export function loadHostedConfig(env: Env, isProduction: boolean): HostedConfig {
+  const fakeRaw = nonEmpty(env.NOWME_CLAUDE_FAKE);
+  if (fakeRaw !== undefined && fakeRaw !== '1' && fakeRaw !== '0') {
+    throw new ConfigError(`NOWME_CLAUDE_FAKE 只能是 1 或 0：${fakeRaw}`);
+  }
+  const fake = fakeRaw === '1';
+  if (fake && isProduction) throw new ConfigError('生产环境不能使用 NOWME_CLAUDE_FAKE=1（假的 Claude 客户端只用于开发与测试）');
+  const hasApiKey = nonEmpty(env.ANTHROPIC_API_KEY) !== undefined;
+  return {
+    enabled: hasApiKey || fake,
+    fake,
+    hasApiKey,
+    interviewModel: parseModel(env, 'NOWME_INTERVIEW_MODEL', DEFAULT_INTERVIEW_MODEL),
+    generateModel: parseModel(env, 'NOWME_GENERATE_MODEL', DEFAULT_GENERATE_MODEL),
+    freeQuota: parseIntRange(env, 'NOWME_HOSTED_FREE_QUOTA', DEFAULT_HOSTED_FREE_QUOTA, HOSTED_FREE_QUOTA_RANGE),
+    maxTurns: parseIntRange(env, 'NOWME_HOSTED_MAX_TURNS', DEFAULT_HOSTED_MAX_TURNS, HOSTED_MAX_TURNS_RANGE),
+    dailyAttempts: parseIntRange(env, 'NOWME_HOSTED_DAILY_ATTEMPTS', DEFAULT_HOSTED_DAILY_ATTEMPTS, HOSTED_DAILY_RANGE),
+    interviewDailyCalls: parseIntRange(env, 'NOWME_INTERVIEW_DAILY_CALLS', DEFAULT_INTERVIEW_DAILY_CALLS, HOSTED_DAILY_RANGE),
+  };
+}
+
+/** [原型默认] 市场名称与安装命令的长度上限。 */
+const SKILL_MARKET_LABEL_MAX = 40;
+const SKILL_MARKET_COMMAND_MAX = 300;
+
+/** Skill 市场渠道（contracts 4.5）：两个变量必须同时设置或同时不设；命令只能是一行可打印字符。 */
+export function loadSkillMarketConfig(env: Env): SkillMarketConfig | null {
+  const label = nonEmpty(env.NOWME_SKILL_MARKET_LABEL);
+  const command = nonEmpty(env.NOWME_SKILL_MARKET_COMMAND);
+  if (label === undefined && command === undefined) return null;
+  if (label === undefined || command === undefined) {
+    throw new ConfigError('NOWME_SKILL_MARKET_LABEL 与 NOWME_SKILL_MARKET_COMMAND 要同时设置（或都不设）');
+  }
+  if (label.length > SKILL_MARKET_LABEL_MAX || /[\u0000-\u001f\u007f]/.test(label)) {
+    throw new ConfigError(`NOWME_SKILL_MARKET_LABEL 应为一行、不超过 ${SKILL_MARKET_LABEL_MAX} 个字符`);
+  }
+  if (command.length > SKILL_MARKET_COMMAND_MAX || /[\u0000-\u001f\u007f]/.test(command)) {
+    throw new ConfigError(`NOWME_SKILL_MARKET_COMMAND 应为一行、不超过 ${SKILL_MARKET_COMMAND_MAX} 个字符`);
+  }
+  return { label, command };
 }
 
 /** 读取配置并校验。默认值见 contracts 0.1。不读写文件。 */
@@ -128,6 +229,8 @@ export function loadConfig(env: Env = process.env): NowmeConfig {
     agentTokenTtlHours: parseTtlHours(env.NOWME_AGENT_TOKEN_TTL_HOURS),
     nowmeHome,
     isProduction: env.NODE_ENV === 'production',
+    hosted: loadHostedConfig(env, env.NODE_ENV === 'production'),
+    skillMarket: loadSkillMarketConfig(env),
   };
 }
 

@@ -85,9 +85,16 @@
 | 场景指南 | 每种场景的侧重、采访重点、建议区块、接话点类型、视觉基调 |
 | NOWMe Kit | 平台托管的基础 CSS 变量、字体清单（见 5.4 节）、若干现成动效和组件；拉高弱模型的质量下限 |
 | 示例页 | 每种场景 1–2 个风格差异大、质量高的示例，附上设计思路 |
-| `nowme` 命令行工具 | `fetch`（换取页面凭证并拉取墙的情境）、`validate`（校验）、`preview`（本地预览和截图）、`submit`（上传素材与页面）；凭证规则见 6.1 节 |
+| `nowme` 命令行工具 | `fetch`（换取页面凭证并拉取墙的情境）、`validate`（校验）、`preview`（预览和截图；随 Skill 分发的版本由服务端渲染）、`submit`（上传素材与页面）；凭证规则见 6.1 节；随 Skill 包一起分发（`scripts/nowme.mjs`） |
 
 Skill 格式优先兼容 `SKILL.md` 规范；不支持的 Agent 提供等价的纯文本指令。各家 Agent 的兼容情况 [待定]，需要实测。
+
+**分发与安装 [已决定，T3.6，详见 contracts 4.5]**：真实用户手里没有本仓库。主站自己托管 Skill 包（`/skill` 安装页、给 Agent 读的 `/skill/install.md`、带 sha256 的归档），Skill 包里自带打包好的单文件 `nowme` 命令行（`scripts/nowme.mjs`，只需要 Node 22），所以“装好 Skill”就等于“装好命令行”，版本也始终与服务器接口一致。命令行在本机没有浏览器，`preview` 由服务端用同一套沙箱渲染截图后返回（不保存）。
+
+- 安装说明是**通用的**：不写具体 Agent 的名字和目录；推荐用户把一句话（“请按 <主站>/skill/install.md 安装 NOWMe Skill”）发给自己的 Agent，由 Agent 判断装到哪里，不确定就问用户。
+- 装好后需要**重开会话**；用户让 Agent 运行 `scripts/nowme.mjs --version` 自检；连接后工作区显示 Skill 版本，过旧时提示更新。
+- 工作区始终显示安装说明，并解释 `Unknown command` 的原因（当前会话没有加载 Skill）与解决办法；不支持 Skill 的 Agent 用纯文本说明，它的第 0 步同样指向这个工具包。
+- 可以额外配置一个 Skill 市场渠道（例如 SkillHub、skills.sh 的安装命令），配置了才显示；主站托管始终是权威来源。
 
 ### 5.2 输出契约 [已决定]
 

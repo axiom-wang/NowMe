@@ -29,7 +29,44 @@ describe('loadConfig', () => {
       agentTokenTtlHours: 72,
       nowmeHome: join(homedir(), '.nowme'),
       isProduction: false,
+      hosted: {
+        enabled: false,
+        fake: false,
+        hasApiKey: false,
+        interviewModel: 'claude-haiku-5-5',
+        generateModel: 'claude-sonnet-5-5',
+        freeQuota: 3,
+        maxTurns: 30,
+        dailyAttempts: 10,
+        interviewDailyCalls: 20,
+      },
+      skillMarket: null,
     });
+  });
+
+  it('Skill 市场渠道：两个变量同时设置才生效；只设一个、多行或过长都报错', () => {
+    expect(loadConfig({}).skillMarket).toBeNull();
+    expect(
+      loadConfig({ NOWME_SKILL_MARKET_LABEL: 'SkillHub', NOWME_SKILL_MARKET_COMMAND: ' npx skills add nowme/nowme-page ' }).skillMarket,
+    ).toEqual({ label: 'SkillHub', command: 'npx skills add nowme/nowme-page' });
+    expect(() => loadConfig({ NOWME_SKILL_MARKET_LABEL: 'SkillHub' })).toThrow(ConfigError);
+    expect(() => loadConfig({ NOWME_SKILL_MARKET_COMMAND: 'npx skills add x' })).toThrow(ConfigError);
+    expect(() => loadConfig({ NOWME_SKILL_MARKET_LABEL: 'A', NOWME_SKILL_MARKET_COMMAND: 'a\nrm -rf ~' })).toThrow(ConfigError);
+    expect(() => loadConfig({ NOWME_SKILL_MARKET_LABEL: 'x'.repeat(41), NOWME_SKILL_MARKET_COMMAND: 'a' })).toThrow(ConfigError);
+    expect(() => loadConfig({ NOWME_SKILL_MARKET_LABEL: 'A', NOWME_SKILL_MARKET_COMMAND: 'a'.repeat(301) })).toThrow(ConfigError);
+  });
+
+  it('托管路线：有 key 才开启；配置对象里不含 key；生产环境拒绝假客户端', () => {
+    const key = 'sk-ant-test-' + 'x'.repeat(40);
+    const config = loadConfig({ ANTHROPIC_API_KEY: key, NOWME_HOSTED_FREE_QUOTA: '5', NOWME_GENERATE_MODEL: 'claude-opus-5-5' });
+    expect(config.hosted).toMatchObject({ enabled: true, fake: false, hasApiKey: true, freeQuota: 5, generateModel: 'claude-opus-5-5' });
+    expect(JSON.stringify(config)).not.toContain(key);
+    expect(loadConfig({ NOWME_CLAUDE_FAKE: '1' }).hosted).toMatchObject({ enabled: true, fake: true, hasApiKey: false });
+    expect(() => loadConfig({ NOWME_CLAUDE_FAKE: '1', NODE_ENV: 'production' })).toThrow(ConfigError);
+    expect(() => loadConfig({ NOWME_HOSTED_FREE_QUOTA: '-1' })).toThrow(ConfigError);
+    expect(() => loadConfig({ NOWME_HOSTED_FREE_QUOTA: '101' })).toThrow(ConfigError);
+    expect(() => loadConfig({ NOWME_INTERVIEW_MODEL: 'bad model' })).toThrow(ConfigError);
+    expect(() => loadConfig({ NOWME_CLAUDE_FAKE: 'yes' })).toThrow(ConfigError);
   });
 
   it('读取环境变量；源末尾斜杠被去掉；空字符串视为未设置', () => {

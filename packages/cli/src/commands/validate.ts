@@ -9,12 +9,12 @@
 import { writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { PAGE_MANIFEST_FILE, type ValidationReport } from '@nowme/contracts';
-import { loadKitFonts } from '@nowme/kit';
 import { computeExtraChars, validatePage } from '@nowme/validator';
 import type { ParsedArgs } from '../args.js';
 import type { CliContext } from '../context.js';
 import { formatIssues, summaryLine } from '../format.js';
 import { replaceTopLevelString } from '../manifest-edit.js';
+import { resolveKitFonts } from '../kit-fonts.js';
 import { loadPage } from '../page-dir.js';
 import type { PageDirFiles } from '@nowme/validator/node';
 
@@ -76,7 +76,7 @@ export async function runValidate(ctx: CliContext, args: ParsedArgs): Promise<nu
     return 1;
   }
   const { pageDir, workDir, files } = await loadPage(ctx, args.positionals[0]);
-  const kitFonts = loadKitFonts();
+  const kitFonts = await resolveKitFonts(workDir);
   const fix = noFix ? null : await fixExtraChars(pageDir, files);
   const report = validatePage(files, { kitFonts });
   const output: ValidateOutput = { command: 'validate', ok: report.ok, pageDir, fixed: fix ? { extraChars: fix } : null, report };

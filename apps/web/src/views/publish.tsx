@@ -22,6 +22,7 @@ function basePath(model: WorkspaceModel): string {
 /** 主人确认后的缩略卡（墙上看到的样子）。 */
 export const MiniCard: FC<{ card: Card }> = ({ card }) => (
   <div class="mini-card">
+    <p class="mini-card__label">墙上的缩略卡</p>
     <p class="mini-card__name">{card.displayName}</p>
     <p class="mini-card__tagline">{card.tagline}</p>
     <ul class="mini-card__hooks">
@@ -40,11 +41,20 @@ const PublicLinkBlock: FC<{ model: WorkspaceModel }> = ({ model }) => {
   const action = `${basePath(model)}/public-link`;
   return (
     <div class="public-link" id="public-link">
-      <h3>公开链接</h3>
+      <div class="public-link__head">
+        <h3>公开链接</h3>
+        {publish.publicLinkUrl ? (
+          <span class="badge badge--ok">
+            <span class="dot" aria-hidden="true"></span>已开启
+          </span>
+        ) : (
+          <span class="badge badge--muted">未开启</span>
+        )}
+      </div>
       {publish.publicLinkUrl ? (
         <>
           <p>
-            <span class="badge badge--ok">已开启</span> 任何拿到链接的人不用登录就能看到你的页面本身，但看不到联系方式与接话点。
+            任何拿到链接的人不用登录就能看到你的页面本身，但看不到联系方式与接话点。
           </p>
           <pre class="code code--wrap public-link__url" id="nm-public-link">
             {publish.publicLinkUrl}
@@ -76,7 +86,7 @@ const PublicLinkBlock: FC<{ model: WorkspaceModel }> = ({ model }) => {
       ) : (
         <>
           <p class="muted">
-            <span class="badge">未开启</span> 默认只有这面墙的成员能看到你的页面。开启后会生成一个链接，墙外的人不用登录也能看到页面本身（不含联系方式与接话点）；随时可以关闭，关闭后旧链接立即失效。
+            默认只有这面墙的成员能看到你的页面。开启后会生成一个链接，墙外的人不用登录也能看到页面本身（不含联系方式与接话点）；随时可以关闭，关闭后旧链接立即失效。
           </p>
           <div class="actions">
             <PostButton action={action} csrf={model.csrf} fields={{ enabled: '1' }} label="开启公开链接" />
@@ -91,12 +101,14 @@ export const WallStatusSection: FC<{ model: WorkspaceModel }> = ({ model }) => {
   const { publish } = model;
   const active = publish.active;
   return (
-    <section class="card wall-status" id="wall-status" aria-labelledby="wall-status-heading">
+    <section class={`card wall-status wall-status--${publish.state}`} id="wall-status" aria-labelledby="wall-status-heading">
       <h2 id="wall-status-heading">墙上的页面</h2>
       {active ? (
         <>
           <p class="wall-status__line">
-            <span class="badge badge--ok">已发布</span>
+            <span class="badge badge--live">
+              <span class="dot" aria-hidden="true"></span>已发布
+            </span>
             <span>
               墙上展示的是{active.revisionNumber !== null ? `第 ${active.revisionNumber} 版` : '你发布的版本'} ·{' '}
               {formatDateTime(active.publication.publishedAt)} 发布
@@ -138,7 +150,7 @@ export const WallStatusSection: FC<{ model: WorkspaceModel }> = ({ model }) => {
         </p>
       ) : (
         <p class="wall-status__line">
-          <span class="badge">未发布</span>
+          <span class="badge badge--muted">未发布</span>
           <span>墙上的成员还看不到你的页面。选一个通过校验的版本，确认缩略卡与联系方式后发布。</span>
         </p>
       )}
@@ -251,7 +263,12 @@ const PublishFormBody: FC<{ model: WorkspaceModel; form: PublishFormModel }> = (
         <input type="hidden" name="revisionId" value={form.revisionId} />
 
         <fieldset class="publish-form__group">
-          <legend>缩略卡</legend>
+          <legend>
+            <span class="publish-form__num" aria-hidden="true">
+              1
+            </span>
+            缩略卡
+          </legend>
           <p class="field__hint">
             墙上显示的入口：名字、一行介绍和 {CARD_LIMITS.hooks.min}–{CARD_LIMITS.hooks.max} 个接话点。
             {form.prefill === 'publication'
@@ -276,14 +293,14 @@ const PublishFormBody: FC<{ model: WorkspaceModel; form: PublishFormModel }> = (
             value={values.tagline}
             error={errors.tagline}
           />
-          <div class="hooks">
+          <div class="pf-hooks">
             <p class="field__label">
               接话点（保留 {CARD_LIMITS.hooks.min}–{CARD_LIMITS.hooks.max} 个）
             </p>
             <p class="field__hint">别人点某个接话点上的“想聊这个”时，会复制对应的开场白来找你。写得越具体越好接话。</p>
             <FieldError id="pf-hooks-error" message={errors.hooks} />
             {values.hooks.map((hook, index) => (
-              <fieldset class={hook.remove ? 'hook hook--removed' : 'hook'}>
+              <fieldset class={hook.remove ? 'pf-hook pf-hook--removed' : 'pf-hook'}>
                 <legend>接话点 {index + 1}</legend>
                 <input type="hidden" name={`hooks[${index}][id]`} value={hook.id} />
                 <TextField
@@ -313,7 +330,12 @@ const PublishFormBody: FC<{ model: WorkspaceModel; form: PublishFormModel }> = (
         </fieldset>
 
         <fieldset class="publish-form__group">
-          <legend>联系方式</legend>
+          <legend>
+            <span class="publish-form__num" aria-hidden="true">
+              2
+            </span>
+            联系方式
+          </legend>
           <div class="contact-row">
             <div class={errors.contactChannel ? 'field field--invalid' : 'field'}>
               <label class="field__label" for="pf-contact-channel">
@@ -348,7 +370,12 @@ const PublishFormBody: FC<{ model: WorkspaceModel; form: PublishFormModel }> = (
         </fieldset>
 
         <fieldset class="publish-form__group publish-form__confirm">
-          <legend>确认</legend>
+          <legend>
+            <span class="publish-form__num" aria-hidden="true">
+              3
+            </span>
+            确认
+          </legend>
           <label class={errors.confirm ? 'check check--strong check--invalid' : 'check check--strong'}>
             <input type="checkbox" name="confirm" value="1" required checked={values.confirm} />
             <span>发布后，以上内容对这面墙的成员可见</span>
@@ -357,7 +384,7 @@ const PublishFormBody: FC<{ model: WorkspaceModel; form: PublishFormModel }> = (
           {model.publish.publicLinkUrl ? (
             <p class="field__hint">你的公开链接已开启：墙外拿到链接的人也能看到页面本身（不含联系方式与接话点）。</p>
           ) : null}
-          <button type="submit" class="btn btn--primary btn--block">
+          <button type="submit" class="btn btn--primary btn--block btn--lg">
             {text.button(form.revisionNumber)}
           </button>
         </fieldset>
@@ -375,7 +402,7 @@ export const PublishForm: FC<{ model: WorkspaceModel }> = ({ model }) => {
   if (form.unavailable) {
     return (
       <div class="publish" id="publish">
-        <h3>{text.heading(form.revisionNumber)}</h3>
+        <h2 class="publish__title">{text.heading(form.revisionNumber)}</h2>
         <p class="notice notice--warning">这一版的缩略卡（card.json）读不出来，不能发布。请让 Agent 检查 card.json 后重新提交一版。</p>
       </div>
     );
@@ -391,7 +418,7 @@ export const PublishForm: FC<{ model: WorkspaceModel }> = ({ model }) => {
         </details>
       ) : (
         <>
-          <h3>{text.heading(form.revisionNumber)}</h3>
+          <h2 class="publish__title">{text.heading(form.revisionNumber)}</h2>
           <p class="muted">{modeIntro(form, activeNumber)}</p>
           <PublishFormBody model={model} form={form} />
         </>
@@ -401,11 +428,13 @@ export const PublishForm: FC<{ model: WorkspaceModel }> = ({ model }) => {
 };
 
 export const MoreActionsSection: FC<{ model: WorkspaceModel }> = ({ model }) => (
-  <section class="card more-actions" aria-labelledby="more-heading">
+  <section class="card card--quiet more-actions" aria-labelledby="more-heading">
     <h2 id="more-heading">删除与退出</h2>
     <ul class="link-list">
       <li>
-        <a href={`${basePath(model)}/delete`}>删除这一页…</a>
+        <a class="link-danger" href={`${basePath(model)}/delete`}>
+          删除这一页…
+        </a>
         <span class="muted">删除全部版本的文件、撤下页面、关闭公开链接、断开本地 Agent；你仍是这面墙的成员，可以重新开始。删除前会先说明影响范围。</span>
       </li>
       <li>
@@ -413,7 +442,9 @@ export const MoreActionsSection: FC<{ model: WorkspaceModel }> = ({ model }) => 
           <span class="muted">你是这面墙的组织者，不能退出；活动结束后可以在组织者后台关闭这面墙。</span>
         ) : (
           <>
-            <a href={`/w/${model.wall.id}/leave`}>退出这面墙…</a>
+            <a class="link-danger" href={`/w/${model.wall.id}/leave`}>
+              退出这面墙…
+            </a>
             <span class="muted">撤下页面并断开本地 Agent；版本会保留，用邀请重新加入后需要重新确认发布。</span>
           </>
         )}

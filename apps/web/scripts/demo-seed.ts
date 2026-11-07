@@ -1,9 +1,11 @@
 /**
  * 演示数据（`pnpm demo` 与 demo 种子测试共用）。
  *
- * 一面黑客松墙：1 名组织者 + 6 名成员（6 个 Skill 示例页各属于一名成员）+ 1 名还没做页面的新同学。
+ * - 黑客松墙：1 名组织者 + 6 名成员（6 个 Skill 示例页各属于一名成员）+ 1 名还没做页面的新同学。最后一名成员保持“已提交未发布”。
+ * - 社团墙“山海摄影社 · 2026 秋季招新”（club，M5 验收时加入）：同一位组织者；小满、周一鸣、栗子三位成员各发布一页
+ *   （club / interest 示例），新同学也已加入，可以在这面墙上试“在这里创作”。
  * 每名成员都走真实提交管线：生成 Agent 指令 → `/api/agent/exchange` 换凭证 → `/api/agent/revisions` 提交
- * （服务端校验 + 渲染），再以示例 `card.json` 的内容发布。最后一名成员保持“已提交未发布”。
+ * （服务端校验 + 渲染），再以示例 `card.json` 的内容发布。
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
@@ -18,6 +20,7 @@ import { addMember, createWall } from '../src/services/walls.js';
 
 export const DEMO_DOMAIN = 'demo.nowme.test';
 export const DEMO_WALL_NAME = 'NOWMe 演示黑客松';
+export const DEMO_CLUB_WALL_NAME = '山海摄影社 · 2026 秋季招新';
 
 interface DemoMemberPlan {
   dir: string;
@@ -39,6 +42,13 @@ export const DEMO_MEMBER_PLANS: readonly DemoMemberPlan[] = [
   { dir: 'club-senior-quest', email: `zhouyiming@${DEMO_DOMAIN}`, contactPublic: true, contact: { channel: 'wechat', value: 'zhou_yiming' }, publish: false },
 ];
 
+/** 社团墙：复用黑客松墙的三个账号（按邮箱对应），各发布一页。 */
+export const DEMO_CLUB_PLANS: readonly DemoMemberPlan[] = [
+  { dir: 'club-newbie-sticker', email: `xiaoman@${DEMO_DOMAIN}`, contactPublic: true, contact: { channel: 'wechat', value: 'xiaoman_2026' }, publish: true },
+  { dir: 'club-senior-quest', email: `zhouyiming@${DEMO_DOMAIN}`, contactPublic: true, contact: { channel: 'wechat', value: 'zhou_yiming' }, publish: true },
+  { dir: 'interest-film-zine', email: `lizi@${DEMO_DOMAIN}`, contactPublic: false, contact: { channel: 'email', value: `lizi@${DEMO_DOMAIN}` }, publish: true },
+];
+
 export interface DemoMember {
   email: string;
   nickname: string;
@@ -57,6 +67,8 @@ export interface DemoSeed {
   members: DemoMember[];
   /** 已加入、还没做页面的新同学：给“用自己的 Agent 走一遍”用。 */
   newcomer: { email: string; nickname: string; userId: string; instruction: AgentInstruction };
+  /** 社团墙（新同学也已加入，还没做页面）。 */
+  club: { wall: Wall; inviteUrl: string; members: DemoMember[] };
 }
 
 function readExample(dir: string): { files: Record<string, string>; displayName: string } {
@@ -96,66 +108,11 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
   });
 
   const members: DemoMember[] = [];
+  const userIds = new Map<string, string>();
   for (const plan of DEMO_MEMBER_PLANS) {
-    const example = readExample(plan.dir);
-    const userId = newUser(plan.email, example.displayName);
-    const { page } = addMember(deps, wall, userId);
-
-    // 真实提交管线：指令 → 换凭证 → 提交（校验 + 渲染）
-    const instruction = createInstruction(deps, wall, page);
-    const exchanged = await json<ExchangeResponse>(
-      await web.request(`${config.webOrigin}/api/agent/exchange`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ wallId: wall.id, token: instruction.token }),
-      }),
-      `${example.displayName}换取凭证`,
-    );
-    const submitted = await json<RevisionResponse>(
-      await web.request(`${config.webOrigin}/api/agent/revisions`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', authorization: `Bearer ${exchanged.credential}` },
-        body: JSON.stringify({ files: example.files }),
-      }),
-      `${example.displayName}提交页面`,
-    );
-    if (submitted.revision.status !== 'accepted') {
-      throw new Error(`示例页 ${plan.dir} 没有通过服务端校验：${JSON.stringify(submitted.revision.report.errors.map((e) => e.code))}`);
-    }
-    const revisionId = submitted.revision.id;
-    log(`  已提交 ${example.displayName}（${plan.dir}）`);
-
-    // 主人在工作区确认并发布（这里直接调用与表单路由相同的服务）
-    if (plan.publish) {
-      const own = findOwnPage(repos, userId, wall.id);
-      const revision = repos.revisions.findById(revisionId);
-      if (!own || !revision?.cardJson) throw new Error('演示数据异常：找不到页面或版本');
-      const defaults = publishDefaults(deps, own, revision);
-      if (!defaults) throw new Error('演示数据异常：版本缺少 card');
-      const checked = validatePublishForm(
-        {
-          ...defaults.values,
-          contactChannel: plan.contact.channel,
-          contactValue: plan.contact.value,
-          contactPublic: plan.contactPublic,
-          confirm: true,
-        },
-        cardSchema.parse(JSON.parse(revision.cardJson)),
-      );
-      if (!checked.ok) throw new Error(`演示数据异常：发布表单不通过 ${JSON.stringify(checked.errors)}`);
-      if (!publishRevision(deps, own, revision, checked, userId)) throw new Error('演示数据异常：发布失败');
-      log(`  已发布 ${example.displayName}（联系方式${plan.contactPublic ? '公开' : '不公开'}）`);
-    }
-    members.push({
-      email: plan.email,
-      nickname: example.displayName,
-      userId,
-      pageId: page.id,
-      exampleDir: plan.dir,
-      published: plan.publish,
-      contactPublic: plan.contactPublic,
-      revisionId,
-    });
+    const userId = newUser(plan.email, readExample(plan.dir).displayName);
+    userIds.set(plan.email, userId);
+    members.push(await submitAndPublish(web, wall, userId, plan, log));
   }
 
   const newcomerUserId = newUser(`newbie@${DEMO_DOMAIN}`, '新同学');
@@ -167,5 +124,93 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
     instruction: createInstruction(deps, wall, newcomerPage),
   };
 
-  return { wall, inviteUrl: `${config.webOrigin}/join/${wall.inviteCode}`, organizer, members, newcomer };
+  // 社团墙：同一位组织者，三位成员各发布一页；新同学也加入
+  const { wall: clubWall } = createWall(deps, {
+    organizerId: organizer.userId,
+    name: DEMO_CLUB_WALL_NAME,
+    description: '每周六早上扫街，月底一起冲洗胶片办小展。新社员、老社员都在这里挂一页，让大家先认识你。这是演示用的墙，里面的人都是虚构的。',
+    sceneType: 'club',
+    organizerNote: '新同学写写想拍什么，老社员写写可以来问你什么',
+  });
+  log(`社团墙「${DEMO_CLUB_WALL_NAME}」`);
+  const clubMembers: DemoMember[] = [];
+  for (const plan of DEMO_CLUB_PLANS) {
+    const userId = userIds.get(plan.email);
+    if (!userId) throw new Error(`演示数据异常：社团墙成员 ${plan.email} 不在黑客松墙里`);
+    clubMembers.push(await submitAndPublish(web, clubWall, userId, plan, log));
+  }
+  addMember(deps, clubWall, newcomerUserId);
+
+  return {
+    wall,
+    inviteUrl: `${config.webOrigin}/join/${wall.inviteCode}`,
+    organizer,
+    members,
+    newcomer,
+    club: { wall: clubWall, inviteUrl: `${config.webOrigin}/join/${clubWall.inviteCode}`, members: clubMembers },
+  };
+}
+
+/** 一名成员在一面墙上：加入 → 指令 → 换凭证 → 提交（校验 + 渲染）→ 按计划由主人确认发布。 */
+async function submitAndPublish(web: WebApp, wall: Wall, userId: string, plan: DemoMemberPlan, log: (message: string) => void): Promise<DemoMember> {
+  const { deps } = web;
+  const { repos, config } = deps;
+  const example = readExample(plan.dir);
+  const { page } = addMember(deps, wall, userId);
+
+  // 真实提交管线：指令 → 换凭证 → 提交（校验 + 渲染）
+  const instruction = createInstruction(deps, wall, page);
+  const exchanged = await json<ExchangeResponse>(
+    await web.request(`${config.webOrigin}/api/agent/exchange`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ wallId: wall.id, token: instruction.token }),
+    }),
+    `${example.displayName}换取凭证`,
+  );
+  const submitted = await json<RevisionResponse>(
+    await web.request(`${config.webOrigin}/api/agent/revisions`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: `Bearer ${exchanged.credential}` },
+      body: JSON.stringify({ files: example.files }),
+    }),
+    `${example.displayName}提交页面`,
+  );
+  if (submitted.revision.status !== 'accepted') {
+    throw new Error(`示例页 ${plan.dir} 没有通过服务端校验：${JSON.stringify(submitted.revision.report.errors.map((e) => e.code))}`);
+  }
+  const revisionId = submitted.revision.id;
+  log(`  已提交 ${example.displayName}（${plan.dir}）`);
+
+  // 主人在工作区确认并发布（这里直接调用与表单路由相同的服务）
+  if (plan.publish) {
+    const own = findOwnPage(repos, userId, wall.id);
+    const revision = repos.revisions.findById(revisionId);
+    if (!own || !revision?.cardJson) throw new Error('演示数据异常：找不到页面或版本');
+    const defaults = publishDefaults(deps, own, revision);
+    if (!defaults) throw new Error('演示数据异常：版本缺少 card');
+    const checked = validatePublishForm(
+      {
+        ...defaults.values,
+        contactChannel: plan.contact.channel,
+        contactValue: plan.contact.value,
+        contactPublic: plan.contactPublic,
+        confirm: true,
+      },
+      cardSchema.parse(JSON.parse(revision.cardJson)),
+    );
+    if (!checked.ok) throw new Error(`演示数据异常：发布表单不通过 ${JSON.stringify(checked.errors)}`);
+    if (!publishRevision(deps, own, revision, checked, userId)) throw new Error('演示数据异常：发布失败');
+    log(`  已发布 ${example.displayName}（联系方式${plan.contactPublic ? '公开' : '不公开'}）`);
+  }
+  return {
+    email: plan.email,
+    nickname: example.displayName,
+    userId,
+    pageId: page.id,
+    exampleDir: plan.dir,
+    published: plan.publish,
+    contactPublic: plan.contactPublic,
+    revisionId,
+  };
 }

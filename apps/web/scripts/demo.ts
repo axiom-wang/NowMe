@@ -71,9 +71,10 @@ mkdirSync(DEMO_DATA_DIR, { recursive: true });
 
 const db = openDatabase(dataPaths(config.dataDir).db);
 const ticketSecret = resolveTicketSecret(config);
-const web = createWebApp({ config: { ...config, ticketSecret }, db, log: () => {} });
+// 平台托管路线：有 ANTHROPIC_API_KEY（或 NOWME_CLAUDE_FAKE=1）时开启；key 只从环境变量读取
+const web = createWebApp({ config: { ...config, ticketSecret }, db, log: () => {}, anthropicApiKey: process.env.ANTHROPIC_API_KEY?.trim() || undefined });
 
-console.log('[demo] 正在种演示数据（6 个示例页走真实提交管线：校验 + 渲染，大约需要几十秒）……');
+console.log('[demo] 正在种演示数据（两面墙、9 个页面走真实提交管线：校验 + 渲染，大约需要一分钟）……');
 const seed = await seedDemo(web, (message) => console.log(`[demo] ${message}`));
 
 const webServer = serve({ fetch: web.fetch, port: config.web.port, hostname: config.web.hostname });
@@ -119,7 +120,8 @@ console.log(
     line,
     `  主站：      ${config.webOrigin}`,
     `  页面托管：  ${config.pagesOrigin}（页面在这个独立源的沙箱里运行，不用直接打开）`,
-    `  演示墙：    ${seed.wall.name}`,
+    `  演示墙：    ${seed.wall.name}（黑客松）`,
+    `              ${seed.club.wall.name}（社团招新）`,
     `  数据目录：  ${config.dataDir}（每次运行 pnpm demo 都会清空重建）`,
     '',
     ' 登录方式',
@@ -132,7 +134,8 @@ console.log(
       (member) => `  成员：      ${member.email}（${member.nickname}，已发布，联系方式${member.contactPublic ? '公开' : '不公开'}）`,
     ),
     ...draft.map((member) => `  成员：      ${member.email}（${member.nickname}，已提交、还没发布：对照用）`),
-    `  新同学：    ${seed.newcomer.email}（已加入，还没做页面）`,
+    `  新同学：    ${seed.newcomer.email}（两面墙都已加入，还没做页面）`,
+    `  社团墙：    ${seed.club.members.map((member) => member.nickname).join('、')} 也在「${seed.club.wall.name}」各发布了一页（同一个账号在两面墙上是两页）`,
     '',
     ' 建议的浏览路线',
     `  1. 用成员账号（如 ${published[0]?.email ?? ''}）登录，进入「${seed.wall.name}」，看墙上 ${published.length} 张卡片`,
@@ -148,6 +151,13 @@ console.log(
     indent(seed.newcomer.instruction.command),
     `  Agent 提交后，用 ${seed.newcomer.email} 登录，到「我的页面」预览并确认发布。`,
     '',
+    ' 在应用里创作（平台托管路线）',
+    web.deps.hosted
+      ? `  已开启（${web.deps.hosted.settings.fake ? '假 Claude 客户端，生成的是简单的测试页' : `采访 ${web.deps.hosted.settings.interviewModel} · 生成 ${web.deps.hosted.settings.generateModel}`}，每页免费 ${web.deps.hosted.settings.freeQuota} 次）。`
+      : '  未开启：没有 ANTHROPIC_API_KEY。用 ANTHROPIC_API_KEY=... pnpm demo 开启（或 NOWME_CLAUDE_FAKE=1 pnpm demo 用假客户端试流程）。',
+    web.deps.hosted ? `  用 ${seed.newcomer.email} 登录，进「${seed.club.wall.name}」→「我的页面」→“在这里创作”。` : '',
+    '',
+    `  社团墙邀请链接：${seed.club.inviteUrl}`,
     '  按 Ctrl+C 退出（同时关闭主站与页面托管）。',
     line,
     '',

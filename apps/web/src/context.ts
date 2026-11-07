@@ -13,12 +13,15 @@ import type { PageCredential } from './db/credentials.js';
 import type { SessionRecord } from './db/sessions.js';
 import type { User } from './db/users.js';
 import type { Wall } from './db/walls.js';
+import type { HostedService } from './hosted/service.js';
 import type { Outbox } from './services/outbox.js';
+import type { RemotePreviewService } from './services/remote-preview.js';
+import type { SkillPackage } from './services/skill-package.js';
 import type { SubmissionService } from './services/submissions.js';
 import type { TicketIssuer } from './services/tickets.js';
 
 /** 主站运行配置（contracts 0.1、4.3、4.4）。`ticketSecret` 已解析（`resolveTicketSecret`）。 */
-export type WebConfig = Pick<NowmeConfig, 'webOrigin' | 'pagesOrigin' | 'dataDir' | 'agentTokenTtlHours' | 'isProduction'> & {
+export type WebConfig = Pick<NowmeConfig, 'webOrigin' | 'pagesOrigin' | 'dataDir' | 'agentTokenTtlHours' | 'isProduction' | 'hosted' | 'skillMarket'> & {
   ticketSecret: string;
 };
 
@@ -34,6 +37,12 @@ export interface AppDeps {
   tickets: TicketIssuer;
   submissions: SubmissionService;
   outbox: Outbox;
+  /** 平台托管路线（contracts 9）；没有 API key（也没开假客户端）时为 null，整个功能隐藏。 */
+  hosted: HostedService | null;
+  /** 主站托管的 Skill 包（contracts 4.5）；没有打包时为 null（安装页提示先构建）。 */
+  skillPackage: SkillPackage | null;
+  /** 服务端远程预览（`POST /api/agent/previews`）。 */
+  remotePreview: RemotePreviewService;
   log: (message: string) => void;
 }
 
@@ -60,6 +69,8 @@ export type AppEnv = {
     auth: SessionAuth | null;
     /** `requireForm` 解析后的表单字段。 */
     form: FormFields;
+    /** `requireForm({ multipartFiles })` 解析出的上传文件（托管采访的图片）。 */
+    uploads: Uint8Array[];
     /** `requireCredential` 认证后的 Agent。 */
     agent: AgentAuth;
   };

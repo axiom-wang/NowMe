@@ -5,16 +5,18 @@
  * /nowme-page wal_xxx nmt_xxx --server http://localhost:3000
  * ```
  *
- * 同时给出一段等价的纯文本说明，给不支持 Skill 的 Agent。生成新指令时，该页旧的未使用 token 作废；
+ * 同时给出一段等价的纯文本说明，给不支持 Skill 的 Agent（第 0 步告诉它去 `/skill/install.md` 下载工具包，
+ * 里面的单文件命令行就是 nowme，contracts 4.5）。生成新指令时，该页旧的未使用 token 作废；
  * 有效期 `NOWME_AGENT_TOKEN_TTL_HOURS`（默认 72 小时）。token 明文只在这一次返回值里出现，库里只有哈希。
  */
-import { generateId, generateToken, hashToken } from '@nowme/contracts';
+import { generateId, generateToken, hashToken, SKILL_BUNDLED_CLI_PATH, SKILL_NAME } from '@nowme/contracts';
 import type { AppDeps, WebConfig } from '../context.js';
 import { transaction } from '../db/index.js';
 import type { Page } from '../db/pages.js';
 import { formatDateTime } from '../format.js';
 import type { Wall } from '../db/walls.js';
 import { workspaceUrl } from './agent.js';
+import { skillInstallDocUrl } from './skill-package.js';
 
 export interface AgentInstruction {
   /** 一次性 token 明文（只用于本次展示）。 */
@@ -27,7 +29,7 @@ export interface AgentInstruction {
 }
 
 export function formatCommand(wallId: string, token: string, server: string): string {
-  return `/nowme-page ${wallId} ${token} --server ${server}`;
+  return `/${SKILL_NAME} ${wallId} ${token} --server ${server}`;
 }
 
 export function formatPlainText(input: { wallName: string; wallId: string; token: string; server: string; expiresAt: Date }): string {
@@ -35,7 +37,9 @@ export function formatPlainText(input: { wallName: string; wallId: string; token
   return [
     `请帮我用 NOWMe 做一页介绍我自己的页面，挂到「${wallName}」这面墙上。按下面的步骤做：`,
     '',
-    '1. 新建一个空的工作目录，在里面运行（需要 Node 22 与 nowme 命令行工具）：',
+    `0. 准备 nowme 命令行：按 ${skillInstallDocUrl(server)} 下载并解压 NOWMe 工具包（只需要 Node.js 22；你不支持 Skill 也没关系，解压即可，不用装成 Skill）。`,
+    `   下文的 nowme 都指 node <解压目录>/${SKILL_NAME}/${SKILL_BUNDLED_CLI_PATH}；已经全局安装了 nowme 的可以直接用。工具包里的 ${SKILL_NAME}/SKILL.md 是更详细的操作手册，可以参考。`,
+    '1. 新建一个空的工作目录，在里面运行：',
     `   nowme fetch ${wallId} ${token} --server ${server}`,
     `   这一步用一次性 token 换取页面凭证，并把墙的情境写进 context.json。token 只能用一次，${formatDateTime(expiresAt)}（北京时间）前有效。`,
     '   凭证保存在 ~/.nowme/credentials：不要打印它，不要写进 page/，不要发给任何人。',

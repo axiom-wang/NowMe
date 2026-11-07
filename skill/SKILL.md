@@ -15,6 +15,8 @@ description: 为 NOWMe 社区墙做一页“有个性的自己”。当用户输
 
 例如 `/nowme-page wal_xxxx nmt_xxxx --server http://localhost:3000`。token 只能换一次；换过以后，同一个工作目录里直接用 `nowme fetch`（不带参数）刷新。
 
+Skill 版本：0.1.0。最新版本与安装说明在 NOWMe 应用的 `/skill` 页面（例如 `http://localhost:3000/skill`）；`nowme fetch` 发现有新版本时会提示，请转告主人更新。
+
 本文件是操作手册，按第 0–7 步顺序做。细节放在 `reference/` 里，用到时再读：
 
 | 文件 | 什么时候读 |
@@ -44,10 +46,15 @@ description: 为 NOWMe 社区墙做一页“有个性的自己”。当用户输
 
 ### 0.1 确认 `nowme` 命令
 
-先试 `nowme --version`。
+按顺序找，用第一个能输出版本号的：
 
-- **方式 A（已安装）**：能输出版本号，下文的 `nowme` 就是它。
-- **方式 B（本地开发阶段，还没有安装）**：主人会告诉你 NOWMe 仓库的路径 `<仓库路径>`，用
+- **方式 A（推荐，随 Skill 一起安装）**：本 Skill 目录里自带打包好的命令行 `scripts/nowme.mjs`，只需要 Node ≥ 22.13：
+  ```bash
+  node "<本 Skill 目录>/scripts/nowme.mjs" --version
+  ```
+  输出形如 `nowme 0.1.0 · NOWMe Skill 0.1.0`。它的 `preview` 由 NOWMe 服务端渲染截图（本机不需要浏览器），版本与本 Skill 一致。`node` 不存在或版本太低时，请主人先安装 Node 22（https://nodejs.org）。
+- **方式 B（已全局安装）**：`nowme --version` 能输出版本号。
+- **方式 C（NOWMe 开发者在本地仓库里运行）**：主人会告诉你 NOWMe 仓库的路径 `<仓库路径>`，用
   ```bash
   pnpm --dir <仓库路径> nowme <命令> [参数]
   ```
@@ -121,12 +128,12 @@ nowme fetch <wallId> <token> --server <url>
 ## 第 5 步：校验与截图自查
 
 1. `nowme validate page`：逐条按报告里的 `hint` 修复，重复直到 0 个错误。警告也尽量处理；`EXTRA_CHARS_MISSING` 会被自动补全。错误码对照见 `reference/page-contract.md`。
-2. `nowme preview page`：在和平台一样的沙箱里渲染，报告渲染问题（脚本报错、CSP 违规、加载慢、空白），并做与提交后一致的字体子集化。`page/` 里还没有 `cover.png` 时会把封面（页面顶部 375×500，存成 750×1000）写进去；之后改了首屏要重新生成封面就加 `--cover`。其他截图（封面副本、整页、减少动态效果的整页、按 `data-nm-id` 切开的区块图）和 `report.json` 写在工作目录的 `.nowme-preview/` 里（不会进 `page/`），命令会打印每张图的绝对路径。
-3. **看截图**，按 `reference/self-check.md` 逐项检查，至少做一轮“截图 → 审视 → 修改 → 再截图”。你看不了图片时，如实告诉主人，请他用 `nowme preview page --serve` 在浏览器里看，再按他的反馈改。
+2. `nowme preview page`：在和平台一样的沙箱里渲染（方式 A 的命令行把页面发给 NOWMe 服务端渲染，服务端不保存、不生成版本；方式 B、C 在本机渲染，也可以加 `--remote` 改由服务端渲染），报告渲染问题（脚本报错、CSP 违规、加载慢、空白），并做与提交后一致的字体子集化。`page/` 里还没有 `cover.png` 时会把封面（页面顶部 375×500，存成 750×1000）写进去；之后改了首屏要重新生成封面就加 `--cover`。其他截图（封面副本、整页、减少动态效果的整页、按 `data-nm-id` 切开的区块图）和 `report.json` 写在工作目录的 `.nowme-preview/` 里（不会进 `page/`），命令会打印每张图的绝对路径。
+3. **看截图**，按 `reference/self-check.md` 逐项检查，至少做一轮“截图 → 审视 → 修改 → 再截图”。你看不了图片时，如实告诉主人，请他打开 `.nowme-preview/` 里的截图（方式 B、C 也可以用 `nowme preview page --serve` 在浏览器里看），再按他的反馈改。
 
 ## 第 6 步：交给主人，按意见修改（详见 `reference/editing.md`）
 
-1. 运行 `nowme preview page --serve`（默认 `http://localhost:4100/`，端口被占用时加 `--port <端口>`），把地址给主人；用两三句话说明你的设计构想，以及缩略卡上的一行介绍和接话点。
+1. 把 `.nowme-preview/` 里的截图给主人看（方式 B、C 可以运行 `nowme preview page --serve`，默认 `http://localhost:4100/`，端口被占用时加 `--port <端口>`，把地址给主人；方式 A 也可以先 `nowme submit`，让主人在工作区里预览这个版本）；用两三句话说明你的设计构想，以及缩略卡上的一行介绍和接话点。
 2. 主人提修改时，先确定改哪个区块（`data-nm-id`），**只改那个区块**，其他部分保持不变。范围不清时先问（例如列出区块编号让主人选）。
 3. 主人在修改时补充的新信息属于“主人明确表达”，可以直接用；其中的长期信息按第 3 步写回画像。
 4. 每次修改后重新 `validate` 与 `preview`。做不到的请求如实说明，并给替代方案。
@@ -166,7 +173,8 @@ nowme submit page
 | `nowme` 不可用 | 按 0.1 换方式 B；仍不行就把错误原文告诉主人，请他确认仓库路径或安装 |
 | `fetch` 返回 `TOKEN_INVALID` / `CREDENTIAL_INVALID` | 请主人在应用内重新生成指令，用新 token 重新 `nowme fetch <wallId> <token> --server <url>` |
 | `validate` 有错误 | 按 `hint` 修复；同一个错误改了两次还在，把报告原文和你的理解告诉主人 |
-| `preview` 报渲染错误 | 脚本异常 / CSP 违规通常是用了禁用 API 或外部资源，按报告位置修；浏览器启动失败时把错误原文告诉主人 |
+| `preview` 报渲染错误 | 脚本异常 / CSP 违规通常是用了禁用 API 或外部资源，按报告位置修；浏览器启动失败时把错误原文告诉主人（也可以加 `--remote` 改由服务端渲染） |
+| `preview` 报“预览次数已达上限” | 服务端预览每页每天有上限；直接 `nowme submit`，请主人在工作区里预览 |
 | `submit` 被拒（422）或限流（429） | 422 按报告修复后重交；429 说明今天提交次数用完，明天再交 |
 | 主人的请求做不到 | 说明原因，给 1–2 个可行的替代方案（见 `reference/editing.md`） |
 

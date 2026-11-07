@@ -8,6 +8,7 @@
  * | GET /api/agent/context | 凭证 | 200 AgentContext |
  * | POST /api/agent/revisions | 凭证 | 201 { revision }；校验不通过 422 { revision } |
  * | POST /api/agent/events | 凭证 | 204 |
+ * | POST /api/agent/previews | 凭证 | 200 RemotePreviewResponse（服务端渲染预览，什么都不存） |
  */
 import type { Context, MiddlewareHandler } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
@@ -18,11 +19,13 @@ import {
   eventsRequestSchema,
   exchangeRequestSchema,
   REVISION_REQUEST_MAX_BYTES,
+  REMOTE_PREVIEWS_PER_PAGE_PER_DAY,
   REVISIONS_PER_PAGE_PER_DAY,
   revisionsRequestSchema,
   toStoredAgentEventType,
   type ApiErrorCode,
   type ExchangeResponse,
+  type RemotePreviewResponse,
   type RevisionResponse,
 } from '@nowme/contracts';
 import type { AppDeps, AppEnv, AppHono } from '../context.js';
@@ -90,8 +93,14 @@ export function registerAgentApiRoutes(app: AppHono, deps: AppDeps): void {
     const body = await readJson(c);
     if (body === INVALID_JSON) return apiError(c, 'BAD_REQUEST', '请求体不是合法的 JSON');
     const parsed = exchangeRequestSchema.safeParse(body);
-    // token 或墙 ID 格式不对也返回 TOKEN_INVALID（与不存在、已用、过期一致，contracts 4.1）
-    if (!parsed.success) return apiError(c, 'TOKEN_INVALID', 'token 或墙 ID 格式不对：请复制工作区里的完整指令');
+    if (!parsed.success) {
+      // 只有 client（CLI 自报的版本）不对时返回 BAD_REQUEST；此时 token 没有被使用，换一个正常的 CLI 还能用
+      if (parsed.error.issues.every((issue) => issue.path[0] === 'client')) {
+        return apiError(c, 'BAD_REQUEST', `CLI 版本信息格式不对：${firstIssue(parsed.error)}（token 没有被使用）`);
+      }
+      // token 或墙 ID 格式不对也返回 TOKEN_INVALID（与不存在、已用、过期一致，contracts 4.1）
+      return apiError(c, 'TOKEN_INVALID', 'token 或墙 ID 格式不对：请复制工作区里的完整指令');
+    }
     const result = exchangeAgentToken(deps, parsed.data);
     if (!result.ok) return apiError(c, 'TOKEN_INVALID', result.message);
     const response: ExchangeResponse = {
@@ -142,5 +151,22 @@ export function registerAgentApiRoutes(app: AppHono, deps: AppDeps): void {
     }
     const response: RevisionResponse = { revision: outcome.summary };
     return c.json(response, outcome.summary.status === 'accepted' ? 201 : 422);
+  });
+
+  app.post(`${AGENT_API_PREFIX}/previews`, credential, revisionLimit, async (c) => {
+    const agent = c.get('agent');
+    const body = await readJson(c);
+    if (body === INVALID_JSON) return apiError(c, 'BAD_REQUEST', '请求体不是合法的 JSON');
+    const parsed = revisionsRequestSchema.safeParse(body);
+    if (!parsed.success) return apiError(c, 'BAD_REQUEST', `预览请求格式不对：${firstIssue(parsed.error)}`);
+    const outcome = await deps.remotePreview.preview(agent, parsed.data.files);
+    if (outcome.kind === 'rate_limited') {
+      return apiError(c, 'RATE_LIMITED', `预览太频繁：每页每 24 小时最多预览 ${REMOTE_PREVIEWS_PER_PAGE_PER_DAY} 次，请稍后再试`);
+    }
+    if (outcome.kind === 'credential_invalid') {
+      return apiError(c, 'CREDENTIAL_INVALID', CREDENTIAL_INVALID_MESSAGE, { 'WWW-Authenticate': 'Bearer' });
+    }
+    const response: RemotePreviewResponse = outcome.response;
+    return c.json(response, 200);
   });
 }

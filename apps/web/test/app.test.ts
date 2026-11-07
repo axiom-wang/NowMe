@@ -36,6 +36,11 @@ describe('主站基础', () => {
     const js = await get(t, '/static/page-frame.js');
     expect(js.status).toBe(200);
     expect(js.headers.get('content-type')).toBe('text/javascript; charset=utf-8');
+    for (const name of ['font-display.woff2', 'font-grotesk-500.woff2', 'font-grotesk-700.woff2', 'font-mono-500.woff2']) {
+      const font = await get(t, `/static/${name}`);
+      expect(font.status, name).toBe(200);
+      expect(font.headers.get('content-type'), name).toBe('font/woff2');
+    }
     for (const path of ['/static/missing.css', '/static/..%2Fpackage.json', '/static/%2e%2e%2fsrc%2fapp.tsx', '/static/.hidden.js']) {
       expect((await get(t, path)).status, path).toBe(404);
     }

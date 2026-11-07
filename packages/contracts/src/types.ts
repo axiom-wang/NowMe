@@ -67,6 +67,8 @@ export interface AgentContext {
     assetsMaxCount: number;
     maxCjkFonts: number;
   };
+  /** 主站当前分发的 Skill 版本与安装页（contracts 4.5）；CLI 发现自己落后时提示更新。没有 Skill 包时为 null。 */
+  skill: { version: string; installUrl: string } | null;
 }
 
 export type RevisionStatus = 'accepted' | 'rejected';
@@ -94,6 +96,24 @@ export type ContextResponse = AgentContext;
 /** `POST /api/agent/revisions` 201（accepted）或 422（rejected，含报告）。 */
 export interface RevisionResponse {
   revision: RevisionSummary;
+}
+
+/**
+ * `POST /api/agent/previews` 200（contracts 4.1）：服务端用与提交相同的沙箱渲染管线做预览，什么都不存。
+ * 静态校验有错误也照样渲染（报告里保留错误），与本地 `nowme preview` 一致。图片都是 PNG 的 base64；没有时为 null。
+ */
+export interface RemotePreviewResponse {
+  report: ValidationReport;
+  /** 是否渲染了（缺 index.html 时为 false）。 */
+  rendered: boolean;
+  /** 750×1000 封面（截图生成）。 */
+  cover: string | null;
+  /** 整页截图。 */
+  full: string | null;
+  /** `prefers-reduced-motion: reduce` 时的整页截图。 */
+  reducedMotion: string | null;
+  /** 按 `data-nm-id` 分块的截图。 */
+  blocks: { id: string; top: number; height: number; png: string }[];
 }
 
 /** 所有 API 错误的响应体。 */

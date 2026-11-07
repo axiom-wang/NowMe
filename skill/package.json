@@ -9,6 +9,11 @@
       "source": "./src/index.ts",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
+    },
+    "./pack": {
+      "source": "./src/pack.ts",
+      "types": "./dist/pack.d.ts",
+      "default": "./dist/pack.js"
     }
   },
   "files": [
@@ -20,17 +25,20 @@
     "examples"
   ],
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
+    "build": "tsc -p tsconfig.build.json && pnpm run pack:skill",
     "clean": "node -e \"require('node:fs').rmSync('dist',{recursive:true,force:true})\"",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "pack:skill": "tsx --conditions=source scripts/pack.ts"
   },
   "dependencies": {
     "@nowme/contracts": "workspace:*"
   },
   "devDependencies": {
+    "@nowme/cli": "workspace:*",
     "@nowme/kit": "workspace:*",
     "@types/node": "catalog:",
+    "tsx": "catalog:",
     "typescript": "catalog:",
     "vitest": "catalog:"
   }

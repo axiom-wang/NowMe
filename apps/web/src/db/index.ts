@@ -10,6 +10,7 @@ import type { Database } from './database.js';
 import { createAgentTokensRepo } from './agent-tokens.js';
 import { createCredentialsRepo } from './credentials.js';
 import { createEventsRepo } from './events.js';
+import { createBriefAssetsRepo, createBriefsRepo, createGenerationJobsRepo, createProfileEntriesRepo } from './hosted.js';
 import { createLoginCodesRepo } from './login-codes.js';
 import { createMembershipsRepo } from './memberships.js';
 import { createPagesRepo } from './pages.js';
@@ -34,6 +35,10 @@ export function createRepos(db: Database) {
     revisions: createRevisionsRepo(db),
     publications: createPublicationsRepo(db),
     events: createEventsRepo(db),
+    profileEntries: createProfileEntriesRepo(db),
+    briefs: createBriefsRepo(db),
+    briefAssets: createBriefAssetsRepo(db),
+    jobs: createGenerationJobsRepo(db),
   };
 }
 

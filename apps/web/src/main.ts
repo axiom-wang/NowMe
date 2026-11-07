@@ -10,11 +10,20 @@ import { openDatabase } from './db/index.js';
 loadRepoDotEnv();
 const config = loadConfig();
 const db = openDatabase(dataPaths(config.dataDir).db);
-const web = createWebApp({ config: { ...config, ticketSecret: resolveTicketSecret(config) }, db });
+// ANTHROPIC_API_KEY 只从环境变量读取，直接交给 Claude 客户端，不进入配置对象（contracts 9 / hosted-route 1）
+const web = createWebApp({
+  config: { ...config, ticketSecret: resolveTicketSecret(config) },
+  db,
+  anthropicApiKey: process.env.ANTHROPIC_API_KEY?.trim() || undefined,
+});
 
 const server = serve({ fetch: web.fetch, port: config.web.port, hostname: config.web.hostname }, () => {
   console.log(`[web] NOWMe 主站已启动：${config.webOrigin}（数据目录 ${config.dataDir}）`);
   if (!config.isProduction) console.log(`[web] 开发发件箱：${config.webOrigin}/dev/outbox`);
+  if (web.deps.hosted) {
+    const hosted = web.deps.hosted.settings;
+    console.log(`[web] 平台托管路线已开启（${hosted.fake ? '假 Claude 客户端' : `采访 ${hosted.interviewModel} · 生成 ${hosted.generateModel}`}，每页免费 ${hosted.freeQuota} 次）`);
+  }
 });
 
 let closing = false;

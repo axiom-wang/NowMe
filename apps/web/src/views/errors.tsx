@@ -8,9 +8,12 @@ export function renderNotFound(c: Context<AppEnv>): Response | Promise<Response>
     title: '找不到这个页面',
     status: 404,
     body: (
-      <section class="card">
-        <h1>找不到这个页面</h1>
-        <p>链接可能已经失效，或者你没有访问权限。</p>
+      <section class="status-page">
+        <p class="status-page__code" aria-hidden="true">
+          404
+        </p>
+        <h1 class="display">找不到这个页面</h1>
+        <p class="muted">链接可能已经失效，或者你没有访问权限。</p>
         <p>
           <a class="btn btn--primary" href="/">
             回到“我的”
@@ -29,9 +32,12 @@ export function renderError(
     title: options.title,
     status: options.status,
     body: (
-      <section class="card">
+      <section class="status-page">
+        <p class="status-page__code" aria-hidden="true">
+          {String(options.status)}
+        </p>
         <h1>{options.title}</h1>
-        <p>{options.message}</p>
+        <p class="muted">{options.message}</p>
         <p>
           {options.loginLink ? (
             <a class="btn btn--primary" href="/login">

@@ -11,6 +11,9 @@ export interface PageCredential {
   createdAt: string;
   lastUsedAt: string | null;
   revokedAt: string | null;
+  /** exchange 时 CLI 自报的版本（contracts 4.5）；没报时为 null。 */
+  clientCliVersion: string | null;
+  clientSkillVersion: string | null;
 }
 
 interface PageCredentialRow {
@@ -20,6 +23,8 @@ interface PageCredentialRow {
   created_at: string;
   last_used_at: string | null;
   revoked_at: string | null;
+  client_cli_version: string | null;
+  client_skill_version: string | null;
 }
 
 function toCredential(row: PageCredentialRow | undefined): PageCredential | null {
@@ -31,12 +36,14 @@ function toCredential(row: PageCredentialRow | undefined): PageCredential | null
     createdAt: row.created_at,
     lastUsedAt: row.last_used_at,
     revokedAt: row.revoked_at,
+    clientCliVersion: row.client_cli_version,
+    clientSkillVersion: row.client_skill_version,
   };
 }
 
 export function createCredentialsRepo(db: Database) {
   const insert = db.prepare(
-    'INSERT INTO page_credentials (id, page_id, credential_hash, created_at, last_used_at, revoked_at) VALUES (?, ?, ?, ?, NULL, NULL)',
+    'INSERT INTO page_credentials (id, page_id, credential_hash, created_at, last_used_at, revoked_at, client_cli_version, client_skill_version) VALUES (?, ?, ?, ?, NULL, NULL, ?, ?)',
   );
   const activeByHash = db.prepare('SELECT * FROM page_credentials WHERE credential_hash = ? AND revoked_at IS NULL');
   const activeForPage = db.prepare('SELECT * FROM page_credentials WHERE page_id = ? AND revoked_at IS NULL');
@@ -45,8 +52,18 @@ export function createCredentialsRepo(db: Database) {
   const touch = db.prepare('UPDATE page_credentials SET last_used_at = ? WHERE id = ?');
 
   return {
-    create(credential: Pick<PageCredential, 'id' | 'pageId' | 'credentialHash' | 'createdAt'>): void {
-      insert.run(credential.id, credential.pageId, credential.credentialHash, credential.createdAt);
+    create(
+      credential: Pick<PageCredential, 'id' | 'pageId' | 'credentialHash' | 'createdAt'> &
+        Partial<Pick<PageCredential, 'clientCliVersion' | 'clientSkillVersion'>>,
+    ): void {
+      insert.run(
+        credential.id,
+        credential.pageId,
+        credential.credentialHash,
+        credential.createdAt,
+        credential.clientCliVersion ?? null,
+        credential.clientSkillVersion ?? null,
+      );
     },
     findActiveByHash(credentialHash: string): PageCredential | null {
       return toCredential(activeByHash.get(credentialHash) as PageCredentialRow | undefined);

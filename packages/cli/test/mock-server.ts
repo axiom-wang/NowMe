@@ -49,6 +49,21 @@ export interface MockHandlers {
   context?: () => { status: number; body: unknown };
   revisions?: (body: any) => { status: number; body: unknown };
   events?: () => { status: number; body: unknown };
+  previews?: (body: any) => { status: number; body: unknown };
+}
+
+/** 1×1 PNG（base64），模拟服务端预览返回的截图。 */
+export const TINY_PNG_BASE64 = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAwS2OUAAAAABJRU5ErkJggg==';
+
+export function previewBody(report: Record<string, unknown> = {}) {
+  return {
+    report: { ok: true, errors: [], warnings: [], stats: {}, validatorVersion: '1', ...report },
+    rendered: true,
+    cover: TINY_PNG_BASE64,
+    full: TINY_PNG_BASE64,
+    reducedMotion: TINY_PNG_BASE64,
+    blocks: [{ id: 'hero', top: 0, height: 100, png: TINY_PNG_BASE64 }],
+  };
 }
 
 function error(status: number, code: string, message: string) {
@@ -91,6 +106,8 @@ export async function startMockServer(handlers: MockHandlers = {}): Promise<Mock
       out = !authorized ? error(401, 'CREDENTIAL_INVALID', '凭证无效') : (h.context?.() ?? { status: 200, body: makeContext() });
     } else if (req.method === 'POST' && path === '/api/agent/revisions') {
       out = !authorized ? error(401, 'CREDENTIAL_INVALID', '凭证无效') : (h.revisions?.(JSON.parse(body)) ?? { status: 201, body: { revision: revision('accepted') } });
+    } else if (req.method === 'POST' && path === '/api/agent/previews') {
+      out = !authorized ? error(401, 'CREDENTIAL_INVALID', '凭证无效') : (h.previews?.(JSON.parse(body)) ?? { status: 200, body: previewBody() });
     } else if (req.method === 'POST' && path === '/api/agent/events') {
       out = !authorized ? error(401, 'CREDENTIAL_INVALID', '凭证无效') : (h.events?.() ?? { status: 204, body: null });
     } else {

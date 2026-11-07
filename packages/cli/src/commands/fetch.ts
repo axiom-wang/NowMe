@@ -9,9 +9,12 @@ import {
   WORKDIR_CONTEXT_FILE,
   WORKDIR_LINK_FILE,
   WORKDIR_PAGE_DIR,
+  compareVersions,
+  isVersion,
   type AgentContext,
   type ExchangeResponse,
 } from '@nowme/contracts';
+import { BUNDLED_SKILL_VERSION, CLI_VERSION } from '../build-info.js';
 import { NetworkError, apiRequest, normalizeServer, readApiError, type ApiResult } from '../api-client.js';
 import type { ParsedArgs } from '../args.js';
 import type { CliContext } from '../context.js';
@@ -100,7 +103,9 @@ async function exchange(ctx: CliContext, args: ParsedArgs, json: boolean, starte
   }
   let result: ApiResult;
   try {
-    result = await apiRequest(server, '/api/agent/exchange', { method: 'POST', body: { wallId, token } });
+    // 自报版本：主站在工作区显示“Skill 版本”，落后时提示主人更新（不参与授权）
+    const client = { cliVersion: CLI_VERSION, skillVersion: BUNDLED_SKILL_VERSION };
+    result = await apiRequest(server, '/api/agent/exchange', { method: 'POST', body: { wallId, token, client } });
   } catch (error) {
     return networkFail(ctx, json, 'fetch', error);
   }
@@ -127,13 +132,31 @@ async function exchange(ctx: CliContext, args: ParsedArgs, json: boolean, starte
   return 0;
 }
 
+/**
+ * 服务端分发的 Skill 比这个 CLI 所在的 Skill 包新时，返回提示（contracts 4.5）；否则 null。
+ * 源码方式运行（不知道 Skill 版本）时不提示。
+ */
+export function skillUpdateNotice(context: AgentContext, skillVersion: string | null = BUNDLED_SKILL_VERSION): { latest: string; installUrl: string; message: string } | null {
+  const latest = context.skill?.version;
+  if (!skillVersion || !latest || !isVersion(latest) || !isVersion(skillVersion)) return null;
+  if (compareVersions(latest, skillVersion) <= 0) return null;
+  const installUrl = context.skill?.installUrl ?? '';
+  return {
+    latest,
+    installUrl,
+    message: `NOWMe Skill 有新版本 ${latest}（你现在用的是 ${skillVersion}）。请告诉主人：按 ${installUrl} 更新 Skill 后重开会话。这次可以继续用旧版本。`,
+  };
+}
+
 function printSuccess(ctx: CliContext, json: boolean, refreshed: boolean, context: AgentContext, link: { server: string; wallId: string; pageId: string }): void {
+  const update = skillUpdateNotice(context);
   if (json) {
     ctx.io.stdout(
-      `${JSON.stringify({ command: 'fetch', refreshed, ok: true, workDir: ctx.cwd, ...link, credentialSaved: true, wall: context.wall, page: context.page }, null, 2)}\n`,
+      `${JSON.stringify({ command: 'fetch', refreshed, ok: true, workDir: ctx.cwd, ...link, credentialSaved: true, wall: context.wall, page: context.page, skillUpdate: update }, null, 2)}\n`,
     );
     return;
   }
+  if (update) ctx.io.stderr(`${update.message}\n`);
   const lines = [
     refreshed ? `nowme fetch：已刷新 ${WORKDIR_CONTEXT_FILE}` : `nowme fetch：已连接，工作目录 ${ctx.cwd}`,
     ...describeContext(context),

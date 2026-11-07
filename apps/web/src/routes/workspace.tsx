@@ -39,6 +39,8 @@ import { DeleteConfirmView, LeaveConfirmView, LeftView, type LeaveImpact } from 
 import { renderError, renderNotFound } from '../views/errors.js';
 import { renderPage } from '../views/layout.js';
 import { WorkspaceView } from '../views/workspace.js';
+import { JOB_START_ERROR_TEXT } from '../views/hosted.js';
+import type { JobStartError } from '../hosted/service.js';
 
 /** `?notice=` 只接受这些（固定文案，不回显参数）。 */
 const NOTICES: ReadonlySet<string> = new Set<WorkspaceNotice>([
@@ -98,9 +100,11 @@ export function registerWorkspaceRoutes(app: AppHono, deps: AppDeps): void {
 
   app.get('/w/:wallId/me', user, (c) => {
     const notice = c.req.query('notice');
+    const hostedError = c.req.query('hosted');
     return renderWorkspace(c, deps, c.req.param('wallId'), {
       revisionId: c.req.query('rev') ?? null,
       notice: notice && NOTICES.has(notice) ? (notice as WorkspaceNotice) : null,
+      hostedError: hostedError && Object.hasOwn(JOB_START_ERROR_TEXT, hostedError) ? (hostedError as JobStartError) : null,
     });
   });
 

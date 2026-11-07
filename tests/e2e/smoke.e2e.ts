@@ -18,7 +18,7 @@ test('主站可在 Chromium 中打开（未登录跳到登录页），带主站 
   expect(csp).toContain("frame-ancestors 'none'");
   // 外部样式生效（主站不用内联样式）
   const background = await page.locator('body').evaluate((body) => body.ownerDocument.defaultView?.getComputedStyle(body).backgroundColor);
-  expect(background).toBe('rgb(244, 241, 234)');
+  expect(background).toBe('rgb(243, 240, 232)');
   expect(violations).toEqual([]);
 });
 
