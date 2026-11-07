@@ -11,7 +11,7 @@
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { EXAMPLES_INDEX_FILE, REFERENCE_DIR, SKILL_FILE, TEMPLATES_DIR } from '@nowme/skill';
-import type { TextBlock } from './claude.js';
+import type { TextBlock } from './model-client.js';
 
 const REFERENCE_FILES = ['interview.md', 'page-contract.md', 'kit.md', 'design-principles.md', 'self-check.md', 'editing.md'];
 

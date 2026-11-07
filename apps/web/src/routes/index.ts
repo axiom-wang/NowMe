@@ -15,6 +15,7 @@
  * | hosted.tsx | M5 | 平台托管路线：`/w/:wallId/me/create*`、`/generate`、`/edit`、`/jobs/:jobId`、`/brief*`、`/account/data` 等 |
  */
 import type { AppDeps, AppHono } from '../context.js';
+import { registerAiSettingsRoutes } from './ai-settings.js';
 import { registerAdminRoutes } from './admin.js';
 import { registerAgentApiRoutes } from './agent-api.js';
 import { registerAuthRoutes } from './auth.js';
@@ -34,6 +35,7 @@ export function registerRoutes(app: AppHono, deps: AppDeps): void {
   registerHomeRoutes(app, deps);
   registerWorkspaceRoutes(app, deps);
   registerHostedRoutes(app, deps);
+  registerAiSettingsRoutes(app, deps);
   registerWallRoutes(app, deps);
   registerAdminRoutes(app, deps);
   registerPublicRoutes(app, deps);

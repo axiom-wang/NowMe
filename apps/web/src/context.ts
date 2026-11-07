@@ -13,6 +13,7 @@ import type { PageCredential } from './db/credentials.js';
 import type { SessionRecord } from './db/sessions.js';
 import type { User } from './db/users.js';
 import type { Wall } from './db/walls.js';
+import type { UserModels } from './hosted/user-models.js';
 import type { HostedService } from './hosted/service.js';
 import type { Outbox } from './services/outbox.js';
 import type { RemotePreviewService } from './services/remote-preview.js';
@@ -37,8 +38,9 @@ export interface AppDeps {
   tickets: TicketIssuer;
   submissions: SubmissionService;
   outbox: Outbox;
-  /** 平台托管路线（contracts 9）；没有 API key（也没开假客户端）时为 null，整个功能隐藏。 */
+  /** 平台托管路线（contracts 9）；用户未配置时引导到账号设置。 */
   hosted: HostedService | null;
+  userModels: UserModels;
   /** 主站托管的 Skill 包（contracts 4.5）；没有打包时为 null（安装页提示先构建）。 */
   skillPackage: SkillPackage | null;
   /** 服务端远程预览（`POST /api/agent/previews`）。 */

@@ -3,11 +3,12 @@
  * 结束条件：模型调用 `finish`；没有调用工具就停下视为失败（NO_FINISH）；超过轮数（MAX_TURNS）；被取消（TIMEOUT）。
  * 循环里的校验结果不被信任：调用方在结束后用平台的提交管线重新校验（3.1 第 4 步）。
  */
-import { addUsage, emptyUsage, type ClaudeClient, type ClaudeMessage, type ToolResultBlock, type UsageTotals } from './claude.js';
+import { addUsage, emptyUsage, type ModelClient, type ModelMessage, type ToolResultBlock, type UsageTotals } from './model-client.js';
+import { modelFailureCode, type ModelAccessCode } from './model-errors.js';
 import { generationSystem } from './prompts.js';
 import { GENERATION_TOOLS, type FinishSignal, type GenerationWorkspace } from './tools.js';
 
-export type RunErrorCode = 'MAX_TURNS' | 'NO_FINISH' | 'TIMEOUT' | 'API_ERROR' | 'REFUSED';
+export type RunErrorCode = ModelAccessCode | 'MAX_TURNS' | 'NO_FINISH' | 'TIMEOUT' | 'API_ERROR' | 'REFUSED';
 
 export class RunError extends Error {
   override name = 'RunError';
@@ -27,7 +28,7 @@ export interface RunResult {
 }
 
 export interface RunOptions {
-  client: ClaudeClient;
+  client: ModelClient;
   model: string;
   maxTurns: number;
   workspace: GenerationWorkspace;
@@ -41,7 +42,7 @@ export interface RunOptions {
  * 在最后一条用户消息的最后一块上加缓存断点（滚动）：多轮工具循环里，之前的对话作为缓存前缀复用。
  * 加上 tools 与 system 的断点共 3 个（API 上限 4 个）。不修改原数组。
  */
-export function withRollingCache(messages: ClaudeMessage[]): ClaudeMessage[] {
+export function withRollingCache(messages: ModelMessage[]): ModelMessage[] {
   const last = messages.at(-1);
   if (!last || last.role !== 'user' || typeof last.content === 'string' || last.content.length === 0) return messages;
   const content = last.content.slice();
@@ -53,7 +54,7 @@ export function withRollingCache(messages: ClaudeMessage[]): ClaudeMessage[] {
 export async function runGeneration(options: RunOptions): Promise<RunResult> {
   const { client, workspace } = options;
   const usage = emptyUsage();
-  const messages: ClaudeMessage[] = [{ role: 'user', content: [{ type: 'text', text: options.firstMessage }] }];
+  const messages: ModelMessage[] = [{ role: 'user', content: [{ type: 'text', text: options.firstMessage }] }];
   const system = generationSystem();
 
   for (let turn = 1; turn <= options.maxTurns; turn += 1) {
@@ -71,8 +72,8 @@ export async function runGeneration(options: RunOptions): Promise<RunResult> {
         },
         { signal: options.signal },
       );
-    } catch {
-      throw new RunError(options.signal?.aborted ? 'TIMEOUT' : 'API_ERROR', turn - 1, usage);
+    } catch (error) {
+      throw new RunError(options.signal?.aborted ? 'TIMEOUT' : modelFailureCode(error) ?? 'API_ERROR', turn - 1, usage);
     }
     addUsage(usage, response.usage);
     if (response.stop_reason === 'refusal') throw new RunError('REFUSED', turn, usage);

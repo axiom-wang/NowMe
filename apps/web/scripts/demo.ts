@@ -14,6 +14,7 @@ import { hasKitFontSource, loadKitFonts } from '@nowme/kit';
 import { createPagesApp } from '@nowme/pages-host';
 import { SKILL_FILE } from '@nowme/skill';
 import { createWebApp } from '../src/app.js';
+import { describeHostedModels } from '../src/hosted/describe.js';
 import { openDatabase } from '../src/db/index.js';
 import { seedDemo } from './demo-seed.js';
 
@@ -71,8 +72,8 @@ mkdirSync(DEMO_DATA_DIR, { recursive: true });
 
 const db = openDatabase(dataPaths(config.dataDir).db);
 const ticketSecret = resolveTicketSecret(config);
-// 平台托管路线：有 ANTHROPIC_API_KEY（或 NOWME_CLAUDE_FAKE=1）时开启；key 只从环境变量读取
-const web = createWebApp({ config: { ...config, ticketSecret }, db, log: () => {}, anthropicApiKey: process.env.ANTHROPIC_API_KEY?.trim() || undefined });
+// 网页创作始终可见，真实模型使用用户账号配置；环境只提供凭证加密密钥。
+const web = createWebApp({ config: { ...config, ticketSecret }, db, log: () => {}, secretEnv: process.env });
 
 console.log('[demo] 正在种演示数据（两面墙、9 个页面走真实提交管线：校验 + 渲染，大约需要一分钟）……');
 const seed = await seedDemo(web, (message) => console.log(`[demo] ${message}`));
@@ -153,8 +154,8 @@ console.log(
     '',
     ' 在应用里创作（平台托管路线）',
     web.deps.hosted
-      ? `  已开启（${web.deps.hosted.settings.fake ? '假 Claude 客户端，生成的是简单的测试页' : `采访 ${web.deps.hosted.settings.interviewModel} · 生成 ${web.deps.hosted.settings.generateModel}`}，每页免费 ${web.deps.hosted.settings.freeQuota} 次）。`
-      : '  未开启：没有 ANTHROPIC_API_KEY。用 ANTHROPIC_API_KEY=... pnpm demo 开启（或 NOWME_CLAUDE_FAKE=1 pnpm demo 用假客户端试流程）。',
+      ? `  已开启（${describeHostedModels(web.deps.hosted.settings)}，用户自带 API）。`
+      : '  网页创作暂未启用，请检查运行配置。',
     web.deps.hosted ? `  用 ${seed.newcomer.email} 登录，进「${seed.club.wall.name}」→「我的页面」→“在这里创作”。` : '',
     '',
     `  社团墙邀请链接：${seed.club.inviteUrl}`,

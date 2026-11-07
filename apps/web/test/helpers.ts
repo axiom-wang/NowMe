@@ -29,7 +29,7 @@ import type { ProcessedSubmission, SubmissionProcessor } from '../src/services/p
 import type { RemoteRenderer, RemoteRenderResult } from '../src/services/remote-preview.js';
 import { addMember, createWall, type MemberPage } from '../src/services/walls.js';
 import type { Wall } from '../src/db/walls.js';
-import type { ClaudeClient } from '../src/hosted/claude.js';
+import type { ModelClient } from '../src/hosted/model-client.js';
 import type { PagePreviewer } from '../src/hosted/tools.js';
 
 export const TEST_SECRET = 'test-ticket-secret-0123456789abcdefghijklmnop';
@@ -166,9 +166,13 @@ export interface TestWebOptions {
   processor?: SubmissionProcessor;
   env?: Record<string, string>;
   clock?: TestClock;
-  /** 平台托管路线（需要 env 里 `NOWME_CLAUDE_FAKE=1` 或 `ANTHROPIC_API_KEY` 才会开启）。 */
-  claude?: ClaudeClient;
+  /** 平台托管路线（需要 env 里 `NOWME_MODEL_FAKE=1` 才会用假客户端开启）；注入的客户端采访与生成共用。 */
+  model?: ModelClient;
   previewer?: PagePreviewer;
+  /** 不注入 model 时，按配置建真实客户端：key 从这里读、OpenAI 兼容服务用这个 fetch。 */
+  secretEnv?: Record<string, string>;
+  modelFetch?: typeof fetch;
+  modelLookup?: import('../src/security/model-network.js').ModelLookup;
   hostedTempRoot?: string;
   remoteRenderer?: RemoteRenderer;
   /** 默认一个共享的测试 Skill 包；null 表示没有 Skill 包。 */
@@ -191,7 +195,10 @@ export function createTestWeb(options: TestWebOptions = {}): TestWeb {
     outbox,
     kitFonts: KIT_FONTS,
     log: () => {},
-    claude: options.claude,
+    model: options.model,
+    secretEnv: options.secretEnv,
+    modelFetch: options.modelFetch,
+    modelLookup: options.modelLookup,
     previewer: options.previewer,
     hostedTempRoot: options.hostedTempRoot,
     remoteRenderer: options.remoteRenderer ?? createStaticRemoteRenderer(),

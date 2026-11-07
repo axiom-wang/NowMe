@@ -29,8 +29,10 @@ import { createTicketIssuer } from './services/tickets.js';
 import { createRealRemoteRenderer, createRemotePreviewService, type RemoteRenderer } from './services/remote-preview.js';
 import { loadSkillPackage, type SkillPackage } from './services/skill-package.js';
 import { SKILL_PACKAGE_DIR } from '@nowme/skill';
-import { createAnthropicClaude, type ClaudeClient } from './hosted/claude.js';
-import { createFakeClaude } from './hosted/fake-claude.js';
+import { type ModelClient } from './hosted/model-client.js';
+import { createUserModels } from './hosted/user-models.js';
+import type { ModelLookup } from './security/model-network.js';
+import { createFakeModel } from './hosted/fake-model.js';
 import { createRenderPreviewer } from './hosted/previewer.js';
 import { createHostedService, type HostedService } from './hosted/service.js';
 import type { PagePreviewer } from './hosted/tools.js';
@@ -52,14 +54,13 @@ export interface CreateWebAppOptions {
   /** Kit 字体清单，默认 `loadKitFonts()`。 */
   kitFonts?: KitFont[];
   log?: (message: string) => void;
-  /**
-   * 平台托管路线（contracts 9）。`config.hosted.enabled` 为 false 时一律不开启。
-   * - `claude`：注入的客户端（测试）；不给时：`config.hosted.fake` → 假客户端，否则用 `anthropicApiKey` 建真实客户端；
-   * - `anthropicApiKey`：只由进程入口从环境变量读取后传入，不进入配置对象；
-   * - `previewer`：`preview_page` 工具的渲染，默认真实渲染器。
-   */
-  claude?: ClaudeClient;
-  anthropicApiKey?: string;
+  /** 非生产环境假模型测试注入；真实模型始终使用用户账号配置。 */
+  model?: ModelClient;
+  /** 只读取 NOWME_AI_ENCRYPTION_KEY 与开发本机访问开关，不读取模型 Key。 */
+  secretEnv?: Readonly<Record<string, string | undefined>>;
+  /** OpenAI 兼容服务的 fetch（测试注入模拟服务）。 */
+  modelFetch?: typeof fetch;
+  modelLookup?: ModelLookup;
   previewer?: PagePreviewer;
   /** 托管任务临时目录的父目录（测试）。 */
   hostedTempRoot?: string;
@@ -101,7 +102,12 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
   const tickets = createTicketIssuer({ secret: config.ticketSecret, pagesOrigin: config.pagesOrigin, now });
   const remotePreview = createRemotePreviewService({ repos, now, kitFonts, renderer: options.remoteRenderer ?? createRealRemoteRenderer() });
   const skillPackage = loadHostedSkillPackage(options.skillPackageDir === undefined ? SKILL_PACKAGE_DIR : options.skillPackageDir, log);
-  const deps: AppDeps = { config, db, repos, now, kitFonts, tickets, submissions, outbox, hosted: null, skillPackage, remotePreview, log };
+  const userModels = createUserModels(db, {
+    encryptionKey: options.secretEnv?.NOWME_AI_ENCRYPTION_KEY,
+    allowLocal: !config.isProduction && options.secretEnv?.NOWME_AI_ALLOW_LOCAL === '1',
+    fetch: options.modelFetch, lookup: options.modelLookup, now,
+  });
+  const deps: AppDeps = { userModels, config, db, repos, now, kitFonts, tickets, submissions, outbox, hosted: null, skillPackage, remotePreview, log };
   deps.hosted = createHosted(deps, options);
 
   const app: AppHono = new Hono<AppEnv>();
@@ -156,12 +162,14 @@ function loadHostedSkillPackage(dir: string | null, log: (message: string) => vo
 function createHosted(deps: AppDeps, options: CreateWebAppOptions): HostedService | null {
   const settings = deps.config.hosted;
   if (!settings.enabled) return null;
-  let client = options.claude ?? null;
-  if (!client && settings.fake) client = createFakeClaude();
-  if (!client && options.anthropicApiKey) client = createAnthropicClaude(options.anthropicApiKey);
-  if (!client) {
-    deps.log('[web] 托管路线已配置但没有拿到 API key，“在这里创作”保持隐藏');
-    return null;
-  }
-  return createHostedService(deps, { settings, client, previewer: options.previewer ?? createRenderPreviewer(), tempRoot: options.hostedTempRoot });
+  if (deps.config.isProduction && (settings.fake || options.model)) throw new Error('生产环境不能注入测试模型');
+  const fake = settings.fake ? options.model ?? createFakeModel() : null;
+  return createHostedService(deps, {
+    settings,
+    ready: (userId) => !!fake || deps.userModels.ready(userId),
+    resolve: (userId, role) => fake
+      ? { client: fake, endpoint: { ...settings[role], ready: true } }
+      : deps.userModels.resolve(userId, role),
+    previewer: options.previewer ?? createRenderPreviewer(), tempRoot: options.hostedTempRoot,
+  });
 }

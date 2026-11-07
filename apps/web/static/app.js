@@ -58,4 +58,29 @@
     var message = form.getAttribute('data-confirm');
     if (message && !window.confirm(message)) event.preventDefault();
   });
+  // AI 设置只处理表单预设，不存储或发出 Key。
+  document.querySelectorAll('form[data-ai-settings]').forEach(function (form) {
+    var shared = form.querySelector('[name="shared"]');
+    function syncShared() {
+      form.querySelectorAll('[name^="generate_"]').forEach(function (field) {
+        if (field.name !== 'generate_model') field.disabled = shared.checked;
+      });
+    }
+    shared.addEventListener('change', syncShared);
+    syncShared();
+    form.querySelectorAll('[data-model-provider]').forEach(function (select) {
+      select.addEventListener('change', function () {
+        var role = select.getAttribute('data-model-provider');
+        var option = select.selectedOptions[0];
+        form.elements[role + '_baseUrl'].value = option.getAttribute('data-base-url') || '';
+        form.elements[role + '_model'].value = option.getAttribute('data-model') || '';
+        form.elements[role + '_vision'].checked = option.getAttribute('data-vision') === '1';
+        form.elements[role + '_apiKey'].value = '';
+        if (role === 'interview' && shared.checked) {
+          var generate = form.querySelector('[name="generate_provider"] option[value="' + select.value + '"]');
+          form.elements.generate_model.value = generate.getAttribute('data-model') || '';
+        }
+      });
+    });
+  });
 })();

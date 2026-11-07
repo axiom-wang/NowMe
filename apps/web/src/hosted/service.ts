@@ -1,5 +1,5 @@
 /**
- * 平台托管路线的服务（contracts 9 / hosted-route.md）：应用内采访的状态机、长期画像写回、额度、生成 / 修改任务。
+ * 平台托管路线的服务（contracts 9 / hosted-route.md）：应用内采访的状态机、长期画像写回、生成 / 修改任务。
  *
  * 授权：所有方法的 `own` 必须来自路由里的 `findOwnPage(repos, 当前用户, wallId)`；`userId` 是当前登录用户。
  * 数据只按主人自己的 ID 读写（S7）。任务执行见 `runJob`（S8：独立临时目录、结束必删、平台重新校验）。
@@ -36,7 +36,9 @@ import {
   type InterviewAnswers,
   type StructuredBrief,
 } from './brief.js';
-import { untrusted, type ClaudeClient, type UsageTotals } from './claude.js';
+import { modelFailureCode, type ModelAccessCode } from './model-errors.js';
+import type { ModelRole, ResolvedModel } from './user-models.js';
+import { untrusted, type UsageTotals } from './model-client.js';
 import { InterviewError, runComposeBrief, runFollowups } from './interview.js';
 import { RunError, runGeneration } from './runner.js';
 import { GenerationWorkspace, type PagePreviewer } from './tools.js';
@@ -45,13 +47,16 @@ type HostedDeps = Pick<AppDeps, 'config' | 'db' | 'repos' | 'now' | 'kitFonts' |
 
 export interface HostedServiceOptions {
   settings: HostedConfig;
-  client: ClaudeClient;
+  /** 采访与生成各用一个客户端（可以是不同的模型服务，hosted-route 1.1）。 */
+  resolve(userId: string, role: ModelRole): ResolvedModel;
+  ready(userId: string): boolean;
   previewer: PagePreviewer;
   /** 任务临时目录的父目录，默认 `os.tmpdir()`（测试用来断言任务结束后目录被删除）。 */
   tempRoot?: string;
 }
 
 export type StepError =
+  | ModelAccessCode
   | 'rate-limited'
   | 'model-failed'
   | 'wrong-state'
@@ -64,14 +69,8 @@ export type StepError =
   | 'note-empty';
 export type StepResult = { ok: true } | { ok: false; error: StepError };
 
-export type JobStartError = 'quota' | 'busy' | 'daily' | 'no-brief' | 'no-revision' | 'bad-block' | 'bad-request';
+export type JobStartError = ModelAccessCode | 'busy' | 'daily' | 'no-brief' | 'no-revision' | 'bad-block' | 'bad-request';
 export type JobStartResult = { ok: true; job: GenerationJob } | { ok: false; error: JobStartError };
-
-export interface QuotaState {
-  total: number;
-  used: number;
-  remaining: number;
-}
 
 /** 解析后的 brief 状态（只给主人）。 */
 export interface BriefView {
@@ -83,7 +82,7 @@ export interface BriefView {
 }
 
 export interface HostedOverview {
-  quota: QuotaState;
+  modelReady: boolean;
   brief: BriefView | null;
   activeJob: GenerationJob | null;
   recentJobs: GenerationJob[];
@@ -144,25 +143,29 @@ function usageProps(usage: UsageTotals): EventProps {
 
 /** 任务失败时给主人看的固定文案（不含模型输出）。 */
 export const JOB_ERROR_TEXT: Record<string, string> = {
-  REJECTED: '生成的页面没有通过平台校验，没有保存。这次不扣免费次数，可以再试一次。',
-  MAX_TURNS: '这次生成用了太多步还没完成，已停止。这次不扣免费次数，可以再试一次。',
-  NO_FINISH: '这次生成没有正常结束。这次不扣免费次数，可以再试一次。',
-  TIMEOUT: '这次生成超时了。这次不扣免费次数，可以再试一次。',
-  API_ERROR: '暂时连不上生成服务。这次不扣免费次数，请稍后再试。',
-  REFUSED: '生成服务拒绝了这次请求。这次不扣免费次数；可以换一种说法再试。',
-  RATE_LIMITED: '这一页今天的版本数已达上限，明天再试。这次不扣免费次数。',
+  MODEL_CONFIG: 'AI 配置缺失、已更换或无法解密，请在 AI 设置中重新保存后再试。',
+  MODEL_AUTH: '模型服务拒绝了凭证，请在 AI 设置中检查 API Key、模型权限和服务地址。',
+  MODEL_RATE_LIMITED: '模型服务限流或账号余额不足，请检查服务商账号后再试。',
+  MODEL_UNAVAILABLE: '暂时连不上你配置的模型服务，请检查服务地址或稍后再试。',
+  REJECTED: '生成的页面没有通过平台校验，没有保存。可以再试一次。',
+  MAX_TURNS: '这次生成用了太多步还没完成，已停止。可以再试一次。',
+  NO_FINISH: '这次生成没有正常结束。可以再试一次。',
+  TIMEOUT: '这次生成超时了。可以再试一次。',
+  API_ERROR: '暂时连不上生成服务。请检查 AI 设置或稍后再试。',
+  REFUSED: '生成服务拒绝了这次请求。可以换一种说法再试。',
+  RATE_LIMITED: '这一页今天的版本数已达上限，明天再试。',
   PAGE_GONE: '这一页已经不可用（可能已退出墙或页面已删除），结果没有保存。',
-  INTERRUPTED: '服务重启打断了这次生成。这次不扣免费次数，可以再试一次。',
-  INTERNAL: '服务器处理时出错了。这次不扣免费次数，可以再试一次。',
+  INTERRUPTED: '服务重启打断了这次生成。可以再试一次。',
+  INTERNAL: '服务器处理时出错了。可以再试一次。',
 };
 
 export function createHostedService(deps: HostedDeps, options: HostedServiceOptions): HostedService {
   const { repos, db, config } = deps;
-  const { settings, client, previewer } = options;
+  const { settings, previewer } = options;
   const queue = createSerialQueue();
 
   const interrupted = repos.jobs.interruptAll(deps.now().toISOString());
-  if (interrupted > 0) deps.log(`[web] ${interrupted} 个托管任务因服务重启被标记为失败（不扣额度）`);
+  if (interrupted > 0) deps.log(`[web] ${interrupted} 个托管任务因服务重启被标记为失败`);
 
   const sinceDay = () => new Date(deps.now().getTime() - DAY_MS).toISOString();
   const countInterviewCalls = db.prepare("SELECT COUNT(*) AS n FROM events WHERE type = 'hosted_interview_call' AND page_id = ? AND created_at > ?");
@@ -170,12 +173,6 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
   const record = (type: Parameters<typeof repos.events.record>[0]['type'], own: OwnPage | { wallId: string; pageId: string }, actorId: string, props: EventProps) => {
     const ids = 'page' in own ? { wallId: own.wall.id, pageId: own.page.id } : own;
     repos.events.record({ type, wallId: ids.wallId, pageId: ids.pageId, actorId, props, createdAt: deps.now().toISOString() });
-  };
-
-  const quota = (pageId: string): QuotaState => {
-    const used = repos.jobs.countCharged(pageId);
-    const active = repos.jobs.findActive(pageId) ? 1 : 0;
-    return { total: settings.freeQuota, used, remaining: Math.max(0, settings.freeQuota - used - active) };
   };
 
   const loadBrief = (own: OwnPage, userId: string): BriefView | null => {
@@ -209,9 +206,10 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
     const started = Date.now();
     const sceneGuide = scene(own);
     try {
+      const model = options.resolve(userId, 'interview');
       const result = await runComposeBrief(
-        client,
-        settings.interviewModel,
+        model.client,
+        model.endpoint.model!,
         {
           wall: own.wall,
           scene: sceneGuide,
@@ -235,7 +233,9 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
       return { ok: true };
     } catch (error) {
       recordCall(own, userId, note ? 3 : 2, false, started, error instanceof InterviewError ? error.usage : { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 });
-      if (error instanceof InterviewError) return { ok: false, error: 'model-failed' };
+      if (error instanceof InterviewError) return { ok: false, error: error.accessCode ?? 'model-failed' };
+      const accessCode = modelFailureCode(error);
+      if (accessCode) return { ok: false, error: accessCode };
       throw error;
     }
   }
@@ -298,7 +298,7 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
     return { dir, baseBlocks, baseNumber };
   }
 
-  async function runJob(jobId: string): Promise<void> {
+  async function runJob(jobId: string, model: ResolvedModel): Promise<void> {
     const job = repos.jobs.findById(jobId);
     if (!job || !repos.jobs.markRunning(jobId, deps.now().toISOString())) return;
     const page = repos.pages.findById(job.pageId);
@@ -309,21 +309,20 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
     let dir: string | null = null;
 
     const finish = (status: 'succeeded' | 'failed' | 'needs_input', input: { revisionId?: string; errorCode?: string; message?: string }) => {
-      const charged = status === 'succeeded';
+      const ok = status === 'succeeded';
       const jobUsage: JobUsage = { turns, ...usage };
       repos.jobs.finish(jobId, {
         status,
         revisionId: input.revisionId ?? null,
         errorCode: input.errorCode ?? null,
         resultMessage: input.message ?? null,
-        charged,
+        charged: false,
         usage: jobUsage,
         finishedAt: deps.now().toISOString(),
       });
       if (page) {
         record(job.kind === 'generate' ? 'hosted_generate' : 'hosted_edit', { wallId: page.wallId, pageId: page.id }, job.ownerId, {
-          ok: charged,
-          charged,
+          ok,
           clarify: status === 'needs_input',
           turns,
           durationMs: Date.now() - started,
@@ -348,8 +347,8 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
       const notes = new Map((view?.brief?.images ?? []).map((image) => [image.file, image.description]));
       const workspace = new GenerationWorkspace(dir, deps.kitFonts, previewer);
       const result = await runGeneration({
-        client,
-        model: settings.generateModel,
+        client: model.client,
+        model: model.endpoint.model!,
         maxTurns: settings.maxTurns,
         workspace,
         firstMessage: firstMessage(own, job, briefMd, view?.record.status === 'confirmed' ? view.assets : [], prepared.baseNumber, notes),
@@ -397,8 +396,8 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
         turns = error.turns;
         finish('failed', { errorCode: error.code });
       } else {
-        deps.log(`[web] 托管任务 ${jobId} 出错：${error instanceof Error ? error.message : String(error)}`);
-        finish('failed', { errorCode: 'INTERNAL' });
+        deps.log(`[web] 托管任务 ${jobId} 出错`);
+        finish('failed', { errorCode: modelFailureCode(error) ?? 'INTERNAL' });
       }
     } finally {
       clearTimeout(timer);
@@ -412,7 +411,7 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
     scene,
     overview(own, userId) {
       return {
-        quota: quota(own.page.id),
+        modelReady: options.ready(userId),
         brief: loadBrief(own, userId),
         activeJob: repos.jobs.findActive(own.page.id),
         recentJobs: repos.jobs.listRecent(own.page.id, userId, 5),
@@ -421,14 +420,22 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
 
     async startInterview(own, userId, answers, uploads) {
       if (uploads.length > BRIEF_ASSETS_MAX_COUNT) return { ok: false, error: 'too-many-images' };
-      const checked = uploads.map(checkUpload);
+      let checked = uploads.map(checkUpload);
       for (const check of checked) {
         if (!check.ok) return { ok: false, error: check.reason === 'too-large' ? 'image-too-large' : 'image-type' };
       }
       if (!interviewAllowed(own.page.id)) return { ok: false, error: 'rate-limited' };
 
+      if (!options.ready(userId)) return { ok: false, error: 'MODEL_CONFIG' };
+
       // 重新采访：旧的 brief 与素材整体替换
       const existing = repos.briefs.findForPage(own.page.id, userId);
+      if (existing && existing.status !== 'collecting') return { ok: false, error: 'wrong-state' };
+      // 重试时沿用已保存的图片；模型失败不会让用户重新上传。
+      if (existing && uploads.length === 0) {
+        for (const asset of repos.briefAssets.listForBrief(existing.id, userId)) uploads.push(await readAsset(config.dataDir, own.page.id, asset.fileName));
+      }
+      checked = uploads.map(checkUpload);
       if (existing) await eraseBrief(existing);
       const nowIso = deps.now().toISOString();
       const brief: BriefRecord = {
@@ -460,7 +467,8 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
       const sceneGuide = scene(own);
       let followups: FollowupState;
       try {
-        const result = await runFollowups(client, settings.interviewModel, {
+        const model = options.resolve(userId, 'interview');
+        const result = await runFollowups(model.client, model.endpoint.model!, {
           wall: own.wall,
           scene: sceneGuide,
           answers,
@@ -479,8 +487,10 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
       } catch (error) {
         if (error instanceof InterviewError) {
           recordCall(own, userId, 1, false, started, error.usage);
-          return { ok: false, error: 'model-failed' };
+          return { ok: false, error: error.accessCode ?? 'model-failed' };
         }
+        const accessCode = modelFailureCode(error);
+        if (accessCode) return { ok: false, error: accessCode };
         throw error;
       }
       const view = loadBrief(own, userId);
@@ -581,10 +591,11 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
     },
 
     startJob(own, userId, request) {
+      if (!options.ready(userId)) return { ok: false, error: 'MODEL_CONFIG' };
+      const model = options.resolve(userId, 'generate');
       const nowIso = deps.now().toISOString();
       const result = transaction(db, (): JobStartResult => {
         if (repos.jobs.findActive(own.page.id)) return { ok: false, error: 'busy' };
-        if (quota(own.page.id).remaining <= 0) return { ok: false, error: 'quota' };
         if (repos.jobs.countSince(own.page.id, sinceDay()) >= settings.dailyAttempts) return { ok: false, error: 'daily' };
         let baseRevisionId: string | null = null;
         let targetBlock: string | null = null;
@@ -613,7 +624,7 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
       });
       if (result.ok) {
         const jobId = result.job.id;
-        void queue.run(() => runJob(jobId)).catch((error: unknown) => deps.log(`[web] 托管任务 ${jobId} 未捕获的错误：${String(error)}`));
+        void queue.run(() => runJob(jobId, model)).catch((error: unknown) => deps.log(`[web] 托管任务 ${jobId} 未捕获的错误`));
       }
       return result;
     },

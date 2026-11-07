@@ -6,14 +6,14 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { validatePage } from '@nowme/validator';
 import type { Wall } from '../src/db/walls.js';
-import { createFakeClaude, type FakeClaude } from '../src/hosted/fake-claude.js';
+import { createFakeModel, type FakeModel } from '../src/hosted/fake-model.js';
 import type { PagePreviewer } from '../src/hosted/tools.js';
 import type { MemberPage } from '../src/services/walls.js';
 import { createTestWeb, createUser, get, login, seedMember, TINY_PNG, type TestSession, type TestWeb, type TestWebOptions } from './helpers.js';
 import { post } from './publish-helpers.js';
 
 export interface HostedTestWeb extends TestWeb {
-  fake: FakeClaude;
+  fake: FakeModel;
   previewer: FakePreviewer;
   tempRoot: string;
   /** tempRoot 下残留的任务临时目录。 */
@@ -38,10 +38,10 @@ export function createFakePreviewer(): FakePreviewer {
 }
 
 export function createHostedTestWeb(options: TestWebOptions & { env?: Record<string, string> } = {}): HostedTestWeb {
-  const fake = (options.claude as FakeClaude | undefined) ?? createFakeClaude();
+  const fake = (options.model as FakeModel | undefined) ?? createFakeModel();
   const previewer = createFakePreviewer();
   const tempRoot = mkdtempSync(join(tmpdir(), 'nowme-hosted-tmp-'));
-  const t = createTestWeb({ ...options, env: { NOWME_CLAUDE_FAKE: '1', ...options.env }, claude: fake, previewer, hostedTempRoot: tempRoot });
+  const t = createTestWeb({ ...options, env: { NOWME_MODEL_FAKE: '1', ...options.env }, model: fake, previewer, hostedTempRoot: tempRoot });
   const close = t.close;
   return {
     ...t,
@@ -127,7 +127,7 @@ export async function completeInterview(t: TestWeb, wall: Wall, owner: HostedOwn
 }
 
 /** 发起生成并等待任务结束，返回任务。 */
-export async function generate(t: HostedTestWeb, wall: Wall, owner: HostedOwner) {
+export async function generate(t: TestWeb, wall: Wall, owner: HostedOwner) {
   const response = await post(t, owner.session, `/w/${wall.id}/me/generate`);
   const location = response.headers.get('location') ?? '';
   await t.web.deps.hosted?.idle();
@@ -135,7 +135,7 @@ export async function generate(t: HostedTestWeb, wall: Wall, owner: HostedOwner)
   return { response, location, job: jobId ? t.repos.jobs.findById(jobId) : null };
 }
 
-export async function edit(t: HostedTestWeb, wall: Wall, owner: HostedOwner, fields: { revisionId: string; block?: string; request: string }) {
+export async function edit(t: TestWeb, wall: Wall, owner: HostedOwner, fields: { revisionId: string; block?: string; request: string }) {
   const response = await post(t, owner.session, `/w/${wall.id}/me/edit`, { revisionId: fields.revisionId, block: fields.block ?? '', request: fields.request });
   const location = response.headers.get('location') ?? '';
   await t.web.deps.hosted?.idle();

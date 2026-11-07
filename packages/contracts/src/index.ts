@@ -9,6 +9,7 @@ export * from './page-paths.js';
 export * from './ticket.js';
 export * from './csp.js';
 export * from './config.js';
+export * from './model-providers.js';
 export * from './schemas.js';
 export * from './api.js';
 export * from './version.js';

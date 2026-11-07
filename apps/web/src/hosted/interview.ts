@@ -17,7 +17,8 @@ import {
   type FollowupState,
   type InterviewAnswers,
 } from './brief.js';
-import { addUsage, emptyUsage, untrusted, type ClaudeClient, type ImageBlock, type TextBlock, type UsageTotals } from './claude.js';
+import { addUsage, emptyUsage, untrusted, type ModelClient, type ImageBlock, type TextBlock, type UsageTotals } from './model-client.js';
+import { modelFailureCode, type ModelAccessCode } from './model-errors.js';
 import { interviewSystem } from './prompts.js';
 
 export interface InterviewContext {
@@ -34,6 +35,7 @@ export class InterviewError extends Error {
   constructor(
     readonly code: 'API_ERROR' | 'BAD_OUTPUT',
     readonly usage: UsageTotals,
+    readonly accessCode?: ModelAccessCode | null,
   ) {
     super(code);
   }
@@ -86,8 +88,26 @@ function followupAnswersText(state: FollowupState): string {
     .join('\n');
 }
 
+/** 从文字回复里取出第一个 JSON 对象（允许包在 ```json 代码块里）。取不到返回 undefined。 */
+export function jsonFromText(content: { type: string; text?: string }[]): unknown {
+  const text = content
+    .filter((block) => block.type === 'text' && typeof block.text === 'string')
+    .map((block) => block.text)
+    .join('\n');
+  const fenced = /```(?:json)?\s*([\s\S]*?)```/.exec(text)?.[1];
+  const candidate = (fenced ?? text).trim();
+  const start = candidate.indexOf('{');
+  const end = candidate.lastIndexOf('}');
+  if (start < 0 || end <= start) return undefined;
+  try {
+    return JSON.parse(candidate.slice(start, end + 1));
+  } catch {
+    return undefined;
+  }
+}
+
 async function callTool<T>(
-  client: ClaudeClient,
+  client: ModelClient,
   model: string,
   toolName: string,
   toolDescription: string,
@@ -107,13 +127,15 @@ async function callTool<T>(
         tools: [{ name: toolName, description: toolDescription, input_schema: schema }],
         tool_choice: { type: 'tool', name: toolName },
       });
-    } catch {
-      throw new InterviewError('API_ERROR', usage);
+    } catch (error) {
+      throw new InterviewError('API_ERROR', usage, modelFailureCode(error));
     }
     addUsage(usage, response.usage);
     const call = response.content.find((block) => block.type === 'tool_use' && block.name === toolName);
-    if (call && call.type === 'tool_use') {
-      const parsed = parser.safeParse(call.input);
+    // 有些 OpenAI 兼容服务不严格遵守“必须调用指定工具”，会把 JSON 直接写在文字里：同样经 zod 校验后接受
+    const input = call && call.type === 'tool_use' ? call.input : jsonFromText(response.content);
+    if (input !== undefined) {
+      const parsed = parser.safeParse(input);
       if (parsed.success) return { output: parsed.data, usage };
     }
   }
@@ -121,7 +143,7 @@ async function callTool<T>(
 }
 
 /** 调用 #1：抽取事实候选、缺项与追问。 */
-export async function runFollowups(client: ClaudeClient, model: string, context: InterviewContext): Promise<InterviewCallResult<FollowupOutput>> {
+export async function runFollowups(client: ModelClient, model: string, context: InterviewContext): Promise<InterviewCallResult<FollowupOutput>> {
   const content: (TextBlock | ImageBlock)[] = [
     {
       type: 'text',
@@ -148,7 +170,7 @@ export async function runFollowups(client: ClaudeClient, model: string, context:
 
 /** 调用 #2（correction 为空）/ #3（带主人的修正意见）：整理结构化 brief。 */
 export async function runComposeBrief(
-  client: ClaudeClient,
+  client: ModelClient,
   model: string,
   context: Omit<InterviewContext, 'images'> & { imageFiles: string[] },
   state: FollowupState,

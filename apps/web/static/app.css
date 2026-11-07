@@ -602,6 +602,8 @@ strong {
   font-weight: 600;
 }
 
+input[type='url'],
+input[type='password'],
 input[type='email'],
 input[type='text'],
 textarea,
@@ -631,6 +633,8 @@ textarea::placeholder {
   color: #a59e90;
 }
 
+input[type='url']:hover,
+input[type='password']:hover,
 input[type='email']:hover,
 input[type='text']:hover,
 textarea:hover,
@@ -638,6 +642,8 @@ select:hover {
   border-color: var(--paper-3);
 }
 
+input[type='url']:focus,
+input[type='password']:focus,
 input[type='email']:focus,
 input[type='text']:focus,
 textarea:focus,
@@ -1360,6 +1366,18 @@ input[type='checkbox'] {
 /* 响应式 */
 
 @media (max-width: 479px) {
+  .site-header__inner {
+    height: auto;
+    min-height: var(--header-h);
+    flex-wrap: wrap;
+    padding-block: 10px;
+  }
+
+  .site-header__nav {
+    flex-wrap: wrap;
+    justify-content: flex-end;
+  }
+
   .user-chip__name {
     display: none;
   }

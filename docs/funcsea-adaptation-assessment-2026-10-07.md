@@ -1,5 +1,7 @@
 # FuncSea 改造为 NowMe 的可行性评估
 
+> 历史复用评估。当前产品以 [接口约定](contracts.md) 和 [自带 API 方案](hosted-route.md) 为准：收费与商业额度已取消，网页创作使用用户账号中加密保存的 API Key，仍保留运行保护限制。
+
 日期：2026-10-07。需求基线：[NowMe 产品 MVP 文档](/Users/axiom/Projects/NowMe/docs/product-mvp.md)。
 
 **结论：可以利用 FuncSea 的基础资产建设 NowMe，建议选择性复用基础框架、数据库、认证和模型调用代码，新增 NowMe 的创作核心。当前附件不足以直接改出完整的消费者产品，也不足以评估完整 vibe coding 平台的复用成本。**

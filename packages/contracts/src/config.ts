@@ -16,17 +16,14 @@ import {
   DEFAULT_NOWME_HOME_DIR_NAME,
   DEFAULT_PAGES_ORIGIN,
   DEFAULT_WEB_ORIGIN,
-  DEFAULT_GENERATE_MODEL,
   DEFAULT_HOSTED_DAILY_ATTEMPTS,
-  DEFAULT_HOSTED_FREE_QUOTA,
   DEFAULT_HOSTED_MAX_TURNS,
   DEFAULT_INTERVIEW_DAILY_CALLS,
-  DEFAULT_INTERVIEW_MODEL,
   HOSTED_DAILY_RANGE,
-  HOSTED_FREE_QUOTA_RANGE,
   HOSTED_MAX_TURNS_RANGE,
 } from './constants.js';
 import { normalizeOrigin } from './csp.js';
+import { MODEL_PROVIDER_PRESETS, type ModelProtocol, type ModelProvider } from './model-providers.js';
 
 /**
  * 仓库根目录。本文件位于 `packages/contracts/{src,dist}/config.*`，向上三级即仓库根。
@@ -76,21 +73,42 @@ export interface SkillMarketConfig {
 }
 
 /**
- * 平台托管路线的配置。`ANTHROPIC_API_KEY` **不进入配置对象**（只记录有没有），
- * 由主站进程入口直接从环境变量读取并交给 Claude 客户端，避免随配置被打印或序列化。
+ * 网页创作运行限制与表单默认端点，不含用户或平台 Key。
  */
 export interface HostedConfig {
-  /** 托管功能是否开启：有 API key，或非生产环境下 `NOWME_CLAUDE_FAKE=1`。 */
+  /** 网页创作始终开启；未配置的用户会被引导到 AI 设置。 */
   enabled: boolean;
-  /** `NOWME_CLAUDE_FAKE=1`：使用确定性的假客户端（只在非生产环境允许）。 */
+  /** `NOWME_MODEL_FAKE=1`（旧名 `NOWME_CLAUDE_FAKE`）：使用确定性的假客户端（只在非生产环境允许）。 */
   fake: boolean;
-  hasApiKey: boolean;
-  interviewModel: string;
-  generateModel: string;
-  freeQuota: number;
+  /** 采访用的模型服务（便宜、够用）。 */
+  interview: ModelEndpointConfig;
+  /** 生成与修改用的模型服务（效果更好）。 */
+  generate: ModelEndpointConfig;
   maxTurns: number;
   dailyAttempts: number;
   interviewDailyCalls: number;
+}
+
+export interface ModelEndpointConfig {
+  provider: ModelProvider;
+  /** 界面与日志里显示的服务名。 */
+  label: string;
+  protocol: ModelProtocol;
+  /** OpenAI 兼容服务的 API 根地址；Anthropic 为 null 时用 SDK 默认地址。 */
+  baseUrl: string | null;
+  /** 模型 ID；没配置且预设没有默认值时为 null（用户必须填写）。 */
+  model: string | null;
+  /** 兼容端点元数据；账号凭证从不从环境变量读取，此值始终为 null。 */
+  apiKeyEnv: string | null;
+  /** key 是否必需；显式开发配置的本机 Ollama 可以不提供。 */
+  apiKeyRequired: boolean;
+  hasApiKey: boolean;
+  /** 是否把图片交给模型。 */
+  vision: boolean;
+  maxOutputTokens: number;
+  maxTokensField: 'max_tokens' | 'max_completion_tokens';
+  /** 这个角色可以使用：有模型、需要 key 时有 key、需要 baseUrl 时有 baseUrl。 */
+  ready: boolean;
 }
 
 export class ConfigError extends Error {
@@ -138,30 +156,27 @@ function parseIntRange(env: Env, name: string, fallback: number, range: { min: n
   return Number(value);
 }
 
-const MODEL_ID_PATTERN = /^[a-z0-9][a-z0-9.\-:@\[\]]{1,99}$/;
-
-function parseModel(env: Env, name: string, fallback: string): string {
-  const value = nonEmpty(env[name]) ?? fallback;
-  if (!MODEL_ID_PATTERN.test(value)) throw new ConfigError(`${name} 不是合法的模型 ID：${value}`);
-  return value;
+/** 无用户凭证的初始端点，仅用于表单默认值；绝不读取平台模型 Key。 */
+export function defaultModelEndpoint(provider: ModelProvider = 'anthropic', role: 'interview' | 'generate' = 'generate'): ModelEndpointConfig {
+  const preset = MODEL_PROVIDER_PRESETS[provider];
+  return {
+    provider, label: preset.label, protocol: preset.protocol, baseUrl: preset.baseUrl,
+    model: role === 'interview' ? preset.interviewModel : preset.generateModel,
+    apiKeyEnv: null, apiKeyRequired: provider !== 'ollama', hasApiKey: false,
+    vision: preset.vision, maxOutputTokens: preset.maxOutputTokens, maxTokensField: preset.maxTokensField, ready: false,
+  };
 }
 
-/** 托管路线配置（hosted-route 1）。生产环境拒绝 `NOWME_CLAUDE_FAKE=1`。 */
+/** 网页创作始终可见。平台只配置运行限制，模型凭证由账号提供。 */
 export function loadHostedConfig(env: Env, isProduction: boolean): HostedConfig {
-  const fakeRaw = nonEmpty(env.NOWME_CLAUDE_FAKE);
-  if (fakeRaw !== undefined && fakeRaw !== '1' && fakeRaw !== '0') {
-    throw new ConfigError(`NOWME_CLAUDE_FAKE 只能是 1 或 0：${fakeRaw}`);
-  }
+  const fakeName = nonEmpty(env.NOWME_MODEL_FAKE) !== undefined ? 'NOWME_MODEL_FAKE' : 'NOWME_CLAUDE_FAKE';
+  const fakeRaw = nonEmpty(env[fakeName]);
+  if (fakeRaw !== undefined && fakeRaw !== '1' && fakeRaw !== '0') throw new ConfigError(`${fakeName} 只能是 1 或 0`);
   const fake = fakeRaw === '1';
-  if (fake && isProduction) throw new ConfigError('生产环境不能使用 NOWME_CLAUDE_FAKE=1（假的 Claude 客户端只用于开发与测试）');
-  const hasApiKey = nonEmpty(env.ANTHROPIC_API_KEY) !== undefined;
+  if (fake && isProduction) throw new ConfigError('生产环境不能使用假模型客户端');
   return {
-    enabled: hasApiKey || fake,
-    fake,
-    hasApiKey,
-    interviewModel: parseModel(env, 'NOWME_INTERVIEW_MODEL', DEFAULT_INTERVIEW_MODEL),
-    generateModel: parseModel(env, 'NOWME_GENERATE_MODEL', DEFAULT_GENERATE_MODEL),
-    freeQuota: parseIntRange(env, 'NOWME_HOSTED_FREE_QUOTA', DEFAULT_HOSTED_FREE_QUOTA, HOSTED_FREE_QUOTA_RANGE),
+    enabled: true, fake,
+    interview: defaultModelEndpoint('anthropic', 'interview'), generate: defaultModelEndpoint(),
     maxTurns: parseIntRange(env, 'NOWME_HOSTED_MAX_TURNS', DEFAULT_HOSTED_MAX_TURNS, HOSTED_MAX_TURNS_RANGE),
     dailyAttempts: parseIntRange(env, 'NOWME_HOSTED_DAILY_ATTEMPTS', DEFAULT_HOSTED_DAILY_ATTEMPTS, HOSTED_DAILY_RANGE),
     interviewDailyCalls: parseIntRange(env, 'NOWME_INTERVIEW_DAILY_CALLS', DEFAULT_INTERVIEW_DAILY_CALLS, HOSTED_DAILY_RANGE),

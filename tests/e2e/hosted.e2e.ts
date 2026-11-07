@@ -1,5 +1,5 @@
 /**
- * 平台托管路线（contracts 9 / hosted-route 9）：Claude API 用假实现替代（NOWME_CLAUDE_FAKE=1），其余全部真实——
+ * 平台托管路线（contracts 9 / hosted-route 9）：模型服务用假实现替代（NOWME_MODEL_FAKE=1），其余全部真实——
  * 采访（素材 + 点选 + 上传图片）→ 追问 → 确认“AI 眼中的你” → 生成（真实工具循环、validator、render 截图自查、平台重新校验）→
  * 沙箱预览 → 指定区块修改 → 新版本预览 → 发布确认 → 另一成员在墙上看到；组织者看不到 brief。
  */
@@ -32,7 +32,7 @@ test('平台托管：采访、生成、预览、修改、发布', async ({ brows
   await a.page.getByRole('link', { name: '开始采访' }).click();
 
   // 2. 素材 + 点选 + 图片
-  await expect(a.page.getByText('会发送给 Claude API')).toBeVisible();
+  await expect(a.page.getByText('会发送给 AI 模型服务（测试用的假模型）')).toBeVisible();
   await a.page.locator('textarea[name="material"]').fill(`我叫阿柚。做过 3 个校园小程序，负责前端。我总在${SECRET}。`);
   await a.page.locator('input[name="photos"]').setInputFiles(join(EXAMPLES, 'interest-film-zine', 'cover.png'));
   await a.page.locator('input[name="q_role"][value="0"]').check();
@@ -50,7 +50,7 @@ test('平台托管：采访、生成、预览、修改、发布', async ({ brows
   await a.page.locator('input[name="ai_0"]').fill('你是阿柚，一个做小程序的前端。');
   await a.page.getByRole('button', { name: '确认，就是我' }).click();
   await expect(a.page.getByRole('heading', { name: 'brief 已确认' })).toBeVisible();
-  await expect(a.page.getByText('剩 3 / 3 次')).toBeVisible();
+  await expect(a.page.getByText('使用你的 AI API，模型费用由服务商向你收取')).toBeVisible();
 
   // 5. 生成（真实工具循环 + 渲染截图 + 平台重新校验）
   await a.page.getByRole('button', { name: '开始生成页面' }).click();
@@ -72,7 +72,7 @@ test('平台托管：采访、生成、预览、修改、发布', async ({ brows
   await waitForJob(a.page, '去预览第 2 版');
   await a.page.getByRole('link', { name: '去预览第 2 版' }).click();
   await expect(a.page.frameLocator('iframe[data-nm-page-frame]').locator('[data-nm-id="about"]')).toContainText('已按要求修改：再加一句我拿过校赛二等奖');
-  await expect(a.page.getByText('剩 1 / 3 次')).toBeVisible();
+  await expect(a.page.getByText('免费次数')).toHaveCount(0);
 
   // 7. 发布确认（平台不会替主人发布）
   await publishViaUi(a.page, wallId, { contactValue: 'ayou_e2e', contactPublic: true });

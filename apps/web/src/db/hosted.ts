@@ -334,7 +334,6 @@ export function createGenerationJobsRepo(db: Database) {
     `UPDATE generation_jobs SET status = ?, revision_id = ?, error_code = ?, result_message = ?, charged = ?, usage_json = ?, finished_at = ?
       WHERE id = ? AND status IN ('queued', 'running')`,
   );
-  const countCharged = db.prepare('SELECT COUNT(*) AS n FROM generation_jobs WHERE page_id = ? AND charged = 1');
   const active = db.prepare(
     "SELECT * FROM generation_jobs WHERE page_id = ? AND status IN ('queued', 'running') ORDER BY created_at DESC LIMIT 1",
   );
@@ -375,9 +374,6 @@ export function createGenerationJobsRepo(db: Database) {
         ) === 1
       );
     },
-    countCharged(pageId: string): number {
-      return Number((countCharged.get(pageId) as { n: number }).n);
-    },
     findActive(pageId: string): GenerationJob | null {
       return toJob(active.get(pageId) as Record<string, unknown> | undefined);
     },
@@ -387,11 +383,11 @@ export function createGenerationJobsRepo(db: Database) {
     listRecent(pageId: string, ownerId: string, limit = 5): GenerationJob[] {
       return (recent.all(pageId, ownerId, limit) as Record<string, unknown>[]).map((row) => toJob(row) as GenerationJob);
     },
-    /** 进程启动时：遗留的排队 / 运行中任务一律失败（不扣额度）。 */
+    /** 进程启动时：遗留的排队 / 运行中任务一律失败。 */
     interruptAll(now: string): number {
       return Number(interrupt.run(now).changes);
     },
-    /** 删除页面：清空内容字段，保留行（额度不恢复）。 */
+    /** 删除页面：清空内容字段，保留行。 */
     eraseContentForPage(pageId: string): number {
       return Number(eraseForPage.run(pageId).changes);
     },

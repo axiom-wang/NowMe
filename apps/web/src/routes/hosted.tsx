@@ -1,6 +1,6 @@
 /**
  * 平台托管路线的路由（contracts 9 / hosted-route 5）。全部是会话 + CSRF + Origin 的表单路由，忽略 `Authorization` 头；
- * 只有页面主人可访问（`findOwnPage`，否则 404）；`deps.hosted` 为 null（没有 API key）时创作相关路由一律 404。
+ * 只有页面主人可访问（`findOwnPage`，否则 404）；网页创作始终可见，未配置自己的 API 时引导到账号设置。
  *
  * “我的资料”（`/account/data`、`/account/profile/delete`、`/account/briefs/delete`）不依赖托管功能是否开启：
  * 主人随时可以查看、删除自己已保存的画像与 brief（S7）。
@@ -104,6 +104,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
             csrf: auth.session.csrfToken,
             scene: hosted.scene(own),
             examples: loadExamplesIndex().examples,
+            providers: deps.config.hosted.fake ? '测试用的假模型' : (['interview', 'generate'] as const).map((role) => deps.userModels.summary(auth.user.id, role)?.endpoint.label).filter((value, i, all) => value && all.indexOf(value) === i).join('、') || '你配置的服务',
             overview: hosted.overview(own, auth.user.id),
             error,
           }}

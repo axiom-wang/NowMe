@@ -1,5 +1,7 @@
 # DeepWisdom 其他项目对 NowMe 的复用价值
 
+> 历史复用评估。当前产品以 [接口约定](contracts.md) 和 [自带 API 方案](hosted-route.md) 为准：收费与商业额度已取消，网页创作使用用户账号中加密保存的 API Key，仍保留运行保护限制。
+
 日期：2026-10-07。需求基线：[NowMe MVP](/Users/axiom/Projects/NowMe/docs/product-mvp.md)。本评估补充[此前 FuncSea 评估](/Users/axiom/Projects/NowMe/docs/funcsea-adaptation-assessment-2026-10-07.md)。
 
 **有能帮上忙的项目，而且能补上此前只看 FuncSea 时缺少的部分。最值得优先评估的是 Atoms 的元素定位和局部编辑、MetaGPT 的网页生成工具，以及 MGX 的版本与运行状态恢复。DeepFlow 更适合提供问答、会话和运行时编排的参考。**

@@ -28,7 +28,7 @@ export async function deleteOwnBrief(deps: DataDeps, userId: string, briefId: st
   return true;
 }
 
-/** 删除页面时：brief、素材、任务内容（修改要求、结果说明）一并清除；任务行保留（额度不恢复）。 */
+/** 删除页面时：brief、素材、任务内容（修改要求、结果说明）一并清除；任务行保留。 */
 export async function eraseHostedPageData(deps: DataDeps, pageId: string): Promise<void> {
   transaction(deps.db, () => {
     deps.repos.briefAssets.deleteForPage(pageId);

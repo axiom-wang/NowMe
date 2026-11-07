@@ -59,6 +59,7 @@ const Header: FC<{ auth: SessionAuth | null }> = ({ auth }) => (
           <a class="nav-link nav-link--quiet" href="/account/data">
             我的资料
           </a>
+          <a class="nav-link nav-link--quiet" href="/account/ai">AI 设置</a>
           <span class="user-chip">
             <span class="avatar avatar--sm" aria-hidden="true">
               {initialOf(auth.user.nickname)}

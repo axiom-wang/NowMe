@@ -1,5 +1,5 @@
 /**
- * 确定性的假 Claude 客户端（hosted-route D8，`NOWME_CLAUDE_FAKE=1`，只在非生产环境）。
+ * 确定性的假模型客户端（hosted-route D8，`NOWME_MODEL_FAKE=1`，旧名 `NOWME_CLAUDE_FAKE`，只在非生产环境）。
  *
  * 它不调用网络，但走真实的流程：采访时按强制的工具返回结构化结果；生成 / 修改时按轮次调用真实工具
  * （list → write ×3 → validate → preview → finish），所以 validator、render 与平台重新校验都真实运行。
@@ -10,11 +10,11 @@
  * - `【假模型：越界】`：尝试读写越界路径（工具应拒绝），然后照常完成；
  * - `【假模型：不结束】`：一直调用 validate_page，不调用 finish（触发 MAX_TURNS）。
  */
-import type { AssistantContent, ClaudeClient, ClaudeMessage, ClaudeResponse, CreateMessageParams, TextBlock } from './claude.js';
+import type { AssistantContent, ModelClient, ModelMessage, ModelResponse, CreateMessageParams, TextBlock } from './model-client.js';
 
 const USAGE = { input_tokens: 1200, output_tokens: 300, cache_read_input_tokens: 1000, cache_creation_input_tokens: 0 };
 
-function allUserText(messages: ClaudeMessage[]): string {
+function allUserText(messages: ModelMessage[]): string {
   const parts: string[] = [];
   for (const message of messages) {
     if (message.role !== 'user') continue;
@@ -24,7 +24,7 @@ function allUserText(messages: ClaudeMessage[]): string {
   return parts.join('\n');
 }
 
-function firstUserText(messages: ClaudeMessage[]): string {
+function firstUserText(messages: ModelMessage[]): string {
   const first = messages[0];
   if (!first || first.role !== 'user') return '';
   if (typeof first.content === 'string') return first.content;
@@ -50,7 +50,7 @@ function toolUse(name: string, input: unknown): AssistantContent {
   return { type: 'tool_use', id: `toolu_fake_${counter}`, name, input };
 }
 
-function respond(content: AssistantContent[]): ClaudeResponse {
+function respond(content: AssistantContent[]): ModelResponse {
   return { content, stop_reason: content.some((block) => block.type === 'tool_use') ? 'tool_use' : 'end_turn', usage: USAGE };
 }
 
@@ -79,7 +79,7 @@ function hookKinds(text: string): string[] {
   }
 }
 
-function interviewFollowups(text: string): ClaudeResponse {
+function interviewFollowups(text: string): ModelResponse {
   const material = between(text, 'owner_material');
   const files = [...text.matchAll(/图片文件名：(photo-\d+\.[a-z]+)/g)].map((match) => match[1] as string);
   const facts = sentences(material).slice(0, 6).map((item) => clip(item, 100));
@@ -98,7 +98,7 @@ function interviewFollowups(text: string): ClaudeResponse {
   ]);
 }
 
-function interviewBrief(text: string): ClaudeResponse {
+function interviewBrief(text: string): ModelResponse {
   const material = between(text, 'owner_material');
   const name = displayNameFrom(material);
   const facts = sentences(material).slice(0, 5);
@@ -251,7 +251,7 @@ function editedHtml(html: string, block: string | null, request: string): string
   return html.replace(pattern, `$1\n      <p class="nm-edited">已按要求修改：${escapeHtml(clip(request, 60))}</p>`);
 }
 
-function lastToolResultText(messages: ClaudeMessage[]): string {
+function lastToolResultText(messages: ModelMessage[]): string {
   const last = messages.at(-1);
   if (!last || last.role !== 'user' || typeof last.content === 'string') return '';
   for (const block of last.content) {
@@ -262,7 +262,7 @@ function lastToolResultText(messages: ClaudeMessage[]): string {
   return '';
 }
 
-function generation(params: CreateMessageParams): ClaudeResponse {
+function generation(params: CreateMessageParams): ModelResponse {
   const first = firstUserText(params.messages);
   const turn = params.messages.filter((message) => message.role === 'assistant').length + 1;
   const isEdit = first.includes('<owner_edit_request>');
@@ -317,12 +317,12 @@ function generation(params: CreateMessageParams): ClaudeResponse {
   }
 }
 
-export interface FakeClaude extends ClaudeClient {
+export interface FakeModel extends ModelClient {
   /** 收到的全部请求（测试断言缓存断点、资料标签等）。 */
   readonly calls: CreateMessageParams[];
 }
 
-export function createFakeClaude(): FakeClaude {
+export function createFakeModel(): FakeModel {
   const calls: CreateMessageParams[] = [];
   return {
     calls,

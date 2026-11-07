@@ -239,7 +239,7 @@ const HostedSection: FC<{ model: WorkspaceModel }> = ({ model }) => {
   return (
     <section class="card ws-hosted" id="hosted" aria-labelledby="hosted-heading">
       <h2 id="hosted-heading">在这里创作</h2>
-      <p class="muted">不用装任何东西：在应用里点选几道题、上传几张图，AI 按同一份 NOWMe Skill 帮你做页面。</p>
+      <p class="muted">填写你自己的 AI API，在应用里点选几道题、上传几张图，AI 按同一份 NOWMe Skill 帮你做页面。模型费用由服务商向你收取。</p>
       {hosted.error ? <Notice tone="error">{JOB_START_ERROR_TEXT[hosted.error]}</Notice> : null}
       <dl class="facts">
         <div>
@@ -247,10 +247,8 @@ const HostedSection: FC<{ model: WorkspaceModel }> = ({ model }) => {
           <dd>{statusText}</dd>
         </div>
         <div>
-          <dt>免费次数</dt>
-          <dd>
-            剩 {overview.quota.remaining} / {overview.quota.total} 次 <span class="muted">（生成和修改各算一次，失败不扣）</span>
-          </dd>
+          <dt>AI 服务</dt>
+          <dd>{overview.modelReady ? '已配置自己的 API' : '尚未配置'} · <a href="/account/ai">AI 设置</a></dd>
         </div>
       </dl>
       {overview.activeJob ? (

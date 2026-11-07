@@ -9,7 +9,7 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { PAGE_IFRAME_SANDBOX } from '@nowme/contracts';
 import { afterEach, describe, expect, it } from 'vitest';
-import { untrusted } from '../../src/hosted/claude.js';
+import { untrusted } from '../../src/hosted/model-client.js';
 import { GenerationWorkspace, resolveSkillPath, ToolError } from '../../src/hosted/tools.js';
 import { addMember } from '../../src/services/walls.js';
 import { agentGet, connectAgent, createUser, dumpDb, get, iframesOf, KIT_FONTS, postForm, seedWall, type TestSession } from '../helpers.js';

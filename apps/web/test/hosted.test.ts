@@ -1,6 +1,6 @@
 /**
- * 平台托管路线（contracts 9 / hosted-route.md）功能测试：采访 → brief 确认 → 生成 → 修改；额度与次数；提示缓存；
- * 没有 key 时整个功能隐藏。用假 Claude 客户端（真实工具循环 + 真实静态校验）与假预览器。
+ * 平台托管路线（contracts 9 / hosted-route.md）功能测试：采访 → brief 确认 → 生成 → 修改；运行次数限制；提示缓存；
+ * 没有用户配置时引导到设置。用假 Claude 客户端（真实工具循环 + 真实静态校验）与假预览器。
  * 隐私与隔离（S7、S8）见 test/security/hosted.security.test.ts。
  */
 import { existsSync, readFileSync } from 'node:fs';
@@ -36,32 +36,24 @@ function setup(env: Record<string, string> = {}) {
   return { t: web, wall };
 }
 
-describe('没有 API key：整个功能隐藏', () => {
-  it('工作区没有“在这里创作”；创作路由一律 404；“我的资料”仍可用', async () => {
-    const web = createTestWeb();
+describe('用户尚未配置 API', () => {
+  it('入口可见，引导配置；不发模型请求，已有资料仍可管理', async () => {
+    const web = createTestWeb({ env: { ANTHROPIC_API_KEY: 'sk-platform-ignored' } });
     t = web;
-    expect(web.web.deps.hosted).toBeNull();
+    expect(web.web.deps.hosted).not.toBeNull();
     const organizerId = createUser(web, 'org@example.com', '组织者');
     const { wall } = seedWall(web, organizerId);
     const owner = await joinAs(web, wall, 'a@example.com', '阿柚');
     const html = await workspaceHtml(web, owner.session, wall.id);
-    expect(html).not.toContain('在这里创作');
-    for (const path of ['create', 'jobs/gen_aaaaaaaaaaaaaaaaaaaaaaaaaa']) {
-      expect((await get(web, `/w/${wall.id}/me/${path}`, { cookie: owner.session.cookie })).status).toBe(404);
-    }
-    for (const path of ['create/followups', 'create/confirm', 'create/revise', 'create/restart', 'generate', 'edit']) {
-      expect((await post(web, owner.session, `/w/${wall.id}/me/${path}`)).status, path).toBe(404);
-    }
-    expect((await postMultipart(web, `/w/${wall.id}/me/create/start`, { _csrf: owner.session.csrf }, [], { cookie: owner.session.cookie })).status).toBe(404);
+    expect(html).toContain('在这里创作');
+    expect(html).toContain('/account/ai');
+    const response = await get(web, `/w/${wall.id}/me/create`, { cookie: owner.session.cookie });
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('请先配置你自己的 AI API');
+    const start = await postMultipart(web, `/w/${wall.id}/me/create/start`, interviewFields(owner.session), [], { cookie: owner.session.cookie });
+    expect(start.status).toBe(422);
+    expect(web.repos.briefs.findForPage(owner.member.page.id, owner.session.userId)).toBeNull();
     expect((await get(web, '/account/data', { cookie: owner.session.cookie })).status).toBe(200);
-  });
-
-  it('有 key 时开启（客户端由入口注入，配置对象里只有 hasApiKey）', () => {
-    const web = createTestWeb({ env: { ANTHROPIC_API_KEY: 'sk-ant-test-key-0000000000000000' } });
-    t = web;
-    expect(web.config.hosted).toMatchObject({ enabled: true, hasApiKey: true, fake: false });
-    // 测试没有传 anthropicApiKey，也没注入客户端 → 不开启（不会用配置里不存在的 key 去建客户端）
-    expect(web.web.deps.hosted).toBeNull();
   });
 });
 
@@ -73,7 +65,7 @@ describe('应用内采访', () => {
     expect(workspace).toContain('在这里创作');
     expect(workspace).toContain('生成 Agent 指令'); // 与本地 Agent 并列
     const createPage = await (await get(t, `/w/${wall.id}/me/create`, { cookie: owner.session.cookie })).text();
-    expect(createPage).toContain('会发送给 Claude API');
+    expect(createPage).toContain('会发送给 AI 模型服务（测试用的假模型）');
     expect(createPage).toContain('想找什么样的队友'); // 场景指南的题目
 
     const started = await postMultipart(t, `/w/${wall.id}/me/create/start`, interviewFields(owner.session), [{ name: 'photos', bytes: TINY_JPEG, filename: 'x.png', type: 'image/png' }], {
@@ -174,7 +166,7 @@ describe('托管生成与修改', () => {
     await completeInterview(t, wall, owner);
     const generated = await generate(t, wall, owner);
     expect(generated.location).toMatch(/\/jobs\/gen_/);
-    expect(generated.job).toMatchObject({ status: 'succeeded', charged: true, kind: 'generate' });
+    expect(generated.job).toMatchObject({ status: 'succeeded', charged: false, kind: 'generate' });
     expect(t.processor).toBeDefined();
     const revision = t.repos.revisions.findById(generated.job?.revisionId ?? '');
     expect(revision).toMatchObject({ source: 'hosted', status: 'accepted', credentialId: null });
@@ -196,7 +188,7 @@ describe('托管生成与修改', () => {
     expect(t.repos.publications.findActiveForPage(owner.member.page.id)).toBeNull(); // 不会自动发布
 
     const edited = await edit(t, wall, owner, { revisionId: revision?.id ?? '', block: 'about', request: '再加一句我拿过校赛二等奖' });
-    expect(edited.job).toMatchObject({ status: 'succeeded', charged: true, kind: 'edit', targetBlock: 'about' });
+    expect(edited.job).toMatchObject({ status: 'succeeded', charged: false, kind: 'edit', targetBlock: 'about' });
     const second = t.repos.revisions.findById(edited.job?.revisionId ?? '');
     expect(second?.number).toBe(2);
     const html = readFileSync(join(t.dataDir, 'revisions', second?.id ?? '', 'original', 'index.html'), 'utf8');
@@ -210,7 +202,7 @@ describe('托管生成与修改', () => {
     expect(JSON.stringify(editCall?.messages[0])).toContain('目标区块：data-nm-id=\\"about\\"');
   });
 
-  it('澄清、平台校验不通过、超过轮数都不扣额度、不存版本', async () => {
+  it('澄清、平台校验不通过、超过轮数都不存版本', async () => {
     const { t, wall } = setup({ NOWME_HOSTED_MAX_TURNS: '6' });
     const owner = await joinAs(t, wall, 'a@example.com', '阿柚');
     await completeInterview(t, wall, owner, '我叫阿柚。【假模型：违规】做过小程序。');
@@ -219,7 +211,8 @@ describe('托管生成与修改', () => {
     expect(t.repos.revisions.listForPage(owner.member.page.id)).toEqual([]);
     expect(t.leftoverJobDirs()).toEqual([]);
     const failedPage = await (await get(t, `/w/${wall.id}/me/jobs/${rejected.job?.id}`, { cookie: owner.session.cookie })).text();
-    expect(failedPage).toContain('不扣免费次数');
+    expect(failedPage).toContain('没有通过平台校验');
+    expect(failedPage).not.toContain('不扣免费次数');
 
     await post(t, owner.session, `/w/${wall.id}/me/create/restart`);
     await completeInterview(t, wall, owner, '我叫阿柚。【假模型：不结束】');
@@ -236,28 +229,19 @@ describe('托管生成与修改', () => {
     expect(clarifyPage).toContain('你想改哪一块');
     expect(clarifyPage).toContain('按这个修改');
 
-    const quota = t.web.deps.hosted?.overview(
-      { wall, membership: owner.member.membership, page: owner.member.page },
-      owner.session.userId,
-    ).quota;
-    expect(quota).toEqual({ total: 3, used: 1, remaining: 2 });
   });
 
-  it('额度：用完后不能再生成或修改；退出后重新加入、删除页面都不恢复', async () => {
-    const { t, wall } = setup({ NOWME_HOSTED_FREE_QUOTA: '1' });
+  it('取消旧额度：生成修改累计超过三次仍可继续', async () => {
+    const { t, wall } = setup({ NOWME_HOSTED_FREE_QUOTA: '0' });
     const owner = await joinAs(t, wall, 'a@example.com', '阿柚');
     await completeInterview(t, wall, owner);
-    const first = await generate(t, wall, owner);
-    expect(first.job?.status).toBe('succeeded');
-    const again = await post(t, owner.session, `/w/${wall.id}/me/generate`);
-    expect(again.headers.get('location')).toContain('error=quota');
-    const editAttempt = await post(t, owner.session, `/w/${wall.id}/me/edit`, { revisionId: first.job?.revisionId ?? '', request: '换个颜色' });
-    expect(editAttempt.headers.get('location')).toContain('hosted=quota');
-    expect(await workspaceHtml(t, owner.session, wall.id, '?hosted=quota')).toContain('免费次数已经用完');
-
-    await post(t, owner.session, `/w/${wall.id}/me/delete`, { confirm: '1' });
-    await completeInterview(t, wall, owner);
-    expect((await post(t, owner.session, `/w/${wall.id}/me/generate`)).headers.get('location')).toContain('error=quota');
+    let result = await generate(t, wall, owner);
+    for (let i = 0; i < 4; i++) {
+      expect(result.job?.status).toBe('succeeded');
+      result = await edit(t, wall, owner, { revisionId: result.job!.revisionId!, request: '换个颜色' });
+    }
+    expect(result.job?.status).toBe('succeeded');
+    expect(await workspaceHtml(t, owner.session, wall.id)).not.toContain('免费次数');
   });
 
   it('每页每天的任务次数（含失败）有上限；同时只有一个任务', async () => {
@@ -280,7 +264,7 @@ describe('托管生成与修改', () => {
     expect((await post(t, owner.session, `/w/${wall.id}/me/edit`, { revisionId: 'rev_aaaaaaaaaaaaaaaaaaaaaaaaaa', request: '改' })).headers.get('location')).toContain('hosted=no-revision');
   });
 
-  it('任务进行中页面自动刷新；进程重启时遗留任务置为失败且不扣额度', async () => {
+  it('任务进行中页面自动刷新；进程重启时遗留任务置为失败', async () => {
     const { t, wall } = setup();
     const owner = await joinAs(t, wall, 'a@example.com', '阿柚');
     const now = t.clock.now().toISOString();
@@ -294,7 +278,7 @@ describe('托管生成与修改', () => {
 
 describe('提示缓存与模型选择', () => {
   it('采访用采访模型、生成用生成模型；固定的 system 与工具带缓存断点，变量放在用户消息里', async () => {
-    const { t, wall } = setup({ NOWME_INTERVIEW_MODEL: 'claude-haiku-5-5', NOWME_GENERATE_MODEL: 'claude-opus-5-5' });
+    const { t, wall } = setup();
     const owner = await joinAs(t, wall, 'a@example.com', '阿柚');
     await completeInterview(t, wall, owner);
     await generate(t, wall, owner);
@@ -302,7 +286,7 @@ describe('提示缓存与模型选择', () => {
     const generation = t.fake.calls.filter((call) => call.tool_choice?.type !== 'tool');
     expect(interview.length).toBeGreaterThanOrEqual(2);
     expect(interview.every((call) => call.model === 'claude-haiku-5-5')).toBe(true);
-    expect(generation.every((call) => call.model === 'claude-opus-5-5')).toBe(true);
+    expect(generation.every((call) => call.model === 'claude-sonnet-5-5')).toBe(true);
     for (const call of t.fake.calls) {
       expect(call.system.at(-1)?.cache_control).toEqual({ type: 'ephemeral' });
       expect(JSON.stringify(call.system)).not.toContain('沉迷做手冲咖啡'); // system 固定，不含主人内容

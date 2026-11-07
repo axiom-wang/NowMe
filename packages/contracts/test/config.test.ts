@@ -8,6 +8,8 @@ import {
   loadConfig,
   REPO_ROOT,
   resolveTicketSecret,
+  MODEL_PROVIDER_PRESETS,
+  MODEL_PROVIDERS,
 } from '../src/index.js';
 
 describe('REPO_ROOT', () => {
@@ -30,12 +32,36 @@ describe('loadConfig', () => {
       nowmeHome: join(homedir(), '.nowme'),
       isProduction: false,
       hosted: {
-        enabled: false,
+        enabled: true,
         fake: false,
-        hasApiKey: false,
-        interviewModel: 'claude-haiku-5-5',
-        generateModel: 'claude-sonnet-5-5',
-        freeQuota: 3,
+        interview: {
+          provider: 'anthropic',
+          label: 'Anthropic Claude',
+          protocol: 'anthropic',
+          baseUrl: null,
+          model: 'claude-haiku-5-5',
+          apiKeyEnv: null,
+          apiKeyRequired: true,
+          hasApiKey: false,
+          vision: true,
+          maxOutputTokens: 32000,
+          maxTokensField: 'max_tokens',
+          ready: false,
+        },
+        generate: {
+          provider: 'anthropic',
+          label: 'Anthropic Claude',
+          protocol: 'anthropic',
+          baseUrl: null,
+          model: 'claude-sonnet-5-5',
+          apiKeyEnv: null,
+          apiKeyRequired: true,
+          hasApiKey: false,
+          vision: true,
+          maxOutputTokens: 32000,
+          maxTokensField: 'max_tokens',
+          ready: false,
+        },
         maxTurns: 30,
         dailyAttempts: 10,
         interviewDailyCalls: 20,
@@ -56,17 +82,19 @@ describe('loadConfig', () => {
     expect(() => loadConfig({ NOWME_SKILL_MARKET_LABEL: 'A', NOWME_SKILL_MARKET_COMMAND: 'a'.repeat(301) })).toThrow(ConfigError);
   });
 
-  it('托管路线：有 key 才开启；配置对象里不含 key；生产环境拒绝假客户端', () => {
-    const key = 'sk-ant-test-' + 'x'.repeat(40);
-    const config = loadConfig({ ANTHROPIC_API_KEY: key, NOWME_HOSTED_FREE_QUOTA: '5', NOWME_GENERATE_MODEL: 'claude-opus-5-5' });
-    expect(config.hosted).toMatchObject({ enabled: true, fake: false, hasApiKey: true, freeQuota: 5, generateModel: 'claude-opus-5-5' });
+  it('网页创作始终可见，不读取平台模型凭证或旧额度', () => {
+    const key = 'sk-platform-secret';
+    const config = loadConfig({ ANTHROPIC_API_KEY: key, NOWME_MODEL_API_KEY: key, NOWME_MODEL_PROVIDER: 'deepseek', NOWME_HOSTED_FREE_QUOTA: '0' });
+    expect(config.hosted.enabled).toBe(true);
+    expect(config.hosted.generate).toMatchObject({ provider: 'anthropic', hasApiKey: false, apiKeyEnv: null, ready: false });
+    expect(config.hosted).not.toHaveProperty('freeQuota');
     expect(JSON.stringify(config)).not.toContain(key);
-    expect(loadConfig({ NOWME_CLAUDE_FAKE: '1' }).hosted).toMatchObject({ enabled: true, fake: true, hasApiKey: false });
-    expect(() => loadConfig({ NOWME_CLAUDE_FAKE: '1', NODE_ENV: 'production' })).toThrow(ConfigError);
-    expect(() => loadConfig({ NOWME_HOSTED_FREE_QUOTA: '-1' })).toThrow(ConfigError);
-    expect(() => loadConfig({ NOWME_HOSTED_FREE_QUOTA: '101' })).toThrow(ConfigError);
-    expect(() => loadConfig({ NOWME_INTERVIEW_MODEL: 'bad model' })).toThrow(ConfigError);
-    expect(() => loadConfig({ NOWME_CLAUDE_FAKE: 'yes' })).toThrow(ConfigError);
+    expect(loadConfig({ NOWME_MODEL_FAKE: '1' }).hosted.fake).toBe(true);
+    expect(loadConfig({ NOWME_CLAUDE_FAKE: '1' }).hosted.fake).toBe(true);
+    expect(() => loadConfig({ NOWME_MODEL_FAKE: '1', NODE_ENV: 'production' })).toThrow(ConfigError);
+    expect(() => loadConfig({ NOWME_MODEL_FAKE: 'yes' })).toThrow(ConfigError);
+    expect(() => loadConfig({ NOWME_HOSTED_DAILY_ATTEMPTS: '-1' })).toThrow(ConfigError);
+    for (const provider of MODEL_PROVIDERS) expect(MODEL_PROVIDER_PRESETS[provider].label.length).toBeGreaterThan(0);
   });
 
   it('读取环境变量；源末尾斜杠被去掉；空字符串视为未设置', () => {

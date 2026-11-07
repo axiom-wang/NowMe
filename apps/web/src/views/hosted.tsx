@@ -17,8 +17,12 @@ import { JOB_ERROR_TEXT, type HostedOverview, type JobStartError, type StepError
 import { CsrfField, Notice, PostButton } from './forms.js';
 
 export const STEP_ERROR_TEXT: Record<StepError, string> = {
-  'rate-limited': '今天的采访次数用完了（为了控制成本，每页每天有上限），明天再继续。已填写的内容没有丢。',
-  'model-failed': '这一步没成功（AI 没有给出能用的结果）。再点一次试试；这不会扣免费次数。',
+  MODEL_CONFIG: JOB_ERROR_TEXT.MODEL_CONFIG!,
+  MODEL_AUTH: JOB_ERROR_TEXT.MODEL_AUTH!,
+  MODEL_RATE_LIMITED: JOB_ERROR_TEXT.MODEL_RATE_LIMITED!,
+  MODEL_UNAVAILABLE: JOB_ERROR_TEXT.MODEL_UNAVAILABLE!,
+  'rate-limited': '今天的采访次数用完了（为防止任务过载，每页每天有运行上限），明天再继续。已填写的内容没有丢。',
+  'model-failed': '这一步没成功（AI 没有给出能用的结果）。可以重试或检查 AI 设置；服务商可能已收取调用费用。',
   'wrong-state': '这一步已经过期了，请从当前步骤继续。',
   'too-many-images': `图片最多 ${BRIEF_ASSETS_MAX_COUNT} 张。`,
   'image-type': '只支持 PNG、JPEG、WebP、GIF 图片。',
@@ -30,7 +34,10 @@ export const STEP_ERROR_TEXT: Record<StepError, string> = {
 };
 
 export const JOB_START_ERROR_TEXT: Record<JobStartError, string> = {
-  quota: '这面墙的免费次数已经用完了。你仍然可以用本地 Agent 继续修改，或发布已有的版本。',
+  MODEL_CONFIG: JOB_ERROR_TEXT.MODEL_CONFIG!,
+  MODEL_AUTH: JOB_ERROR_TEXT.MODEL_AUTH!,
+  MODEL_RATE_LIMITED: JOB_ERROR_TEXT.MODEL_RATE_LIMITED!,
+  MODEL_UNAVAILABLE: JOB_ERROR_TEXT.MODEL_UNAVAILABLE!,
   busy: '已经有一个任务在进行，等它结束再开始新的。',
   daily: '今天发起的生成次数太多了，明天再试。',
   'no-brief': '先完成采访并确认“AI 眼中的你”，才能开始生成。',
@@ -39,7 +46,9 @@ export const JOB_START_ERROR_TEXT: Record<JobStartError, string> = {
   'bad-request': `修改要求要写 ${EDIT_REQUEST_LIMITS.min}–${EDIT_REQUEST_LIMITS.max} 个字。`,
 };
 
-export const PRIVACY_NOTE = '你填写的内容和图片会发送给 Claude API 用来生成页面，保存在 NOWMe 平台、只有你自己能看到，不会给组织者或其他成员看；随时可以在“我的资料”里删除。';
+export function privacyNote(providers: string): string {
+  return `你填写的内容和图片会发送给 AI 模型服务（${providers}）用来生成页面，模型费用由服务商向你收取；资料保存在 NOWMe 平台、只有你自己能看到，不会给组织者或其他成员看；随时可以在“我的资料”里删除。`;
+}
 
 const MOTION_OPTIONS = [
   { value: 'calm', label: '安静' },
@@ -54,16 +63,16 @@ export interface CreateViewModel {
   examples: ExampleEntry[];
   overview: HostedOverview;
   error: string | null;
+  /** 隐私说明里“发给哪家模型服务”。 */
+  providers: string;
 }
 
 function base(wall: Wall): string {
   return `/w/${wall.id}/me`;
 }
 
-const QuotaLine: FC<{ overview: HostedOverview }> = ({ overview }) => (
-  <p class="muted hosted-quota">
-    免费次数：剩 <strong>{overview.quota.remaining}</strong> / {overview.quota.total} 次（生成和修改各算一次，失败不扣）
-  </p>
+const ModelNotice: FC<{ overview: HostedOverview }> = ({ overview }) => (
+  <p class="muted">{overview.modelReady ? '使用你的 AI API，模型费用由服务商向你收取；失败请求也可能计费。' : '请先配置你自己的 AI API，已有资料与页面不受影响。'} <a href="/account/ai">AI 设置</a></p>
 );
 
 const Steps: FC<{ current: number }> = ({ current }) => (
@@ -84,6 +93,7 @@ const Steps: FC<{ current: number }> = ({ current }) => (
 
 const InterviewForm: FC<{ model: CreateViewModel }> = ({ model }) => {
   const { scene } = model;
+  const saved = model.overview.brief?.answers;
   return (
     <form method="post" action={`${base(model.wall)}/create/start`} enctype="multipart/form-data" class="stack hosted-form">
       <CsrfField token={model.csrf} />
@@ -91,7 +101,7 @@ const InterviewForm: FC<{ model: CreateViewModel }> = ({ model }) => {
         <h2>1. 先贴点关于你的东西</h2>
         <label class="field">
           <span class="field__label">{scene.assetPrompt}</span>
-          <textarea name="material" rows={6} maxlength={BRIEF_MATERIAL_MAX_CHARS} placeholder="写好的自我介绍、作品链接、一句话描述都行"></textarea>
+          <textarea name="material" rows={6} maxlength={BRIEF_MATERIAL_MAX_CHARS} placeholder="写好的自我介绍、作品链接、一句话描述都行">{saved?.material ?? ''}</textarea>
         </label>
         <label class="field">
           <span class="field__label">
@@ -99,6 +109,7 @@ const InterviewForm: FC<{ model: CreateViewModel }> = ({ model }) => {
           </span>
           <input type="file" name="photos" accept="image/png,image/jpeg,image/webp,image/gif" multiple />
         </label>
+        {model.overview.brief?.assets.length ? <p class="muted">已保存 {model.overview.brief.assets.length} 张图片；不选择新图片时继续使用。</p> : null}
       </section>
 
       <section class="card">
@@ -113,19 +124,19 @@ const InterviewForm: FC<{ model: CreateViewModel }> = ({ model }) => {
               {question.options.map((option, index) =>
                 question.multi ? (
                   <label class="check chip-check">
-                    <input type="checkbox" name={`q_${question.id}_${index}`} value="1" checked={isDefaultChecked(option)} />
+                    <input type="checkbox" name={`q_${question.id}_${index}`} value="1" checked={saved ? saved.choices[question.id]?.selected.includes(option.replace('（默认勾选）', '')) : isDefaultChecked(option)} />
                     <span>{option.replace('（默认勾选）', '')}</span>
                   </label>
                 ) : (
                   <label class="check chip-check">
-                    <input type="radio" name={`q_${question.id}`} value={String(index)} required={question.required} />
+                    <input type="radio" name={`q_${question.id}`} value={String(index)} checked={saved?.choices[question.id]?.selected.includes(option)} required={question.required} />
                     <span>{option}</span>
                   </label>
                 ),
               )}
             </div>
             {question.options.some(isWriteInOption) || !question.multi ? (
-              <input type="text" name={`q_${question.id}_text`} maxlength={200} placeholder="想直接写的话写在这里（可选）" class="hosted-writein" />
+              <input type="text" name={`q_${question.id}_text`} maxlength={200} value={saved?.choices[question.id]?.text ?? ''} placeholder="想直接写的话写在这里（可选）" class="hosted-writein" />
             ) : null}
           </fieldset>
         ))}
@@ -135,7 +146,7 @@ const InterviewForm: FC<{ model: CreateViewModel }> = ({ model }) => {
           <div class="style-grid">
             {model.examples.map((example) => (
               <label class="style-option">
-                <input type="checkbox" name={`style_${example.dir}`} value="1" />
+                <input type="checkbox" name={`style_${example.dir}`} value="1" checked={saved?.styles.includes(example.dir)} />
                 <img src={`/hosted/examples/${example.dir}.png`} alt="" loading="lazy" width={150} height={200} />
                 <span>{example.style}</span>
               </label>
@@ -148,14 +159,14 @@ const InterviewForm: FC<{ model: CreateViewModel }> = ({ model }) => {
           <div class="chips">
             {MOTION_OPTIONS.map((option) => (
               <label class="check chip-check">
-                <input type="radio" name="motion" value={option.value} checked={option.value === 'medium'} />
+                <input type="radio" name="motion" value={option.value} checked={option.value === (saved?.motion ?? 'medium')} />
                 <span>{option.label}</span>
               </label>
             ))}
           </div>
         </fieldset>
       </section>
-      <p class="muted hosted-privacy">{PRIVACY_NOTE}</p>
+      <p class="muted hosted-privacy">{privacyNote(model.providers)}</p>
       <button type="submit" class="btn btn--primary btn--lg btn--block">
         下一步
       </button>
@@ -316,7 +327,7 @@ const ConfirmedPanel: FC<{ model: CreateViewModel }> = ({ model }) => {
           <PostButton
             action={`${base(model.wall)}/generate`}
             csrf={model.csrf}
-            label={model.overview.quota.remaining > 0 ? '开始生成页面' : '免费次数已用完'}
+            label="开始生成页面"
             variant="primary"
           />
         )}
@@ -353,10 +364,10 @@ export const CreateView: FC<{ model: CreateViewModel }> = ({ model }) => {
         {model.scene.label} · 大约 {Math.max(1, Math.round(model.scene.interviewBudgetSeconds / 60))} 分钟。以点选为主，AI 只追问必要的问题。
       </p>
       <Steps current={step} />
-      <QuotaLine overview={model.overview} />
+      <ModelNotice overview={model.overview} />
       {model.error ? <Notice tone="error">{model.error}</Notice> : null}
       <ActiveJobNotice model={model} />
-      {status === 'collecting' ? <InterviewForm model={model} /> : null}
+      {model.overview.modelReady && status === 'collecting' ? <InterviewForm model={model} /> : null}
       {status === 'followups' ? <FollowupForm model={model} /> : null}
       {status === 'review' && view?.brief ? <ReviewForm model={model} brief={view.brief} briefMd={view.record.briefMd} /> : null}
       {status === 'confirmed' ? <ConfirmedPanel model={model} /> : null}
@@ -400,7 +411,7 @@ export const JobView: FC<{ wall: Wall; job: GenerationJob; revisionNumber: numbe
           <>
             {job.resultMessage ? <p>{job.resultMessage}</p> : null}
             <p>
-              已保存为第 {revisionNumber ?? '?'} 版（用掉 1 次免费次数）。预览满意后，在工作区确认缩略卡和联系方式再发布。
+              已保存为第 {revisionNumber ?? '?'} 版。预览满意后，在工作区确认缩略卡和联系方式再发布。
             </p>
             <p>
               <a class="btn btn--primary" href={`${base(wall)}?rev=${job.revisionId}#preview-heading`}>
@@ -409,10 +420,10 @@ export const JobView: FC<{ wall: Wall; job: GenerationJob; revisionNumber: numbe
             </p>
           </>
         ) : null}
-        {job.status === 'failed' ? <Notice tone="error">{JOB_ERROR_TEXT[job.errorCode ?? 'INTERNAL'] ?? JOB_ERROR_TEXT.INTERNAL}</Notice> : null}
+        {job.status === 'failed' ? <><Notice tone="error">{JOB_ERROR_TEXT[job.errorCode ?? 'INTERNAL'] ?? JOB_ERROR_TEXT.INTERNAL}</Notice><p class="muted">模型服务商可能已收取调用费用。<a href="/account/ai">检查 AI 设置</a></p></> : null}
         {job.status === 'needs_input' ? (
           <>
-            <Notice tone="warning">{job.resultMessage ?? '需要你说得再具体一点。'}（这次不扣免费次数）</Notice>
+            <Notice tone="warning">{job.resultMessage ?? '需要你说得再具体一点。'}</Notice>
             {job.baseRevisionId ? <EditForm wallId={wall.id} csrf={csrf} revisionId={job.baseRevisionId} blocks={blocks} request={job.requestText ?? ''} /> : null}
           </>
         ) : null}
@@ -450,7 +461,7 @@ export const EditForm: FC<{ wallId: string; csrf: string; revisionId: string; bl
       </textarea>
     </label>
     <button type="submit" class="btn btn--accent">
-      按这个修改（用 1 次免费次数）
+      按这个修改
     </button>
   </form>
 );

@@ -1,9 +1,9 @@
-# NOWMe 本地开发计划（原型试跑 · 本地路线）
+# NOWMe 本地开发计划（本地 Agent + 网页内自带 API）
 
 > 总规划师维护。每完成一项更新状态并提交。
 > 需求：[MVP 需求](product-mvp-community-wall.md)、[页面生成方案](page-generation-byo-agent.md)、[信息收集与 brief](brief-collection.md)。
 > 接口约定：[contracts.md](contracts.md)（所有任务的共同依据）。
-> 范围：只做本地路线；平台托管路线、付费、派生（W18）、部署不做（contracts 第 9 节）。
+> 范围：本地 Agent + 网页内自带 API 创作。取消收费与免费次数；派生（W18）、部署不做（contracts 第 9 节）。
 
 状态：⬜ 未开始 · 🟡 进行中 · ✅ 完成（已由总规划师亲自验收）· ⛔ 阻塞
 
@@ -25,7 +25,8 @@
 | M2 | 提交、服务端校验与沙箱展示 | `nowme fetch` → `nowme submit` → 主人在工作区的沙箱 iframe 中看到页面；S2、S3、S4 测试通过 | ✅ |
 | M3 | 墙的闭环 | 登录 → 建墙 → 邀请 → 加入 → 提交 → 发布 → 浏览 → 想聊这个 → 组织者后台，e2e 通过；S1–S6 全部有测试；安全审查完成且高危问题已修复 | 🟡 |
 | M4 | 端到端演练 | 子 Agent 扮演“用户的 Agent”按 Skill 完整走通，产出演练报告 | ⬜ |
-| M5 | 平台托管路线（不收费） | 应用内采访 → brief 确认 → 托管生成（同一 Skill + 平台重新校验）→ 预览 → 按区块修改 → 发布；免费额度；S7、S8 测试；假 Claude 客户端 e2e | 🟡 |
+| M5 | 平台托管路线（不收费） | 应用内采访 → brief 确认 → 托管生成（同一 Skill + 平台重新校验）→ 预览 → 按区块修改 → 发布；账号自带 API 与加密凭证；S7、S8 测试；假 Claude 客户端 e2e | 🟡 |
+| M6 | 网页内自带 API 与取消收费 | 账号配置、加密凭证、用户隔离、删除/更换停止请求、旧库升级、取消次数额度、桌面/手机及生成发布回归 | ✅ |
 
 ## M0 架子与 CLAUDE.md
 
@@ -133,8 +134,8 @@ T1.3 / T1.4 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm te
 | --- | --- | --- | --- |
 | T5.0 contracts 提案与确认 | 总规划师 | `docs/hosted-route.md`、`docs/contracts.md` | ✅（2026-11-07 确认 D1–D8） |
 | T5.1 配置、迁移、仓储 | — | `packages/contracts`（config、常量、ID 前缀、事件、校验码）、`apps/web/migrations/002_hosted.sql`、`apps/web/src/db/hosted.ts` | ✅ |
-| T5.2 采访与 brief | — | `apps/web/src/hosted/{claude,prompts,interview,brief}.ts`、路由与视图 | ✅ |
-| T5.3 托管生成与修改、额度 | — | `apps/web/src/hosted/{tools,runner,previewer,service}.ts`、`services/submissions.ts`（共用存储） | ✅ |
+| T5.2 采访与 brief | — | `apps/web/src/hosted/{model-client,prompts,interview,brief}.ts`、路由与视图 | ✅ |
+| T5.3 托管生成与修改、运行限制 | — | `apps/web/src/hosted/{tools,runner,previewer,service}.ts`、`services/submissions.ts`（共用存储） | ✅ |
 | T5.4 隐私：查看与删除 | — | `apps/web/src/hosted/data.ts`、`/account/*`、删除页面时清除 | ✅ |
 | T5.5 测试与 e2e、演示社团墙 | — | `apps/web/test/hosted*.ts`、`apps/web/test/security/hosted.security.test.ts`、`tests/e2e/hosted.e2e.ts`、`apps/web/scripts/demo*.ts` | ✅ |
 | T5.6 M5 验收 | 总规划师 | — | 🟡 |
@@ -142,6 +143,13 @@ T1.3 / T1.4 验收记录（2026-11-06）：合并后 `pnpm typecheck`、`pnpm te
 验收标准：`pnpm typecheck`、`pnpm test`、`pnpm test:security` 通过；S7、S8 的最低测试要求全部覆盖；`pnpm test:e2e` 中的托管用例走通采访、生成、预览、修改、发布；`pnpm demo` 多一面社团墙。
 
 T5.1–T5.5 记录（2026-11-07）：`pnpm test`（74 文件 / 1447 用例）、`pnpm test:security`（27 文件 / 696 用例）、`pnpm test:e2e`（6 用例，含托管全流程）通过。`pnpm typecheck` 唯一的错误来自同一工作树里另一项进行中的工作（contracts 4.5 Skill 分发：`AgentContext.skill` 已加到类型，`services/agent.ts` 还没跟上），与 M5 无关。
+
+## M6 用户自带 API（2026-11-07）
+
+- 增加 `/account/ai`、账号隔离的 AES-256-GCM 凭证库与增量迁移 `004_user_models.sql`；主密钥来自 `NOWME_AI_ENCRYPTION_KEY`。
+- 模型请求绑定当前用户及配置版本；删除、更换后停止旧任务后续请求；公网 HTTPS、DNS 固定连接、禁止重定向。
+- 删除平台赠送次数、扣减及未来收费方案，保留运行保护限制、历史任务与页面数据。
+- 验收覆盖账号设置、跨会话、凭证隔离/篡改、模拟模型全流程、删除/更换、超过原 3 次仍可创作，以及既有本地路线和沙箱。验收（2026-11-07）：`pnpm typecheck`、`pnpm build`、`pnpm test`（83 文件 / 1507 用例）、`pnpm test:security`（30 文件 / 716 用例）通过；完整 `pnpm test:e2e`（8 用例）通过，最终设置页与网页创作定向复验（2 用例）通过。模型服务均为模拟实现，未产生真实模型费用。
 
 ## 决策与偏差记录
 
@@ -160,5 +168,8 @@ T5.1–T5.5 记录（2026-11-07）：`pnpm test`（74 文件 / 1447 用例）、
 | 2026-11-06 | 用户要求：M3 安全审查与 M4 之前停下，先看预览效果 |
 | 2026-11-06 | 子 Agent 模型分配：机械性任务用 Sonnet，规划、安全审查、Skill/示例页等需要判断的任务用 Opus（见“工作方式”） |
 | 2026-11-06 | `nowme.css` 内置全局减少动效规则；每款 Kit 字体提供 `--nm-font-<id>` 变量；本地工作目录与 CLI 命令见 contracts 1.5 |
+| 2026-11-07 | 用户要求托管路线不绑定 Claude：增加 OpenAI 兼容协议与 12 种服务预设（hosted-route 1.1），采访与生成可分别指定服务；`NOWME_CLAUDE_FAKE` 改名 `NOWME_MODEL_FAKE`（旧名兼容） |
 | 2026-11-07 | 用户要求实现平台托管路线（不收费）：确认 hosted-route D1–D8；“我的资料”改用 `/account/` 前缀（`/me/data` 会被 S5 的“不含工作区链接”检查误判）；演示加一面社团墙 |
 | 2026-11-07 | T3.6：Skill 由主站托管分发（不依赖外部市场，市场渠道只作为可选配置）；CLI 打成单文件随 Skill 包分发，真实用户只需 Node 22；本机没有 Playwright 时预览改由服务端渲染（不存储、限流 100 次/页/天） |
+
+| 2026-11-07 | 用户确认取消全部收费与免费次数方案，平台不提供模型 Key：服务器使用用户自带 API；Key 按账号加密保存、跨设备可用并支持删除。此前平台环境变量 Key / 免费额度决策由本条取代 |

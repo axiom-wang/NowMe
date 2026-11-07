@@ -23,7 +23,7 @@ import {
 } from '@nowme/contracts';
 import { SKILL_DIR } from '@nowme/skill';
 import { computeExtraChars, isSystemFile, validatePage } from '@nowme/validator';
-import type { ImageBlock, TextBlock, ToolDefinition } from './claude.js';
+import type { ImageBlock, TextBlock, ToolDefinition } from './model-client.js';
 
 export const WRITABLE_PAGE_FILES: ReadonlySet<string> = new Set([PAGE_INDEX_FILE, PAGE_CARD_FILE, PAGE_MANIFEST_FILE]);
 const SKILL_READ_DIRS = ['reference', 'templates', 'scenes', 'examples'];

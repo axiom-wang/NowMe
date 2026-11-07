@@ -206,12 +206,7 @@ export const EVENT_PROP_KEY_PATTERN = /^[a-zA-Z][a-zA-Z0-9_]{0,39}$/;
 // 平台托管路线（contracts 9 / hosted-route.md）
 // ---------------------------------------------------------------------------
 
-/** 默认模型（hosted-route D2）：采访用便宜的模型，生成与修改用更强的模型。 */
-export const DEFAULT_INTERVIEW_MODEL = 'claude-haiku-5-5';
-export const DEFAULT_GENERATE_MODEL = 'claude-sonnet-5-5';
-/** 每页免费次数（D3），`NOWME_HOSTED_FREE_QUOTA`，0–100。 */
-export const DEFAULT_HOSTED_FREE_QUOTA = 3;
-export const HOSTED_FREE_QUOTA_RANGE = { min: 0, max: 100 } as const;
+/** 各模型服务的默认模型见 model-providers.ts（hosted-route D2：采访用便宜的模型，生成与修改用更强的模型）。 */
 /** 一次任务最多几轮工具调用（`NOWME_HOSTED_MAX_TURNS`）。 */
 export const DEFAULT_HOSTED_MAX_TURNS = 30;
 export const HOSTED_MAX_TURNS_RANGE = { min: 4, max: 200 } as const;

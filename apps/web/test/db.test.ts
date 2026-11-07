@@ -14,6 +14,7 @@ const CONTRACT_TABLES: Record<string, string[]> = {
   profile_entries: ['id', 'user_id', 'category', 'text', 'source', 'confirmation', 'created_at', 'updated_at'],
   briefs: ['id', 'page_id', 'owner_id', 'status', 'answers_json', 'followups_json', 'brief_json', 'brief_md', 'confirmed_at', 'created_at', 'updated_at'],
   brief_assets: ['id', 'brief_id', 'page_id', 'owner_id', 'file_name', 'mime', 'bytes', 'sha256', 'created_at'],
+  user_model_settings: ['user_id', 'role', 'endpoint_json', 'encrypted_key', 'version', 'updated_at'],
   generation_jobs: ['id', 'page_id', 'owner_id', 'kind', 'status', 'base_revision_id', 'target_block', 'request_text', 'result_message', 'revision_id', 'error_code', 'charged', 'usage_json', 'created_at', 'started_at', 'finished_at'],
   users: ['id', 'email', 'nickname', 'created_at'],
   login_codes: ['id', 'email', 'code_hash', 'attempts', 'expires_at', 'used_at'],
@@ -130,7 +131,23 @@ describe('数据库迁移', () => {
     expect(migrate(db)).toEqual([]);
     db.close();
     const again = open(file);
-    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }]);
+    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }, { version: '004_user_models.sql' }]);
+  });
+
+  it('从旧数据库增量升级保留用户、页面、brief、版本、发布与历史任务', () => {
+    const db = open();
+    db.exec("DROP TABLE user_model_settings; DELETE FROM schema_migrations WHERE version='004_user_models.sql'");
+    const data = seed(db);
+    const revision = insertRevision(db, data.page, 1);
+    db.prepare("INSERT INTO briefs(id,page_id,owner_id,status,answers_json,brief_md,created_at,updated_at) VALUES (?,?,?,'collecting','{}','旧资料',?,?)").run(generateId('brf'), data.page, data.user, NOW, NOW);
+    db.prepare("INSERT INTO generation_jobs(id,page_id,owner_id,kind,status,charged,created_at) VALUES (?,?,?,'generate','succeeded',1,?)").run(generateId('gen'), data.page, data.user, NOW);
+    db.prepare("INSERT INTO publications(id,page_id,revision_id,card_json,contact_json,published_at) VALUES (?,?,?,'{}','{}',?)").run(generateId('pbl'), data.page, revision, NOW);
+    const tables = ['users', 'walls', 'memberships', 'pages', 'briefs', 'revisions', 'publications', 'generation_jobs'];
+    const snapshot = () => tables.map((table) => db.prepare(`SELECT * FROM ${table}`).all());
+    const before = snapshot();
+    expect(migrate(db)).toEqual(['004_user_models.sql']);
+    expect(snapshot()).toEqual(before);
+    expect(migrate(db)).toEqual([]);
   });
 
   it('关键索引存在（部分唯一索引：每页一个有效凭证、一个活跃发布）', () => {
