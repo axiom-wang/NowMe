@@ -205,8 +205,9 @@ export function createOpenAICompatibleClient(options: OpenAICompatibleOptions): 
         try {
           response = await fetchImpl(url, { method: 'POST', headers, body, signal: AbortSignal.any(signals), redirect: 'manual' });
         } catch (error) {
-          if (error instanceof ModelAccessError) throw error;
           if (callOptions?.signal?.aborted) throw new ModelApiError(null, '请求已取消');
+          // 地址、DNS 校验失败等配置问题不重试；连接中断、DNS 超时等临时网络错误按普通失败重试。
+          if (error instanceof ModelAccessError && error.code !== 'MODEL_UNAVAILABLE') throw error;
           lastError = new ModelApiError(null, '连不上模型服务');
           continue;
         }

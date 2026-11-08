@@ -59,8 +59,9 @@ console.log(reuse ? '[demo] 复用已有演示数据，不会清空。' : '[demo
 
 const db = openDatabase(dataPaths(config.dataDir).db);
 const ticketSecret = resolveTicketSecret(config);
+// 演示输出保持简洁，只打印托管任务结果（错误码、轮数、HTTP 状态码，不含模型响应或 Key）。
 // 网页创作始终可见，真实模型使用用户账号配置；环境只提供凭证加密密钥。
-const web = createWebApp({ config: { ...config, ticketSecret }, db, demo: { dataDir: DEMO_DATA_DIR }, log: () => {}, secretEnv: process.env, modelLookup: createDemoModelLookup(process.env) });
+const web = createWebApp({ config: { ...config, ticketSecret }, db, demo: { dataDir: DEMO_DATA_DIR }, log: (message) => { if (message.startsWith('[web] 托管任务')) console.log(message); }, secretEnv: process.env, modelLookup: createDemoModelLookup(process.env) });
 
 if (!reuse) {
   console.log('[demo] 正在准备 4 面墙、23 个页面版本，首次启动需要几分钟……');

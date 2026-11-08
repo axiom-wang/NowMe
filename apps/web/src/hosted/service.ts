@@ -308,7 +308,7 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
     let turns = 0;
     let dir: string | null = null;
 
-    const finish = (status: 'succeeded' | 'failed' | 'needs_input', input: { revisionId?: string; errorCode?: string; message?: string }) => {
+    const finish = (status: 'succeeded' | 'failed' | 'needs_input', input: { revisionId?: string; errorCode?: string; message?: string; httpStatus?: number | null }) => {
       const ok = status === 'succeeded';
       const jobUsage: JobUsage = { turns, ...usage };
       repos.jobs.finish(jobId, {
@@ -330,7 +330,7 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
           ...(job.kind === 'edit' ? { targeted: job.targetBlock !== null } : {}),
         });
       }
-      deps.log(`[web] 托管任务 ${jobId}（${job.kind}）：${status}${input.errorCode ? ` ${input.errorCode}` : ''}，${turns} 轮`);
+      deps.log(`[web] 托管任务 ${jobId}（${job.kind}）：${status}${input.errorCode ? ` ${input.errorCode}` : ''}${input.httpStatus ? `（HTTP ${input.httpStatus}）` : ''}，${turns} 轮`);
     };
 
     if (!own || !page) {
@@ -394,7 +394,7 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
       if (error instanceof RunError) {
         usage = error.usage;
         turns = error.turns;
-        finish('failed', { errorCode: error.code });
+        finish('failed', { errorCode: error.code, httpStatus: error.status });
       } else {
         deps.log(`[web] 托管任务 ${jobId} 出错`);
         finish('failed', { errorCode: modelFailureCode(error) ?? 'INTERNAL' });

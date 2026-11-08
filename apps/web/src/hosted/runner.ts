@@ -4,7 +4,7 @@
  * 循环里的校验结果不被信任：调用方在结束后用平台的提交管线重新校验（3.1 第 4 步）。
  */
 import { addUsage, emptyUsage, type ModelClient, type ModelMessage, type ToolResultBlock, type UsageTotals } from './model-client.js';
-import { modelFailureCode, type ModelAccessCode } from './model-errors.js';
+import { modelFailureCode, modelFailureStatus, type ModelAccessCode } from './model-errors.js';
 import { generationSystem } from './prompts.js';
 import { GENERATION_TOOLS, type FinishSignal, type GenerationWorkspace } from './tools.js';
 
@@ -16,6 +16,8 @@ export class RunError extends Error {
     readonly code: RunErrorCode,
     readonly turns: number,
     readonly usage: UsageTotals,
+    /** 诊断用：失败时的 HTTP 状态码（只记数字）。 */
+    readonly status: number | null = null,
   ) {
     super(code);
   }
@@ -73,7 +75,7 @@ export async function runGeneration(options: RunOptions): Promise<RunResult> {
         { signal: options.signal },
       );
     } catch (error) {
-      throw new RunError(options.signal?.aborted ? 'TIMEOUT' : modelFailureCode(error) ?? 'API_ERROR', turn - 1, usage);
+      throw new RunError(options.signal?.aborted ? 'TIMEOUT' : modelFailureCode(error) ?? 'API_ERROR', turn - 1, usage, modelFailureStatus(error));
     }
     addUsage(usage, response.usage);
     if (response.stop_reason === 'refusal') throw new RunError('REFUSED', turn, usage);

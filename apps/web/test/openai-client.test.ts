@@ -7,6 +7,7 @@ import { join } from 'node:path';
 import { EXAMPLES_DIR } from '@nowme/skill';
 import { afterEach, describe, expect, it } from 'vitest';
 import { IMAGE_PLACEHOLDER, withEndpointLimits, type CreateMessageParams, type ModelClient } from '../src/hosted/model-client.js';
+import { ModelAccessError, modelFailureStatus } from '../src/hosted/model-errors.js';
 import { createOpenAICompatibleClient, fromChatResponse, toChatRequest, type ChatCompletionRequest } from '../src/hosted/openai-client.js';
 import { createUser, seedWall, type TestWeb } from './helpers.js';
 import { completeInterview, createFakePreviewer, generate, joinAs, type HostedTestWeb } from './hosted-helpers.js';
@@ -147,6 +148,36 @@ describe('请求与响应转换', () => {
     expect(calls).toBe(1);
     expect(error.message).toBe('模型服务返回 400');
     expect(error.message).not.toContain('secret echo');
+    expect(modelFailureStatus(new ModelAccessError('MODEL_UNAVAILABLE', modelFailureStatus(error)))).toBe(400);
+  });
+
+  it('连接中断等临时网络错误会重试；地址或 DNS 校验失败不重试', async () => {
+    let calls = 0;
+    const flaky = createOpenAICompatibleClient({
+      baseUrl: 'https://llm.example.com/v1',
+      apiKey: 'k',
+      retryDelayMs: 0,
+      fetch: (async () => {
+        calls += 1;
+        if (calls < 3) throw new ModelAccessError('MODEL_UNAVAILABLE');
+        return new Response(JSON.stringify({ choices: [{ message: { content: 'ok' }, finish_reason: 'stop' }] }), { status: 200 });
+      }) as typeof fetch,
+    });
+    expect((await flaky.createMessage(PARAMS)).content).toEqual([{ type: 'text', text: 'ok' }]);
+    expect(calls).toBe(3);
+
+    calls = 0;
+    const blocked = createOpenAICompatibleClient({
+      baseUrl: 'https://llm.example.com/v1',
+      apiKey: 'k',
+      retryDelayMs: 0,
+      fetch: (async () => {
+        calls += 1;
+        throw new ModelAccessError('MODEL_CONFIG');
+      }) as typeof fetch,
+    });
+    await expect(blocked.createMessage(PARAMS)).rejects.toMatchObject({ code: 'MODEL_CONFIG' });
+    expect(calls).toBe(1);
   });
 });
 

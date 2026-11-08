@@ -5,7 +5,7 @@ import type { Database } from '../db/index.js';
 import { transaction } from '../db/index.js';
 import { createModelFetch, validateModelUrl, type ModelLookup } from '../security/model-network.js';
 import { createModelClient, type ModelClient } from './model-client.js';
-import { ModelAccessError, modelFailureCode } from './model-errors.js';
+import { ModelAccessError, modelFailureCode, modelFailureStatus } from './model-errors.js';
 
 export type ModelRole = 'interview' | 'generate';
 interface ModelRow { endpoint_json: string; encrypted_key: string | null; version: string; }
@@ -108,7 +108,7 @@ export function createUserModels(db: Database, options: UserModelsOptions) {
             const client = createModelClient(metadata.endpoint, decrypt(current, userId, role), { fetch: fetchImpl });
             if (!client) throw new ModelAccessError('MODEL_CONFIG');
             try { return await client.createMessage(params, callOptions); }
-            catch (error) { throw new ModelAccessError(modelFailureCode(error) ?? 'MODEL_UNAVAILABLE'); }
+            catch (error) { throw new ModelAccessError(modelFailureCode(error) ?? 'MODEL_UNAVAILABLE', modelFailureStatus(error)); }
           },
         },
       };
