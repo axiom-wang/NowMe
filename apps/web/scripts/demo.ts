@@ -47,6 +47,8 @@ process.env.NOWME_PAGES_ORIGIN ??= 'http://127.0.0.1:4000';
 process.env.NOWME_TICKET_SECRET = '';
 loadRepoDotEnv(join(REPO_ROOT, '.env.local'));
 loadRepoDotEnv();
+// 公开演示配置（仅 demo 读取，优先级最低；本机 .env.local / .env 与环境变量会覆盖它）
+loadRepoDotEnv(join(REPO_ROOT, '.env.demo.shared'));
 const config = loadConfig();
 if (config.hosted.fake) fail('评审演示不能启用 NOWME_MODEL_FAKE / NOWME_CLAUDE_FAKE，请移除后重启。');
 if (config.isProduction) fail('demo 只能在开发环境运行（NODE_ENV 不能是 production）。');
