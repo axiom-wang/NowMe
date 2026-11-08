@@ -33,3 +33,6 @@ skill/dist-package/
 
 # 营销素材（本地保存，不纳入 git）
 marketing/
+
+# 项目文档（本地保存，不纳入 git）
+docs/
