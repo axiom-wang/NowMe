@@ -20,7 +20,7 @@ import { CsrfField } from './forms.js';
 import { HomeIcon } from './home-icons.js';
 
 /** 页面链接的样式表（按顺序；`app.css` 总是链接）。 */
-export const STYLESHEETS: readonly string[] = ['app.css', ...['wall.css', 'workspace.css', 'hosted.css', 'messages.css'].filter((name) => existsSync(join(STATIC_DIR, name)))];
+export const STYLESHEETS: readonly string[] = ['app.css', ...['wall.css', 'workspace.css', 'hosted.css', 'messages.css', 'home.css'].filter((name) => existsSync(join(STATIC_DIR, name)))];
 
 export interface LayoutProps {
   title: string;
@@ -49,39 +49,6 @@ export const Brand: FC = () => (
   </a>
 );
 
-const Header: FC<{ auth: SessionAuth | null; demo?: boolean }> = ({ auth, demo }) => (
-  <header class="site-header">
-    <div class="site-header__inner">
-      <Brand />
-      {auth?.user.nickname ? (
-        <nav class="site-header__nav" aria-label="账号">
-          <a class="nav-link" href="/">
-            我的
-          </a>
-          <a class="nav-link" href="/messages">消息 <span class="message-badge" data-message-unread hidden aria-label="未读消息"></span></a>
-          <a class="nav-link nav-link--quiet" href="/account/data">
-            我的资料
-          </a>
-          <a class="nav-link nav-link--quiet" href="/account/ai">{demo ? '演示模型' : 'AI 设置'}</a>
-          {demo ? <a class="nav-link" href="/login">切换身份</a> : null}
-          <span class="user-chip">
-            <span class="avatar avatar--sm" aria-hidden="true">
-              {auth.user.avatarVersion ? <img src={`/account/avatar?v=${auth.user.avatarVersion}`} alt="" /> : initialOf(auth.user.nickname)}
-            </span>
-            <span class="user-chip__name">{auth.user.nickname}</span>
-          </span>
-          <form method="post" action="/logout" class="inline-form">
-            <CsrfField token={auth.session.csrfToken} />
-            <button type="submit" class="nav-link nav-link--quiet">
-              退出登录
-            </button>
-          </form>
-        </nav>
-      ) : null}
-    </div>
-  </header>
-);
-
 const Footer: FC = () => (
   <footer class="site-footer">
     <p>
@@ -90,26 +57,26 @@ const Footer: FC = () => (
   </footer>
 );
 
-const HOME_HEADER_PAGES = new Set(['page--home', 'page--messages', 'page--data', 'page--ai', 'page--switch', 'page--create']);
-
-/** 账号页面共用的居中导航与原生可键盘操作的账号菜单。 */
-const HomeHeader: FC<{ auth: SessionAuth; demo?: boolean; active?: 'home' | 'messages' | 'data' }> = ({ auth, demo, active }) => (
+/** 主站共用顶栏；访客只显示品牌，登录后显示导航与账号菜单。 */
+export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; active?: 'home' | 'messages' | 'data' }> = ({ auth, demo, active }) => (
   <header class="site-header home-header">
     <div class="site-header__inner">
       <Brand />
-      <nav class="home-nav" aria-label="账号">
-        <a class={`nav-link${active === 'home' ? ' home-nav__active' : ''}`} href="/" aria-current={active === 'home' ? 'page' : undefined}>我的</a>
-        <a class={`nav-link${active === 'messages' ? ' home-nav__active' : ''}`} href="/messages" aria-current={active === 'messages' ? 'page' : undefined}>消息 <span class="message-badge" data-message-unread hidden aria-label="未读消息"></span></a>
-        <a class={`nav-link${active === 'data' ? ' home-nav__active' : ''}`} href="/account/data" aria-current={active === 'data' ? 'page' : undefined}>我的资料</a>
-      </nav>
-      <details class="home-account">
-        <summary class="user-chip"><span class="avatar avatar--sm" aria-hidden="true">{auth.user.avatarVersion ? <img src={`/account/avatar?v=${auth.user.avatarVersion}`} alt="" /> : initialOf(auth.user.nickname ?? '')}</span><span class="user-chip__name">{auth.user.nickname}</span><HomeIcon name="chevron" /></summary>
-        <div class="home-account__menu">
-          <a href="/account/ai">{demo ? '演示模型' : 'AI 设置'}</a>
-          {demo ? <a href="/login">切换身份</a> : null}
-          <form method="post" action="/logout"><CsrfField token={auth.session.csrfToken} /><button type="submit">退出登录</button></form>
-        </div>
-      </details>
+      {auth?.user.nickname ? <>
+        <nav class="home-nav" aria-label="账号">
+          <a class={`nav-link${active === 'home' ? ' home-nav__active' : ''}`} href="/" aria-current={active === 'home' ? 'page' : undefined}>我的</a>
+          <a class={`nav-link${active === 'messages' ? ' home-nav__active' : ''}`} href="/messages" aria-current={active === 'messages' ? 'page' : undefined}>消息 <span class="message-badge" data-message-unread hidden aria-label="未读消息"></span></a>
+          <a class={`nav-link${active === 'data' ? ' home-nav__active' : ''}`} href="/account/data" aria-current={active === 'data' ? 'page' : undefined}>我的资料</a>
+        </nav>
+        <details class="home-account">
+          <summary class="user-chip"><span class="avatar avatar--sm" aria-hidden="true">{auth.user.avatarVersion ? <img src={`/account/avatar?v=${auth.user.avatarVersion}`} alt="" /> : initialOf(auth.user.nickname ?? '')}</span><span class="user-chip__name">{auth.user.nickname}</span><HomeIcon name="chevron" /></summary>
+          <div class="home-account__menu">
+            {!demo ? <a href="/account/ai">AI 设置</a> : null}
+            {demo ? <a href="/login">切换身份</a> : null}
+            <form method="post" action="/logout"><CsrfField token={auth.session.csrfToken} /><button type="submit">退出登录</button></form>
+          </div>
+        </details>
+      </> : null}
     </div>
   </header>
 );
@@ -130,13 +97,12 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
         <script src={`${STATIC_PATH_PREFIX}page-frame.js`}></script>
         <script src={`${STATIC_PATH_PREFIX}app.js`} defer></script>
         {auth?.user.nickname ? <script src={`${STATIC_PATH_PREFIX}messages.js`} defer></script> : null}
-        {HOME_HEADER_PAGES.has(bodyClass ?? '') ? <link rel="stylesheet" href={`${STATIC_PATH_PREFIX}home.css`} /> : null}
         {bodyClass === 'page--data' ? <link rel="stylesheet" href={`${STATIC_PATH_PREFIX}profile.css`} /> : null}
         {bodyClass === 'page--create' ? <script src={`${STATIC_PATH_PREFIX}hosted.js`} defer></script> : null}
-        {HOME_HEADER_PAGES.has(bodyClass ?? '') ? <script src={`${STATIC_PATH_PREFIX}home.js`} defer></script> : null}
+        {auth?.user.nickname ? <script src={`${STATIC_PATH_PREFIX}home.js`} defer></script> : null}
       </head>
       <body class={bodyClass ? `site ${bodyClass}` : 'site'}>
-        {HOME_HEADER_PAGES.has(bodyClass ?? '') && auth ? <HomeHeader auth={auth} demo={demo} active={bodyClass === 'page--data' ? 'data' : bodyClass === 'page--messages' ? 'messages' : bodyClass === 'page--home' ? 'home' : undefined} /> : <Header auth={auth} demo={demo} />}
+        <SiteHeader auth={auth} demo={demo} active={bodyClass === 'page--data' ? 'data' : bodyClass === 'page--messages' ? 'messages' : bodyClass === 'page--home' ? 'home' : undefined} />
         <main class="site-main">{children}</main>
         <Footer />
       </body>

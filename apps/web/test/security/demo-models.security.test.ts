@@ -40,9 +40,16 @@ describe('演示模型预置与管理保护', () => {
     expect((t.db.prepare('SELECT * FROM user_model_settings').get() as { encrypted_key: string }).encrypted_key).not.toBe(firstCiphertext);
     const response = await postForm(t, '/login/demo', { identity: 'member' });
     const cookie = `nowme_session=${sessionTokenFrom(response)}`;
-    for (const path of ['/account/ai', `/w/${wallId}/me`, `/w/${wallId}/me/create`]) {
+    for (const path of [`/w/${wallId}/me`, `/w/${wallId}/me/create`]) {
       const html = await (await t.request(path, { headers: { cookie } })).text();
-      expect(html).toContain('演示模型已配置');
+      if (path.endsWith('/create')) {
+        expect(html).not.toContain('演示模型已就绪');
+        expect(html).not.toContain('演示模型已配置');
+        expect(html).not.toContain('class="create-model');
+        expect(html).toContain('下一步');
+      } else {
+        expect(html).toContain('演示模型已配置');
+      }
       expect(html).not.toContain(KEY);
       expect(html).not.toContain(firstCiphertext);
       expect(html).not.toContain('name="interview_apiKey"');
@@ -60,16 +67,23 @@ describe('演示模型预置与管理保护', () => {
     expect(dumpDb(t.db)).toEqual(before);
   });
 
-  it('两个体验身份均不能通过表单、目标ID或接口改写、删除任何模型配置', async () => {
+  it('演示模式移除模型页和管理接口，两个身份均不能访问、改写或删除预置模型', async () => {
     provisionDemoModels(t.web, ENV);
     for (const identity of ['member', 'organizer']) {
       const response = await postForm(t, '/login/demo', { identity });
       const token = sessionTokenFrom(response)!;
       const before = dumpDb(t.db);
+      const page = await t.request('/account/ai', { headers: { cookie: `nowme_session=${token}` } });
+      expect(page.status).toBe(404);
+      const html = await page.text();
+      expect(html).not.toContain('<h1>演示模型</h1>');
+      expect(html).not.toContain(KEY);
       for (const path of ['/account/ai', '/account/ai/delete']) {
-        expect((await postForm(t, path, { _csrf: csrfOf(t, token), userId: memberId, interview_apiKey: 'replacement' }, { cookie: `nowme_session=${token}` })).status).toBe(403);
+        expect((await postForm(t, path, { _csrf: csrfOf(t, token), userId: memberId, interview_apiKey: 'replacement' }, { cookie: `nowme_session=${token}` })).status).toBe(404);
       }
       expect(dumpDb(t.db)).toEqual(before);
+      expect(t.web.deps.userModels.ready(memberId)).toBe(true);
+      expect(transport).not.toHaveBeenCalled();
     }
   });
 

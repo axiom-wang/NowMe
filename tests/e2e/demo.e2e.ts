@@ -22,6 +22,7 @@ test('双入口、真实会话替换、组织者权限与退出（不调用模�
   expect((await page.context().cookies()).find((cookie) => cookie.name === 'nowme_session')!.value).not.toBe(oldCookie);
   expect((await page.request.get(workspace, { headers: { cookie: `nowme_session=${oldCookie}` }, maxRedirects: 0 })).status()).toBe(303);
   expect((await page.request.get(`${workspace}/brief`)).status()).toBe(404);
+  await page.locator('.home-account > summary').click();
   await page.getByRole('button', { name: '退出登录' }).click();
   await expect(page).toHaveURL(/\/login$/);
 });
@@ -101,6 +102,7 @@ test('黑客松评审：两个入口、浏览、真实采访生成修改、本�
   await page.goto(wall);
   await expect(page.locator('.wall-card', { hasText: '阿柚' })).toHaveCount(1);
   console.log('DEMO_VERIFY 本人确认发布、墙上卡片通过');
+  await page.locator('.home-account > summary').click();
   await page.getByRole('link', { name: '切换身份', exact: true }).click();
   await page.getByRole('button', { name: '以组织者身份体验' }).click();
   await expect(page).toHaveURL(`${demoOrigin}/`);
@@ -110,6 +112,7 @@ test('黑客松评审：两个入口、浏览、真实采访生成修改、本�
   const nextSession = (await page.context().cookies()).find((cookie) => cookie.name === 'nowme_session')?.value;
   expect(nextSession).not.toBe(firstSession);
   expect((await page.request.get(`${workspace}/brief`)).status()).toBe(404);
+  await page.locator('.home-account > summary').click();
   await page.getByRole('button', { name: '退出登录' }).click();
   await expect(page).toHaveURL(/\/login$/);
   console.log('DEMO_VERIFY 组织者权限、切换与退出通过');

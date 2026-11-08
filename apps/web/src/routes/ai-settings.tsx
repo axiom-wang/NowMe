@@ -6,7 +6,6 @@ import { authOf, requireUser } from '../security/session.js';
 import { requireForm } from '../security/forms.js';
 import type { ModelRole, UserModelSummary } from '../hosted/user-models.js';
 import { CsrfField, Notice, PostButton } from '../views/forms.js';
-import { DEMO_MODEL_READY, DEMO_MODEL_MISSING } from '../demo-access.js';
 import { renderPage } from '../views/layout.js';
 
 const EndpointFields: FC<{ role: ModelRole; value: UserModelSummary | null }> = ({ role, value }) => {
@@ -33,16 +32,11 @@ const EndpointFields: FC<{ role: ModelRole; value: UserModelSummary | null }> = 
 };
 
 export function registerAiSettingsRoutes(app: AppHono, deps: AppDeps): void {
+  if (deps.demo) return;
   const user = requireUser(deps);
   const form = requireForm(deps);
   const render = (c: Parameters<typeof authOf>[0], error?: string, status = 200) => {
     const auth = authOf(c);
-    if (deps.demo) return renderPage(c, { title: '演示模型', bodyClass: 'page--ai', status, body: <section class="container container--form card stack">
-      <h1>演示模型</h1>
-      <Notice tone={deps.userModels.ready(auth.user.id) ? 'info' : 'error'}>{deps.userModels.ready(auth.user.id) ? DEMO_MODEL_READY : auth.user.email === 'organizer@demo.nowme.test' ? '演示模型由体验成员使用，请切换为成员身份开始创作。' : DEMO_MODEL_MISSING}</Notice>
-      <p>模型配置由维护者预置，体验身份不能覆盖或删除。模型调用失败可以重试，不会切换为假模型。</p>
-      {error ? <Notice tone="error">{error}</Notice> : null}<a href="/login">切换体验身份</a><a href="/">返回我的墙</a>
-    </section> });
     const interview = deps.userModels.summary(auth.user.id, 'interview');
     const generate = deps.userModels.summary(auth.user.id, 'generate');
     return renderPage(c, { title: 'AI 设置', bodyClass: 'page--ai', status, body: <div class="container container--form stack">
@@ -67,7 +61,6 @@ export function registerAiSettingsRoutes(app: AppHono, deps: AppDeps): void {
   };
   app.get('/account/ai', user, (c) => render(c));
   app.post('/account/ai', form, (c) => {
-    if (deps.demo) return render(c, '体验身份不能覆盖预置模型配置，请联系维护者。', 403);
     const fields = c.get('form');
     const read = (role: ModelRole) => ({ provider: fields[`${role}_provider`] ?? '', baseUrl: fields[`${role}_baseUrl`] ?? '', model: fields[`${role}_model`] ?? '', apiKey: fields[`${role}_apiKey`] ?? '', vision: fields[`${role}_vision`] === '1' });
     try { deps.userModels.save(authOf(c).user.id, { interview: read('interview'), generate: read('generate') }, fields.shared === '1'); }
@@ -75,7 +68,6 @@ export function registerAiSettingsRoutes(app: AppHono, deps: AppDeps): void {
     return c.redirect('/account/ai?saved=1', 303);
   });
   app.post('/account/ai/delete', form, (c) => {
-    if (deps.demo) return render(c, '体验身份不能删除预置模型配置，请联系维护者。', 403);
     deps.userModels.delete(authOf(c).user.id);
     return c.redirect('/account/ai?deleted=1', 303);
   });

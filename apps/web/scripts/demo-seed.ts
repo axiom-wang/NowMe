@@ -3,8 +3,7 @@ import { seedDemoAvatars } from './demo-avatars.js';
  * 演示数据（`pnpm demo` 与 demo 种子测试共用）。
  *
  * - 黑客松墙：1 名组织者 + 6 名成员（6 个 Skill 示例页各属于一名成员）+ 1 名还没做页面的体验成员。最后一名成员保持“已提交未发布”。
- * - 社团墙“山海摄影社 · 2026 秋季招新”（club，M5 验收时加入）：同一位组织者；小满、周一鸣、栗子三位成员各发布一页
- *   （club / interest 示例），体验成员也已加入，可以在这面墙上试“在这里创作”。
+ * - 社团墙“山海摄影社 · 2026 秋季招新”：原有三页，加上体验成员江予安与温溪两页。
  * - AI 共创与山野轻徒步墙各 10 人、6 页，体验成员保留空白工作区。
  * - 四个全员群和虚构私聊：经过聊天服务写入历史消息与部分已读位置。
  * 每名成员都走真实提交管线：生成 Agent 指令 → `/api/agent/exchange` 换凭证 → `/api/agent/revisions` 提交
@@ -25,6 +24,7 @@ import { seedDemoPersonalData } from './demo-persona.js';
 import { buildDemoProfile, DEMO_EXTRA_WALLS, DEMO_TEST_EMAIL, DEMO_TEST_NAME, profileEmail } from './demo-content.js';
 import { DEMO_AI_PUBLISHED_INDICES } from './demo-ai/index.js';
 import { DEMO_TRAIL_PUBLISHED_INDICES } from './demo-trail/index.js';
+import { buildDemoClubProfile, DEMO_CLUB_ADDITIONS } from './demo-club.js';
 
 export const DEMO_DOMAIN = 'demo.nowme.test';
 import { DEMO_WALL_NAME } from '../src/demo-access.js';
@@ -77,7 +77,7 @@ export interface DemoSeed {
   members: DemoMember[];
   /** 已加入、还没做页面的体验成员：给“用自己的 Agent 走一遍”用。 */
   newcomer: { email: string; nickname: string; userId: string; instruction: AgentInstruction };
-  /** 社团墙（体验成员也已加入，还没做页面）。 */
+  /** 社团墙（含体验成员江予安的已发布页面）。 */
   club: { wall: Wall; inviteUrl: string; members: DemoMember[] };
   tester: { email: string; nickname: string; userId: string };
   extraWalls: { wall: Wall; inviteUrl: string; members: DemoWallMember[] }[];
@@ -140,7 +140,7 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
     instruction: createInstruction(deps, wall, newcomerPage),
   };
 
-  // 社团墙：同一位组织者，三位成员各发布一页；体验成员也加入
+  // 社团墙：保留原有三页，增补江予安与温溪两页。
   const { wall: clubWall } = createWall(deps, {
     organizerId: organizer.userId,
     name: DEMO_CLUB_WALL_NAME,
@@ -156,6 +156,7 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
     clubMembers.push(await submitAndPublish(web, clubWall, userId, plan, log));
   }
   addMember(deps, clubWall, newcomerUserId);
+  clubMembers.push(...await ensureDemoClubPages(web, log));
 
   // 接入现有“成员体验”账号：可看全部四面墙，原黑客松墙仍留空白页供创作体验。
   const tester = { email: newcomer.email, nickname: newcomer.nickname, userId: newcomer.userId };
@@ -198,7 +199,7 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
       [4, '我可以帮忙拍过程记录，大家组队之后叫我就好。'],
       [0, '组队前先互相聊聊，想法还没成形也欢迎。'],
     ] },
-    { wall: clubWall, members: [{ userId: tester.userId, nickname: tester.nickname }, ...clubMembers], discussion: [
+    { wall: clubWall, members: [{ userId: tester.userId, nickname: tester.nickname }, ...clubMembers.filter((member) => member.userId !== tester.userId)], discussion: [
       [0, '摄影社这周先做一次作品交流，新同学也可以带手机照片。'],
       [1, '我带了一组校园里的树影，想听听大家怎么选照片。'],
       [2, '我可以分享构图经验，周六见！'],
@@ -218,6 +219,30 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
     club: { wall: clubWall, inviteUrl: `${config.webOrigin}/join/${clubWall.inviteCode}`, members: clubMembers },
     tester, extraWalls, chat,
   };
+}
+
+/** 新旧 Demo 共用的增补：只填写空白工作区，绝不覆盖体验者已经创作的版本。 */
+export async function ensureDemoClubPages(web: WebApp, log: (message: string) => void = () => {}): Promise<DemoMember[]> {
+  const { deps } = web;
+  const organizer = deps.repos.users.findByEmail(`organizer@${DEMO_DOMAIN}`);
+  const wall = organizer && deps.repos.walls.findOpenByOrganizerAndName(organizer.id, DEMO_CLUB_WALL_NAME);
+  if (!wall) return [];
+  const added: DemoMember[] = [];
+  for (const [index, person] of DEMO_CLUB_ADDITIONS.entries()) {
+    let user = deps.repos.users.findByEmail(person.email);
+    if (!user) {
+      // The test identity must already exist; never create a second test account.
+      if (person.email === DEMO_TEST_EMAIL) throw new Error('摄影社增补缺少体验账号');
+      user = deps.repos.users.create({ id: generateId('usr'), email: person.email, nickname: person.name, createdAt: deps.now().toISOString() });
+    }
+    const own = findOwnPage(deps.repos, user.id, wall.id);
+    if (own && deps.repos.revisions.listForPage(own.page.id).length > 0) continue;
+    added.push(await submitAndPublish(web, wall, user.id, {
+      dir: person.id, email: person.email, profile: buildDemoClubProfile(index), publish: true,
+      contactPublic: false, contact: { channel: 'email', value: person.email },
+    }, log));
+  }
+  return added;
 }
 
 /** 一名成员在一面墙上：加入 → 指令 → 换凭证 → 提交（校验 + 渲染）→ 按计划由主人确认发布。 */

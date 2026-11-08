@@ -37,7 +37,7 @@ test('平台托管：采访、生成、预览、修改、发布', async ({ brows
     await a.page.setViewportSize({ width, height: 1000 });
     expect(await a.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}px 创作页不溢出`).toBe(true);
     await expect(a.page.getByRole('list', { name: '采访进度' }).locator('[aria-current="step"]')).toContainText('认识你');
-    if (width !== 320) await a.page.screenshot({ path: testInfo.outputPath(`create-${width}.png`), fullPage: true });
+    if (width !== 320) await a.page.screenshot({ path: testInfo.outputPath(`create-${width}.png`), fullPage: false });
   }
   await a.page.setViewportSize({ width: 1440, height: 1000 });
   await a.page.locator('textarea[name="material"]').fill(`我叫阿柚。做过 3 个校园小程序，负责前端。我总在${SECRET}。`);
@@ -48,6 +48,7 @@ test('平台托管：采访、生成、预览、修改、发布', async ({ brows
   expect(await a.page.locator('input[name="photos"]').evaluate((input: HTMLInputElement) => input.validity.valid)).toBe(false);
   await a.page.locator('input[name="photos"]').setInputFiles(join(EXAMPLES, 'interest-film-zine', 'cover.png'));
   await expect(a.page.locator('[data-photo-list] img')).toBeVisible();
+  await expect.poll(() => a.page.locator('[data-photo-list] img').evaluate((img: HTMLImageElement) => img.naturalWidth)).toBeGreaterThan(0);
   await expect(a.page.locator('[data-photo-status]')).toContainText('已选择 1 张图片');
   expect(await a.page.locator('input[name="photos"]').evaluate((input: HTMLInputElement) => input.validity.valid)).toBe(true);
   const writeIn = a.page.locator('fieldset').filter({ has: a.page.locator('input[name="q_role"]') }).locator('.create-writein');

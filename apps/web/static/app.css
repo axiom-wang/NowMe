@@ -1449,6 +1449,8 @@ input[type='checkbox'] {
   margin: 0;
 }
 
+.skill-page { overflow-wrap: anywhere; }
+
 .skill-page .hero {
   margin-bottom: 20px;
 }

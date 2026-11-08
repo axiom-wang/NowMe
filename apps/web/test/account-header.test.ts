@@ -6,7 +6,7 @@ let t: TestWeb;
 afterEach(async () => { await t?.close(); });
 
 describe.each([false, true])('账号顶栏（演示模式：%s）', (demo) => {
-  it('模型与切换身份页复用主页导航和账号菜单，菜单不重复“我的资料”', async () => {
+  it('所有页面共用账号菜单，演示模式隐藏模型入口，菜单不重复“我的资料”', async () => {
     t = createTestWeb({ demo });
     let cookie: string;
     if (demo) {
@@ -22,9 +22,12 @@ describe.each([false, true])('账号顶栏（演示模式：%s）', (demo) => {
     }
 
     const headers: string[] = [];
-    for (const path of ['/', '/account/ai', '/messages', '/account/data', ...(demo ? ['/login'] : [])]) {
+    const wall = seedWall(t, t.repos.users.findByEmail(demo ? DEMO_ACCOUNTS[0].email : 'header@example.com')!.id, '顶栏测试墙').wall;
+    const group = await get(t, `/messages/wall/${wall.id}`, { cookie });
+    const conversation = group.headers.get('location')!;
+    for (const path of ['/', '/messages', '/account/data', '/walls/new', `/w/${wall.id}`, `/w/${wall.id}/me`, `/w/${wall.id}/admin`, conversation, '/missing-page', ...(demo ? ['/login'] : ['/account/ai'])]) {
       const response = await get(t, path, { cookie });
-      expect(response.status).toBe(200);
+      expect(response.status).toBe(path === '/missing-page' ? 404 : 200);
       const html = await response.text();
       const header = html.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0] ?? '';
       expect(header).toContain('class="site-header home-header"');
@@ -32,7 +35,12 @@ describe.each([false, true])('账号顶栏（演示模式：%s）', (demo) => {
       expect(html).toContain('src="/static/home.js" defer');
       expect(header).toContain('href="/account/data"');
       const menu = header.split('<div class="home-account__menu">')[1] ?? '';
-      expect(menu).toContain(demo ? '演示模型' : 'AI 设置');
+      if (demo) {
+        expect(menu).not.toContain('演示模型');
+        expect(menu).not.toContain('href="/account/ai"');
+      } else {
+        expect(menu).toContain('AI 设置');
+      }
       expect(menu).toContain('action="/logout"');
       expect(menu).not.toContain('我的资料');
       expect(menu).not.toContain('href="/account/data"');
@@ -52,6 +60,7 @@ describe.each([false, true])('账号顶栏（演示模式：%s）', (demo) => {
       expect(html).toContain('class="site-header home-header"');
       expect(html).toContain('体验登录失败');
       const anonymous = await (await get(t, '/login')).text();
+      expect(anonymous).toContain('class="site-header home-header"');
       expect(anonymous).not.toContain('class="home-nav"');
       expect(anonymous).not.toContain('class="home-account"');
     }

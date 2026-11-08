@@ -10,7 +10,7 @@ import { raw } from 'hono/html';
 import type { FC } from 'hono/jsx';
 import { STATIC_PATH_PREFIX } from '../constants.js';
 import type { IssuedTicket } from '../services/tickets.js';
-import { Brand } from './layout.js';
+import { SiteHeader } from './layout.js';
 import { PageFrame } from './page-frame.js';
 
 export interface PublicPageProps {
@@ -31,15 +31,12 @@ export const PublicPageDocument: FC<PublicPageProps> = ({ displayName, tagline, 
         <title>{`${displayName} · NOWMe`}</title>
         <link rel="stylesheet" href={`${STATIC_PATH_PREFIX}app.css`} />
         <link rel="stylesheet" href={`${STATIC_PATH_PREFIX}workspace.css`} />
+        <link rel="stylesheet" href={`${STATIC_PATH_PREFIX}home.css`} />
         <script src={`${STATIC_PATH_PREFIX}page-frame.js`}></script>
         <script src={`${STATIC_PATH_PREFIX}app.js`} defer></script>
       </head>
       <body class="site site--public">
-        <header class="site-header">
-          <div class="site-header__inner">
-            <Brand />
-          </div>
-        </header>
+        <SiteHeader auth={null} />
         <main class="site-main public-page">
           <section class="public-page__intro">
             <h1 class="hero__title">{displayName}</h1>

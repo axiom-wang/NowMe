@@ -4,7 +4,7 @@ import sharp from 'sharp';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { seedDemo, type DemoSeed } from '../scripts/demo-seed.js';
+import { ensureDemoClubPages, seedDemo, type DemoSeed } from '../scripts/demo-seed.js';
 import { DEMO_TEST_NAME } from '../scripts/demo-content.js';
 import { DEMO_TEST_PROFILE } from '../scripts/demo-persona.js';
 import { DEMO_ACCOUNTS } from '../src/demo-access.js';
@@ -21,7 +21,7 @@ afterAll(async () => { await t.close(); });
 describe('demo 种子', () => {
   it('全部演示用户有不同的本地头像；重复补齐不覆盖用户头像', async () => {
     const users = t.db.prepare('SELECT id, avatar_version AS version FROM users').all() as { id: string; version: string }[];
-    expect(users).toHaveLength(26);
+    expect(users).toHaveLength(27);
     expect(new Set(users.map((user) => user.version)).size).toBe(users.length);
     for (const user of users) {
       const image = t.repos.users.avatarForUser(user.id);
@@ -41,23 +41,30 @@ describe('demo 种子', () => {
     expect(seed.members.some((m) => m.published && !m.contactPublic)).toBe(true);
     expect(seed.members.some((m) => m.published && m.contactPublic)).toBe(true);
     const active = t.db.prepare('SELECT COUNT(*) AS n FROM publications WHERE ended_at IS NULL').get() as { n: number };
-    expect(active.n).toBe(5 + 3 + 12);
+    expect(active.n).toBe(5 + 5 + 12);
     const revisions = t.db.prepare("SELECT COUNT(*) AS n FROM revisions WHERE status = 'accepted'").get() as { n: number };
-    expect(revisions.n).toBe(6 + 3 + 12);
+    expect(revisions.n).toBe(6 + 5 + 12);
     expect(seed.newcomer.instruction.command).toContain('/nowme-page');
     expect(seed.inviteUrl).toContain('/join/');
   });
 
-  it('社团墙：同一位组织者，3 名成员各发布一页（复用账号），体验成员也已加入', async () => {
+  it('社团墙保留三页，再增补江予安与温溪；使用原测试账号且重复启动不会新增版本', async () => {
     expect(seed.club.wall.sceneType).toBe('club');
     expect(seed.club.wall.organizerId).toBe(seed.organizer.userId);
-    expect(seed.club.members.map((m) => m.exampleDir)).toEqual(['club-newbie-sticker', 'club-senior-quest', 'interest-film-zine']);
+    expect(seed.club.members.map((m) => m.exampleDir)).toEqual(['club-newbie-sticker', 'club-senior-quest', 'interest-film-zine', 'club-light-notes', 'club-tide-atlas']);
     expect(seed.club.members.every((m) => m.published)).toBe(true);
-    for (const member of seed.club.members) expect(seed.members.some((m) => m.userId === member.userId)).toBe(true);
+    for (const member of seed.club.members.slice(0, 3)) expect(seed.members.some((m) => m.userId === member.userId)).toBe(true);
+    expect(seed.club.members[3]!.userId).toBe(seed.tester.userId);
+    expect(seed.club.members[3]!.nickname).toBe(DEMO_TEST_NAME);
+    expect(seed.club.members[4]!.nickname).toBe('温溪');
+    expect(seed.club.members.slice(3).every((member) => !member.contactPublic)).toBe(true);
+    const before = t.db.prepare('SELECT count(*) AS n FROM revisions').get();
+    expect(await ensureDemoClubPages(t.web)).toEqual([]);
+    expect(t.db.prepare('SELECT count(*) AS n FROM revisions').get()).toEqual(before);
     const clubActive = t.db
       .prepare('SELECT COUNT(*) AS n FROM publications pb JOIN pages p ON p.id = pb.page_id WHERE p.wall_id = ? AND pb.ended_at IS NULL')
       .get(seed.club.wall.id) as { n: number };
-    expect(clubActive.n).toBe(3);
+    expect(clubActive.n).toBe(5);
     expect(t.repos.memberships.findByWallAndUser(seed.club.wall.id, seed.newcomer.userId)?.status).toBe('active');
     expect(seed.club.inviteUrl).toContain('/join/');
   });
@@ -123,7 +130,10 @@ describe('demo 种子', () => {
     for (const account of DEMO_ACCOUNTS) expect(t.repos.users.findByEmail(account.email)).not.toBeNull();
     // 保留原有“从空白开始”体验，新增页面不会占用原黑客松墙的创作工作区。
     expect(t.db.prepare(`SELECT count(*) AS n FROM publications pb JOIN pages p ON p.id = pb.page_id
-      WHERE p.owner_id = ? AND p.wall_id IN (?, ?) AND pb.ended_at IS NULL`).get(seed.tester.userId, seed.wall.id, seed.club.wall.id)).toEqual({ n: 0 });
+      WHERE p.owner_id = ? AND p.wall_id = ? AND pb.ended_at IS NULL`).get(seed.tester.userId, seed.wall.id)).toEqual({ n: 0 });
+    for (const member of seed.club.members) {
+      expect((await t.request(`/w/${seed.club.wall.id}/p/${member.pageId}`, { headers: { cookie } })).status).toBe(200);
+    }
   });
 
   it('模拟聊天有双向消息、正确归属和已读/未读；未参与的私聊不出现在主测试账号中', () => {

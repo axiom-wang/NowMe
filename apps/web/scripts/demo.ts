@@ -2,7 +2,7 @@ import { seedDemoAvatars } from './demo-avatars.js';
 /**
  * 演示：`pnpm demo`
  *
- * 独立数据目录 `.data/demo`（默认保留，`--reset` 才清空重建），四面墙、21 个页面版本、模拟聊天与一键测试登录。
+ * 独立数据目录 `.data/demo`（默认保留，`--reset` 才清空重建），四面墙、23 个页面版本、模拟聊天与一键测试登录。
  * 同时启动主站（3000）与页面托管（4000），Ctrl+C 同时关闭；不部署，使用维护者预置的真实账号模型。
  */
 import { execFileSync } from 'node:child_process';
@@ -15,7 +15,7 @@ import { createWebApp } from '../src/app.js';
 import { createDemoModelLookup } from './demo-network.js';
 import { provisionDemoModels } from './demo-models.js';
 import { openDatabase } from '../src/db/index.js';
-import { seedDemo } from './demo-seed.js';
+import { ensureDemoClubPages, seedDemo } from './demo-seed.js';
 import { DEMO_ACCOUNTS, DEMO_MODEL_MISSING, DEMO_MODEL_READY } from '../src/demo-access.js';
 import { checkLocalPorts, handleLocalShutdown, startLocalServers } from './local-server.js';
 import { prepareDemoDirectory } from './demo-data.js';
@@ -63,12 +63,13 @@ const ticketSecret = resolveTicketSecret(config);
 const web = createWebApp({ config: { ...config, ticketSecret }, db, demo: { dataDir: DEMO_DATA_DIR }, log: () => {}, secretEnv: process.env, modelLookup: createDemoModelLookup(process.env) });
 
 if (!reuse) {
-  console.log('[demo] 正在准备 4 面墙、21 个页面版本，首次启动需要几分钟……');
+  console.log('[demo] 正在准备 4 面墙、23 个页面版本，首次启动需要几分钟……');
   await seedDemo(web, (message) => console.log(`[demo] ${message}`));
 } else if (DEMO_ACCOUNTS.some((account) => !web.deps.repos.users.findByEmail(account.email))) {
   fail('现有数据缺少体验账号。数据已保留，请备份后运行 pnpm demo --reset 重建。');
 }
 
+if (reuse) await ensureDemoClubPages(web, (message) => console.log(`[demo] ${message}`));
 seedDemoAvatars(web.deps);
 
 let modelReady = false;

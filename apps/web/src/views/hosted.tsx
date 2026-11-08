@@ -1,4 +1,4 @@
-import { DEMO_MODEL_READY, DEMO_MODEL_MISSING, demoModelError } from '../demo-access.js';
+import { DEMO_MODEL_MISSING, demoModelError } from '../demo-access.js';
 /**
  * 平台托管路线的页面（contracts 9 / hosted-route 2、3、5）：
  * - `CreateView`：“在这里创作”——按 brief 状态显示 素材与点选 / 追问 / 确认“AI 眼中的你” / 已确认（开始生成）；
@@ -76,7 +76,7 @@ function base(wall: Wall): string {
 }
 
 const ModelNotice: FC<{ overview: HostedOverview; demo?: boolean }> = ({ overview, demo }) => (
-  <p class="muted">{demo ? overview.modelReady ? DEMO_MODEL_READY : DEMO_MODEL_MISSING : overview.modelReady ? '使用你的 AI API，模型费用由服务商向你收取；失败请求也可能计费。' : '请先配置你自己的 AI API，已有资料与页面不受影响。'} {!demo ? <a href="/account/ai">AI 设置</a> : null}</p>
+  <p class="muted">{demo ? DEMO_MODEL_MISSING : overview.modelReady ? '使用你的 AI API，模型费用由服务商向你收取；失败请求也可能计费。' : '请先配置你自己的 AI API，已有资料与页面不受影响。'} {!demo ? <a href="/account/ai">AI 设置</a> : null}</p>
 );
 
 const STEP_LABELS = [
@@ -135,7 +135,7 @@ const InterviewForm: FC<{ model: CreateViewModel }> = ({ model }) => {
         <SectionHeading number="02" title="点选几下，认识你多一点" hint="凭直觉选就好。除了标记必答的问题，其他都可以跳过。" />
         <div class="create-questions">
           {scene.choiceQuestions.map((question) => {
-            const prompt = question.question.replace('【先选这个】', '');
+            const prompt = question.question.replace(/【(?:先选这个|必答)】/g, '');
             const parts = /^(.*?)（([^）]+)）$/.exec(prompt);
             return (
               <fieldset class="field hosted-question">
@@ -150,7 +150,7 @@ const InterviewForm: FC<{ model: CreateViewModel }> = ({ model }) => {
                       </label>
                     ) : (
                       <label class="check chip-check">
-                        <input type="radio" name={`q_${question.id}`} value={String(index)} data-write-in={isWriteInOption(option) || option.includes('只写') ? '' : undefined} checked={saved?.choices[question.id]?.selected.includes(option)} required={question.required} />
+                        <input type="radio" name={`q_${question.id}`} value={String(index)} data-write-in={isWriteInOption(option) || /只写|^其他/.test(option) ? '' : undefined} checked={saved?.choices[question.id]?.selected.includes(option)} required={question.required} />
                         <span>{option}</span>
                       </label>
                     ),
@@ -398,10 +398,10 @@ export const CreateView: FC<{ model: CreateViewModel }> = ({ model }) => {
         <aside class="create-journey" aria-label="创作流程">
           <p class="create-journey__title">你的创作旅程<span>0{step + 1} / 04</span></p>
           <Steps current={step} />
-          <div class={`create-model${model.overview.modelReady ? ' create-model--ready' : ''}`}>
-            <p class="create-model__title"><span aria-hidden="true"></span>{model.overview.modelReady ? model.demo ? '演示模型已就绪' : '你的 AI 已就绪' : '先连接你的 AI'}</p>
+          {model.demo && model.overview.modelReady ? null : <div class={`create-model${model.overview.modelReady ? ' create-model--ready' : ''}`}>
+            <p class="create-model__title"><span aria-hidden="true"></span>{model.overview.modelReady ? '你的 AI 已就绪' : '先连接你的 AI'}</p>
             <ModelNotice overview={model.overview} demo={model.demo} />
-          </div>
+          </div>}
           <p class="create-journey__note"><HomeIcon name="eye" /><span>资料先留给自己。<br />页面由你预览、确认发布。</span></p>
           <a class="create-back" href={base(model.wall)}>← 返回创作工作区</a>
         </aside>

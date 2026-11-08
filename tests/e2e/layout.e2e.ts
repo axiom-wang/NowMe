@@ -4,10 +4,11 @@ import { createWall, login, uniqueEmail } from './helpers.js';
 test('各页面与顶栏共用内容边界，桌面限制最大宽度，手机无横向溢出', async ({ page, browser }, testInfo) => {
   await login(page, uniqueEmail('layout'), '布局测试');
   const { wallId } = await createWall(page, '布局检查墙');
-  const paths = ['/', '/messages', '/account/data', '/account/ai', '/walls/new', `/w/${wallId}`, `/w/${wallId}/me`, `/w/${wallId}/me/create`, `/w/${wallId}/admin`, `/messages/wall/${wallId}`];
+  const paths = ['/', '/messages', '/account/data', '/account/ai', '/walls/new', '/skill', `/w/${wallId}`, `/w/${wallId}/me`, `/w/${wallId}/me/create`, `/w/${wallId}/admin`, `/messages/wall/${wallId}`];
   for (const width of [1920, 1440, 1024, 768, 375, 320]) {
     await page.setViewportSize({ width, height: 1000 });
     let baseline: { x: number; width: number } | undefined;
+    let headerBaseline: { x: number; y: number; width: number; height: number } | undefined;
     for (const path of paths) {
       const response = await page.goto(path);
       expect(response?.status(), path).toBe(200);
@@ -27,6 +28,17 @@ test('各页面与顶栏共用内容边界，桌面限制最大宽度，手机�
         };
       });
       const label = `${width}px ${path}`;
+      await expect(page.locator('.site-header')).toHaveClass('site-header home-header');
+      await expect(page.locator('.site-header__nav')).toHaveCount(0);
+      await page.evaluate(() => document.fonts.ready);
+      const headerBox = await page.locator('.site-header').boundingBox();
+      headerBaseline ??= headerBox!;
+      expect(headerBox, label).toEqual(headerBaseline);
+      await page.locator('.home-account > summary').click();
+      await expect(page.locator('.home-account__menu').getByRole('link', { name: 'AI 设置', exact: true })).toBeVisible();
+      await expect(page.locator('.home-account__menu a[href="/account/data"]')).toHaveCount(0);
+      await page.keyboard.press('Escape');
+      await expect(page.locator('.home-account')).not.toHaveAttribute('open');
       expect(layout.x, label).toBeCloseTo(layout.expectedX, 1);
       expect(layout.width, label).toBeCloseTo(layout.expectedWidth, 1);
       expect(layout.width, label).toBeLessThanOrEqual(1240);
@@ -45,6 +57,8 @@ test('各页面与顶栏共用内容边界，桌面限制最大宽度，手机�
     for (const width of [1440, 375, 320]) {
       await loginPage.setViewportSize({ width, height: 1000 });
       await loginPage.goto('/login');
+      await expect(loginPage.locator('.site-header')).toHaveClass('site-header home-header');
+      await expect(loginPage.locator('.home-nav, .home-account')).toHaveCount(0);
       const shell = await loginPage.locator('.site-main').boundingBox();
       expect(await loginPage.locator('.site-header__inner').boundingBox()).toMatchObject({ x: shell!.x, width: shell!.width });
       expect(await loginPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

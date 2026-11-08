@@ -1,5 +1,11 @@
 [
   {
+    "email": "wenxi@demo.nowme.test",
+    "nickname": "温溪",
+    "file": "wenxi.webp",
+    "source": "local:original-coastal-illustration"
+  },
+  {
     "email": "ai-01@demo.nowme.test",
     "nickname": "许知远",
     "file": "ai-01.webp",

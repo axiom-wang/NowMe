@@ -21,10 +21,12 @@
   var photoStatus = form.querySelector('[data-photo-status]');
   var photoList = form.querySelector('[data-photo-list]');
   var savedPhotoStatus = photoStatus.textContent;
-  var previewUrls = [];
+  var previewReaders = [];
   function releasePreviews() {
-    previewUrls.forEach(function (url) { URL.revokeObjectURL(url); });
-    previewUrls = [];
+    previewReaders.forEach(function (reader) {
+      if (reader.readyState === FileReader.LOADING) reader.abort();
+    });
+    previewReaders = [];
   }
   photos.addEventListener('change', function () {
     releasePreviews();
@@ -37,12 +39,16 @@
     if (error) return;
     files.forEach(function (file, index) {
       if (!['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type)) return;
-      var url = URL.createObjectURL(file);
-      previewUrls.push(url);
+      // 主站 CSP 仅允许 self / data 图片；读取本地文件，不放宽安全策略。
+      var reader = new FileReader();
+      previewReaders.push(reader);
       var image = document.createElement('img');
-      image.src = url;
       image.alt = '待上传图片 ' + (index + 1);
       photoList.appendChild(image);
+      reader.addEventListener('load', function () {
+        if (typeof reader.result === 'string') image.src = reader.result;
+      });
+      reader.readAsDataURL(file);
     });
   });
   window.addEventListener('pagehide', releasePreviews);
