@@ -8,6 +8,7 @@ export interface ChatMessage {
   conversationId: string;
   senderId: string;
   senderName: string;
+  senderAvatarUrl?: string | null;
   clientId: string;
   text: string;
   createdAt: string;
@@ -19,6 +20,7 @@ export interface ConversationSummary {
   wallName: string;
   kind: 'group' | 'direct';
   title: string;
+  avatarUrl?: string | null;
   unread: number;
   lastSequence: number;
   lastText: string | null;

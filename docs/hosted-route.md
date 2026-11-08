@@ -193,9 +193,11 @@ ID 前缀新增：`pfe_`（画像条目）、`brf_`（brief）、`bas_`（brief 
 - 采访模型输出只经 JSX 转义渲染，不作为 HTML 插入。
 - 主人在开始采访前看到一行说明：“你填写的内容和图片会发送给 AI 模型服务（<配置的服务名>）用来生成页面……不会给组织者或其他成员看。”
 
-## 8. 演示数据
+## 8. 演示数据与评审模式
 
-`pnpm demo` 在现有黑客松演示墙之外，再建一面社团墙“山海摄影社 · 2026 秋季招新”（`club`），由 3 名成员各发布一个 club / interest 示例页（`club-newbie-sticker`、`club-senior-quest`、`interest-film-zine`），复用现有演示账号，终端输出里列出两面墙。
+`pnpm demo` 保留黑客松、社团墙及现有背景人物与示例数据，每次运行清空并重建独立 `.data/demo`。仅演示启动流程显式启用两种体验身份：`newbie@demo.nowme.test`（成员）与 `organizer@demo.nowme.test`（组织者）。首页和登录页提供同源 POST 快捷入口，固定身份映射，不接受任意用户、邮箱、权限或跳转；切换替换会话；登录后统一进入首页，首页不展示身份切换卡片，从墙卡片进入工作区或后台。邮箱验证码及已有会话同样禁止背景账号访问，普通开发登录不变。
+
+维护者通过服务端 `NOWME_DEMO_*` 环境变量或未跟踪的 `.env.local` 提供真实服务与 Key，可共用或分别配置采访和生成。演示启动使用现有 `userModels.save()` 与 `NOWME_AI_ENCRYPTION_KEY` 将配置加密写入体验成员账号，沿用当前用户模型调用、网络限制与凭证版本失效。评委无需填 Key，费用由演示提供者承担；两个体验身份不能通过界面或接口覆盖、删除预置模型配置。未提供配置提示维护者补齐，模型错误可重试，演示拒绝假模型，无普通账号的平台 Key 回退。配置方法、两个身份及验收记录见 [黑客松演示说明](demo.md)。
 
 ## 9. 验收（M5）
 
@@ -211,3 +213,7 @@ ID 前缀新增：`pfe_`（画像条目）、`brf_`（brief）、`bas_`（brief 
 - 新增校验码 `HOSTED_BLOCKS_CHANGED`（warning，stage `platform`）。
 - 主站 multipart 只用于 `POST /w/:wallId/me/create/start`（上限 14 MB），其余表单仍是 64 KB 的 urlencoded。
 - 测试：`apps/web/test/hosted.test.ts`（功能）、`apps/web/test/openai-client.test.ts`（转换与模拟服务全流程）、`apps/web/test/security/hosted.security.test.ts`（S7、S8）、`apps/web/test/security/model-provider.security.test.ts`（key 边界）、`tests/e2e/hosted.e2e.ts`（假客户端走通采访 → 生成 → 预览 → 修改 → 发布）。
+
+### 黑客松评审演示验收（2026-11-07）
+
+两种固定体验身份、同源 POST 一键会话、背景账号禁登与演示模型配置保护已实现。维护者提供 DeepSeek 配置后，真实采访 → 资料确认 → 生成 → 沙箱预览 → 指定区块修改 → 本人发布完整通过；没有使用假模型替代。类型检查通过，全量 1,548 项、安全 742 项、普通浏览器回归 3 项、真实演示浏览器验收 2 项通过。配置方法、DNS 环境处理和详细验收见 [demo.md](demo.md)。

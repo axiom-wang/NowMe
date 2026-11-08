@@ -15,7 +15,7 @@ description: 为 NOWMe 社区墙做一页“有个性的自己”。当用户输
 
 例如 `/nowme-page wal_xxxx nmt_xxxx --server http://localhost:3000`。token 只能换一次；换过以后，同一个工作目录里直接用 `nowme fetch`（不带参数）刷新。
 
-Skill 版本：0.1.0。最新版本与安装说明在 NOWMe 应用的 `/skill` 页面（例如 `http://localhost:3000/skill`）；`nowme fetch` 发现有新版本时会提示，请转告主人更新。
+Skill 版本：0.1.0。最新版本与安装说明在 https://github.com/axiom-wang/nowme-skill （可跨电脑安装）；`nowme fetch` 发现有新版本时会提示，请转告主人更新。
 
 本文件是操作手册，按第 0–7 步顺序做。细节放在 `reference/` 里，用到时再读：
 

@@ -16,7 +16,8 @@ import { wallQueries } from '../db/wall-queries.js';
 import type { Wall } from '../db/walls.js';
 import { requireForm } from '../security/forms.js';
 import { authOf, requireUser } from '../security/session.js';
-import { findOrganizerWall } from '../services/access.js';
+import { findMemberWall, findOrganizerWall } from '../services/access.js';
+import { uploadWallCover } from '../services/wall-cover.js';
 import { qrSvgDataUri } from '../services/qr.js';
 import { closeWall, removeMember } from '../services/walls.js';
 import { AdminView, type AdminModel, type AdminNotice } from '../views/admin.js';
@@ -25,11 +26,12 @@ import { renderPage } from '../views/layout.js';
 import { sceneLabels } from './home.js';
 import { invitePath, wallPath } from './walls.js';
 
-const NOTICES: ReadonlySet<string> = new Set<AdminNotice>(['created', 'removed']);
+const NOTICES: ReadonlySet<string> = new Set<AdminNotice>(['created', 'removed', 'cover-updated', 'cover-deleted']);
 
 export function registerAdminRoutes(app: AppHono, deps: AppDeps): void {
   const user = requireUser(deps);
   const form = requireForm(deps);
+  const coverForm = requireForm(deps, { multipartFiles: 'cover' });
   const labels = sceneLabels();
 
   function adminModel(wall: Wall): AdminModel {
@@ -38,6 +40,7 @@ export function registerAdminRoutes(app: AppHono, deps: AppDeps): void {
     const inviteUrl = `${deps.config.webOrigin}${invitePath(wall.inviteCode)}`;
     return {
       wall,
+      coverUrl: deps.repos.walls.coverUrl(wall.id),
       sceneLabel: labels[wall.sceneType],
       inviteUrl,
       inviteQr: qrSvgDataUri(inviteUrl),
@@ -46,12 +49,12 @@ export function registerAdminRoutes(app: AppHono, deps: AppDeps): void {
     };
   }
 
-  function renderAdmin(c: Context<AppEnv>, wall: Wall, options: { notice?: AdminNotice | null; closeError?: boolean; status?: number } = {}) {
+  function renderAdmin(c: Context<AppEnv>, wall: Wall, options: { notice?: AdminNotice | null; closeError?: boolean; coverError?: string; status?: number } = {}) {
     return renderPage(c, {
       title: `${wall.name} · 组织者后台`,
       status: options.status,
       body: (
-        <AdminView model={adminModel(wall)} csrf={authOf(c).session.csrfToken} notice={options.notice ?? null} closeError={options.closeError} />
+        <AdminView model={adminModel(wall)} csrf={authOf(c).session.csrfToken} notice={options.notice ?? null} closeError={options.closeError} coverError={options.coverError} />
       ),
     });
   }
@@ -61,6 +64,33 @@ export function registerAdminRoutes(app: AppHono, deps: AppDeps): void {
     if (!organizer) return renderNotFound(c);
     const notice = c.req.query('notice');
     return renderAdmin(c, organizer.wall, { notice: notice && NOTICES.has(notice) ? (notice as AdminNotice) : null });
+  });
+
+  app.get('/w/:wallId/cover', user, (c) => {
+    const member = findMemberWall(deps.repos, authOf(c).user.id, c.req.param('wallId'));
+    if (!member) return renderNotFound(c);
+    const cover = deps.repos.walls.findCover(member.wall.id);
+    if (!cover) return renderNotFound(c);
+    // 不缓存成员资源：移出、退出、关闭后，旧地址也必须立即失效。
+    return c.body(new Uint8Array(cover), 200, { 'Content-Type': 'image/webp', 'Cache-Control': 'private, no-store', 'X-Content-Type-Options': 'nosniff' });
+  });
+
+  app.post('/w/:wallId/admin/cover', coverForm, async (c) => {
+    const organizer = findOrganizerWall(deps.repos, authOf(c).user.id, c.req.param('wallId'));
+    if (!organizer) return renderNotFound(c);
+    const result = await uploadWallCover(deps, authOf(c).user.id, organizer.wall.id, c.get('uploads') ?? []);
+    if (!result.ok) {
+      if (result.status === 404) return renderNotFound(c);
+      return renderAdmin(c, organizer.wall, { coverError: result.error, status: result.status });
+    }
+    return c.redirect(`${wallPath(organizer.wall.id)}/admin?notice=cover-updated#wall-cover-heading`, 303);
+  });
+
+  app.post('/w/:wallId/admin/cover/delete', form, (c) => {
+    const organizer = findOrganizerWall(deps.repos, authOf(c).user.id, c.req.param('wallId'));
+    if (!organizer) return renderNotFound(c);
+    deps.repos.walls.deleteCover(organizer.wall.id);
+    return c.redirect(`${wallPath(organizer.wall.id)}/admin?notice=cover-deleted#wall-cover-heading`, 303);
   });
 
   app.post('/w/:wallId/admin/remove', form, (c) => {

@@ -3,6 +3,7 @@
  * T3.2：`publish` 是发布状态（当前发布、缩略卡确认、联系方式、公开链接，见 services/publish.ts）；
  * 删除页面后留下的版本墓碑不能预览、不能发布、不签发票据。
  */
+import { SKILL_VERSION } from '@nowme/skill';
 import { compareVersions, isVersion, REVISION_ID_PATTERN } from '@nowme/contracts';
 import type { AppDeps } from '../context.js';
 import type { Page } from '../db/pages.js';
@@ -83,6 +84,7 @@ export interface WorkspaceModel {
 }
 
 export interface WorkspaceHosted {
+  demo?: boolean;
   overview: HostedOverview;
   /** 选中版本的区块（“修改这一版”的下拉选项）。 */
   editBlocks: string[];
@@ -102,7 +104,7 @@ export interface LoadWorkspaceOptions {
 }
 
 export function loadWorkspace(
-  deps: Pick<AppDeps, 'repos' | 'tickets' | 'now' | 'config' | 'hosted'> & Partial<Pick<AppDeps, 'skillPackage'>>,
+  deps: Pick<AppDeps, 'repos' | 'tickets' | 'now' | 'config' | 'hosted'> & Partial<Pick<AppDeps, 'skillPackage' | 'demo'>>,
   own: OwnPage,
   options: LoadWorkspaceOptions,
 ): WorkspaceModel | null {
@@ -148,11 +150,12 @@ export function loadWorkspace(
     hosted: deps.hosted
       ? {
           overview: deps.hosted.overview(own, page.ownerId),
+          demo: !!deps.demo,
           editBlocks: selected?.report.stats.blocks ?? [],
           error: options.hostedError ?? null,
         }
       : null,
-    skill: loadWorkspaceSkill(deps.config.webOrigin, deps.skillPackage?.manifest.version ?? null, credential?.clientSkillVersion ?? null),
+    skill: loadWorkspaceSkill(deps.config.webOrigin, deps.skillPackage?.manifest.version ?? SKILL_VERSION, credential?.clientSkillVersion ?? null),
   };
 }
 

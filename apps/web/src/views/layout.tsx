@@ -17,6 +17,7 @@ import { STATIC_PATH_PREFIX } from '../constants.js';
 import type { AppEnv, SessionAuth } from '../context.js';
 import { STATIC_DIR } from '../routes/static.js';
 import { CsrfField } from './forms.js';
+import { HomeIcon } from './home-icons.js';
 
 /** 页面链接的样式表（按顺序；`app.css` 总是链接）。 */
 export const STYLESHEETS: readonly string[] = ['app.css', ...['wall.css', 'workspace.css', 'hosted.css', 'messages.css'].filter((name) => existsSync(join(STATIC_DIR, name)))];
@@ -24,6 +25,7 @@ export const STYLESHEETS: readonly string[] = ['app.css', ...['wall.css', 'works
 export interface LayoutProps {
   title: string;
   auth: SessionAuth | null;
+  demo?: boolean;
   /** 页面主体的额外 class（例如 `page--narrow`）。 */
   bodyClass?: string;
   /** 每隔几秒自动刷新（托管任务进行中；主站 CSP 不允许内联脚本，用 meta refresh）。 */
@@ -47,7 +49,7 @@ export const Brand: FC = () => (
   </a>
 );
 
-const Header: FC<{ auth: SessionAuth | null }> = ({ auth }) => (
+const Header: FC<{ auth: SessionAuth | null; demo?: boolean }> = ({ auth, demo }) => (
   <header class="site-header">
     <div class="site-header__inner">
       <Brand />
@@ -60,10 +62,11 @@ const Header: FC<{ auth: SessionAuth | null }> = ({ auth }) => (
           <a class="nav-link nav-link--quiet" href="/account/data">
             我的资料
           </a>
-          <a class="nav-link nav-link--quiet" href="/account/ai">AI 设置</a>
+          <a class="nav-link nav-link--quiet" href="/account/ai">{demo ? '演示模型' : 'AI 设置'}</a>
+          {demo ? <a class="nav-link" href="/login">切换身份</a> : null}
           <span class="user-chip">
             <span class="avatar avatar--sm" aria-hidden="true">
-              {initialOf(auth.user.nickname)}
+              {auth.user.avatarVersion ? <img src={`/account/avatar?v=${auth.user.avatarVersion}`} alt="" /> : initialOf(auth.user.nickname)}
             </span>
             <span class="user-chip__name">{auth.user.nickname}</span>
           </span>
@@ -87,7 +90,31 @@ const Footer: FC = () => (
   </footer>
 );
 
-export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyClass, refreshSeconds, children }) => (
+const HOME_HEADER_PAGES = new Set(['page--home', 'page--messages', 'page--data', 'page--ai', 'page--switch', 'page--create']);
+
+/** 账号页面共用的居中导航与原生可键盘操作的账号菜单。 */
+const HomeHeader: FC<{ auth: SessionAuth; demo?: boolean; active?: 'home' | 'messages' | 'data' }> = ({ auth, demo, active }) => (
+  <header class="site-header home-header">
+    <div class="site-header__inner">
+      <Brand />
+      <nav class="home-nav" aria-label="账号">
+        <a class={`nav-link${active === 'home' ? ' home-nav__active' : ''}`} href="/" aria-current={active === 'home' ? 'page' : undefined}>我的</a>
+        <a class={`nav-link${active === 'messages' ? ' home-nav__active' : ''}`} href="/messages" aria-current={active === 'messages' ? 'page' : undefined}>消息 <span class="message-badge" data-message-unread hidden aria-label="未读消息"></span></a>
+        <a class={`nav-link${active === 'data' ? ' home-nav__active' : ''}`} href="/account/data" aria-current={active === 'data' ? 'page' : undefined}>我的资料</a>
+      </nav>
+      <details class="home-account">
+        <summary class="user-chip"><span class="avatar avatar--sm" aria-hidden="true">{auth.user.avatarVersion ? <img src={`/account/avatar?v=${auth.user.avatarVersion}`} alt="" /> : initialOf(auth.user.nickname ?? '')}</span><span class="user-chip__name">{auth.user.nickname}</span><HomeIcon name="chevron" /></summary>
+        <div class="home-account__menu">
+          <a href="/account/ai">{demo ? '演示模型' : 'AI 设置'}</a>
+          {demo ? <a href="/login">切换身份</a> : null}
+          <form method="post" action="/logout"><CsrfField token={auth.session.csrfToken} /><button type="submit">退出登录</button></form>
+        </div>
+      </details>
+    </div>
+  </header>
+);
+
+export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyClass, refreshSeconds, demo, children }) => (
   <>
     {raw('<!doctype html>')}
     <html lang="zh-CN">
@@ -103,9 +130,13 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
         <script src={`${STATIC_PATH_PREFIX}page-frame.js`}></script>
         <script src={`${STATIC_PATH_PREFIX}app.js`} defer></script>
         {auth?.user.nickname ? <script src={`${STATIC_PATH_PREFIX}messages.js`} defer></script> : null}
+        {HOME_HEADER_PAGES.has(bodyClass ?? '') ? <link rel="stylesheet" href={`${STATIC_PATH_PREFIX}home.css`} /> : null}
+        {bodyClass === 'page--data' ? <link rel="stylesheet" href={`${STATIC_PATH_PREFIX}profile.css`} /> : null}
+        {bodyClass === 'page--create' ? <script src={`${STATIC_PATH_PREFIX}hosted.js`} defer></script> : null}
+        {HOME_HEADER_PAGES.has(bodyClass ?? '') ? <script src={`${STATIC_PATH_PREFIX}home.js`} defer></script> : null}
       </head>
       <body class={bodyClass ? `site ${bodyClass}` : 'site'}>
-        <Header auth={auth} />
+        {HOME_HEADER_PAGES.has(bodyClass ?? '') && auth ? <HomeHeader auth={auth} demo={demo} active={bodyClass === 'page--data' ? 'data' : bodyClass === 'page--messages' ? 'messages' : bodyClass === 'page--home' ? 'home' : undefined} /> : <Header auth={auth} demo={demo} />}
         <main class="site-main">{children}</main>
         <Footer />
       </body>
@@ -120,7 +151,7 @@ export function renderPage(
 ): Response | Promise<Response> {
   const auth = c.get('auth') ?? null;
   return c.html(
-    <Layout title={options.title} auth={auth} bodyClass={options.bodyClass} refreshSeconds={options.refreshSeconds}>
+    <Layout title={options.title} auth={auth} demo={c.get('demo')} bodyClass={options.bodyClass} refreshSeconds={options.refreshSeconds}>
       {options.body}
     </Layout>,
     (options.status ?? 200) as 200,

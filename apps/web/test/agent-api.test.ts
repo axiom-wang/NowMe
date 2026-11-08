@@ -31,7 +31,7 @@ describe('Agent API', () => {
     expect(context.wall.id).toBe(wall.id);
     expect(context.page.id).toBe(page.id);
     expect(Object.keys(context).sort()).toEqual(['kit', 'limits', 'page', 'skill', 'wall']);
-    expect(context.skill).toEqual({ version: TEST_SKILL_VERSION, installUrl: `${t.config.webOrigin}/skill` });
+    expect(context.skill).toEqual({ version: TEST_SKILL_VERSION, installUrl: 'https://github.com/axiom-wang/nowme-skill' });
     expect(t.repos.credentials.findActiveForPage(page.id)?.lastUsedAt).toBe(t.clock.now().toISOString());
   });
 

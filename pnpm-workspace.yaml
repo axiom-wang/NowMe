@@ -32,6 +32,7 @@ catalog:
   "@types/upng-js": ^2.1.5
   # @nowme/web（T3.1）：邀请二维码（服务端生成 SVG）
   qrcode: ^1.5.4
+  sharp: ^0.35.5
   "@types/qrcode": ^1.5.6
   # @nowme/web（M5 平台托管路线）：Claude API（采访与托管生成）
   "@anthropic-ai/sdk": ^1.6.0
@@ -40,6 +41,7 @@ catalog:
 # esbuild（tsx 依赖）的 postinstall 只校验 / 链接本平台的预编译二进制。
 allowBuilds:
   esbuild: true
+  sharp: false
 
 minimumReleaseAgeExclude:
   - "@anthropic-ai/sdk@1.6.0"

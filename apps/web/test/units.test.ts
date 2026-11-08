@@ -33,7 +33,7 @@ describe('Agent 指令（contracts 4.3）', () => {
 
   it('纯文本说明第 0 步：去主站的 install.md 下载工具包，nowme 指工具包里的单文件命令行（不需要装成 Skill）', () => {
     const text = formatPlainText({ wallName: '周末黑客松', wallId, token, server: 'https://nowme.example', expiresAt: START });
-    expect(text).toContain('https://nowme.example/skill/install.md');
+    expect(text).toContain('https://raw.githubusercontent.com/axiom-wang/nowme-skill/main/install.md');
     expect(text).toContain('node <解压目录>/nowme-page/scripts/nowme.mjs');
     expect(text).toContain('不用装成 Skill');
     // token 只出现在 nowme fetch 那一行

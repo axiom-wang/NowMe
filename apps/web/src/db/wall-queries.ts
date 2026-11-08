@@ -25,8 +25,9 @@ export interface PublishedEntry {
   publishedAt: string;
 }
 
-/** 组织者后台的一行：只有昵称、角色、加入时间、发布状态（S5）。 */
+/** 组织者后台的一行：只有昵称、头像、角色、加入时间、发布状态（S5）。 */
 export interface AdminMemberRow {
+  avatarUrl?: string | null;
   membershipId: string;
   nickname: string;
   role: MembershipRole;
@@ -74,7 +75,7 @@ function createWallQueries(db: Database) {
   const findPublished = db.prepare(`${PUBLISHED_SELECT} AND p.id = ?`);
   const countPublished = db.prepare(`SELECT COUNT(*) AS n FROM (${PUBLISHED_SELECT})`);
   const adminMembers = db.prepare(
-    `SELECT m.id AS membership_id, u.nickname, m.role, m.joined_at,
+    `SELECT CASE WHEN u.avatar_version IS NOT NULL THEN '/w/' || m.wall_id || '/members/' || u.id || '/avatar?v=' || u.avatar_version END AS avatar_url, m.id AS membership_id, u.nickname, m.role, m.joined_at,
             EXISTS (SELECT 1 FROM publications pb WHERE pb.page_id = p.id AND pb.ended_at IS NULL) AS has_active,
             EXISTS (SELECT 1 FROM publications pb WHERE pb.page_id = p.id) AS has_any
        FROM memberships m
@@ -106,6 +107,7 @@ function createWallQueries(db: Database) {
     /** 组织者后台：有效成员的昵称、角色、加入时间、发布状态（组织者在最前）。 */
     listMembersForAdmin(wallId: string): AdminMemberRow[] {
       return (adminMembers.all(wallId) as Record<string, unknown>[]).map((row) => ({
+        ...(row.avatar_url ? { avatarUrl: row.avatar_url as string } : {}),
         membershipId: row.membership_id as string,
         nickname: (row.nickname as string | null) ?? '',
         role: row.role as MembershipRole,

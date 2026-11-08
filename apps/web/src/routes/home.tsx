@@ -6,7 +6,9 @@ import { loadSceneGuide } from '@nowme/skill';
 import { SCENE_TYPES, type SceneType } from '@nowme/contracts';
 import type { AppDeps, AppHono } from '../context.js';
 import { authOf, requireUser } from '../security/session.js';
-import { HomeView, type HomeEntryStatus, type HomeItem, type HomeNotice } from '../views/home.js';
+import { HomeView, type HomeEntryStatus, type HomeFilter, type HomeItem, type HomeNotice } from '../views/home.js';
+import { LoginView } from '../views/auth.js';
+import { DEMO_ACCOUNTS } from '../demo-access.js';
 import { renderPage } from '../views/layout.js';
 
 /** 场景类型的中文名（读 skill/scenes/<type>.json 的 label，contracts 7）。 */
@@ -19,7 +21,10 @@ const NOTICES: ReadonlySet<string> = new Set<HomeNotice>(['wall-closed']);
 export function registerHomeRoutes(app: AppHono, deps: AppDeps): void {
   const labels = sceneLabels();
 
-  app.get('/', requireUser(deps), (c) => {
+  app.get('/', async (c, next) => {
+    if (deps.demo && !c.get('auth')) return renderPage(c, { title: '黑客松评审体验', body: <LoginView next="/" demoAccounts={DEMO_ACCOUNTS} /> });
+    return requireUser(deps)(c, next);
+  }, (c) => {
     const auth = authOf(c);
     const items: HomeItem[] = deps.repos.memberships.listAllForUser(auth.user.id).map(({ membership, wall, pageId }) => {
       const status: HomeEntryStatus = wall.status === 'closed' ? 'closed' : membership.status;
@@ -28,16 +33,22 @@ export function registerHomeRoutes(app: AppHono, deps: AppDeps): void {
         role: membership.role,
         sceneLabel: labels[wall.sceneType],
         status,
+        pageId: status === 'active' ? pageId : null,
+        coverUrl: status === 'active' ? deps.repos.walls.coverUrl(wall.id) : null,
         pageState: status === 'active' && pageId ? deps.repos.publications.displayState(pageId) : null,
       };
     });
     const notice = c.req.query('notice');
+    const queryFilter = c.req.query('filter');
+    const filter: HomeFilter = queryFilter === 'pending' || queryFilter === 'published' ? queryFilter : 'all';
     return renderPage(c, {
       title: 'NOWMe',
+      bodyClass: 'page--home',
       body: (
         <HomeView
           nickname={auth.user.nickname ?? ''}
           items={items}
+          filter={filter}
           notice={notice && NOTICES.has(notice) ? (notice as HomeNotice) : null}
         />
       ),

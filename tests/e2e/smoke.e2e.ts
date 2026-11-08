@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-const PAGES_ORIGIN = 'http://127.0.0.1:4200';
+import { PAGES_ORIGIN } from './helpers.js';
 
 test('主站可在 Chromium 中打开（未登录跳到登录页），带主站 CSP，没有 CSP 违规', async ({ page }) => {
   const violations: string[] = [];

@@ -3,6 +3,7 @@ import type { FC, PropsWithChildren } from 'hono/jsx';
 import { LOGIN_CODE_DIGITS, LOGIN_CODE_TTL_SECONDS } from '@nowme/contracts';
 import { EMAIL_MAX_LENGTH, NICKNAME_LIMITS } from '../constants.js';
 import { CsrfField, Notice } from './forms.js';
+import { DEMO_ACCOUNTS } from '../demo-access.js';
 
 /** 登录前后几步共用的外壳：左边是品牌介绍（桌面端），右边是表单卡片。 */
 const AuthShell: FC<PropsWithChildren<{ step: string }>> = ({ step, children }) => (
@@ -30,29 +31,43 @@ const AuthShell: FC<PropsWithChildren<{ step: string }>> = ({ step, children }) 
   </div>
 );
 
-export const LoginView: FC<{ next: string; email?: string; error?: string }> = ({ next, email, error }) => (
-  <AuthShell step="1 / 2 · 邮箱">
-    <h1>登录 NOWMe</h1>
+interface LoginProps { next: string; email?: string; error?: string; demoAccounts?: typeof DEMO_ACCOUNTS }
+
+const EmailLogin: FC<Pick<LoginProps, 'next' | 'email' | 'error'>> = ({ next, email, error }) => (
+  <>
     <p class="muted">用邮箱登录，我们会发一个 {LOGIN_CODE_DIGITS} 位验证码给你。第一次登录会自动创建账号。</p>
     {error ? <Notice tone="error">{error}</Notice> : null}
     <form method="post" action="/login" class="stack">
       <input type="hidden" name="next" value={next} />
       <label class="field">
         <span class="field__label">邮箱</span>
-        <input
-          type="email"
-          name="email"
-          value={email ?? ''}
-          required
-          autocomplete="email"
-          maxlength={EMAIL_MAX_LENGTH}
-          placeholder="you@example.com"
-        />
+        <input type="email" name="email" value={email ?? ''} required autocomplete="email" maxlength={EMAIL_MAX_LENGTH} placeholder="you@example.com" />
       </label>
-      <button type="submit" class="btn btn--primary btn--block">
-        发送验证码
-      </button>
+      <button type="submit" class="btn btn--primary btn--block">发送验证码</button>
     </form>
+  </>
+);
+
+export const DemoLogin: FC = () => (
+  <section class="demo-login" aria-label="黑客松体验登录">
+    <p class="muted">无需邮箱、验证码或注册。选择身份即可进入；切换身份会替换当前会话。墙上其他人物与示例页为背景内容。</p>
+    <div class="stack">
+      {DEMO_ACCOUNTS.map((account) => (
+        <form method="post" action="/login/demo" class="demo-login__account" data-demo-login="1">
+          <input type="hidden" name="identity" value={account.identity} />
+          <button type="submit" class="btn btn--primary btn--block">{account.label}</button>
+          <p class="muted demo-login__description">{account.description}</p>
+          <p role="alert" data-demo-error hidden></p>
+        </form>
+      ))}
+    </div>
+  </section>
+);
+
+export const LoginView: FC<LoginProps> = ({ next, email, error, demoAccounts }) => (
+  <AuthShell step={demoAccounts ? '黑客松 · 评审体验' : '1 / 2 · 邮箱'}>
+    <h1>{demoAccounts ? '体验 NOWMe' : '登录 NOWMe'}</h1>
+    {demoAccounts ? <>{error ? <Notice tone="error">{error}</Notice> : null}<DemoLogin /></> : <EmailLogin next={next} email={email} error={error} />}
   </AuthShell>
 );
 

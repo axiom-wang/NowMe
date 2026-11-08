@@ -3,6 +3,8 @@
   'use strict';
   var root = document.querySelector('[data-chat]');
   var inbox = document.querySelector('[data-inbox="live"]');
+  var inboxPanel = document.querySelector('[data-inbox]');
+  var inboxFilters = document.querySelector('[data-inbox-filters]');
   var badge = document.querySelector('[data-message-unread]');
   if (!root && !inbox && !badge) return;
   var form = root && root.querySelector('[data-chat-form]');
@@ -77,10 +79,60 @@
     return el;
   }
 
+  function conversationTime(value) {
+    if (!value) return '';
+    var date = new Date(value);
+    if (!Number.isFinite(date.getTime())) return '';
+    var now = new Date();
+    var day = function (time) { return Math.floor((time.getTime() + 9 * 60 * 60 * 1000) / 86400000); };
+    var days = day(now) - day(date);
+    if (days === 0) return date.toLocaleTimeString('zh-CN', { timeZone: 'Asia/Tokyo', hour: '2-digit', minute: '2-digit', hour12: false });
+    if (days === 1) return '昨天';
+    if (days > 1 && days < 7) return date.toLocaleDateString('zh-CN', { timeZone: 'Asia/Tokyo', weekday: 'short' });
+    var year = function (time) { return new Date(time.getTime() + 9 * 60 * 60 * 1000).getUTCFullYear(); };
+    var options = { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric' };
+    if (year(date) !== year(now)) options.year = 'numeric';
+    return date.toLocaleDateString('zh-CN', options);
+  }
+
+  function filterInbox() {
+    if (!inboxPanel || !inboxFilters) return;
+    var filter = location.hash === '#unread' ? 'unread' : location.hash === '#group' ? 'group' : 'all';
+    var visible = 0;
+    var unread = 0;
+    inboxPanel.querySelectorAll('.conversation-item').forEach(function (item) {
+      var count = Number(item.getAttribute('data-unread'));
+      unread += count;
+      item.hidden = filter === 'unread' ? count === 0 : filter === 'group' && item.getAttribute('data-kind') !== 'group';
+      if (!item.hidden) visible++;
+    });
+    inboxFilters.querySelectorAll('[data-inbox-filter]').forEach(function (button) {
+      var active = button.getAttribute('data-inbox-filter') === filter;
+      button.classList.toggle('is-active', active);
+      button.setAttribute('aria-pressed', String(active));
+    });
+    var count = inboxFilters.querySelector('[data-inbox-unread]');
+    count.textContent = String(unread); count.hidden = unread === 0;
+    inboxPanel.querySelector('[data-inbox-empty]').hidden = visible > 0;
+    var more = !inboxPanel.querySelector('[data-conversation-next]').hidden || inboxPanel.getAttribute('data-inbox') === 'paged';
+    inboxPanel.querySelector('[data-inbox-page-note]').hidden = !more;
+    var title = filter === 'unread' ? (more ? '本页暂无未读消息' : '消息都看过了') : filter === 'group' ? '本页暂无群聊' : '聊天，从一句你好开始';
+    var copy = filter === 'unread' ? (more ? '可以查看更早的会话，继续寻找未读消息。' : '新的问候到来时，会出现在这里。') : filter === 'group' ? '进入墙内全员群，和同墙的人打个招呼。' : '还没有聊天。先到墙内全员群打个招呼吧。';
+    inboxPanel.querySelector('[data-inbox-empty-title]').textContent = title;
+    inboxPanel.querySelector('[data-inbox-empty-copy]').textContent = copy;
+    var next = inboxPanel.querySelector('[data-conversation-next]');
+    var nextUrl = new URL(next.href);
+    nextUrl.hash = filter === 'all' ? '' : filter;
+    next.href = nextUrl.pathname + nextUrl.search + nextUrl.hash;
+    var newest = inboxPanel.querySelector('[data-conversation-latest]');
+    if (newest) newest.href = '/messages' + nextUrl.hash;
+  }
+
   function messageNode(message) {
     var item = node('li', 'message' + (message.senderId === root.getAttribute('data-user-id') ? ' message--mine' : ''));
     item.setAttribute('data-sequence', String(message.sequence));
     var meta = node('p', 'message-meta');
+    if (message.senderAvatarUrl) { var avatar = node('img', 'chat-avatar'); avatar.src = message.senderAvatarUrl; avatar.alt = ''; meta.append(avatar); }
     meta.append(node('strong', '', message.senderName));
     var time = node('time', '', new Date(message.createdAt).toLocaleString('zh-CN', { timeZone: 'Asia/Tokyo', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit', hour12: false }));
     time.dateTime = message.createdAt; meta.append(time);
@@ -127,18 +179,21 @@
     var fragment = document.createDocumentFragment();
     data.conversations.forEach(function (item) {
       var li = node('li', 'conversation-item');
+      li.setAttribute('data-kind', item.kind); li.setAttribute('data-unread', String(item.unread));
       var link = node('a', 'conversation-link'); link.href = '/messages/' + item.id;
-      var icon = node('span', 'conversation-icon', item.kind === 'group' ? '群' : Array.from(item.title)[0]); icon.setAttribute('aria-hidden', 'true');
+      var icon = node('span', 'conversation-icon' + (item.kind === 'group' ? ' conversation-icon--group' : ''), item.kind === 'group' ? '群' : Array.from(item.title)[0]); icon.setAttribute('aria-hidden', 'true');
+      if (item.avatarUrl) { var avatar = node('img'); avatar.src = item.avatarUrl; avatar.alt = ''; icon.replaceChildren(avatar); }
       var copy = node('span', 'conversation-copy');
       copy.append(node('strong', '', item.title), node('span', 'muted', item.wallName), node('span', 'conversation-preview', item.lastText || '还没有消息，来打个招呼吧'));
       link.append(icon, copy);
+      if (item.lastAt) { var time = node('time', 'conversation-time', conversationTime(item.lastAt)); time.dateTime = item.lastAt; link.append(time); }
       if (item.unread) { var count = node('span', 'message-badge', item.unread); count.setAttribute('aria-label', item.unread + ' 条未读'); link.append(count); }
       li.append(link); fragment.append(li);
     });
     ul.replaceChildren(fragment);
-    inbox.querySelector('[data-inbox-empty]').hidden = data.conversations.length > 0;
     var next = inbox.querySelector('[data-conversation-next]'); next.hidden = !data.hasMore;
     if (data.hasMore) { var last = data.conversations[data.conversations.length - 1]; next.href = '/messages?before=' + last.lastSequence + ':' + last.id; }
+    filterInbox();
   }
 
   async function poll() {
@@ -154,6 +209,26 @@
       }
     } catch (error) { showError(error); }
     finally { polling = false; }
+  }
+
+  if (inboxFilters) {
+    inboxFilters.hidden = false;
+    inboxFilters.addEventListener('click', function (event) {
+      var button = event.target.closest('[data-inbox-filter]');
+      if (!button) return;
+      var filter = button.getAttribute('data-inbox-filter');
+      window.history.replaceState(null, '', location.pathname + location.search + (filter === 'all' ? '' : '#' + filter));
+      filterInbox();
+    });
+    window.addEventListener('hashchange', filterInbox);
+    filterInbox();
+  }
+  var startChat = document.querySelector('.start-chat');
+  if (startChat) {
+    document.addEventListener('click', function (event) { if (!startChat.contains(event.target)) startChat.open = false; });
+    startChat.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape') { startChat.open = false; startChat.querySelector('summary').focus(); }
+    });
   }
 
   if (root) {

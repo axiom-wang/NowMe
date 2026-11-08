@@ -10,6 +10,7 @@ import { parsePublishedCard } from '../services/wall-view.js';
 import { renderNotFound } from '../views/errors.js';
 import { renderPage } from '../views/layout.js';
 import { ConversationView, MessagesView } from '../views/messages.js';
+import { defaultWallCover } from '../views/home.js';
 
 function integer(raw: string | undefined): number | undefined {
   if (raw === undefined || !/^(0|[1-9]\d{0,15})$/.test(raw)) return undefined;
@@ -25,6 +26,15 @@ function listCursor(raw: string | undefined) {
 }
 
 export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
+  // 首屏与轮询使用同一份头像；群聊沿用墙的自定义封面或默认插画。
+  const listWithAvatars = (userId: string, cursor?: { sequence: number; id: string }) => {
+    const list = deps.repos.chat.list(userId, cursor);
+    return { ...list, conversations: list.conversations.map((item) => {
+      if (item.kind !== 'group') return item;
+      const wall = deps.repos.walls.findById(item.wallId);
+      return wall ? { ...item, avatarUrl: deps.repos.walls.coverUrl(wall.id) ?? `/static/home-wall-${defaultWallCover(wall)}.svg` } : item;
+    }) };
+  };
   const user = requireUser(deps);
   const form = requireForm(deps);
   const jsonUser: MiddlewareHandler<AppEnv> = async (c, next) => {
@@ -36,13 +46,13 @@ export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
     const cursor = listCursor(c.req.query('before'));
     if (cursor === null) return renderNotFound(c);
     const userId = authOf(c).user.id;
-    const list = deps.repos.chat.list(userId, cursor);
-    return renderPage(c, { title: '消息', body: <MessagesView {...list} paged={!!cursor} walls={deps.repos.memberships.listActiveForUser(userId).map((m) => ({ id: m.wall.id, name: m.wall.name }))} /> });
+    const list = listWithAvatars(userId, cursor);
+    return renderPage(c, { title: '消息', bodyClass: 'page--messages', body: <MessagesView {...list} now={deps.now()} paged={!!cursor} walls={deps.repos.memberships.listActiveForUser(userId).map((m) => ({ id: m.wall.id, name: m.wall.name }))} /> });
   });
   app.get('/messages/list', jsonUser, (c) => {
     const cursor = listCursor(c.req.query('before'));
     if (cursor === null) return c.json({ error: '会话游标无效' }, 400);
-    return c.json(deps.repos.chat.list(authOf(c).user.id, cursor));
+    return c.json(listWithAvatars(authOf(c).user.id, cursor));
   });
   app.get('/messages/unread', jsonUser, (c) => c.json({ unread: deps.repos.chat.unread(authOf(c).user.id) }));
   app.get('/messages/wall/:wallId', user, (c) => {

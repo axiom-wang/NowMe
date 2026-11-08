@@ -1,3 +1,4 @@
+import { AVATAR_REQUEST_MAX_BYTES, AVATAR_ERROR } from '@nowme/contracts';
 /**
  * 主站应用（contracts 4.1、4.2、5）：`createWebApp({ config, db, processor?, clock? })`。
  *
@@ -12,7 +13,7 @@
 import { Hono } from 'hono';
 import { bodyLimit } from 'hono/body-limit';
 import { HTTPException } from 'hono/http-exception';
-import { dataPaths, HOSTED_UPLOAD_REQUEST_MAX_BYTES, type KitFont } from '@nowme/contracts';
+import { dataPaths, HOSTED_UPLOAD_REQUEST_MAX_BYTES, WALL_COVER_ERROR, WALL_COVER_REQUEST_MAX_BYTES, type KitFont } from '@nowme/contracts';
 import { loadKitFonts } from '@nowme/kit';
 import { FORM_BODY_MAX_BYTES } from './constants.js';
 import type { AppDeps, AppEnv, AppHono, WebConfig } from './context.js';
@@ -32,6 +33,8 @@ import { SKILL_PACKAGE_DIR } from '@nowme/skill';
 import { type ModelClient } from './hosted/model-client.js';
 import { createUserModels } from './hosted/user-models.js';
 import type { ModelLookup } from './security/model-network.js';
+import { resolve } from 'node:path';
+import type { DemoAccess } from './demo-access.js';
 import { createFakeModel } from './hosted/fake-model.js';
 import { createRenderPreviewer } from './hosted/previewer.js';
 import { createHostedService, type HostedService } from './hosted/service.js';
@@ -43,6 +46,8 @@ export { openDatabase, type Database } from './db/index.js';
 
 export interface CreateWebAppOptions {
   config: WebConfig;
+  /** 仅演示启动器使用的固定测试账号；生产环境禁止开启。 */
+  demo?: DemoAccess;
   /** 已打开的数据库（`openDatabase()`）；这里会再确认一次迁移已执行。 */
   db: Database;
   /** 提交处理器，默认真实渲染管线（`buildRevision({ mode: 'submit' })`，共享一个渲染器）。 */
@@ -91,6 +96,8 @@ function isApiPath(path: string): boolean {
 
 export function createWebApp(options: CreateWebAppOptions): WebApp {
   const { config, db } = options;
+  if (options.demo && (config.isProduction || resolve(options.demo.dataDir) !== resolve(config.dataDir))) throw new Error('演示登录必须绑定独立演示数据目录，且不能在生产环境启用');
+  if (options.demo && (config.hosted.fake || options.model)) throw new Error('演示模式必须使用真实账号模型配置，不能使用假模型');
   migrate(db);
   const log = options.log ?? ((message: string) => console.log(message));
   const now = options.clock ?? (() => new Date());
@@ -107,7 +114,7 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
     allowLocal: !config.isProduction && options.secretEnv?.NOWME_AI_ALLOW_LOCAL === '1',
     fetch: options.modelFetch, lookup: options.modelLookup, now,
   });
-  const deps: AppDeps = { userModels, config, db, repos, now, kitFonts, tickets, submissions, outbox, hosted: null, skillPackage, remotePreview, log };
+  const deps: AppDeps = { demo: options.demo ?? null, userModels, config, db, repos, now, kitFonts, tickets, submissions, outbox, hosted: null, skillPackage, remotePreview, log };
   deps.hosted = createHosted(deps, options);
 
   const app: AppHono = new Hono<AppEnv>();
@@ -121,9 +128,19 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
     maxSize: HOSTED_UPLOAD_REQUEST_MAX_BYTES,
     onError: (c) => renderError(c, { status: 413, title: '上传的内容太多', message: '图片和文字加起来超过了上限（单张图片 2 MB 以内、最多 6 张），请减少后再试。' }),
   });
+  const avatarLimit = bodyLimit({
+    maxSize: AVATAR_REQUEST_MAX_BYTES,
+    onError: (c) => renderError(c, { status: 413, title: '头像图片太大', message: AVATAR_ERROR.size }),
+  });
+  const coverLimit = bodyLimit({
+    maxSize: WALL_COVER_REQUEST_MAX_BYTES,
+    onError: (c) => renderError(c, { status: 413, title: '封面图太大', message: WALL_COVER_ERROR.size }),
+  });
   app.use(async (c, next) => {
     if (c.req.method === 'GET' || c.req.method === 'HEAD' || isApiPath(c.req.path)) return next();
+    if (c.req.path === '/account/profile') return avatarLimit(c, next);
     if (HOSTED_UPLOAD_PATH.test(c.req.path)) return uploadLimit(c, next);
+    if (/^\/w\/wal_[a-z2-7]{26}\/admin\/cover$/.test(c.req.path)) return coverLimit(c, next);
     return formLimit(c, next);
   });
   app.use(sessionLoader(deps));

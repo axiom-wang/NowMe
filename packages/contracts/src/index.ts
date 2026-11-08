@@ -15,3 +15,6 @@ export * from './api.js';
 export * from './version.js';
 export type * from './types.js';
 export * from './chat.js';
+export * from './skill-distribution.js';
+export * from './wall-cover.js';
+export * from './account-profile.js';

@@ -8,7 +8,7 @@
     "node": ">=22.13.0"
   },
   "scripts": {
-    "dev": "pnpm --parallel --filter @nowme/web --filter @nowme/pages-host dev",
+    "dev": "pnpm --filter @nowme/web dev:local",
     "build": "pnpm -r build",
     "clean": "pnpm -r clean",
     "typecheck": "tsc -p tsconfig.json && pnpm -r typecheck",

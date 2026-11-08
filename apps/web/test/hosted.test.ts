@@ -212,6 +212,8 @@ describe('托管生成与修改', () => {
     expect(t.leftoverJobDirs()).toEqual([]);
     const failedPage = await (await get(t, `/w/${wall.id}/me/jobs/${rejected.job?.id}`, { cookie: owner.session.cookie })).text();
     expect(failedPage).toContain('没有通过平台校验');
+    expect(failedPage).toContain('重新生成页面');
+    expect(failedPage).toContain(`action="/w/${wall.id}/me/generate"`);
     expect(failedPage).not.toContain('不扣免费次数');
 
     await post(t, owner.session, `/w/${wall.id}/me/create/restart`);

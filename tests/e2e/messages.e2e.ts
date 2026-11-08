@@ -1,6 +1,146 @@
 import { expect, test } from '@playwright/test';
 import { createWall, joinWall, newUser } from './helpers.js';
 
+test('群头像与墙封面一致，首屏、轮询、更换和恢复默认均显示正确图片', async ({ browser }) => {
+  const ownerContext = await browser.newContext();
+  const memberContext = await browser.newContext();
+  try {
+    const owner = await newUser(ownerContext, 'group-cover-owner', '组织者');
+    const member = await newUser(memberContext, 'group-cover-member', '群成员');
+    const { inviteUrl } = await createWall(owner.page, '山野轻徒步');
+    await joinWall(member.page, inviteUrl);
+    await member.page.goto('/messages');
+    const avatar = member.page.locator('.conversation-icon--group img');
+    await expect(avatar).toHaveAttribute('src', '/static/home-wall-mountain.svg');
+    const png = await owner.page.screenshot({ clip: { x: 0, y: 0, width: 100, height: 100 } });
+    const settings = owner.page.getByRole('region', { name: '墙封面', exact: true });
+    for (const label of ['上传封面图', '更换封面图']) {
+      const previous = await avatar.getAttribute('src');
+      await owner.page.getByLabel(label, { exact: true }).setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: png });
+      await settings.getByRole('button', { name: '保存封面', exact: true }).click();
+      const src = await settings.locator('img').getAttribute('src');
+      expect(src).not.toBe(previous);
+      await expect(avatar).toHaveAttribute('src', src!, { timeout: 8000 });
+      await expect.poll(() => avatar.evaluate((img: HTMLImageElement) => img.complete && img.naturalWidth > 0)).toBe(true);
+      await member.page.reload();
+      await expect(avatar).toHaveAttribute('src', src!);
+    }
+    await settings.getByRole('button', { name: '移除封面，恢复默认' }).click();
+    await expect(avatar).toHaveAttribute('src', '/static/home-wall-mountain.svg', { timeout: 8000 });
+  } finally { await Promise.all([ownerContext.close(), memberContext.close()]); }
+});
+
+test('顶栏在我的、消息和资料页之间保持位置与尺寸，未读数加载时不跳动', async ({ browser }, testInfo) => {
+  const context = await browser.newContext();
+  try {
+    const { page } = await newUser(context, 'header-layout', '江予安');
+    await page.emulateMedia({ reducedMotion: 'reduce' });
+    let holdUnread = false;
+    let releaseUnread: (() => void) | undefined;
+    await page.route('**/messages/unread', async (route) => {
+      if (holdUnread) {
+        holdUnread = false;
+        await new Promise<void>((resolve) => { releaseUnread = resolve; });
+      }
+      await route.fulfill({ json: { unread: 12 } });
+    });
+    const geometry = () => page.evaluate(() => {
+      const selectors = ['.home-header', '.site-header__inner', '.brand', '.home-nav', '.home-nav a', '.home-account', '.home-account .avatar'];
+      return selectors.flatMap((selector) => [...document.querySelectorAll(selector)].map((element) => {
+        const { x, y, width, height } = element.getBoundingClientRect();
+        return { selector, x, y, width, height, fontSize: getComputedStyle(element).fontSize };
+      }));
+    });
+    for (const width of [1440, 1024, 768, 760, 700, 562, 440, 375]) {
+      await page.setViewportSize({ width, height: 941 });
+      let reference: Awaited<ReturnType<typeof geometry>> | undefined;
+      for (const path of ['/', '/messages', '/account/data', '/messages']) {
+        holdUnread = true;
+        releaseUnread = undefined;
+        await page.goto(path);
+        await page.evaluate(() => document.fonts.ready);
+        await expect.poll(() => !!releaseUnread).toBe(true);
+        const beforeUnread = await geometry();
+        releaseUnread!();
+        await expect(page.locator('[data-message-unread]')).toHaveText('12');
+        const afterUnread = await geometry();
+        expect(afterUnread, `${width}px ${path} 未读数加载前后`).toEqual(beforeUnread);
+        if (reference) expect(afterUnread, `${width}px ${path} 与首页`).toEqual(reference);
+        else reference = afterUnread;
+        expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      }
+      if ([1440, 562, 375].includes(width)) await page.screenshot({ path: testInfo.outputPath(`header-${width}.png`) });
+    }
+  } finally { await context.close(); }
+});
+
+test('消息页：筛选与轮询保持同步，发起聊天入口和窄屏布局可用', async ({ browser }, testInfo) => {
+  const aContext = await browser.newContext();
+  const bContext = await browser.newContext();
+  try {
+    const a = await newUser(aContext, 'inbox-a', '高远');
+    const b = await newUser(bContext, 'inbox-b', '江予安');
+    const { wallId, inviteUrl } = await createWall(a.page, '山野轻徒步 · 一起去透气');
+    await joinWall(b.page, inviteUrl);
+    await a.page.goto(`/messages/wall/${wallId}`);
+    const groupPath = new URL(a.page.url()).pathname;
+    await a.page.getByLabel('消息内容').fill('周六去山里走走？');
+    await a.page.getByRole('button', { name: '发送', exact: true }).click();
+    await expect(a.page.locator('.message-text')).toHaveText(['周六去山里走走？']);
+    await a.page.locator('.chat-members summary').click();
+    await a.page.getByRole('button', { name: '和江予安私聊', exact: true }).click();
+    const directPath = new URL(a.page.url()).pathname;
+    await a.page.getByLabel('消息内容').fill('对了，你周六下午方便吗？我们也可以先在群里约时间。');
+    await a.page.getByRole('button', { name: '发送', exact: true }).click();
+    await expect(a.page.locator('.message-text')).toHaveCount(1);
+
+    await b.page.goto('/messages');
+    await expect(b.page.locator('.home-nav [aria-current="page"]')).toHaveText(/消息/);
+    await expect(b.page.locator('[data-inbox-unread]')).toHaveText('2');
+    await expect(b.page.locator('.conversation-time')).toHaveCount(2);
+    await expect(b.page.locator('.conversation-time').first()).toHaveText(/^\d{2}:\d{2}$/);
+    await b.page.getByRole('button', { name: '墙内群聊', exact: true }).click();
+    await expect(b.page.locator('.conversation-item:visible')).toHaveCount(1);
+    await expect(b.page.locator('.conversation-item:visible')).toHaveAttribute('data-kind', 'group');
+    // 轮询重建列表后仍使用当前筛选。
+    await a.page.getByLabel('消息内容').fill('我也可以周日。');
+    await a.page.getByRole('button', { name: '发送', exact: true }).click();
+    await expect(b.page.locator('[data-inbox-unread]')).toHaveText('3', { timeout: 8000 });
+    await expect(b.page.locator('.conversation-item:visible')).toHaveCount(1);
+    await b.page.getByRole('button', { name: '未读消息' }).click();
+    await expect(b.page.locator('.conversation-item:visible')).toHaveCount(2);
+    await b.page.reload();
+    await expect(b.page.getByRole('button', { name: '未读消息' })).toHaveAttribute('aria-pressed', 'true');
+    // 阅读后返回，筛选应显示准确的空状态。
+    for (const path of [directPath, groupPath]) {
+      await b.page.goto(path);
+      await b.page.bringToFront();
+      await expect.poll(async () => (await (await b.page.request.get('/messages/unread')).json()).unread).toBe(path === directPath ? 1 : 0);
+    }
+    await b.page.goto('/messages#unread');
+    await expect(b.page.getByText('消息都看过了')).toBeVisible();
+    await b.page.getByRole('button', { name: '最近的聊天', exact: true }).click();
+    await expect(b.page.locator('.conversation-item:visible')).toHaveCount(2);
+
+    await b.page.getByText('发起聊天', { exact: true }).click();
+    await expect(b.page.locator('.start-chat__menu')).toBeVisible();
+    await b.page.locator('.start-chat summary').press('Escape');
+    await expect(b.page.locator('.start-chat__menu')).toBeHidden();
+    for (const width of [1440, 562, 375]) {
+      await b.page.setViewportSize({ width, height: 941 });
+      expect(await b.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      const inboxBox = await b.page.locator('.inbox').boundingBox();
+      const wallsBox = await b.page.locator('.inbox-walls').boundingBox();
+      if (width >= 540) expect(wallsBox!.x).toBeGreaterThan(inboxBox!.x + inboxBox!.width);
+      else expect(wallsBox!.y).toBeGreaterThan(inboxBox!.y);
+      await b.page.screenshot({ path: testInfo.outputPath(`inbox-${width}.png`), fullPage: true });
+    }
+    await b.page.getByText('发起聊天', { exact: true }).click();
+    await b.page.locator('.start-chat__menu a').click();
+    await expect(b.page).toHaveURL(new RegExp(groupPath + '$'));
+  } finally { await Promise.all([aContext.close(), bContext.close()]); }
+});
+
 test('群聊与私聊：多人收发、未读、断网重试去重、历史、手机布局与权限撤销', async ({ browser }, testInfo) => {
   const ownerContext = await browser.newContext();
   const aContext = await browser.newContext();

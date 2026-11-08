@@ -15,7 +15,7 @@ async function waitForJob(page: Page, label: string): Promise<void> {
   await expect(page.getByRole('link', { name: label })).toBeVisible({ timeout: 90_000 });
 }
 
-test('平台托管：采访、生成、预览、修改、发布', async ({ browser }) => {
+test('平台托管：采访、生成、预览、修改、发布', async ({ browser }, testInfo) => {
   test.setTimeout(240_000);
   const organizerContext = await browser.newContext();
   const organizer = await newUser(organizerContext, 'hosted-org', '组织者');
@@ -33,11 +33,37 @@ test('平台托管：采访、生成、预览、修改、发布', async ({ brows
 
   // 2. 素材 + 点选 + 图片
   await expect(a.page.getByText('会发送给 AI 模型服务（测试用的假模型）')).toBeVisible();
+  for (const width of [1440, 375, 320]) {
+    await a.page.setViewportSize({ width, height: 1000 });
+    expect(await a.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}px 创作页不溢出`).toBe(true);
+    await expect(a.page.getByRole('list', { name: '采访进度' }).locator('[aria-current="step"]')).toContainText('认识你');
+    if (width !== 320) await a.page.screenshot({ path: testInfo.outputPath(`create-${width}.png`), fullPage: true });
+  }
+  await a.page.setViewportSize({ width: 1440, height: 1000 });
   await a.page.locator('textarea[name="material"]').fill(`我叫阿柚。做过 3 个校园小程序，负责前端。我总在${SECRET}。`);
+  await expect(a.page.locator('[data-material-count]')).not.toHaveText('0 / 4000');
+  const tooManyPhotos = Array.from({ length: 7 }, (_, i) => ({ name: `${i}.png`, mimeType: 'image/png', buffer: Buffer.from([137, 80, 78, 71]) }));
+  await a.page.locator('input[name="photos"]').setInputFiles(tooManyPhotos);
+  await expect(a.page.locator('[data-photo-status]')).toContainText('图片最多 6 张');
+  expect(await a.page.locator('input[name="photos"]').evaluate((input: HTMLInputElement) => input.validity.valid)).toBe(false);
   await a.page.locator('input[name="photos"]').setInputFiles(join(EXAMPLES, 'interest-film-zine', 'cover.png'));
+  await expect(a.page.locator('[data-photo-list] img')).toBeVisible();
+  await expect(a.page.locator('[data-photo-status]')).toContainText('已选择 1 张图片');
+  expect(await a.page.locator('input[name="photos"]').evaluate((input: HTMLInputElement) => input.validity.valid)).toBe(true);
+  const writeIn = a.page.locator('fieldset').filter({ has: a.page.locator('input[name="q_role"]') }).locator('.create-writein');
+  await expect(writeIn).not.toHaveAttribute('open');
+  await a.page.locator('input[name="q_role"][data-write-in]').check();
+  await expect(writeIn).toHaveAttribute('open', '');
   await a.page.locator('input[name="q_role"][value="0"]').check();
   await a.page.locator('input[name="q_teammate_0"]').check();
   await a.page.locator('input[name="style_hackathon-terminal"]').check();
+  await a.page.locator('input[name="style_hackathon-poster"]').check();
+  await a.page.locator('input[name="style_interest-vinyl"]').check();
+  await expect(a.page.locator('[data-style-status]')).toContainText('最多选择 2 个参考');
+  expect(await a.page.locator('input[name="style_hackathon-terminal"]').evaluate((input: HTMLInputElement) => input.validity.valid)).toBe(false);
+  await a.page.locator('input[name="style_hackathon-poster"]').uncheck();
+  await a.page.locator('input[name="style_interest-vinyl"]').uncheck();
+  await expect(a.page.locator('[data-style-status]')).toHaveText('已选 1 / 2 个参考');
   await a.page.getByRole('button', { name: '下一步' }).click();
 
   // 3. 追问

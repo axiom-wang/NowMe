@@ -10,10 +10,10 @@ import type { AddressInfo } from 'node:net';
 import { join, resolve } from 'node:path';
 import { expect, type BrowserContext, type Page } from '@playwright/test';
 
-export const WEB_ORIGIN = 'http://localhost:3200';
-export const PAGES_ORIGIN = 'http://127.0.0.1:4200';
+export const WEB_ORIGIN = process.env.NOWME_E2E_WEB_ORIGIN ?? 'http://localhost:3200';
+export const PAGES_ORIGIN = process.env.NOWME_E2E_PAGES_ORIGIN ?? 'http://127.0.0.1:4200';
 export const REPO = resolve(import.meta.dirname, '../..');
-export const OUTBOX_FILE = join(REPO, '.data/e2e/outbox.log');
+export const OUTBOX_FILE = join(REPO, process.env.NOWME_E2E_DATA_DIR ?? '.data/e2e', 'outbox.log');
 export const EXAMPLES = join(REPO, 'skill/examples');
 
 export function uniqueEmail(prefix: string): string {

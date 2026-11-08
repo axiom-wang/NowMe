@@ -170,7 +170,7 @@ describe('创作工作区', () => {
       const { html } = await open();
       const guide = guideOf(html);
       expect(guide).toMatch(/^<details class="skill-install" id="skill-install" open/);
-      expect(guide).toContain(`请按 ${t.config.webOrigin}/skill/install.md 的说明安装 NOWMe Skill（版本 ${TEST_SKILL_VERSION}）`);
+      expect(guide).toContain(`请按 https://raw.githubusercontent.com/axiom-wang/nowme-skill/main/install.md 的说明安装 NOWMe Skill（版本 ${TEST_SKILL_VERSION}）`);
       expect(guide).toContain(`href="${t.config.webOrigin}/skill"`);
       expect(guide).toContain('重新打开一个会话');
       expect(guide).toContain(`NOWMe Skill ${TEST_SKILL_VERSION}`);

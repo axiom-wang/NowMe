@@ -11,16 +11,20 @@ import { formatDateTime } from '../format.js';
 import { CsrfField, Notice } from './forms.js';
 import { PAGE_STATE_LABEL } from './home.js';
 import { initialOf } from './layout.js';
+import { defaultWallCover } from './home.js';
 
-export type AdminNotice = 'created' | 'removed';
+export type AdminNotice = 'created' | 'removed' | 'cover-updated' | 'cover-deleted';
 
 const NOTICE_TEXT: Record<AdminNotice, string> = {
   created: '墙建好了！把下面的邀请链接或二维码发出去，大家打开、登录就能加入。你自己的页面也在这面墙上，回到墙里点“我的页面”就能开始做。',
   removed: '已移出：TA 的页面已立即从墙上消失，本地 Agent 的连接也已断开。TA 不能再通过邀请加入。',
+  'cover-updated': '墙封面已更新，成员会在首页看到新封面。',
+  'cover-deleted': '已移除墙封面，恢复默认插画。',
 };
 
 export interface AdminModel {
   wall: Wall;
+  coverUrl: string | null;
   sceneLabel: string;
   inviteUrl: string;
   /** 二维码 SVG 的 data URI。 */
@@ -35,12 +39,13 @@ export interface AdminViewProps {
   notice: AdminNotice | null;
   /** 关闭墙没有勾选确认。 */
   closeError?: boolean;
+  coverError?: string;
 }
 
 const MemberItem: FC<{ member: AdminMemberRow; wallId: string; csrf: string }> = ({ member, wallId, csrf }) => (
   <li class="member-row">
     <span class="avatar" aria-hidden="true">
-      {initialOf(member.nickname)}
+      {member.avatarUrl ? <img src={member.avatarUrl} alt="" loading="lazy" /> : initialOf(member.nickname)}
     </span>
     <div class="member-row__main">
       <span class="member-row__name">{member.nickname}</span>
@@ -65,7 +70,7 @@ const MemberItem: FC<{ member: AdminMemberRow; wallId: string; csrf: string }> =
   </li>
 );
 
-export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError }) => {
+export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError, coverError }) => {
   const { wall } = model;
   return (
     <div class="container container--wide">
@@ -122,6 +127,20 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError 
         </div>
 
         <aside class="admin-layout__side">
+          <section class="card wall-cover-settings" aria-labelledby="wall-cover-heading">
+            <h2 id="wall-cover-heading">墙封面</h2>
+            <p class="muted">给这面墙选一张有个性的封面，它会展示在成员首页的墙卡片上。</p>
+            <img class="wall-cover-settings__preview" src={model.coverUrl ?? `/static/home-wall-${defaultWallCover(wall)}.svg`} alt={`「${wall.name}」的${model.coverUrl ? '当前封面' : '默认封面'}`} width="400" height="400" />
+            {coverError ? <Notice tone="error">{coverError}</Notice> : null}
+            <form method="post" action={`/w/${wall.id}/admin/cover`} enctype="multipart/form-data" class="stack">
+              <CsrfField token={csrf} />
+              <label for="wall-cover-file">{model.coverUrl ? '更换封面图' : '上传封面图'}</label>
+              <input id="wall-cover-file" name="cover" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="wall-cover-help" required />
+              <p id="wall-cover-help" class="field-help">JPG、PNG 或 WebP，5 MB 以内。建议使用 1:1 正方形图片，其他比例将居中裁切。</p>
+              <button type="submit" class="btn btn--primary">保存封面</button>
+            </form>
+            {model.coverUrl ? <form method="post" action={`/w/${wall.id}/admin/cover/delete`} class="wall-cover-settings__delete"><CsrfField token={csrf} /><button type="submit" class="btn btn--ghost btn--small">移除封面，恢复默认</button></form> : null}
+          </section>
           <section class="card overview" aria-labelledby="overview-heading">
             <h2 id="overview-heading">概况</h2>
             <dl class="stat-tiles">

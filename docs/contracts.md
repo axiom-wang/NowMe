@@ -14,7 +14,7 @@
 | 测试 | vitest（单元、集成）；Playwright（浏览器行为、渲染、e2e），使用本机已缓存的 Chromium |
 | 主站 `apps/web` | Hono + `@hono/node-server`，服务端渲染（`hono/jsx`），原生 CSS，少量原生客户端 JS；中文界面，移动端优先 |
 | 数据库 | SQLite（优先 `node:sqlite`，M0 验证在 vitest 下可用，否则用 `better-sqlite3`），SQL 迁移文件 |
-| 页面托管 `apps/pages-host` | 独立进程、独立源，只做静态托管 + 票据校验 + 安全响应头，不读主站 cookie、不连数据库 |
+| 页面托管 `apps/pages-host` | 独立源，只做静态托管 + 票据校验 + 安全响应头，不读主站 cookie、不连数据库；本地统一启动时与主站共用一个进程，也保留单独启动能力 |
 | 本地数据 | `NOWME_DATA_DIR`（默认仓库根 `.data/`）：`db.sqlite`、`revisions/<revisionId>/`、`outbox.log`、`secret` |
 
 ### 0.1 源（origin）[原型默认]
@@ -241,10 +241,11 @@ ID 一律为 `<前缀>_<16 字节随机 base32 小写>`；时间为 ISO 8601 UTC
 
 | 表 | 主要字段 | 说明 |
 | --- | --- | --- |
-| `users` | `id usr_`、`email` 唯一（小写）、`nickname`、`created_at` | 首次登录时填写昵称 |
+| `users` | `id usr_`、`email` 唯一（小写）、`nickname`、`avatar_webp`、`avatar_version`、`created_at` | 首次登录时填写昵称；资料页可修改昵称和头像，头像只存重编码后的 WebP |
 | `login_codes` | `id`、`email`、`code_hash`、`attempts`、`expires_at`、`used_at` | 6 位数字，10 分钟，最多 5 次尝试 |
 | `sessions` | `id`（会话令牌哈希）、`user_id`、`csrf_token`、`created_at`、`expires_at` | 30 天 |
 | `walls` | `id wal_`、`name`、`description`、`scene_type`、`organizer_note`、`organizer_id`、`invite_code`、`status open\|closed`、`created_at`、`closed_at` | |
+| `wall_covers` | `wall_id` 主键 / 外键、`version`、`image` BLOB、`updated_at` | 组织者设置的墙封面；独立于成员页面的封面，统一重编码为静态 WebP，不保存上传原图或文件名 |
 | `memberships` | `id mem_`、`wall_id`、`user_id`、`role organizer\|member`、`status active\|left\|removed`、`joined_at`、`ended_at` | (`wall_id`,`user_id`) 唯一；组织者建墙时自动成为成员 |
 | `pages` | `id pg_`、`membership_id` 唯一、`wall_id`、`owner_id`、`contact_channel`、`contact_value`、`contact_public`、`public_token`（空=未开启）、`created_at`、`updated_at` | 加入墙时创建 |
 | `agent_tokens` | `id`、`page_id`、`token_hash`、`expires_at`、`used_at`、`created_at` | 一次性 token |
@@ -306,11 +307,16 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 | --- | --- | --- |
 | `GET /login`、`POST /login`、`POST /login/verify`、`POST /logout` | 任何人 | 邮箱 + 6 位验证码；首次登录填昵称 |
 | `GET/POST /welcome` | 登录用户 | 首次登录填写昵称 |
+| `POST /account/profile` | 登录用户，会话 + Origin + CSRF | multipart：`nickname`（去空白后 1–24 字，不含控制字符）、可选单张 `avatar`、`removeAvatar=1` 移除头像；仅更新会话本人，忽略用户 ID 和 Authorization；昵称与头像原子保存，失败保留原资料 |
+| `GET /account/avatar` | 登录用户 | 仅返回会话本人的头像，忽略用户 ID；无头像 404，`image/webp`、`private, no-store`、`nosniff`；`v` 参数用于页面刷新后更换图片地址，不决定授权 |
 | `GET /dev/outbox` | 仅非生产环境 | 本地查看发出的验证码（代替真实邮件） |
-| `GET /` | 登录用户 | “我的”：我加入的墙、每页发布状态、入口 |
+| `GET /` | 登录用户 | 创作工作台：有效墙的统计、待完成 / 已发布分组；`filter=all\|pending\|published` 筛选（未知值按 all）；已撤下归入待完成；已结束的墙只显示状态 |
 | `GET /walls/new`、`POST /walls` | 登录用户 | 建墙：名称、简介、场景类型、可选一句话 |
 | `GET /join/:inviteCode`、`POST /join/:inviteCode` | 登录用户 | 加入墙（已被移除的成员不能再加入；已关闭的墙不能加入） |
 | `GET /w/:wallId` | 墙内有效成员 | 墙：名称、简介、随机排序的缩略卡网格、“我的页面”入口 |
+| `GET /w/:wallId/cover` | 墙内有效成员 | 当前墙封面（WebP）；不存在、非成员、已退出 / 移出或墙关闭均 404；`Cache-Control: private, no-store`，每次检查权限 |
+| `POST /w/:wallId/admin/cover` | 组织者 | multipart 表单 `_csrf` + 单个 `cover` 文件；JPG / PNG / WebP、最多 5 MiB、最多 4000 万像素；按内容识别、完整解码、自动转正、按 1:1 居中裁切至最多 1200×1200、去除元数据并重编码为静态 WebP；拒绝 SVG、动图、伪造 / 损坏图片；成功后替换旧封面，失败保留原图 |
+| `POST /w/:wallId/admin/cover/delete` | 组织者 | 删除自定义墙封面，首页与后台恢复场景默认插画 |
 | `GET /w/:wallId/p/:pageId` | 墙内有效成员 | 成员页面（沙箱 iframe）+ 接话点 + “想聊这个” |
 | `POST /w/:wallId/p/:pageId/chat` | 墙内有效成员 | `hookId` 取当前发布快照；记录事件，303 进入私聊并预填开场白，不自动发送；不依赖外部联系方式 |
 | `POST /w/:wallId/p/:pageId/direct` | 墙内有效成员 | 303 进入与页面主人的同墙私聊；自己页面或未发布页面返回 404 |
@@ -354,13 +360,19 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 
 前端每 2500ms 增量轮询，隐藏时暂停、恢复后从上次序号补齐，hasMore 时连续取下一批；不依赖整页刷新。只有页面可见、有焦点且滚动到消息底部时标记已读。阅读旧消息时不抢滚动位置。消息在 SSR 中转义，客户端使用 textContent，不执行 HTML；脚本和样式为同源静态资源，不改变 iframe 沙箱或 CSP。动态数据响应均 `no-store`。
 
+### 4.2.2 本地评审演示例外
+
+仅服务端演示启动器可显式启用，配置必须绑定演示数据目录，生产与普通 `pnpm dev` 不开放。`POST /login/demo` 检查来源，字段只接受固定的 `identity=member|organizer`，分别映射已有 `newbie@demo.nowme.test` 和 `organizer@demo.nowme.test`，创建正常服务端会话；切换销毁当前会话，两个身份登录后均进入首页，首页不展示身份切换卡片；需要时从顶部“切换身份”进入选择页。邮箱验证码路径与会话加载同样禁止登录背景人物。S1–S8 与组织者权限保持不变。
+
+评审模式允许维护者在启动时将自己的真实模型配置通过现有账号加密机制预置给体验成员，费用由演示提供者承担；体验身份不可通过 AI 设置界面或 HTTP 接口改写、删除预置配置。只在演示启动读取专属环境变量，不给普通账号引入平台 Key 回退，演示不接受假模型。完整流程与配置见 [demo.md](demo.md) 与 [hosted-route.md 第 8 节](hosted-route.md#8-演示数据与评审模式)。
+
 ### 4.3 Agent 指令格式（W05）
 
 ```
 /nowme-page wal_xxx nmt_xxx --server http://localhost:3000
 ```
 
-工作区同时显示一段等价的纯文本说明，给不支持 Skill 的 Agent（第 0 步让它按 `/skill/install.md` 下载工具包，用里面的单文件 CLI，不需要装成 Skill）。工作区还始终显示「安装 NOWMe Skill」（4.5）：让 Agent 自己安装的一句话、重开会话、自检方法、`Unknown command` 的原因与解决办法；这块说明里没有 token，没连接过且没有版本时默认展开。已连接时连接状态显示 CLI 自报的 Skill 版本，落后于主站分发的版本时提示更新。token 有效期 [原型默认] 72 小时（覆盖“现场拿到、当晚执行”），`NOWME_AGENT_TOKEN_TTL_HOURS` 可调。
+工作区同时显示一段等价的纯文本说明，给不支持 Skill 的 Agent（第 0 步让它按公开 GitHub 仓库的 `install.md` 下载工具包，用里面的单文件 CLI，不需要装成 Skill）。工作区还始终显示「安装 NOWMe Skill」（4.5）：让 Agent 自己安装的一句话、重开会话、自检方法、`Unknown command` 的原因与解决办法；这块说明里没有 token，没连接过且没有版本时默认展开。已连接时连接状态显示 CLI 自报的 Skill 版本，落后于主站分发的版本时提示更新。token 有效期 [原型默认] 72 小时（覆盖“现场拿到、当晚执行”），`NOWME_AGENT_TOKEN_TTL_HOURS` 可调。
 
 ### 4.4 页面托管（`apps/pages-host`）
 
@@ -377,7 +389,7 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 
 ### 4.5 Skill 分发（T3.6）
 
-真实用户手里没有本仓库：主站托管 Skill 包，包里自带单文件 CLI（1.5），装好 Skill 就能用。所有地址都由 `NOWME_WEB_ORIGIN` 拼出，本地与上线走同一套代码。
+真实用户手里没有本仓库：Skill 源码留在 NOWMe 主仓库 `skill/`，完整成品同步到公开仓库 `https://github.com/axiom-wang/nowme-skill`。GitHub Releases 提供带版本号的归档与清单；默认安装命令为 `npx skills add axiom-wang/nowme-skill --skill nowme-page -g`。包里自带单文件 CLI（1.5），无需获取主项目。安装提示与纯文本说明使用 GitHub 上的 `install.md`，不会把 localhost 当成下载地址；主站 `/skill` 保留说明入口，本地归档路由只作为离线镜像。
 
 | 路径 | 认证 | 内容 |
 | --- | --- | --- |
@@ -386,7 +398,9 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 | `GET /skill/manifest.json` | 无 | `{ name: "nowme-page", version, file, sha256, bytes, minNode, url }`（`max-age=300`） |
 | `GET /skill/nowme-page-<version>.tar.gz` | 无 | Skill 包（`application/gzip`，`max-age=31536000, immutable`）；文件名不对 `404` |
 
-- **Skill 包**：`pnpm --filter @nowme/skill pack:skill` 打到 `skill/dist-package/`（`build` 与主站 `dev` / `start:source` 会先打包）。只含 `SKILL.md`、`reference/`、`scenes/`、`templates/`、`examples/` 与 `scripts/nowme.mjs`；根目录 `nowme-page/`；ustar + gzip，可复现（排序、固定时间戳）；打包时发现 token / 凭证样式的字符串就失败。主站启动时读取并核对 sha256，不一致或没有打包时当作没有 Skill 包（安装页提示，manifest `404`）。
+- **Skill 包**：`pnpm --filter @nowme/skill pack:skill` 打到 `skill/dist-package/`（`build` 与主站 `dev` / `start:source` 会先打包）。只含 `SKILL.md`、`reference/`、`scenes/`、`templates/`、`examples/` 与 `scripts/nowme.mjs`；根目录 `nowme-page/`；ustar + gzip，可复现（排序、固定时间戳）；打包时发现 token / 凭证样式的字符串就失败。主站启动时读取并核对 sha256，不一致或没有打包时本地 manifest/归档不可用，但页面仍提供公开 GitHub 安装入口。manifest 中的 `url` 指向 GitHub 对应版本的 Release 下载地址。
+- **发布**：`pnpm --filter @nowme/skill publish:github --out <空目录>` 仅导出成品供检查；加 `--publish` 会自动构建、同步公开仓库、推送 `v<版本>` 标签并创建 Release（归档 + manifest）。仅导出打包白名单与生成的 README/install.md/manifest，不复制主项目或本机配置。已有版本拒绝覆盖；更新时先同步修改三个 Skill 版本位置。公开仓库是生成物，不手工维护第二份源码。
+- **跨电脑连接**：Skill 下载不依赖 NOWMe 服务；运行 fetch/preview/submit 仍需要可访问的 `--server`。localhost 仅指当前电脑，主站部署不在本任务范围。
 - **版本**：`skill/package.json` 的 `version` = `SKILL_VERSION` = SKILL.md 里写的“Skill 版本”（测试保证一致）。
 - **通用写法**：安装页、install.md、工作区都不写具体 Agent 的名字和 Skill 目录。
 - **市场渠道**：`NOWME_SKILL_MARKET_LABEL` 与 `NOWME_SKILL_MARKET_COMMAND`（同时设置或都不设，一行、长度有上限）配置后，安装页与 install.md 多显示一种安装方式。
@@ -463,3 +477,11 @@ interface SceneGuide {
 ## 10. 原型试跑不做
 
 收费方案已取消；本期不做 W09 应用内素材管理、修改时把新信息写回画像、派生到新墙（W18）、真实邮件发送、外部内容审核接入（只保存渲染文字和截图供人工审核）、部署。
+
+### 账号资料与头像
+
+头像上传接受静态 PNG / JPEG / WebP，按文件魔数识别并实际解码，拒绝 SVG、GIF、多帧图片、损坏图片。单张不超过 2 MB，请求不超过 2 MB + 64 KB，解码不超过 1600 万像素。自动按 EXIF 旋转、居中裁成正方形（最长 256px，小图不放大），重新编码为 WebP 并剥离元数据；不保存原图、文件名或外部图片 URL。删除头像清空位图与版本号。资料卡、主站导航使用当前会话头像，未设置时显示昵称首字；不改写已生成的用户页面或长期画像。
+
+### 同墙成员头像展示
+
+`GET /w/:wallId/members/:userId/avatar` 仅向该墙有效成员返回另一位有效成员的账号头像；墙关闭、任意一方退出或被移除、目标无头像均返回 404。返回 `image/webp`、`private, no-store` 和 `nosniff`，不返回邮箱、画像或 brief。聊天摘要可含 `avatarUrl`，消息可含 `senderAvatarUrl`，组织者成员列表可含头像地址；客户端轮询与服务端初始渲染均展示头像，无头像继续显示原占位。账号头像是同圈可见的身份信息，账号资料与私密采访内容仍由原授权规则保护。

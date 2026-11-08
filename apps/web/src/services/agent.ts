@@ -7,6 +7,7 @@
  */
 import {
   AGENT_CONTEXT_LIMITS,
+  SKILL_GITHUB_URL,
   generateId,
   generateToken,
   hashToken,
@@ -22,7 +23,6 @@ import type { PageCredential } from '../db/credentials.js';
 import type { Repos } from '../db/index.js';
 import type { Page } from '../db/pages.js';
 import type { Wall } from '../db/walls.js';
-import { skillInstallPageUrl } from './skill-package.js';
 
 /** 页面工作区地址（`/w/<wallId>/me`）。 */
 export function workspacePath(wallId: string): string {
@@ -84,7 +84,7 @@ export function buildAgentContext(
     },
     kit: { version: KIT_VERSION, basePath: KIT_BASE_PATH, fonts: deps.kitFonts },
     limits: { ...AGENT_CONTEXT_LIMITS },
-    skill: deps.skillPackage ? { version: deps.skillPackage.manifest.version, installUrl: skillInstallPageUrl(deps.config.webOrigin) } : null,
+    skill: deps.skillPackage ? { version: deps.skillPackage.manifest.version, installUrl: SKILL_GITHUB_URL } : null,
   };
 }
 

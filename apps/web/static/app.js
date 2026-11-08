@@ -84,3 +84,28 @@
     });
   });
 })();
+
+// 体验登录支持无脚本表单；增强时展示提交与网络失败状态，保持可重试。
+document.querySelectorAll('form[data-demo-login]').forEach(function (form) {
+  form.addEventListener('submit', async function (event) {
+    event.preventDefault();
+    var button = form.querySelector('button');
+    var error = form.querySelector('[data-demo-error]');
+    var label = button.textContent;
+    button.disabled = true;
+    button.textContent = '正在进入…';
+    form.setAttribute('aria-busy', 'true');
+    error.hidden = true;
+    try {
+      var response = await fetch(form.action, { method: 'POST', body: new URLSearchParams(new FormData(form)), credentials: 'same-origin', signal: AbortSignal.timeout(15000) });
+      if (!response.ok || !response.redirected) throw new Error();
+      window.location.assign(response.url);
+    } catch (_) {
+      error.textContent = '体验登录失败，请重试；若仍失败，请联系维护者。';
+      error.hidden = false;
+      button.disabled = false;
+      button.textContent = label;
+      form.removeAttribute('aria-busy');
+    }
+  });
+});

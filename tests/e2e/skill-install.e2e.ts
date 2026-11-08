@@ -42,16 +42,16 @@ test('真实用户：按工作区说明安装 Skill，用 Skill 自带的命令�
     await member.page.goto(`/w/${wallId}/me`);
     const guide = member.page.locator('#skill-install');
     await expect(guide).toHaveAttribute('open', '');
-    await expect(member.page.locator('#nm-skill-install')).toContainText(`${WEB_ORIGIN}/skill/install.md`);
+    await expect(member.page.locator('#nm-skill-install')).toContainText('https://raw.githubusercontent.com/axiom-wang/nowme-skill/main/install.md');
     await expect(guide).toContainText('Unknown command: /nowme-page');
     const { token } = await generateInstruction(member.page, wallId);
     expect(await member.page.locator('#skill-install').innerHTML()).not.toContain(token);
 
-    // 2. 按 install.md 下载并核对 Skill 包
+    // 2. 检查公开下载地址；离线回归使用主站的同字节镜像，公开 GitHub 下载另做发布验证
     const doc = await (await fetch(`${WEB_ORIGIN}/skill/install.md`)).text();
     const manifest = (await (await fetch(`${WEB_ORIGIN}/skill/manifest.json`)).json()) as { url: string; sha256: string; file: string; version: string };
     expect(doc).toContain(manifest.url);
-    const archive = Buffer.from(await (await fetch(manifest.url)).arrayBuffer());
+    const archive = Buffer.from(await (await fetch(`${WEB_ORIGIN}/skill/${manifest.file}`)).arrayBuffer());
     expect(createHash('sha256').update(archive).digest('hex')).toBe(manifest.sha256);
     writeFileSync(join(root, manifest.file), archive);
     const untar = await run('tar', ['-xzf', join(root, manifest.file), '-C', skillsDir], { cwd: root });

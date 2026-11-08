@@ -14,6 +14,7 @@
  */
 import { DEV_OUTBOX_LIMIT } from '../constants.js';
 import type { AppDeps, AppHono } from '../context.js';
+import { DEMO_ACCOUNTS, DEMO_WALL_NAME, demoAccountFor } from '../demo-access.js';
 import { requireForm, requireOriginForm } from '../security/forms.js';
 import { safeNextPath } from '../security/redirect.js';
 import { authOf, clearSessionCookie, readSessionToken, setSessionCookie, welcomeRedirectPath } from '../security/session.js';
@@ -28,28 +29,47 @@ import {
 import { formatDateTime } from '../format.js';
 import { LoginView, VerifyView, WelcomeView } from '../views/auth.js';
 import { renderPage } from '../views/layout.js';
+import { renderNotFound } from '../views/errors.js';
 
 export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
   const { config } = deps;
   const originForm = requireOriginForm(deps);
-  const devOutbox = !config.isProduction;
+  const devOutbox = !config.isProduction && !deps.demo;
+  const demoAccounts = deps.demo ? DEMO_ACCOUNTS : undefined;
 
   app.get('/login', (c) => {
     const next = safeNextPath(c.req.query('next'), config.webOrigin);
     const auth = c.get('auth');
-    if (auth) return c.redirect(auth.user.nickname ? next : welcomeRedirectPath(next, config.webOrigin), 303);
-    return renderPage(c, { title: '登录', body: <LoginView next={next} /> });
+    if (auth && !deps.demo) return c.redirect(auth.user.nickname ? next : welcomeRedirectPath(next, config.webOrigin), 303);
+    return renderPage(c, { title: '登录', bodyClass: deps.demo && auth ? 'page--switch' : undefined, body: <LoginView next={next} demoAccounts={demoAccounts} /> });
   });
+
+  if (deps.demo) {
+    app.post('/login/demo', originForm, (c) => {
+      const form = c.get('form');
+      const account = DEMO_ACCOUNTS.find((entry) => entry.identity === form.identity);
+      const user = account ? deps.repos.users.findByEmail(account.email) : null;
+      const organizer = deps.repos.users.findByEmail(DEMO_ACCOUNTS[1].email);
+      const wall = organizer ? deps.repos.walls.findOpenByOrganizerAndName(organizer.id, DEMO_WALL_NAME) : null;
+      if (!account || !user || !wall || Object.keys(form).some((key) => key !== 'identity')) {
+        return renderPage(c, { title: '体验登录', bodyClass: c.get('auth') ? 'page--switch' : undefined, status: 400, body: <LoginView next="/" demoAccounts={demoAccounts} error="体验登录失败，请重新选择身份；若演示墙不可用，请联系维护者。" /> });
+      }
+      destroySession(deps, readSessionToken(c));
+      setSessionCookie(c, config, createSession(deps, user.id));
+      return c.redirect('/', 303);
+    });
+  }
 
   app.post('/login', originForm, (c) => {
     const form = c.get('form');
     const next = safeNextPath(form.next, config.webOrigin);
     const email = normalizeEmail(form.email);
+    if (deps.demo && (!email || !demoAccountFor(email))) return renderNotFound(c);
     if (!email) {
       return renderPage(c, {
         title: '登录',
         status: 400,
-        body: <LoginView next={next} email={form.email} error="邮箱格式不对，请检查后再试。" />,
+        body: <LoginView next={next} email={form.email} demoAccounts={demoAccounts} error="邮箱格式不对，请检查后再试。" />,
       });
     }
     const result = requestLoginCode(deps, email);
@@ -74,6 +94,7 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
     const form = c.get('form');
     const next = safeNextPath(form.next, config.webOrigin);
     const email = normalizeEmail(form.email);
+    if (deps.demo && (!email || !demoAccountFor(email))) return renderNotFound(c);
     if (!email) return c.redirect('/login', 303);
     const result = verifyLoginCode(deps, email, form.code);
     if (!result.ok) {
@@ -93,7 +114,7 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
     destroySession(deps, readSessionToken(c));
     const session = createSession(deps, result.user.id);
     setSessionCookie(c, config, session);
-    return c.redirect(result.user.nickname ? next : welcomeRedirectPath(next, config.webOrigin), 303);
+    return c.redirect(deps.demo ? '/' : result.user.nickname ? next : welcomeRedirectPath(next, config.webOrigin), 303);
   });
 
   app.get('/welcome', (c) => {

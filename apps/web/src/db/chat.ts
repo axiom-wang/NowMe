@@ -17,7 +17,11 @@ const VISIBLE = `FROM conversations c
     AND EXISTS (SELECT 1 FROM memberships a WHERE a.wall_id = c.wall_id AND a.user_id = c.user_a AND a.status = 'active')
     AND EXISTS (SELECT 1 FROM memberships b WHERE b.wall_id = c.wall_id AND b.user_id = c.user_b AND b.status = 'active')))`;
 
-const SUMMARY = `SELECT c.id, c.wall_id AS wallId, w.name AS wallName, c.kind,
+const SUMMARY = `SELECT
+  CASE WHEN c.kind = 'direct' THEN (SELECT CASE WHEN avatar_version IS NOT NULL
+    THEN '/w/' || c.wall_id || '/members/' || id || '/avatar?v=' || avatar_version END FROM users
+    WHERE id = CASE WHEN c.user_a = $user THEN c.user_b ELSE c.user_a END) END AS avatarUrl,
+  c.id, c.wall_id AS wallId, w.name AS wallName, c.kind,
   CASE WHEN c.kind = 'group' THEN w.name || ' · 全员群'
     ELSE COALESCE((SELECT nickname FROM users WHERE id = CASE WHEN c.user_a = $user THEN c.user_b ELSE c.user_a END), '成员') END AS title,
   (SELECT count(*) FROM chat_messages m WHERE m.conversation_id = c.id AND m.sender_id <> $user
@@ -28,8 +32,9 @@ const SUMMARY = `SELECT c.id, c.wall_id AS wallId, w.name AS wallName, c.kind,
   ${VISIBLE}`;
 
 const MESSAGE = `SELECT m.sequence, m.conversation_id AS conversationId, m.sender_id AS senderId,
+  CASE WHEN u.avatar_version IS NOT NULL THEN '/w/' || c.wall_id || '/members/' || u.id || '/avatar?v=' || u.avatar_version END AS senderAvatarUrl,
   COALESCE(u.nickname, '成员') AS senderName, m.client_id AS clientId, m.body AS text, m.created_at AS createdAt
-  FROM chat_messages m JOIN users u ON u.id = m.sender_id`;
+  FROM chat_messages m JOIN users u ON u.id = m.sender_id JOIN conversations c ON c.id = m.conversation_id`;
 
 export function createChatRepo(db: Database) {
   return {
@@ -84,10 +89,10 @@ export function createChatRepo(db: Database) {
         .run(id, userId, sequence);
       return true;
     },
-    members(wallId: string): { userId: string; nickname: string }[] {
-      return db.prepare(`SELECT u.id AS userId, COALESCE(u.nickname, '成员') AS nickname FROM memberships m
+    members(wallId: string): { userId: string; nickname: string; avatarUrl: string | null }[] {
+      return db.prepare(`SELECT CASE WHEN u.avatar_version IS NOT NULL THEN '/w/' || m.wall_id || '/members/' || u.id || '/avatar?v=' || u.avatar_version END AS avatarUrl, u.id AS userId, COALESCE(u.nickname, '成员') AS nickname FROM memberships m
         JOIN users u ON u.id = m.user_id WHERE m.wall_id = ? AND m.status = 'active' ORDER BY m.joined_at, m.id`)
-        .all(wallId) as unknown as { userId: string; nickname: string }[];
+        .all(wallId) as unknown as { userId: string; nickname: string; avatarUrl: string | null }[];
     },
   };
 }

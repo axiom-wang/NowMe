@@ -1,3 +1,4 @@
+import { DEMO_MODEL_READY, DEMO_MODEL_MISSING, demoModelError } from '../demo-access.js';
 /**
  * 平台托管路线的页面（contracts 9 / hosted-route 2、3、5）：
  * - `CreateView`：“在这里创作”——按 brief 状态显示 素材与点选 / 追问 / 确认“AI 眼中的你” / 已确认（开始生成）；
@@ -15,6 +16,8 @@ import { formatDateTime } from '../format.js';
 import { isDefaultChecked, isWriteInOption, type StructuredBrief } from '../hosted/brief.js';
 import { JOB_ERROR_TEXT, type HostedOverview, type JobStartError, type StepError } from '../hosted/service.js';
 import { CsrfField, Notice, PostButton } from './forms.js';
+import { initialOf } from './layout.js';
+import { HomeIcon } from './home-icons.js';
 
 export const STEP_ERROR_TEXT: Record<StepError, string> = {
   MODEL_CONFIG: JOB_ERROR_TEXT.MODEL_CONFIG!,
@@ -46,8 +49,8 @@ export const JOB_START_ERROR_TEXT: Record<JobStartError, string> = {
   'bad-request': `修改要求要写 ${EDIT_REQUEST_LIMITS.min}–${EDIT_REQUEST_LIMITS.max} 个字。`,
 };
 
-export function privacyNote(providers: string): string {
-  return `你填写的内容和图片会发送给 AI 模型服务（${providers}）用来生成页面，模型费用由服务商向你收取；资料保存在 NOWMe 平台、只有你自己能看到，不会给组织者或其他成员看；随时可以在“我的资料”里删除。`;
+export function privacyNote(providers: string, demo = false): string {
+  return `你填写的内容和图片会发送给 AI 模型服务（${providers}）用来生成页面，${demo ? '模型费用由演示提供者承担' : '模型费用由服务商向你收取'}；资料保存在 NOWMe 平台、只有你自己能看到，不会给组织者或其他成员看；随时可以在“我的资料”里删除。`;
 }
 
 const MOTION_OPTIONS = [
@@ -57,6 +60,7 @@ const MOTION_OPTIONS = [
 ] as const;
 
 export interface CreateViewModel {
+  demo?: boolean;
   wall: Wall;
   csrf: string;
   scene: SceneGuide;
@@ -71,105 +75,134 @@ function base(wall: Wall): string {
   return `/w/${wall.id}/me`;
 }
 
-const ModelNotice: FC<{ overview: HostedOverview }> = ({ overview }) => (
-  <p class="muted">{overview.modelReady ? '使用你的 AI API，模型费用由服务商向你收取；失败请求也可能计费。' : '请先配置你自己的 AI API，已有资料与页面不受影响。'} <a href="/account/ai">AI 设置</a></p>
+const ModelNotice: FC<{ overview: HostedOverview; demo?: boolean }> = ({ overview, demo }) => (
+  <p class="muted">{demo ? overview.modelReady ? DEMO_MODEL_READY : DEMO_MODEL_MISSING : overview.modelReady ? '使用你的 AI API，模型费用由服务商向你收取；失败请求也可能计费。' : '请先配置你自己的 AI API，已有资料与页面不受影响。'} {!demo ? <a href="/account/ai">AI 设置</a> : null}</p>
 );
+
+const STEP_LABELS = [
+  { label: '认识你', detail: '素材、兴趣和一点偏好' },
+  { label: '聊两句', detail: 'AI 只追问必要的问题' },
+  { label: '确认资料', detail: '看看“AI 眼中的你”' },
+  { label: '生成页面', detail: '预览满意，再亲自发布' },
+];
 
 const Steps: FC<{ current: number }> = ({ current }) => (
   <ol class="progress" aria-label="采访进度">
-    {['素材与点选', '追问', '确认“AI 眼中的你”', '生成'].map((label, index) => {
+    {STEP_LABELS.map(({ label, detail }, index) => {
       const state = index < current ? 'done' : index === current ? 'current' : 'todo';
       return (
         <li class={`progress__step progress__step--${state}`} aria-current={state === 'current' ? 'step' : undefined}>
-          <span class="progress__num" aria-hidden="true">
-            {state === 'done' ? '✓' : String(index + 1)}
-          </span>
-          <span class="progress__label">{label}</span>
+          <span class="progress__num" aria-hidden="true">{state === 'done' ? '✓' : String(index + 1)}</span>
+          <span class="progress__label">{label}<small>{detail}</small></span>
         </li>
       );
     })}
   </ol>
 );
 
+const SectionHeading: FC<{ number: string; title: string; hint: string; optional?: boolean }> = ({ number, title, hint, optional }) => (
+  <header class="create-section__head">
+    <span class="create-section__number" aria-hidden="true">{number}</span>
+    <div><h2>{title}{optional ? <span class="create-optional">可选</span> : null}</h2><p>{hint}</p></div>
+  </header>
+);
+
 const InterviewForm: FC<{ model: CreateViewModel }> = ({ model }) => {
   const { scene } = model;
   const saved = model.overview.brief?.answers;
   return (
-    <form method="post" action={`${base(model.wall)}/create/start`} enctype="multipart/form-data" class="stack hosted-form">
+    <form method="post" action={`${base(model.wall)}/create/start`} enctype="multipart/form-data" class="stack hosted-form create-interview" data-interview>
       <CsrfField token={model.csrf} />
-      <section class="card">
-        <h2>1. 先贴点关于你的东西</h2>
+      <section class="card create-section">
+        <SectionHeading number="01" title="先分享一点关于你" hint="一句话、一张照片，都可以成为灵感。没有素材也可以直接往下选。" optional />
         <label class="field">
-          <span class="field__label">{scene.assetPrompt}</span>
-          <textarea name="material" rows={6} maxlength={BRIEF_MATERIAL_MAX_CHARS} placeholder="写好的自我介绍、作品链接、一句话描述都行">{saved?.material ?? ''}</textarea>
+          <span class="field__label">关于你的素材</span>
+          <span class="field__hint" id="material-hint">{scene.assetPrompt}</span>
+          <textarea name="material" rows={4} maxlength={BRIEF_MATERIAL_MAX_CHARS} aria-describedby="material-hint" placeholder="比如：周末喜欢钻进山里，最近在练习用胶片记录路上的小事……">{saved?.material ?? ''}</textarea>
         </label>
-        <label class="field">
-          <span class="field__label">
-            图片 <span class="muted">（可选，最多 {BRIEF_ASSETS_MAX_COUNT} 张，每张 2 MB 以内）</span>
-          </span>
-          <input type="file" name="photos" accept="image/png,image/jpeg,image/webp,image/gif" multiple />
+        <div class="create-material-meta"><span>自我介绍、作品链接，或一个小细节</span><span data-material-count aria-label="素材字数">{saved?.material.length ?? 0} / {BRIEF_MATERIAL_MAX_CHARS}</span></div>
+        <label class="create-upload">
+          <input type="file" name="photos" accept="image/png,image/jpeg,image/webp,image/gif" multiple aria-describedby="photos-hint photos-status" />
+          <span class="create-upload__icon" aria-hidden="true"><HomeIcon name="plus" /></span>
+          <span><strong>添加几张能代表你的照片</strong><span id="photos-hint">生活照、作品、你的桌面都行 · 最多 {BRIEF_ASSETS_MAX_COUNT} 张，每张 2 MB 以内</span></span>
+          <span class="create-upload__action" aria-hidden="true">选择图片</span>
         </label>
-        {model.overview.brief?.assets.length ? <p class="muted">已保存 {model.overview.brief.assets.length} 张图片；不选择新图片时继续使用。</p> : null}
+        <p class="field__hint create-upload__status" id="photos-status" data-photo-status role="status">{model.overview.brief?.assets.length ? `已保存 ${model.overview.brief.assets.length} 张图片；不选择新图片时继续使用。` : '支持 PNG、JPEG、WebP、GIF'}</p>
+        <div class="create-photo-list" data-photo-list></div>
       </section>
 
-      <section class="card">
-        <h2>2. 点选几道题</h2>
-        {scene.choiceQuestions.map((question) => (
-          <fieldset class="field hosted-question">
-            <legend class="field__label">
-              {question.question}
-              {question.required ? <span class="badge badge--warn">必答</span> : null}
-            </legend>
-            <div class="chips">
-              {question.options.map((option, index) =>
-                question.multi ? (
-                  <label class="check chip-check">
-                    <input type="checkbox" name={`q_${question.id}_${index}`} value="1" checked={saved ? saved.choices[question.id]?.selected.includes(option.replace('（默认勾选）', '')) : isDefaultChecked(option)} />
-                    <span>{option.replace('（默认勾选）', '')}</span>
-                  </label>
-                ) : (
-                  <label class="check chip-check">
-                    <input type="radio" name={`q_${question.id}`} value={String(index)} checked={saved?.choices[question.id]?.selected.includes(option)} required={question.required} />
-                    <span>{option}</span>
-                  </label>
-                ),
-              )}
-            </div>
-            {question.options.some(isWriteInOption) || !question.multi ? (
-              <input type="text" name={`q_${question.id}_text`} maxlength={200} value={saved?.choices[question.id]?.text ?? ''} placeholder="想直接写的话写在这里（可选）" class="hosted-writein" />
-            ) : null}
-          </fieldset>
-        ))}
+      <section class="card create-section">
+        <SectionHeading number="02" title="点选几下，认识你多一点" hint="凭直觉选就好。除了标记必答的问题，其他都可以跳过。" />
+        <div class="create-questions">
+          {scene.choiceQuestions.map((question) => {
+            const prompt = question.question.replace('【先选这个】', '');
+            const parts = /^(.*?)（([^）]+)）$/.exec(prompt);
+            return (
+              <fieldset class="field hosted-question">
+                <legend class="field__label">{parts?.[1] ?? prompt}{question.required ? <span class="create-required">必答</span> : <span class="create-question-type">{question.multi ? '可多选' : '可跳过'}</span>}</legend>
+                {parts ? <p class="field__hint">{parts[2]}</p> : null}
+                <div class="chips">
+                  {question.options.map((option, index) =>
+                    question.multi ? (
+                      <label class="check chip-check">
+                        <input type="checkbox" name={`q_${question.id}_${index}`} value="1" data-write-in={isWriteInOption(option) ? '' : undefined} checked={saved ? saved.choices[question.id]?.selected.includes(option.replace('（默认勾选）', '')) : isDefaultChecked(option)} />
+                        <span>{option.replace('（默认勾选）', '')}</span>
+                      </label>
+                    ) : (
+                      <label class="check chip-check">
+                        <input type="radio" name={`q_${question.id}`} value={String(index)} data-write-in={isWriteInOption(option) || option.includes('只写') ? '' : undefined} checked={saved?.choices[question.id]?.selected.includes(option)} required={question.required} />
+                        <span>{option}</span>
+                      </label>
+                    ),
+                  )}
+                </div>
+                {question.options.some(isWriteInOption) || !question.multi ? (
+                  <details class="create-writein" open={!!saved?.choices[question.id]?.text}>
+                    <summary>想自己写，或补充一句？</summary>
+                    <label class="field"><span class="visually-hidden">{parts?.[1] ?? prompt}：补充说明</span><input type="text" name={`q_${question.id}_text`} maxlength={200} value={saved?.choices[question.id]?.text ?? ''} placeholder="用你自己的话说说（可选）" class="hosted-writein" /></label>
+                  </details>
+                ) : null}
+              </fieldset>
+            );
+          })}
+        </div>
+      </section>
 
-        <fieldset class="field hosted-question">
-          <legend class="field__label">页面风格：挑 1–2 个参考（不选就是“你来定”）</legend>
+      <section class="card create-section">
+        <SectionHeading number="03" title="选一种，你喜欢的样子" hint="挑 1–2 个风格参考，也可以不选，让 AI 来发挥。" optional />
+        <fieldset class="field hosted-question create-styles">
+          <legend class="visually-hidden">页面风格</legend>
           <div class="style-grid">
-            {model.examples.map((example) => (
-              <label class="style-option">
-                <input type="checkbox" name={`style_${example.dir}`} value="1" checked={saved?.styles.includes(example.dir)} />
-                <img src={`/hosted/examples/${example.dir}.png`} alt="" loading="lazy" width={150} height={200} />
-                <span>{example.style}</span>
-              </label>
-            ))}
+            {model.examples.map((example) => {
+              const [title, ...description] = example.style.split('：');
+              return (
+                <label class="style-option">
+                  <input type="checkbox" name={`style_${example.dir}`} value="1" checked={saved?.styles.includes(example.dir)} aria-label={example.style} />
+                  <span class="style-option__check" aria-hidden="true">✓</span>
+                  <img src={`/hosted/examples/${example.dir}.png`} alt="" loading="lazy" width={300} height={400} />
+                  <span class="style-option__copy"><strong>{title}</strong><small>{description.join('：')}</small></span>
+                </label>
+              );
+            })}
           </div>
+          <p class="field__hint create-style-status" data-style-status role="status">{saved?.styles.length ? `已选 ${saved.styles.length} / 2 个参考` : '还没想好？不选也没关系。'}</p>
         </fieldset>
-
-        <fieldset class="field hosted-question">
-          <legend class="field__label">动效强度</legend>
+        <fieldset class="field hosted-question create-motion">
+          <legend class="field__label">让页面动起来<span class="create-question-type">动效强度</span></legend>
           <div class="chips">
             {MOTION_OPTIONS.map((option) => (
               <label class="check chip-check">
                 <input type="radio" name="motion" value={option.value} checked={option.value === (saved?.motion ?? 'medium')} />
-                <span>{option.label}</span>
+                <span>{option.label}<small>{option.value === 'calm' ? '安静地展示' : option.value === 'medium' ? '一点灵动，刚刚好' : '多一点互动惊喜'}</small></span>
               </label>
             ))}
           </div>
         </fieldset>
       </section>
-      <p class="muted hosted-privacy">{privacyNote(model.providers)}</p>
-      <button type="submit" class="btn btn--primary btn--lg btn--block">
-        下一步
-      </button>
+      <div class="create-submit">
+        <div class="create-submit__privacy"><HomeIcon name="eye" /><p class="muted hosted-privacy">{privacyNote(model.providers, model.demo)}</p></div>
+        <div class="create-submit__action"><p>接下来，AI 会和你聊两句。<small>确认资料后，才开始生成页面。</small></p><button type="submit" class="btn btn--primary btn--lg">下一步<HomeIcon name="arrow" /></button></div>
+      </div>
     </form>
   );
 };
@@ -351,31 +384,38 @@ export const CreateView: FC<{ model: CreateViewModel }> = ({ model }) => {
   const status = view?.record.status ?? 'collecting';
   const step = status === 'collecting' ? 0 : status === 'followups' ? 1 : status === 'review' ? 2 : 3;
   return (
-    <div class="container container--form">
-      <p class="crumbs">
-        <a href="/">我的</a>
-        <span aria-hidden="true">/</span>
-        <a href={`/w/${model.wall.id}`}>{model.wall.name}</a>
-        <span aria-hidden="true">/</span>
+    <div class="container create-page">
+      <nav class="crumbs create-crumbs" aria-label="当前位置">
+        <a href="/">我的</a><span aria-hidden="true">/</span>
+        <a href={`/w/${model.wall.id}`}>{model.wall.name}</a><span aria-hidden="true">/</span>
         <a href={base(model.wall)}>创作工作区</a>
-      </p>
-      <h1 class="display form-title">在这里创作</h1>
-      <p class="muted">
-        {model.scene.label} · 大约 {Math.max(1, Math.round(model.scene.interviewBudgetSeconds / 60))} 分钟。以点选为主，AI 只追问必要的问题。
-      </p>
-      <Steps current={step} />
-      <ModelNotice overview={model.overview} />
-      {model.error ? <Notice tone="error">{model.error}</Notice> : null}
-      <ActiveJobNotice model={model} />
-      {model.overview.modelReady && status === 'collecting' ? <InterviewForm model={model} /> : null}
-      {status === 'followups' ? <FollowupForm model={model} /> : null}
-      {status === 'review' && view?.brief ? <ReviewForm model={model} brief={view.brief} briefMd={view.record.briefMd} /> : null}
-      {status === 'confirmed' ? <ConfirmedPanel model={model} /> : null}
-      {status !== 'collecting' && status !== 'confirmed' ? (
-        <p class="hosted-restart">
-          <PostButton action={`${base(model.wall)}/create/restart`} csrf={model.csrf} label="从头再来" confirm="会删除这次采访已填写的内容和图片。继续吗？" />
-        </p>
-      ) : null}
+      </nav>
+      <header class="create-intro">
+        <div><p class="create-eyebrow"><span aria-hidden="true">✳</span> 每一面，都是你</p><h1>在这里创作<span class="create-intro__dot" aria-hidden="true">.</span></h1><p class="create-intro__lead">不用从空白页开始。和 AI 聊聊，做一页有个性的自己。</p></div>
+        <p class="create-duration"><span>约 <strong>{Math.max(1, Math.round(model.scene.interviewBudgetSeconds / 60))}</strong> 分钟</span><small>完成这次小采访</small></p>
+      </header>
+      <div class="create-layout">
+        <aside class="create-journey" aria-label="创作流程">
+          <p class="create-journey__title">你的创作旅程<span>0{step + 1} / 04</span></p>
+          <Steps current={step} />
+          <div class={`create-model${model.overview.modelReady ? ' create-model--ready' : ''}`}>
+            <p class="create-model__title"><span aria-hidden="true"></span>{model.overview.modelReady ? model.demo ? '演示模型已就绪' : '你的 AI 已就绪' : '先连接你的 AI'}</p>
+            <ModelNotice overview={model.overview} demo={model.demo} />
+          </div>
+          <p class="create-journey__note"><HomeIcon name="eye" /><span>资料先留给自己。<br />页面由你预览、确认发布。</span></p>
+          <a class="create-back" href={base(model.wall)}>← 返回创作工作区</a>
+        </aside>
+        <div class="create-content">
+          {model.error ? <Notice tone="error">{model.error}</Notice> : null}
+          <ActiveJobNotice model={model} />
+          {!model.overview.modelReady && status === 'collecting' ? <section class="card create-empty"><HomeIcon name="pencil" /><h2>连接 AI，开始认识你</h2><p>{model.demo ? DEMO_MODEL_MISSING : '先在 AI 设置中添加你的模型服务，再回来开始这次小采访。'}</p>{!model.demo ? <a class="btn btn--primary" href="/account/ai">前往 AI 设置<HomeIcon name="arrow" /></a> : null}</section> : null}
+          {model.overview.modelReady && status === 'collecting' ? <InterviewForm model={model} /> : null}
+          {status === 'followups' ? <FollowupForm model={model} /> : null}
+          {status === 'review' && view?.brief ? <ReviewForm model={model} brief={view.brief} briefMd={view.record.briefMd} /> : null}
+          {status === 'confirmed' ? <ConfirmedPanel model={model} /> : null}
+          {status !== 'collecting' && status !== 'confirmed' ? <div class="hosted-restart"><PostButton action={`${base(model.wall)}/create/restart`} csrf={model.csrf} label="从头再来" confirm="会删除这次采访已填写的内容和图片。继续吗？" /></div> : null}
+        </div>
+      </div>
     </div>
   );
 };
@@ -392,7 +432,7 @@ export const JOB_STATUS_TEXT: Record<GenerationJob['status'], string> = {
   needs_input: '需要你补充一句',
 };
 
-export const JobView: FC<{ wall: Wall; job: GenerationJob; revisionNumber: number | null; csrf: string; blocks: string[] }> = ({ wall, job, revisionNumber, csrf, blocks }) => {
+export const JobView: FC<{ demo?: boolean; wall: Wall; job: GenerationJob; revisionNumber: number | null; csrf: string; blocks: string[] }> = ({ wall, job, revisionNumber, csrf, blocks, demo }) => {
   const label = job.kind === 'generate' ? '生成页面' : '修改页面';
   const running = job.status === 'queued' || job.status === 'running';
   return (
@@ -420,7 +460,10 @@ export const JobView: FC<{ wall: Wall; job: GenerationJob; revisionNumber: numbe
             </p>
           </>
         ) : null}
-        {job.status === 'failed' ? <><Notice tone="error">{JOB_ERROR_TEXT[job.errorCode ?? 'INTERNAL'] ?? JOB_ERROR_TEXT.INTERNAL}</Notice><p class="muted">模型服务商可能已收取调用费用。<a href="/account/ai">检查 AI 设置</a></p></> : null}
+        {job.status === 'failed' ? <><Notice tone="error">{(demo ? demoModelError(job.errorCode ?? '') : null) ?? JOB_ERROR_TEXT[job.errorCode ?? 'INTERNAL'] ?? JOB_ERROR_TEXT.INTERNAL}</Notice><p class="muted">{demo ? '请重试；若仍失败，请维护者检查模型权限、余额和连接。费用由演示提供者承担。' : <>模型服务商可能已收取调用费用。<a href="/account/ai">检查 AI 设置</a></>}</p></> : null}
+        {job.status === 'failed' ? job.kind === 'generate'
+          ? <PostButton action={`${base(wall)}/generate`} csrf={csrf} label="重新生成页面" />
+          : job.baseRevisionId ? <EditForm wallId={wall.id} csrf={csrf} revisionId={job.baseRevisionId} blocks={blocks} request={job.requestText ?? ''} /> : null : null}
         {job.status === 'needs_input' ? (
           <>
             <Notice tone="warning">{job.resultMessage ?? '需要你说得再具体一点。'}</Notice>
@@ -494,51 +537,80 @@ export const BriefPageView: FC<{ wall: Wall; csrf: string; briefMd: string; brie
 const CATEGORY_LABEL: Record<ProfileEntry['category'], string> = { fact: '事实', quote: '原话', preference: '偏好', boundary: '边界' };
 const BRIEF_STATUS_LABEL: Record<OwnBriefListItem['status'], string> = { collecting: '采访中', followups: '追问中', review: '待确认', confirmed: '已确认' };
 
-export const MyDataView: FC<{ csrf: string; profile: ProfileEntry[]; briefs: OwnBriefListItem[]; notice: string | null }> = ({ csrf, profile, briefs, notice }) => (
-  <div class="container container--form">
-    <h1 class="display form-title">我的资料</h1>
-    <p class="muted">在应用内创作时保存的长期画像与 brief 都在这里，只有你自己能看到；组织者和其他成员都看不到。</p>
+const ProfileRow: FC<{ entry: ProfileEntry; csrf: string }> = ({ entry, csrf }) => (
+  <li class="profile-row">
+    <span class="profile-category">{CATEGORY_LABEL[entry.category]}</span>
+    <p>{entry.text}</p>
+    <details class="profile-menu">
+      <summary aria-label={`管理画像：${entry.text}`}><span aria-hidden="true">···</span></summary>
+      <div class="profile-menu__panel">
+        <p class="muted">{entry.confirmation === 'owner-stated' ? '你明确说过' : '你确认过'}<br />{formatDateTime(entry.updatedAt)}</p>
+        <PostButton action="/account/profile/delete" csrf={csrf} label="删除这条画像" variant="danger" fields={{ entryId: entry.id }} confirm="删除这条画像？无法恢复。" />
+      </div>
+    </details>
+  </li>
+);
+
+export const MyDataView: FC<{ nickname: string; avatarVersion?: string | null | undefined; nicknameDraft?: string; error?: string; csrf: string; profile: ProfileEntry[]; briefs: OwnBriefListItem[]; notice: string | null }> = ({ nickname, avatarVersion, nicknameDraft, error, csrf, profile, briefs, notice }) => (
+  <div class="profile-page">
+    <header class="profile-intro">
+      <h1>我的资料</h1>
+      <p>在应用内创作时保存的长期画像与 brief 都在这里。<br />只有你自己能看到；组织者和其他成员都看不到。</p>
+    </header>
     {notice ? <Notice tone="success">{notice}</Notice> : null}
-    <section class="card stack" aria-labelledby="profile-heading">
-      <h2 id="profile-heading">长期画像（{profile.length} 条）</h2>
-      {profile.length === 0 ? (
-        <p class="muted">还没有。确认 brief 时勾选“记住这些”，下次采访就不用再问。</p>
-      ) : (
-        <ul class="hosted-profile">
-          {profile.map((entry) => (
-            <li>
-              <span class="badge">{CATEGORY_LABEL[entry.category]}</span> {entry.text}
-              <span class="muted"> · {entry.confirmation === 'owner-stated' ? '你明确说过' : '你确认过'} · {formatDateTime(entry.updatedAt)}</span>
-              <PostButton action="/account/profile/delete" csrf={csrf} label="删除" fields={{ entryId: entry.id }} />
-            </li>
-          ))}
-        </ul>
-      )}
-      {profile.length > 0 ? (
-        <PostButton action="/account/profile/delete" csrf={csrf} label="全部删除" variant="danger" fields={{ all: '1' }} confirm="删除全部长期画像？无法恢复。" />
-      ) : null}
+    <section class="profile-card profile-identity" aria-label="个人资料">
+      <span class="profile-avatar" aria-hidden="true">{avatarVersion ? <img src={`/account/avatar?v=${avatarVersion}`} alt="" /> : initialOf(nickname)}</span>
+      <div class="profile-identity__copy">
+        <h2>{nickname}</h2>
+        <p>{profile.find((entry) => entry.category === 'fact')?.text ?? '从一次采访开始，让 AI 慢慢认识你。'}</p>
+      </div>
+      <details class="profile-editor" open={!!error}>
+        <summary class="profile-button"><HomeIcon name="pencil" />编辑资料</summary>
+        <form method="post" action="/account/profile" enctype="multipart/form-data" class="stack profile-edit-form">
+          <CsrfField token={csrf} />
+          {error ? <Notice tone="error">{error}</Notice> : null}
+          <label>昵称<input type="text" name="nickname" value={nicknameDraft ?? nickname} required autocomplete="nickname" aria-describedby="nickname-help" /></label>
+          <p id="nickname-help" class="muted">1–24 个字。昵称和头像会显示在账号导航和同墙聊天中。</p>
+          <label>头像<input type="file" name="avatar" accept="image/png,image/jpeg,image/webp" aria-describedby="avatar-help" /></label>
+          <p id="avatar-help" class="muted">支持 PNG、JPEG、WebP，2 MB 以内；保存时自动居中裁成正方形。</p>
+          {avatarVersion ? <label class="profile-remove-avatar"><input type="checkbox" name="removeAvatar" value="1" />移除当前头像，恢复昵称首字</label> : null}
+          <div><button type="submit" class="profile-button profile-button--save">保存资料</button></div>
+        </form>
+      </details>
     </section>
-    <section class="card stack" aria-labelledby="briefs-heading">
-      <h2 id="briefs-heading">各面墙的 brief（{briefs.length} 份）</h2>
-      {briefs.length === 0 ? (
-        <p class="muted">还没有。</p>
+    <section class="profile-card profile-entries" aria-labelledby="profile-heading">
+      <div class="profile-section-heading">
+        <h2 id="profile-heading">长期画像（{profile.length} 条）</h2>
+        <details class="profile-help">
+          <summary><HomeIcon name="plus" />如何添加</summary>
+          <div class="profile-help__panel">在墙的创作工作区完成采访，确认 brief 时勾选“记住这些”，就能保存新的画像。<a href="/">前往我的墙 <span aria-hidden="true">→</span></a></div>
+        </details>
+      </div>
+      {profile.length === 0 ? (
+        <div class="profile-empty"><p>还没有长期画像</p><span>确认 brief 时勾选“记住这些”，下次采访就不用再问。</span></div>
       ) : (
-        <ul class="hosted-profile">
-          {briefs.map((item) => (
-            <li>
-              <strong>{item.wallName}</strong>
-              <span class="muted">
-                {' '}
-                · {BRIEF_STATUS_LABEL[item.status]} · {formatDateTime(item.updatedAt)}
-                {item.wallClosed ? ' · 墙已关闭' : item.membershipStatus !== 'active' ? ' · 你已不在这面墙' : ''}
-              </span>
-              {!item.wallClosed && item.membershipStatus === 'active' ? (
-                <a href={`/w/${item.wallId}/me/brief`}> 查看</a>
-              ) : null}
+        <>
+          <ul class="profile-list">{profile.slice(0, 6).map((entry) => <ProfileRow entry={entry} csrf={csrf} />)}</ul>
+          {profile.length > 6 ? <details class="profile-more">
+            <summary class="profile-button"><span class="profile-more__closed">展开全部 {profile.length} 条</span><span class="profile-more__open">收起画像</span><HomeIcon name="chevron" /></summary>
+            <ul class="profile-list">{profile.slice(6).map((entry) => <ProfileRow entry={entry} csrf={csrf} />)}</ul>
+          </details> : null}
+          <details class="profile-clear"><summary>管理全部画像</summary><PostButton action="/account/profile/delete" csrf={csrf} label="全部删除" variant="danger" fields={{ all: '1' }} confirm="删除全部长期画像？无法恢复。" /></details>
+        </>
+      )}
+    </section>
+    <section class="profile-card profile-briefs" aria-labelledby="briefs-heading">
+      <h2 id="briefs-heading">各面墙的 brief（{briefs.length} 份）</h2>
+      {briefs.length === 0 ? <div class="profile-empty"><p>还没有保存的 brief</p><span>在墙里完成采访后，你的创作资料会出现在这里。</span></div> : (
+        <ul class="profile-brief-list">{briefs.map((item) => (
+          <li>
+            <div><h3>{item.wallName}</h3><p class="muted">{BRIEF_STATUS_LABEL[item.status]} · {formatDateTime(item.updatedAt)}{item.wallClosed ? ' · 墙已关闭' : item.membershipStatus !== 'active' ? ' · 你已不在这面墙' : ''}</p></div>
+            <div class="profile-brief-actions">
+              {!item.wallClosed && item.membershipStatus === 'active' ? <a class="profile-button" href={`/w/${item.wallId}/me/brief`}>查看</a> : null}
               <PostButton action="/account/briefs/delete" csrf={csrf} label="删除" fields={{ briefId: item.id }} confirm="删除这份 brief 和上传的图片？无法恢复。" />
-            </li>
-          ))}
-        </ul>
+            </div>
+          </li>
+        ))}</ul>
       )}
     </section>
   </div>

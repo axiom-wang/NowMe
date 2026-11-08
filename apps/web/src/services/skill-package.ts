@@ -1,16 +1,17 @@
 /**
- * Skill 分发（contracts 4.5）：主站托管 `@nowme/skill` 打出的 Skill 包（`skill/dist-package/`）。
+ * Skill 分发（contracts 4.5）：GitHub 提供公开下载；主站保留本地包镜像（`skill/dist-package/`）。
  *
- * - 启动时读一次 `manifest.json` 与归档，核对 sha256 与大小；不一致或缺文件时返回 null（安装页提示先构建）。
- * - 所有对外地址都由 `NOWME_WEB_ORIGIN` 拼出：本地是 http://localhost:3000，上线后是正式域名，用户复制就能用。
+ * - 启动时读一次本地 `manifest.json` 与归档，核对 sha256 与大小；不一致或缺文件时返回 null，仍可从 GitHub 安装。
+ * - 安装说明、下载清单与归档 URL 使用 GitHub；只有主站的安装入口使用 webOrigin。
  * - Skill 包与安装说明里没有任何 token 或凭证；这些路由公开，不需要登录。
  */
 import { createHash } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import {
-  SKILL_INSTALL_DOC_PATH,
-  SKILL_MANIFEST_PATH,
+  SKILL_PUBLIC_INSTALL_DOC,
+  SKILL_PUBLIC_MANIFEST,
+  skillReleaseArchiveUrl,
   SKILL_ROUTE_PREFIX,
   skillArchiveFileName,
   skillPackageManifestSchema,
@@ -27,16 +28,16 @@ export function skillInstallPageUrl(webOrigin: string): string {
   return `${webOrigin}${SKILL_ROUTE_PREFIX}`;
 }
 
-export function skillInstallDocUrl(webOrigin: string): string {
-  return `${webOrigin}${SKILL_INSTALL_DOC_PATH}`;
+export function skillInstallDocUrl(_webOrigin?: string): string {
+  return SKILL_PUBLIC_INSTALL_DOC;
 }
 
-export function skillManifestUrl(webOrigin: string): string {
-  return `${webOrigin}${SKILL_MANIFEST_PATH}`;
+export function skillManifestUrl(_webOrigin?: string): string {
+  return SKILL_PUBLIC_MANIFEST;
 }
 
-export function skillArchiveUrl(webOrigin: string, version: string): string {
-  return `${webOrigin}${SKILL_ROUTE_PREFIX}/${skillArchiveFileName(version)}`;
+export function skillArchiveUrl(_webOrigin: string, version: string): string {
+  return skillReleaseArchiveUrl(version);
 }
 
 export type SkillPackageLoadResult = { ok: true; skillPackage: SkillPackage } | { ok: false; reason: string };

@@ -1,3 +1,4 @@
+import { saveAccountProfile } from '../services/account-profile.js';
 /**
  * 平台托管路线的路由（contracts 9 / hosted-route 5）。全部是会话 + CSRF + Origin 的表单路由，忽略 `Authorization` 头；
  * 只有页面主人可访问（`findOwnPage`，否则 404）；网页创作始终可见，未配置自己的 API 时引导到账号设置。
@@ -18,6 +19,7 @@ import { requireForm } from '../security/forms.js';
 import { authOf, requireUser } from '../security/session.js';
 import { findOwnPage, type OwnPage } from '../services/access.js';
 import { renderNotFound } from '../views/errors.js';
+import { demoModelError } from '../demo-access.js';
 import { BriefPageView, CreateView, JOB_START_ERROR_TEXT, JobView, MyDataView, STEP_ERROR_TEXT } from '../views/hosted.js';
 import { renderPage } from '../views/layout.js';
 
@@ -96,6 +98,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     const auth = authOf(c);
     return renderPage(c, {
       title: `在这里创作 · ${own.wall.name}`,
+      bodyClass: 'page--create',
       status,
       body: (
         <CreateView
@@ -104,6 +107,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
             csrf: auth.session.csrfToken,
             scene: hosted.scene(own),
             examples: loadExamplesIndex().examples,
+            demo: !!deps.demo,
             providers: deps.config.hosted.fake ? '测试用的假模型' : (['interview', 'generate'] as const).map((role) => deps.userModels.summary(auth.user.id, role)?.endpoint.label).filter((value, i, all) => value && all.indexOf(value) === i).join('、') || '你配置的服务',
             overview: hosted.overview(own, auth.user.id),
             error,
@@ -115,14 +119,14 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
 
   const afterStep = (c: Context<AppEnv>, own: OwnPage, hosted: HostedService, result: StepResult) => {
     if (result.ok) return c.redirect(`/w/${own.wall.id}/me/create`, 303);
-    return renderCreate(c, own, hosted, STEP_ERROR_TEXT[result.error], result.error === 'rate-limited' ? 429 : 422);
+    return renderCreate(c, own, hosted, (deps.demo ? demoModelError(result.error) : null) ?? STEP_ERROR_TEXT[result.error], result.error === 'rate-limited' ? 429 : 422);
   };
 
   app.get('/w/:wallId/me/create', user, (c) => {
     const found = ownOf(c);
     if (!found) return renderNotFound(c);
     const error = c.req.query('error');
-    return renderCreate(c, found.own, found.hosted, error && JOB_ERRORS.has(error) ? JOB_START_ERROR_TEXT[error as keyof typeof JOB_START_ERROR_TEXT] : error && STEP_ERRORS.has(error) ? STEP_ERROR_TEXT[error as keyof typeof STEP_ERROR_TEXT] : null);
+    return renderCreate(c, found.own, found.hosted, error && deps.demo && demoModelError(error) ? demoModelError(error) : error && JOB_ERRORS.has(error) ? JOB_START_ERROR_TEXT[error as keyof typeof JOB_START_ERROR_TEXT] : error && STEP_ERRORS.has(error) ? STEP_ERROR_TEXT[error as keyof typeof STEP_ERROR_TEXT] : null);
   });
 
   app.post('/w/:wallId/me/create/start', uploadForm, async (c) => {
@@ -225,6 +229,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
       refreshSeconds: running ? 3 : undefined,
       body: (
         <JobView
+          demo={!!deps.demo}
           wall={found.own.wall}
           job={job}
           revisionNumber={revision?.pageId === found.own.page.id ? revision.number : null}
@@ -269,6 +274,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
   const DATA_NOTICES: Record<string, string> = {
     'brief-deleted': 'brief 已删除：采访内容和上传的图片都已清除。',
     'profile-deleted': '已删除。',
+    'profile-saved': '个人资料已保存。',
   };
 
   app.get('/account/data', user, (c) => {
@@ -276,8 +282,11 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     const notice = c.req.query('notice');
     return renderPage(c, {
       title: '我的资料',
+      bodyClass: 'page--data',
       body: (
         <MyDataView
+          nickname={auth.user.nickname ?? '我'}
+          avatarVersion={auth.user.avatarVersion}
           csrf={auth.session.csrfToken}
           profile={deps.repos.profileEntries.listForUser(auth.user.id)}
           briefs={deps.repos.briefs.listForOwner(auth.user.id)}
@@ -285,6 +294,24 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
         />
       ),
     });
+  });
+
+  app.get('/account/avatar', user, (c) => {
+    const bytes = deps.repos.users.avatarForUser(authOf(c).user.id);
+    if (!bytes) return renderNotFound(c);
+    return c.body(new Uint8Array(bytes), 200, { 'Content-Type': 'image/webp', 'Cache-Control': 'private, no-store' });
+  });
+
+  app.post('/account/profile', requireForm(deps, { multipartFiles: 'avatar' }), async (c) => {
+    const auth = authOf(c);
+    const fields = c.get('form');
+    const nickname = (fields.nickname ?? '').trim();
+    const error = await saveAccountProfile(deps.repos.users, auth.user.id, nickname, c.get('uploads'), fields.removeAvatar === '1');
+    if (error) return renderPage(c, {
+      title: '我的资料', bodyClass: 'page--data', status: 400,
+      body: <MyDataView nickname={auth.user.nickname ?? '我'} avatarVersion={auth.user.avatarVersion} nicknameDraft={nickname} error={error} csrf={auth.session.csrfToken} profile={deps.repos.profileEntries.listForUser(auth.user.id)} briefs={deps.repos.briefs.listForOwner(auth.user.id)} notice={null} />,
+    });
+    return c.redirect('/account/data?notice=profile-saved', 303);
   });
 
   app.post('/account/profile/delete', form, (c) => {

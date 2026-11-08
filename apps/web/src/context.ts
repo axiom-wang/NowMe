@@ -27,6 +27,7 @@ export type WebConfig = Pick<NowmeConfig, 'webOrigin' | 'pagesOrigin' | 'dataDir
 };
 
 export interface AppDeps {
+  demo: import('./demo-access.js').DemoAccess | null;
   config: WebConfig;
   db: Database;
   repos: Repos;
@@ -69,6 +70,7 @@ export type AppEnv = {
   Variables: {
     /** 会话（主站页面与表单；Agent API 不加载会话）。 */
     auth: SessionAuth | null;
+    demo: boolean;
     /** `requireForm` 解析后的表单字段。 */
     form: FormFields;
     /** `requireForm({ multipartFiles })` 解析出的上传文件（托管采访的图片）。 */

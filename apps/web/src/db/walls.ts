@@ -64,8 +64,26 @@ export function createWallsRepo(db: Database) {
     "SELECT * FROM walls WHERE organizer_id = ? AND name = ? AND status = 'open' ORDER BY created_at LIMIT 1",
   );
   const close = db.prepare("UPDATE walls SET status = 'closed', closed_at = ? WHERE id = ? AND status = 'open'");
+  const coverVersion = db.prepare('SELECT version FROM wall_covers WHERE wall_id = ?');
+  const cover = db.prepare('SELECT image FROM wall_covers WHERE wall_id = ?');
+  const saveCover = db.prepare('INSERT INTO wall_covers (wall_id, version, image, updated_at) VALUES (?, ?, ?, ?) ON CONFLICT(wall_id) DO UPDATE SET version = excluded.version, image = excluded.image, updated_at = excluded.updated_at');
+  const deleteCover = db.prepare('DELETE FROM wall_covers WHERE wall_id = ?');
 
   return {
+    coverUrl(wallId: string): string | null {
+      const row = coverVersion.get(wallId) as { version: string } | undefined;
+      return row ? `/w/${wallId}/cover?v=${row.version}` : null;
+    },
+    findCover(wallId: string): Uint8Array | null {
+      const row = cover.get(wallId) as { image: Uint8Array } | undefined;
+      return row?.image ?? null;
+    },
+    saveCover(wallId: string, version: string, image: Uint8Array, now: string): void {
+      saveCover.run(wallId, version, image, now);
+    },
+    deleteCover(wallId: string): void {
+      deleteCover.run(wallId);
+    },
     create(wall: Wall): Wall {
       insert.run(
         wall.id,

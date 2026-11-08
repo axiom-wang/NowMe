@@ -50,6 +50,17 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
   const labels = sceneLabels();
   const scenes: SceneChoice[] = SCENE_TYPES.map((type) => ({ type, label: labels[type] }));
 
+  // 头像仅向同墙的有效成员提供，移除或关墙后立即失效。
+  app.get('/w/:wallId/members/:userId/avatar', user, (c) => {
+    const viewer = authOf(c).user.id;
+    const wallId = c.req.param('wallId');
+    const targetId = c.req.param('userId');
+    if (!findMemberWall(deps.repos, viewer, wallId) || !findMemberWall(deps.repos, targetId, wallId)) return renderNotFound(c);
+    const bytes = deps.repos.users.avatarForUser(targetId);
+    if (!bytes) return renderNotFound(c);
+    return c.body(new Uint8Array(bytes), 200, { 'Content-Type': 'image/webp', 'Cache-Control': 'private, no-store' });
+  });
+
   // -------------------------------------------------------------------------
   // 建墙（W02）
   // -------------------------------------------------------------------------

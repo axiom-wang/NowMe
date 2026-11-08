@@ -1,3 +1,4 @@
+import { DEMO_MODEL_READY, DEMO_MODEL_MISSING, demoModelError } from '../demo-access.js';
 /**
  * 创作工作区（`GET /w/:wallId/me`）：墙上的页面（发布状态、公开链接）、Agent 指令、本地 Agent 连接状态、
  * 版本预览与发布确认、版本列表与校验报告、删除与退出入口。
@@ -239,8 +240,8 @@ const HostedSection: FC<{ model: WorkspaceModel }> = ({ model }) => {
   return (
     <section class="card ws-hosted" id="hosted" aria-labelledby="hosted-heading">
       <h2 id="hosted-heading">在这里创作</h2>
-      <p class="muted">填写你自己的 AI API，在应用里点选几道题、上传几张图，AI 按同一份 NOWMe Skill 帮你做页面。模型费用由服务商向你收取。</p>
-      {hosted.error ? <Notice tone="error">{JOB_START_ERROR_TEXT[hosted.error]}</Notice> : null}
+      <p class="muted">{hosted.demo ? overview.modelReady ? DEMO_MODEL_READY : DEMO_MODEL_MISSING : '填写你自己的 AI API，在应用里点选几道题、上传几张图，AI 按同一份 NOWMe Skill 帮你做页面。模型费用由服务商向你收取。'}</p>
+      {hosted.error ? <Notice tone="error">{(hosted.demo ? demoModelError(hosted.error) : null) ?? JOB_START_ERROR_TEXT[hosted.error]}</Notice> : null}
       <dl class="facts">
         <div>
           <dt>采访</dt>
@@ -248,7 +249,7 @@ const HostedSection: FC<{ model: WorkspaceModel }> = ({ model }) => {
         </div>
         <div>
           <dt>AI 服务</dt>
-          <dd>{overview.modelReady ? '已配置自己的 API' : '尚未配置'} · <a href="/account/ai">AI 设置</a></dd>
+          <dd>{hosted.demo ? overview.modelReady ? '演示模型已配置' : '请维护者补齐配置' : <>{overview.modelReady ? '已配置自己的 API' : '尚未配置'} · <a href="/account/ai">AI 设置</a></>}</dd>
         </div>
       </dl>
       {overview.activeJob ? (
@@ -454,7 +455,7 @@ const WorkspaceNoticeView: FC<{ notice: WorkspaceNotice }> = ({ notice }) => {
 
 export const WorkspaceView: FC<{ model: WorkspaceModel; ownerName: string }> = ({ model, ownerName }) => {
   const showStatus = model.revisions.length > 0 || model.publish.state !== 'unpublished' || model.publish.publicLinkUrl;
-  const connectionFirst = Boolean(model.instruction) || model.revisions.every(isRevisionDeleted);
+  const connectionFirst = !model.hosted?.demo && (Boolean(model.instruction) || model.revisions.every(isRevisionDeleted));
   return (
     <div class="container container--wide">
       <section class="ws-hero">

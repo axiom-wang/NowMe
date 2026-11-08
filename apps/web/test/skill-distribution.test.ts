@@ -29,18 +29,18 @@ describe('Skill 分发路由', () => {
     expect(response.status).toBe(200);
     const html = await response.text();
     expect(html).toContain('给你的 Agent 装上 NOWMe Skill');
-    expect(html).toContain(`请按 ${t.config.webOrigin}/skill/install.md 的说明安装 NOWMe Skill（版本 ${TEST_SKILL_VERSION}）`);
+    expect(html).toContain(`请按 https://raw.githubusercontent.com/axiom-wang/nowme-skill/main/install.md 的说明安装 NOWMe Skill（版本 ${TEST_SKILL_VERSION}）`);
     expect(html).toContain('重新打开一个会话');
     expect(html).toContain(`NOWMe Skill ${TEST_SKILL_VERSION}`);
     expect(html).toContain('Unknown command: /nowme-page');
-    expect(html).toContain(`${t.config.webOrigin}/skill/nowme-page-${TEST_SKILL_VERSION}.tar.gz`);
+    expect(html).toContain(`https://github.com/axiom-wang/nowme-skill/releases/download/v${TEST_SKILL_VERSION}/nowme-page-${TEST_SKILL_VERSION}.tar.gz`);
     expect(html).toContain('data-copy="nm-skill-install"');
     expect(html).toContain('data-copy="nm-skill-check"');
     // 通用写法：不点名任何 Agent 产品
     expect(html).not.toMatch(/Claude Code|Cursor|Codex|Copilot|\.claude\//);
   });
 
-  it('GET /skill/install.md：text/markdown，地址都用配置里的 NOWME_WEB_ORIGIN；含 sha256、目录名、重开会话与自检', async () => {
+  it('GET /skill/install.md：text/markdown，地址独立于 NOWME_WEB_ORIGIN，使用 GitHub；含 sha256、目录名、重开会话与自检', async () => {
     t = createTestWeb({ env: { NOWME_WEB_ORIGIN: 'https://nowme.example', NOWME_PAGES_ORIGIN: 'https://pages.nowme-pages.example' } });
     const response = await get(t, '/skill/install.md');
     expect(response.status).toBe(200);
@@ -48,20 +48,20 @@ describe('Skill 分发路由', () => {
     expect(response.headers.get('cache-control')).toBe('public, max-age=300');
     const doc = await response.text();
     const manifest = (await (await get(t, '/skill/manifest.json')).json()) as SkillPackageManifest;
-    expect(doc).toContain(`https://nowme.example/skill/nowme-page-${TEST_SKILL_VERSION}.tar.gz`);
+    expect(doc).toContain(`https://github.com/axiom-wang/nowme-skill/releases/download/v${TEST_SKILL_VERSION}/nowme-page-${TEST_SKILL_VERSION}.tar.gz`);
     expect(doc).toContain(manifest.sha256);
     expect(doc).toContain('`nowme-page/`');
     expect(doc).toContain('不要猜');
     expect(doc).toContain('重开一个会话');
     expect(doc).toContain('scripts/nowme.mjs --version');
-    expect(doc).not.toContain('localhost');
+    expect(doc).not.toContain('https://nowme.example/skill/');
     expect(doc).not.toMatch(/Claude Code|\.claude\//);
   });
 
   it('GET /skill/manifest.json：带绝对下载地址；归档的 sha256 与大小一致，长缓存；文件名不对 404', async () => {
     t = createTestWeb();
     const manifest = (await (await get(t, '/skill/manifest.json')).json()) as SkillPackageManifest;
-    expect(manifest).toMatchObject({ name: 'nowme-page', version: TEST_SKILL_VERSION, url: `${t.config.webOrigin}/skill/${manifest.file}` });
+    expect(manifest).toMatchObject({ name: 'nowme-page', version: TEST_SKILL_VERSION, url: `https://github.com/axiom-wang/nowme-skill/releases/download/v${TEST_SKILL_VERSION}/${manifest.file}` });
     const archive = await get(t, `/skill/${manifest.file}`);
     expect(archive.status).toBe(200);
     expect(archive.headers.get('content-type')).toBe('application/gzip');
@@ -84,13 +84,14 @@ describe('Skill 分发路由', () => {
     expect(await (await get(t, '/skill/install.md')).text()).toContain('npx skills add nowme/nowme-page');
   });
 
-  it('没有 Skill 包：安装页提示还没有，manifest 404，install.md 说明暂时不能安装，context.skill 为 null', async () => {
+  it('没有本地 Skill 包：仍提供 GitHub 安装入口；本地 manifest 404', async () => {
     t = createTestWeb({ skillPackageDir: null });
     const html = await (await get(t, '/skill')).text();
-    expect(html).toContain('暂时还没有可下载的 Skill 包');
+    expect(html).toContain('仍可从 GitHub 安装');
+    expect(html).toContain('npx skills add axiom-wang/nowme-skill');
     expect(html).toContain('pnpm --filter @nowme/skill pack:skill');
     expect((await get(t, '/skill/manifest.json')).status).toBe(404);
-    expect(await (await get(t, '/skill/install.md')).text()).toContain('暂时还没有可下载的 Skill 包');
+    expect(await (await get(t, '/skill/install.md')).text()).toContain('https://github.com/axiom-wang/nowme-skill');
   });
 
   it('Skill 包的 sha256 对不上：当作没有 Skill 包', async () => {
@@ -114,7 +115,7 @@ describe('exchange 自报版本', () => {
     });
     expect(response.status).toBe(200);
     const body = (await response.json()) as ExchangeResponse;
-    expect(body.context.skill).toEqual({ version: TEST_SKILL_VERSION, installUrl: `${t.config.webOrigin}/skill` });
+    expect(body.context.skill).toEqual({ version: TEST_SKILL_VERSION, installUrl: 'https://github.com/axiom-wang/nowme-skill' });
     expect(t.repos.credentials.findActiveForPage(page.id)).toMatchObject({ clientCliVersion: '0.1.0', clientSkillVersion: '0.0.9' });
 
     const again = issueInstruction(t, wall, page);

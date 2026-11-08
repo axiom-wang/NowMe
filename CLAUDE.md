@@ -24,10 +24,11 @@ pnpm test               # 全部 vitest（不需要先 build，按 "source" 条�
 pnpm test:security      # 路径含 security 的测试（安全不变量）
 pnpm test:e2e           # Playwright（用 3200/4200 端口自起服务）
 pnpm build              # 各包编译到 dist/
-pnpm dev                # 源码方式启动 web(3000) + pages-host(4000)
+pnpm dev                # 单服务进程启动主站与页面沙箱（带 watch），只需打开 localhost:3000
 pnpm nowme <命令>        # 源码方式运行 CLI，例如 pnpm nowme validate skill/examples/<名>
 pnpm --filter @nowme/web seed [--json]   # 开发种子：用户 + 黑客松墙 + 页面 + 一条 Agent 指令
-pnpm --filter @nowme/skill pack:skill    # 打 Skill 包（含单文件 CLI）到 skill/dist-package/，主站 /skill 托管下载；dev / start:source 会先自动打包
+pnpm --filter @nowme/skill pack:skill    # 打 Skill 包（含单文件 CLI）到 skill/dist-package/，本地镜像；公开安装走 GitHub；dev / start:source 会先自动打包
+pnpm --filter @nowme/skill publish:github --publish # 同步完整成品到 axiom-wang/nowme-skill 并发布版本；默认不带 --publish 时只导出
 pnpm --filter @nowme/<包> test   # 只测一个包
 ```
 

@@ -10,6 +10,7 @@ import type { Context, MiddlewareHandler } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from '@nowme/contracts';
 import type { AppDeps, AppEnv, WebConfig } from '../context.js';
+import { demoAccountFor } from '../demo-access.js';
 import { loadSession, type CreatedSession } from '../services/auth.js';
 import { loginRedirectPath, safeNextPath } from './redirect.js';
 
@@ -18,9 +19,11 @@ function isApiPath(path: string): boolean {
 }
 
 /** 加载会话到 `c.var.auth`（Agent API 路径除外）。 */
-export function sessionLoader(deps: Pick<AppDeps, 'repos' | 'now'>): MiddlewareHandler<AppEnv> {
+export function sessionLoader(deps: Pick<AppDeps, 'repos' | 'now' | 'demo'>): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
-    c.set('auth', isApiPath(c.req.path) ? null : loadSession(deps, getCookie(c, SESSION_COOKIE_NAME)));
+    const auth = isApiPath(c.req.path) ? null : loadSession(deps, getCookie(c, SESSION_COOKIE_NAME));
+    c.set('demo', !!deps.demo);
+    c.set('auth', auth && deps.demo && !demoAccountFor(auth.user.email) ? null : auth);
     return next();
   };
 }

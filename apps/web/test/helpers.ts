@@ -163,6 +163,7 @@ export interface TestWeb {
 }
 
 export interface TestWebOptions {
+  demo?: boolean;
   processor?: SubmissionProcessor;
   env?: Record<string, string>;
   clock?: TestClock;
@@ -189,6 +190,7 @@ export function createTestWeb(options: TestWebOptions = {}): TestWeb {
   const processor = options.processor ?? createStaticProcessor();
   const web = createWebApp({
     config,
+    demo: options.demo ? { dataDir } : undefined,
     db,
     processor,
     clock: clock.now,

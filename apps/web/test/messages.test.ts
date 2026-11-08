@@ -1,9 +1,24 @@
 import { randomUUID } from 'node:crypto';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { CHAT_PAGE_SIZE, type ChatHistory, type ChatMessage, type ConversationSummary } from '@nowme/contracts';
-import { createTestWeb, get, login, postForm, seedMember, seedWall, type TestSession, type TestWeb } from './helpers.js';
+import { createTestWeb, get, login, postForm, seedMember, seedWall, TINY_PNG, type TestSession, type TestWeb } from './helpers.js';
 import { openDirect, sendMessage } from '../src/services/chat.js';
 import { migrate } from '../src/db/index.js';
+import { formatConversationTime } from '../src/views/messages.js';
+
+describe('会话时间', () => {
+  it('按东京自然日显示时间、昨天、星期和跨年日期，空会话不显示时间', () => {
+    const now = new Date('2026-11-08T01:00:00Z');
+    expect(formatConversationTime('2026-11-08T00:26:00Z', now)).toBe('09:26');
+    expect(formatConversationTime('2026-11-07T15:05:00Z', now)).toBe('00:05');
+    expect(formatConversationTime('2026-11-07T14:59:00Z', now)).toBe('昨天');
+    expect(formatConversationTime('2026-11-03T00:00:00Z', now)).toBe('周二');
+    expect(formatConversationTime('2026-10-20T00:00:00Z', now)).toBe('10/20');
+    expect(formatConversationTime('2025-10-20T00:00:00Z', now)).toBe('2025/10/20');
+    expect(formatConversationTime(null, now)).toBe('');
+    expect(formatConversationTime('bad', now)).toBe('');
+  });
+});
 
 describe('墙内聊天', () => {
   let t: TestWeb;
@@ -26,6 +41,25 @@ describe('墙内聊天', () => {
     direct = openDirect(t.web.deps, a.userId, wallId, b.userId)!;
   });
   afterEach(async () => { await t.close(); });
+
+  it('群头像在首屏和轮询中复用墙封面，更换和删除后同步恢复，私聊头像不受影响', async () => {
+    const avatar = async () => {
+      const data = await (await read(b, '/messages/list')).json() as { conversations: ConversationSummary[] };
+      expect(data.conversations.find((item) => item.id === direct)?.avatarUrl).toBeNull();
+      return data.conversations.find((item) => item.id === group)?.avatarUrl;
+    };
+    expect(await avatar()).toBe('/static/home-wall-laptop.svg');
+    expect(await (await read(b, '/messages')).text()).toContain('src="/static/home-wall-laptop.svg"');
+    for (const version of ['first-cover', 'second-cover']) {
+      t.repos.walls.saveCover(wallId, version, TINY_PNG, t.clock.now().toISOString());
+      const url = `/w/${wallId}/cover?v=${version}`;
+      expect(await avatar()).toBe(url);
+      expect(await (await read(b, '/messages')).text()).toContain(`src="${url}"`);
+    }
+    t.repos.walls.deleteCover(wallId);
+    expect(await avatar()).toBe('/static/home-wall-laptop.svg');
+    expect(await (await read(b, '/messages')).text()).toContain('src="/static/home-wall-laptop.svg"');
+  });
 
   it('群聊自动创建且幂等；双向发起私聊复用同一会话，不需要先发布页面', async () => {
     expect(t.db.prepare("SELECT * FROM conversations WHERE kind = 'group'").all()).toHaveLength(1);
@@ -137,5 +171,21 @@ describe('墙内聊天', () => {
     expect(html).toContain('&lt;script&gt;');
     expect(html).not.toContain('<script>window.evil');
     expect(await (await read(b, '/messages')).text()).toContain('消息');
+  });
+
+  it('消息页输出真实时间、筛选依据和当前导航；没有脚本时仍可进入会话和发起聊天', async () => {
+    await send(a, direct, '刚刚发来的问候');
+    const html = await (await read(b, '/messages')).text();
+    expect(html).toContain('class="site page--messages"');
+    expect(html).toContain('href="/messages" aria-current="page"');
+    expect(html).toContain('data-kind="direct" data-unread="1"');
+    expect(html).toContain(`datetime="${t.clock.now().toISOString()}"`);
+    expect(html).toContain(formatConversationTime(t.clock.now().toISOString(), t.clock.now()));
+    expect(html).toContain('data-inbox-filter="unread"');
+    expect(html).toContain('发起聊天</summary>');
+    expect(html).toContain(`href="/messages/${direct}"`);
+    expect(html).toContain(`href="/messages/wall/${wallId}"`);
+    expect(html).toContain('从群内成员列表发起私聊');
+    expect(html).not.toContain('提及我的');
   });
 });

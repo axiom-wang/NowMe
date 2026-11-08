@@ -22,6 +22,7 @@
     "typecheck": "tsc -p tsconfig.json",
     "test": "vitest run",
     "dev": "pnpm --filter @nowme/skill pack:skill && tsx watch --conditions=source --disable-warning=ExperimentalWarning src/main.ts",
+    "dev:local": "pnpm --filter @nowme/skill pack:skill && tsx watch --conditions=source --disable-warning=ExperimentalWarning scripts/dev.ts",
     "start": "node --disable-warning=ExperimentalWarning dist/main.js",
     "start:source": "pnpm --filter @nowme/skill pack:skill && tsx --conditions=source --disable-warning=ExperimentalWarning src/main.ts",
     "seed": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/seed.ts",
@@ -39,6 +40,7 @@
     "@nowme/validator": "workspace:*",
     "hono": "catalog:",
     "qrcode": "catalog:",
+    "sharp": "catalog:",
     "zod": "catalog:"
   },
   "devDependencies": {
