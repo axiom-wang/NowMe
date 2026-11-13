@@ -15,46 +15,76 @@ import { initialOf } from './layout.js';
 
 export type WallNotice = 'joined' | 'rejoined';
 
+/** 墙上至少有这么多张卡片才显示搜索框。 */
+const WALL_SEARCH_MIN_CARDS = 4;
+
 const NOTICE_TEXT: Record<WallNotice, string> = {
   joined: '欢迎加入！先逛逛墙上的人；准备好了，再去创作工作区做你自己的一页。',
   rejoined: '欢迎回来！你原来的页面没有自动回到墙上，需要时在创作工作区重新发布。',
 };
 
 const MY_PAGE_TEXT: Record<PageDisplayState, string> = {
-  unpublished: '你的页面还没发布，墙上的人还看不到你。到创作工作区复制指令给你的 Agent，就能开始做。',
+  unpublished: '你的页面还没发布，墙上的人还看不到你。去创作工作区，和 AI 聊几句就能做出来。',
   withdrawn: '你的页面已从墙上撤下。需要时可以在创作工作区重新发布。',
   published: '你的页面已经挂在墙上了。',
 };
 
-const WallCardItem: FC<{ item: WallCard }> = ({ item }) => (
-  <li class="wall-card">
-    <a class="wall-card__link" href={item.href}>
-      <span class="wall-card__cover">
-        {item.coverSrc ? (
-          <img src={item.coverSrc} alt="" width={String(COVER_CSS_WIDTH)} height={String(COVER_CSS_HEIGHT)} loading="lazy" decoding="async" />
-        ) : (
-          <span class="wall-card__placeholder" aria-hidden="true">
-            {initialOf(item.card.displayName)}
+/** 卡片的检索文字（名字、一行介绍、全部接话点），给墙上的搜索用。 */
+function searchText(item: WallCard): string {
+  return [item.card.displayName, item.card.tagline, ...item.card.hooks.map((hook) => hook.text)].join(' ').toLowerCase();
+}
+
+/**
+ * 墙上的一张“海报”：封面像被胶带贴在墙上，下面压着一张写着接话点的便签。
+ * 便签只放第一个接话点的完整文字（不截成省略号），其余的写“还想聊 N 个话题”。
+ */
+const WallCardItem: FC<{ item: WallCard }> = ({ item }) => {
+  const [first, ...rest] = item.card.hooks;
+  return (
+    <li class="wall-card" data-wall-card data-search={searchText(item)}>
+      <a class="wall-card__link" href={item.href}>
+        <span class="wall-card__poster">
+          <span class="wall-card__cover">
+            {item.coverSrc ? (
+              <img src={item.coverSrc} alt="" width={String(COVER_CSS_WIDTH)} height={String(COVER_CSS_HEIGHT)} loading="lazy" decoding="async" />
+            ) : (
+              <span class="wall-card__placeholder" aria-hidden="true">
+                {initialOf(item.card.displayName)}
+              </span>
+            )}
           </span>
-        )}
-        {item.own ? <span class="sticker sticker--orange wall-card__me">我</span> : null}
-      </span>
-      <span class="wall-card__body">
-        <span class="wall-card__name">{item.card.displayName}</span>
-        {item.card.tagline ? <span class="wall-card__tagline">{item.card.tagline}</span> : null}
-        {item.card.hooks.length > 0 ? (
-          <span class="wall-card__hooks">
-            {item.card.hooks.map((hook) => (
-              <span class="wall-card__hook">{hook.text}</span>
-            ))}
+          {item.own ? <span class="sticker sticker--orange wall-card__me">我</span> : null}
+        </span>
+        {first ? (
+          <span class="wall-card__say">
+            <span class="wall-card__say-label">想聊</span>
+            <span class="wall-card__say-text">{first.text}</span>
           </span>
         ) : null}
+        <span class="wall-card__body">
+          <span class="wall-card__name">{item.card.displayName}</span>
+          {item.card.tagline ? <span class="wall-card__tagline">{item.card.tagline}</span> : null}
+          {rest.length > 0 ? <span class="wall-card__more">还想聊 {rest.length} 个话题</span> : null}
+        </span>
+      </a>
+    </li>
+  );
+};
+
+/** 还没上墙时，墙上给自己留的空位。 */
+const WallGhost: FC<{ href: string; withdrawn: boolean }> = ({ href, withdrawn }) => (
+  <li class="wall-ghost">
+    <a class="wall-ghost__link" href={href}>
+      <span class="wall-ghost__plus" aria-hidden="true">
+        +
       </span>
+      <span class="wall-ghost__title">{withdrawn ? '把你的一页挂回来' : '这里留给你'}</span>
+      <span class="wall-ghost__text">{withdrawn ? '你的页面已撤下，随时可以重新发布。' : '和 AI 聊几句，做一页自己，挂上来。'}</span>
     </a>
   </li>
 );
 
-/** 组织者的话：一张贴在墙上的便签。 */
+/** 组织者的话：一张贴在墙上的便签（墙上有人时是墙面的第一格）。 */
 export const OrganizerNote: FC<{ text: string }> = ({ text }) => (
   <blockquote class="organizer-note">
     <p class="organizer-note__label">组织者的话</p>
@@ -81,7 +111,6 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
           <h1 class="hero__title">{wall.name}</h1>
           {wall.description ? <p class="wall-head__desc">{wall.description}</p> : null}
         </div>
-        {wall.organizerNote ? <OrganizerNote text={wall.organizerNote} /> : null}
       </section>
 
       {notice ? <Notice tone="success">{NOTICE_TEXT[notice]}</Notice> : null}
@@ -98,7 +127,7 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
           <p class="my-page__text">{MY_PAGE_TEXT[myPage.state]}</p>
         </div>
         <div class="actions my-page__actions">
-          <a class="btn btn--accent" href={`/w/${wall.id}/me`}>
+          <a class={`btn ${published ? 'btn--on-dark' : 'btn--accent'}`} href={`/w/${wall.id}/me`}>
             {published ? '去工作区更新' : '去创作工作区'}
           </a>
           {myPage.href ? (
@@ -109,26 +138,48 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
         </div>
       </section>
 
-      <section class="wall-members" aria-labelledby="members-heading">
-        <div class="section-head">
+      <section class="wall-members wall-board" aria-labelledby="members-heading" data-wall-board>
+        <div class="section-head wall-board__head">
           <h2 id="members-heading" class="section-title display">
             墙上的人
           </h2>
           {cards.length > 0 ? (
             <>
-              <span class="section-head__count">{cards.length}</span>
-              <span class="section-head__note">位已发布 · 每次进入随机排序</span>
+              <span class="section-head__count" data-wall-count>
+                {cards.length}
+              </span>
+              <span class="section-head__note">
+                位已上墙{model.memberCount > cards.length ? ` · 共 ${model.memberCount} 位成员` : ''} · 每次进入随机排序
+              </span>
             </>
+          ) : null}
+          {cards.length >= WALL_SEARCH_MIN_CARDS ? (
+            <label class="wall-search">
+              <span class="visually-hidden">在墙上找人</span>
+              <input type="search" class="wall-search__input" placeholder="搜名字或话题，如：设计、后端" autocomplete="off" enterkeyhint="search" data-wall-search />
+            </label>
           ) : null}
         </div>
         {cards.length > 0 ? (
           <ul class="wall-grid">
+            {wall.organizerNote ? (
+              <li class="wall-note">
+                <OrganizerNote text={wall.organizerNote} />
+              </li>
+            ) : null}
+            {!published ? <WallGhost href={`/w/${wall.id}/me`} withdrawn={myPage.state === 'withdrawn'} /> : null}
             {cards.map((item) => (
               <WallCardItem item={item} />
             ))}
           </ul>
+        ) : null}
+        {cards.length > 0 ? (
+          <p class="wall-board__none" hidden data-wall-none>
+            墙上没有找到相关的人。换个词试试，或者去全员群里问一句。
+          </p>
         ) : (
           <div class="empty-state">
+            {wall.organizerNote ? <OrganizerNote text={wall.organizerNote} /> : null}
             <div class="empty-state__art" aria-hidden="true">
               <span class="sticker sticker--paper">空</span>
               <span class="sticker sticker--lime">墙</span>

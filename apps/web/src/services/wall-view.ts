@@ -153,6 +153,8 @@ export interface WallModel {
   myPage: { pageId: string | null; state: PageDisplayState; href: string | null };
   /** 随机排序后的已发布卡片。 */
   cards: WallCard[];
+  /** 这面墙的有效成员数（含还没发布的；只是数字，不含任何人的信息）。 */
+  memberCount: number;
 }
 
 function nicknameOf(deps: Pick<AppDeps, 'repos'>, userId: string): string {
@@ -185,6 +187,7 @@ export function loadWallModel(deps: Pick<AppDeps, 'db' | 'repos' | 'config'>, me
       href: myEntry ? memberPagePath(wall.id, myEntry.pageId) : null,
     },
     cards: shuffle(entries.map((entry) => toWallCard(deps, wall.id, entry, membership.userId))),
+    memberCount: deps.repos.memberships.countActiveForWall(wall.id),
   };
 }
 

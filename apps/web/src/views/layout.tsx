@@ -99,6 +99,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
         {auth?.user.nickname ? <script src={`${STATIC_PATH_PREFIX}messages.js`} defer></script> : null}
         {bodyClass === 'page--data' ? <link rel="stylesheet" href={`${STATIC_PATH_PREFIX}profile.css`} /> : null}
         {bodyClass === 'page--create' ? <script src={`${STATIC_PATH_PREFIX}hosted.js`} defer></script> : null}
+        {bodyClass === 'page--wall' ? <script src={`${STATIC_PATH_PREFIX}wall.js`} defer></script> : null}
         {auth?.user.nickname ? <script src={`${STATIC_PATH_PREFIX}home.js`} defer></script> : null}
       </head>
       <body class={bodyClass ? `site ${bodyClass}` : 'site'}>

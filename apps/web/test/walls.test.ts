@@ -307,6 +307,48 @@ describe('墙（W13）、成员页与想聊这个（W14）', () => {
     expect(orders.size).toBeGreaterThan(1);
   });
 
+  it('卡片上的便签完整写出第一个接话点，其余的只写数量；全部接话点进检索文字', async () => {
+    publishedMember(t, wall, { name: '阿柚' });
+    const html = await (await get(t, `/w/${wall.id}`, { cookie: viewer.cookie })).text();
+    const card = elements(html).find((element) => element.attrs['data-wall-card'] !== undefined);
+    const hooks = [...html.matchAll(/class="wall-card__say-text">([^<]+)</g)].map((match) => match[1]);
+    expect(hooks).toHaveLength(1);
+    expect(card?.attrs['data-search']).toContain('阿柚'.toLowerCase());
+    expect(card?.attrs['data-search']).toContain(hooks[0]?.toLowerCase());
+    const more = /还想聊 (\d+) 个话题/.exec(html);
+    const search = card?.attrs['data-search'] ?? '';
+    // 检索文字 = 名字 + 一行介绍 + 全部接话点；便签之外的接话点也能被搜到
+    expect(search.split(' ').length).toBeGreaterThanOrEqual(2 + Number(more?.[1] ?? 0));
+    expect(html).not.toContain('wall-card__hook"');
+  });
+
+  it('还没上墙时墙上给自己留一个空位（不算卡片）；发布后空位消失', async () => {
+    publishedMember(t, wall, { name: '阿柚' });
+    const before = await (await get(t, `/w/${wall.id}`, { cookie: viewer.cookie })).text();
+    expect(before).toContain('这里留给你');
+    expect(before).toContain(`class="wall-ghost__link" href="/w/${wall.id}/me"`);
+    expect(cardOrder(before)).toHaveLength(1);
+    const mine = t.repos.memberships.findByWallAndUser(wall.id, viewer.userId);
+    const myPage = t.repos.pages.findByMembership(mine?.id ?? '');
+    if (!mine || !myPage) throw new Error('缺少成员关系');
+    publishPage(t, { membership: mine, page: myPage }, '小白');
+    const after = await (await get(t, `/w/${wall.id}`, { cookie: viewer.cookie })).text();
+    expect(after).not.toContain('wall-ghost');
+    expect(cardOrder(after)).toHaveLength(2);
+  });
+
+  it('写明上墙人数与成员总数；卡片够多才出现搜索框', async () => {
+    publishedMember(t, wall, { name: '成员0' });
+    const few = await (await get(t, `/w/${wall.id}`, { cookie: viewer.cookie })).text();
+    expect(few).toMatch(/位已上墙 · 共 \d+ 位成员/);
+    expect(few).not.toContain('data-wall-search');
+    for (let index = 1; index < 4; index += 1) publishedMember(t, wall, { name: `成员${index}` });
+    const many = await (await get(t, `/w/${wall.id}`, { cookie: viewer.cookie })).text();
+    expect(many).toContain('data-wall-search');
+    expect(many).toContain('src="/static/wall.js"');
+    expect(many).toContain('data-wall-none');
+  });
+
   it('shuffle 是排列（元素不丢不重）', () => {
     const items = Array.from({ length: 50 }, (_, index) => index);
     expect([...shuffle(items)].sort((a, b) => a - b)).toEqual(items);

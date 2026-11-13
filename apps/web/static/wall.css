@@ -534,7 +534,7 @@ fieldset.field legend {
   display: grid;
   gap: 8px 40px;
   align-items: center;
-  margin-bottom: 26px;
+  margin-bottom: 18px;
 }
 
 .wall-head__meta {
@@ -565,9 +565,9 @@ fieldset.field legend {
   flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
-  gap: 16px 24px;
-  margin-bottom: 36px;
-  padding: 20px 20px 22px;
+  gap: 12px 24px;
+  margin-bottom: 22px;
+  padding: 14px 16px 16px;
   border-radius: var(--radius-lg);
   background: var(--ink);
   color: var(--paper);
@@ -592,7 +592,7 @@ fieldset.field legend {
 .my-page__head h2 {
   margin: 0;
   color: var(--paper);
-  font-size: 1.2rem;
+  font-size: 1.05rem;
 }
 
 .my-page .badge--muted {
@@ -608,11 +608,89 @@ fieldset.field legend {
 .my-page__text {
   margin: 0;
   color: rgba(243, 240, 232, 0.72);
-  font-size: 0.93rem;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.my-page__actions .btn {
+  min-height: 42px;
 }
 
 .my-page__actions {
   margin-top: 0;
+}
+
+/*
+ * 墙面：一块比页面底色深一点的板子，卡片像海报一样用胶带 / 图钉贴在上面。
+ * - 每张卡片的倾斜、下沉、胶带颜色由 :nth-child 给出（墙上每次进入随机排序，所以看起来每次都不一样）；
+ * - 主站 CSP 不允许 style= 属性，这些变化全部写在这里；
+ * - .wall-card 用 content-visibility: auto（100 张卡也流畅），它会裁掉超出盒子的内容，
+ *   所以 li 自己留出内边距，胶带、倾斜的角和阴影都落在盒子里面。
+ */
+.wall-board {
+  position: relative;
+  margin: 0 -8px 8px;
+  padding: 20px 8px 30px;
+  border-radius: var(--radius-xl);
+  background-color: #e8e0cf;
+  background-image:
+    radial-gradient(rgba(22, 21, 15, 0.075) 1px, transparent 1.4px),
+    radial-gradient(rgba(255, 253, 248, 0.6) 1px, transparent 1.7px);
+  background-size:
+    18px 18px,
+    26px 26px;
+  background-position:
+    0 0,
+    9px 13px;
+  box-shadow:
+    inset 0 0 0 1px rgba(22, 21, 15, 0.08),
+    inset 0 12px 26px -16px rgba(22, 21, 15, 0.32),
+    0 1px 0 rgba(255, 253, 248, 0.9);
+}
+
+.wall-board__head {
+  margin: 0 8px 8px;
+}
+
+.wall-search {
+  flex: 1 1 100%;
+  margin-top: 8px;
+}
+
+.wall-search__input {
+  width: 100%;
+  min-height: 44px;
+  padding: 9px 16px 9px 40px;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--surface)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='18' height='18' viewBox='0 0 24 24' fill='none' stroke='%2316150f' stroke-width='2.4' stroke-linecap='round'%3E%3Ccircle cx='11' cy='11' r='7'/%3E%3Cpath d='m20 20-3.6-3.6'/%3E%3C/svg%3E")
+    no-repeat 14px center;
+  border: 1.5px solid var(--ink);
+  border-radius: 999px;
+  box-shadow: 2px 2px 0 var(--ink);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.wall-search__input::placeholder {
+  color: var(--muted);
+}
+
+.wall-search__input:focus-visible {
+  outline: 2.5px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.wall-board__none {
+  margin: 8px 8px 0;
+  padding: 18px;
+  text-align: center;
+  color: var(--ink-2);
+  background: rgba(255, 253, 248, 0.6);
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius);
 }
 
 .wall-grid {
@@ -621,45 +699,169 @@ fieldset.field legend {
   padding: 0;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 6px 0;
+  align-items: start;
 }
 
-/* 100 张卡：屏幕外的卡片跳过布局与绘制 */
 .wall-card {
+  position: relative;
+  padding: 18px 9px 16px;
+  /* 100 张卡：屏幕外的卡片跳过布局与绘制 */
   content-visibility: auto;
-  contain-intrinsic-size: auto 360px;
+  contain-intrinsic-size: auto 400px;
+  --tilt: -1.5deg;
+  --drop: 0px;
+  --tape: rgba(212, 245, 74, 0.9);
+  --tape-left: 50%;
+  --tape-tilt: -4deg;
+  --say-bg: #fff4a8;
+  --say-tilt: 1.8deg;
+  --say-shift: 12px;
+}
+
+.wall-card:nth-child(6n + 2) {
+  --tilt: 1.3deg;
+  --drop: 14px;
+  --tape: rgba(255, 91, 46, 0.82);
+  --tape-left: 38%;
+  --tape-tilt: 5deg;
+  --say-bg: var(--lime-soft);
+  --say-tilt: -1.6deg;
+  --say-shift: 2px;
+}
+
+.wall-card:nth-child(6n + 3) {
+  --tilt: 0.8deg;
+  --drop: 4px;
+  --tape: rgba(22, 21, 15, 0.78);
+  --tape-left: 62%;
+  --tape-tilt: -7deg;
+  --say-bg: var(--surface);
+  --say-tilt: 2.4deg;
+  --say-shift: 16px;
+}
+
+.wall-card:nth-child(6n + 4) {
+  --tilt: -0.9deg;
+  --drop: 10px;
+  --tape: rgba(255, 244, 168, 0.95);
+  --tape-left: 46%;
+  --tape-tilt: 3deg;
+  --say-bg: #fff4a8;
+  --say-tilt: -2.2deg;
+  --say-shift: 4px;
+}
+
+.wall-card:nth-child(6n + 5) {
+  --tilt: 1.8deg;
+  --drop: 0px;
+  --tape: rgba(212, 245, 74, 0.9);
+  --tape-left: 58%;
+  --tape-tilt: 6deg;
+  --say-bg: var(--lime-soft);
+  --say-tilt: 1.2deg;
+  --say-shift: 10px;
+}
+
+.wall-card:nth-child(6n) {
+  --tilt: -2deg;
+  --drop: 12px;
+  --tape: rgba(255, 91, 46, 0.82);
+  --tape-left: 42%;
+  --tape-tilt: -3deg;
+  --say-bg: var(--surface);
+  --say-tilt: -1.2deg;
+  --say-shift: 6px;
 }
 
 .wall-card__link {
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: 6px;
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: 20px;
+  position: relative;
+  display: block;
   color: inherit;
   text-decoration: none;
-  box-shadow: var(--shadow-1);
-  transition:
-    transform 0.25s var(--ease),
-    box-shadow 0.25s var(--ease),
-    border-color 0.2s;
-}
-
-.wall-card__link:hover {
-  transform: translateY(-5px) rotate(-0.8deg);
-  border-color: var(--ink);
-  box-shadow: var(--shadow-2);
-}
-
-.wall-card:nth-child(even) .wall-card__link:hover {
-  transform: translateY(-5px) rotate(0.8deg);
+  transform: translateY(var(--drop)) rotate(var(--tilt));
+  transform-origin: 50% 0;
+  transition: transform 0.35s var(--ease);
+  animation: wall-pin 0.6s var(--ease) both;
 }
 
 .wall-card__link:focus-visible {
   outline: 2.5px solid var(--ink);
-  outline-offset: 3px;
+  outline-offset: 4px;
+  border-radius: 16px;
+}
+
+/* 贴上墙的那一下：从上方落下、多歪一点，再回正 */
+@keyframes wall-pin {
+  from {
+    opacity: 0;
+    transform: translateY(calc(var(--drop) - 20px)) rotate(calc(var(--tilt) * 3.5)) scale(0.95);
+  }
+
+  60% {
+    opacity: 1;
+  }
+}
+
+.wall-card:nth-child(2) .wall-card__link { animation-delay: 0.05s; }
+.wall-card:nth-child(3) .wall-card__link { animation-delay: 0.1s; }
+.wall-card:nth-child(4) .wall-card__link { animation-delay: 0.15s; }
+.wall-card:nth-child(5) .wall-card__link { animation-delay: 0.2s; }
+.wall-card:nth-child(6) .wall-card__link { animation-delay: 0.25s; }
+.wall-card:nth-child(7) .wall-card__link { animation-delay: 0.3s; }
+.wall-card:nth-child(8) .wall-card__link { animation-delay: 0.35s; }
+.wall-card:nth-child(n + 9) .wall-card__link { animation-delay: 0.4s; }
+
+/* 搜索过后不再重放落下的动画 */
+.wall-board.is-settled .wall-card__link {
+  animation: none;
+}
+
+.wall-board.is-filtering .wall-ghost {
+  display: none;
+}
+
+/* 海报：一圈白边，像冲印出来的照片 */
+.wall-card__poster {
+  position: relative;
+  display: block;
+  padding: 5px;
+  background: var(--surface);
+  border-radius: 14px;
+  box-shadow:
+    0 0 0 1px rgba(22, 21, 15, 0.07),
+    0 16px 22px -16px rgba(22, 21, 15, 0.6),
+    0 2px 4px -2px rgba(22, 21, 15, 0.18);
+  transition: box-shadow 0.35s var(--ease);
+}
+
+/* 胶带（两端剪成小缺口） */
+.wall-card__poster::before {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  top: -10px;
+  left: var(--tape-left);
+  width: 64px;
+  height: 21px;
+  margin-left: -32px;
+  background: var(--tape);
+  background-image: linear-gradient(90deg, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0) 30%, rgba(255, 255, 255, 0) 70%, rgba(255, 255, 255, 0.2));
+  clip-path: polygon(0 0, 5% 50%, 0 100%, 100% 100%, 95% 50%, 100% 0);
+  transform: rotate(var(--tape-tilt));
+}
+
+/* 每四张里有一张用图钉 */
+.wall-card:nth-child(4n + 3) .wall-card__poster::before {
+  top: -7px;
+  width: 16px;
+  height: 16px;
+  margin-left: -8px;
+  border-radius: 50%;
+  clip-path: none;
+  background: radial-gradient(circle at 34% 30%, #ffb199, var(--orange) 52%, #b0300f);
+  box-shadow: 0 4px 4px -1px rgba(22, 21, 15, 0.45);
+  transform: none;
 }
 
 /* 固定 3:4 画框（封面 750×1000），图片加载前就占好位置 */
@@ -667,7 +869,7 @@ fieldset.field legend {
   position: relative;
   display: block;
   aspect-ratio: 3 / 4;
-  border-radius: 15px;
+  border-radius: 10px;
   background: var(--paper-2);
   overflow: hidden;
 }
@@ -685,31 +887,70 @@ fieldset.field legend {
   justify-content: center;
   width: 100%;
   height: 100%;
-  font-size: 3rem;
-  font-weight: 800;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 3.2rem;
   color: var(--paper-3);
 }
 
 .wall-card__me {
   position: absolute;
-  top: 10px;
-  left: 10px;
+  z-index: 3;
+  top: 12px;
+  left: -4px;
   font-size: 0.9rem;
   padding: 3px 10px 4px;
+}
+
+/* 压在海报下沿的便签：第一个接话点，完整显示 */
+.wall-card__say {
+  position: relative;
+  z-index: 1;
+  display: block;
+  margin: -22px 4px 0 var(--say-shift);
+  padding: 8px 11px 10px;
+  background: var(--say-bg);
+  border-radius: 3px 3px 3px 13px;
+  box-shadow:
+    0 10px 12px -9px rgba(22, 21, 15, 0.55),
+    0 0 0 1px rgba(22, 21, 15, 0.05);
+  transform: rotate(var(--say-tilt));
+  transition: transform 0.35s var(--ease);
+}
+
+.wall-card__say-label {
+  display: block;
+  margin-bottom: 1px;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  line-height: 1.2;
+  color: rgba(22, 21, 15, 0.55);
+}
+
+.wall-card__say-text {
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-size: 0.82rem;
+  font-weight: 650;
+  line-height: 1.42;
+  overflow-wrap: anywhere;
 }
 
 .wall-card__body {
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 6px 6px;
+  gap: 2px;
+  padding: 10px 6px 0;
   min-width: 0;
 }
 
 .wall-card__name {
   font-family: var(--font-head);
   font-weight: 700;
-  font-size: 1.02rem;
+  font-size: 1.04rem;
   line-height: 1.3;
   letter-spacing: -0.01em;
   overflow: hidden;
@@ -718,9 +959,9 @@ fieldset.field legend {
 }
 
 .wall-card__tagline {
-  font-size: 0.82rem;
+  font-size: 0.8rem;
   line-height: 1.45;
-  color: var(--muted);
+  color: var(--ink-2);
   display: -webkit-box;
   -webkit-line-clamp: 2;
   line-clamp: 2;
@@ -728,35 +969,141 @@ fieldset.field legend {
   overflow: hidden;
 }
 
-.wall-card__hooks {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 4px;
-  margin-top: 6px;
+.wall-card__more {
+  margin-top: 3px;
+  font-size: 0.72rem;
+  color: var(--muted);
 }
 
-.wall-card__hook {
-  display: block;
-  max-width: 100%;
-  font-size: 0.75rem;
-  line-height: 1.35;
-  padding: 4px 9px;
-  border-radius: 999px;
-  background: var(--paper);
-  border: 1px solid var(--line);
-  color: var(--ink-2);
-  overflow: hidden;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-.wall-card__hook::before {
-  content: '#';
-  margin-right: 3px;
+.wall-card__more::before {
+  content: '+ ';
   font-family: var(--font-head);
   font-weight: 700;
-  color: var(--muted);
+}
+
+@media (hover: hover) {
+  .wall-card:hover {
+    z-index: 2;
+  }
+
+  .wall-card__link:hover {
+    transform: translateY(calc(var(--drop) - 6px)) rotate(0deg) scale(1.025);
+  }
+
+  .wall-card__link:hover .wall-card__poster {
+    box-shadow:
+      0 0 0 1.5px var(--ink),
+      0 26px 30px -18px rgba(22, 21, 15, 0.7),
+      0 2px 4px -2px rgba(22, 21, 15, 0.18);
+  }
+
+  .wall-card__link:hover .wall-card__say {
+    transform: rotate(0deg) translateY(-2px);
+  }
+}
+
+/* 组织者的话：墙面的第一格。手机上横跨两列，像贴在最上面的一张通知 */
+.wall-note {
+  grid-column: 1 / -1;
+  padding: 16px 10px 10px;
+}
+
+.wall-note .organizer-note {
+  max-width: none;
+  margin: 0;
+  animation: wall-pin 0.6s var(--ease) both;
+  --drop: 0px;
+  --tilt: -1.2deg;
+}
+
+.wall-board.is-filtering .wall-note {
+  display: none;
+}
+
+.empty-state .organizer-note {
+  margin: 0 auto 26px;
+  text-align: left;
+}
+
+/* 还没上墙：墙上给自己留的空位 */
+.wall-ghost {
+  display: flex;
+  align-self: stretch;
+  padding: 18px 9px 16px;
+}
+
+.wall-ghost__link {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  flex: 1;
+  min-height: 250px;
+  padding: 14px;
+  text-align: center;
+  color: var(--ink);
+  text-decoration: none;
+  border: 2px dashed rgba(22, 21, 15, 0.4);
+  border-radius: 14px;
+  background: rgba(255, 253, 248, 0.42);
+  transform: rotate(-1.2deg);
+  transition:
+    transform 0.3s var(--ease),
+    background-color 0.2s,
+    border-color 0.2s;
+}
+
+.wall-ghost__link:hover,
+.wall-ghost__link:focus-visible {
+  transform: rotate(0deg);
+  background: var(--lime-soft);
+  border-color: var(--ink);
+}
+
+.wall-ghost__link:focus-visible {
+  outline: 2.5px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.wall-ghost__plus {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 46px;
+  margin-bottom: 4px;
+  font-family: var(--font-head);
+  font-size: 1.7rem;
+  font-weight: 500;
+  line-height: 1;
+  background: var(--lime);
+  border: 1.5px solid var(--ink);
+  border-radius: 50%;
+  box-shadow: var(--shadow-hard);
+}
+
+.wall-ghost__title {
+  font-family: var(--font-display);
+  font-size: 1.25rem;
+  line-height: 1.2;
+}
+
+.wall-ghost__text {
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wall-card__link,
+  .wall-card__poster,
+  .wall-card__say,
+  .wall-ghost__link,
+  .wall-note .organizer-note {
+    animation: none;
+    transition: none;
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -768,6 +1115,14 @@ fieldset.field legend {
   grid-template-areas:
     'head'
     'frame'
+    'topics';
+}
+
+.member-layout--talk {
+  grid-template-areas:
+    'head'
+    'frame'
+    'talk'
     'topics';
 }
 
@@ -792,6 +1147,10 @@ fieldset.field legend {
 .member-head__me {
   font-size: 0.95rem;
   letter-spacing: 0;
+}
+
+.member-head form {
+  margin-top: 14px;
 }
 
 .member-head__tagline {
@@ -866,6 +1225,401 @@ fieldset.field legend {
   padding-top: 12px;
   border-top: 1px solid var(--line);
   font-size: 0.86rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* 和 TA 聊什么（contracts 11）：成员页上最显眼的一块，墨色底 + 荧光绿 */
+
+.talk {
+  grid-area: talk;
+  position: relative;
+  min-width: 0;
+  padding: 20px 18px 18px;
+  border-radius: var(--radius-xl);
+  color: var(--paper);
+  background-color: var(--ink);
+  background-image:
+    radial-gradient(120% 90% at 100% 0%, rgba(212, 245, 74, 0.26), rgba(212, 245, 74, 0) 52%),
+    radial-gradient(rgba(243, 240, 232, 0.07) 1px, transparent 1.4px);
+  background-size:
+    auto,
+    18px 18px;
+  box-shadow: var(--shadow-2);
+  overflow: hidden;
+}
+
+.talk__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.talk__badge {
+  font-size: 0.92rem;
+  box-shadow: 3px 3px 0 rgba(243, 240, 232, 0.9);
+}
+
+.talk__pair {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+}
+
+.talk__who {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 0.95rem;
+  border-radius: 50%;
+  border: 1.5px solid var(--paper);
+}
+
+.talk__who--me {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.talk__who--them {
+  background: var(--lime);
+  border-color: var(--lime);
+  color: var(--ink);
+}
+
+.talk__wire {
+  position: relative;
+  width: 46px;
+  height: 0;
+  border-top: 2px dashed rgba(243, 240, 232, 0.55);
+}
+
+.talk__spark {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  margin-left: -9px;
+  width: 18px;
+  font-size: 1.05rem;
+  line-height: 1.2;
+  text-align: center;
+  color: var(--lime);
+  background: var(--ink);
+  border-radius: 50%;
+  animation: talk-spark 2.6s ease-in-out infinite;
+}
+
+@keyframes talk-spark {
+  50% {
+    transform: scale(1.25) rotate(20deg);
+  }
+}
+
+.talk__title {
+  margin: 0 0 8px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.7rem;
+  line-height: 1.15;
+  letter-spacing: 0;
+  color: var(--paper);
+  overflow-wrap: anywhere;
+}
+
+/* 名字是用户内容：不用只含界面用字的标题字体（见 static/FONTS.md） */
+.talk__name {
+  margin: 0 0.22em;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 0.86em;
+  color: var(--lime);
+}
+
+.talk__lead {
+  margin: 0 0 16px;
+  font-size: 0.98rem;
+  line-height: 1.6;
+  color: rgba(243, 240, 232, 0.78);
+}
+
+.talk__start {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin: 0;
+}
+
+.talk__go {
+  min-height: 48px;
+  padding-inline: 22px;
+  font-size: 1.02rem;
+}
+
+.talk__hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: rgba(243, 240, 232, 0.62);
+}
+
+.talk__error {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  color: #ffd9cf;
+  background: rgba(255, 91, 46, 0.16);
+  border: 1px solid rgba(255, 91, 46, 0.5);
+  border-radius: var(--radius-sm);
+}
+
+/* 连接点 */
+.talk__links {
+  list-style: none;
+  margin: 14px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.talk-link {
+  padding: 12px 12px 12px 14px;
+  background: rgba(243, 240, 232, 0.07);
+  border: 1px solid rgba(243, 240, 232, 0.16);
+  border-left: 3px solid var(--lime);
+  border-radius: 6px 14px 14px 6px;
+  animation: talk-rise 0.5s var(--ease) both;
+}
+
+.talk-link--curious {
+  border-left-color: rgba(243, 240, 232, 0.6);
+}
+
+.talk-link:nth-child(2) { animation-delay: 0.08s; }
+.talk-link:nth-child(3) { animation-delay: 0.16s; }
+
+.talk-link__title {
+  margin: 0 0 8px;
+  font-weight: 700;
+  font-size: 1.04rem;
+  line-height: 1.4;
+  color: var(--paper);
+}
+
+.talk-link__kind {
+  display: inline-block;
+  margin-right: 8px;
+  padding: 1px 8px 2px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 0.78rem;
+  line-height: 1.5;
+  vertical-align: 2px;
+  color: var(--ink);
+  background: var(--lime);
+  border-radius: 6px;
+}
+
+.talk-link--curious .talk-link__kind {
+  background: var(--paper);
+}
+
+.talk-link__proof {
+  display: grid;
+  gap: 5px;
+}
+
+.talk-quote {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 8px;
+  margin: 0;
+  font-size: 0.86rem;
+  line-height: 1.5;
+  color: rgba(243, 240, 232, 0.82);
+}
+
+.talk-quote__who {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  text-align: center;
+  color: var(--ink);
+  background: var(--paper);
+  border-radius: 5px;
+}
+
+.talk-quote--them .talk-quote__who {
+  background: var(--lime);
+}
+
+.talk-quote q {
+  quotes: '「' '」';
+  overflow-wrap: anywhere;
+}
+
+/* 开场白：像一条还没发出去的消息 */
+.talk__sub {
+  margin: 18px 0 10px;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 1.08rem;
+  color: var(--lime);
+}
+
+.talk__openers {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 14px;
+}
+
+.talk-opener {
+  animation: talk-rise 0.5s var(--ease) both;
+  animation-delay: 0.18s;
+}
+
+.talk-opener:nth-child(2) { animation-delay: 0.28s; }
+.talk-opener:nth-child(3) { animation-delay: 0.38s; }
+
+@keyframes talk-rise {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+}
+
+.talk-opener__bubble {
+  position: relative;
+  margin: 0;
+  padding: 12px 14px 13px;
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--ink);
+  background: var(--surface);
+  border-radius: 18px 18px 18px 5px;
+  box-shadow: 0 10px 18px -12px rgba(0, 0, 0, 0.7);
+  overflow-wrap: anywhere;
+}
+
+.talk-opener__action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 8px 0 0;
+}
+
+.talk-opener__about {
+  min-width: 0;
+  font-size: 0.78rem;
+  line-height: 1.4;
+  color: rgba(243, 240, 232, 0.6);
+  overflow-wrap: anywhere;
+}
+
+.talk-opener__action .btn {
+  flex: none;
+}
+
+.talk__foot {
+  margin: 18px 0 0;
+  padding-top: 14px;
+  border-top: 1px dashed rgba(243, 240, 232, 0.22);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  color: rgba(243, 240, 232, 0.62);
+}
+
+.talk__tools {
+  display: flex;
+  gap: 4px 18px;
+  margin-top: 8px;
+}
+
+.talk__tools form {
+  margin: 0;
+}
+
+.talk__tool {
+  min-height: 36px;
+  padding: 0;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 600;
+  color: var(--paper);
+  background: none;
+  border: 0;
+  text-decoration: underline;
+  text-decoration-color: rgba(243, 240, 232, 0.4);
+  text-underline-offset: 4px;
+  cursor: pointer;
+}
+
+.talk__tool:hover {
+  color: var(--lime);
+  text-decoration-color: var(--lime);
+}
+
+.talk__tool:focus-visible,
+.talk .btn:focus-visible {
+  outline: 2.5px solid var(--lime);
+  outline-offset: 3px;
+}
+
+/* 提交后、等模型返回的十几秒：顶上一条来回扫的光，内容变淡，写明正在做什么 */
+.talk__busy {
+  margin: 14px 0 0;
+  font-size: 0.92rem;
+  font-weight: 600;
+  color: var(--lime);
+}
+
+.talk.is-busy::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 40%;
+  height: 3px;
+  background: linear-gradient(90deg, rgba(212, 245, 74, 0), var(--lime), rgba(212, 245, 74, 0));
+  animation: talk-scan 1.2s ease-in-out infinite alternate;
+}
+
+@keyframes talk-scan {
+  to {
+    transform: translateX(150%);
+  }
+}
+
+.talk.is-busy .talk__links,
+.talk.is-busy .talk__openers,
+.talk.is-busy .talk__sub,
+.talk.is-busy .talk__foot,
+.talk.is-busy .talk__tools,
+.talk.is-busy .talk__lead {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+.talk.is-busy .talk__spark {
+  animation-duration: 0.7s;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .talk__spark,
+  .talk-link,
+  .talk-opener,
+  .talk.is-busy::before {
+    animation: none;
+  }
 }
 
 /* ------------------------------------------------------------------ */
@@ -1158,19 +1912,52 @@ fieldset.field legend {
   }
 }
 
+@media (min-width: 600px) {
+  .wall-board {
+    margin: 0 0 8px;
+    padding: 24px 16px 36px;
+  }
+
+  .wall-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px 4px;
+  }
+
+  .wall-search {
+    flex: 0 1 320px;
+    margin: 0 0 0 auto;
+  }
+
+  .wall-note {
+    grid-column: auto;
+    padding: 18px 9px 16px;
+  }
+
+  .wall-note .organizer-note {
+    padding: 26px 16px 18px;
+  }
+
+  .wall-note .organizer-note__text {
+    font-size: 0.95rem;
+  }
+}
+
 @media (min-width: 880px) {
+  .wall-board {
+    padding: 28px 22px 44px;
+  }
+
   .wall-grid {
     grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 14px 8px;
   }
 
-  .wall-head {
-    grid-template-columns: minmax(0, 1fr) auto;
+  .wall-card,
+  .wall-ghost,
+  .wall-note {
+    padding: 20px 12px 18px;
   }
 
-  .wall-head .organizer-note {
-    margin: 0;
-    width: 320px;
-  }
 
   .member-layout {
     grid-template-columns: 420px minmax(0, 1fr);
@@ -1180,6 +1967,22 @@ fieldset.field legend {
       'frame topics';
     gap: 24px 48px;
     align-items: start;
+  }
+
+  .member-layout--talk {
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      'frame head'
+      'frame talk'
+      'frame topics';
+  }
+
+  .talk {
+    padding: 26px 26px 22px;
+  }
+
+  .talk__title {
+    font-size: 2rem;
   }
 
   .member-layout__frame {
@@ -1207,6 +2010,14 @@ fieldset.field legend {
 @media (min-width: 1120px) {
   .wall-grid {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+
+/* 人少的墙（不到一行）在大屏上不要把海报拉得太宽 */
+@media (min-width: 880px) {
+  .wall-grid:has(> :nth-last-child(-n + 3):first-child) {
+    grid-template-columns: repeat(auto-fill, minmax(230px, 260px));
+    justify-content: center;
   }
 }
 
