@@ -4,7 +4,7 @@
  * | 路径 | 谁能访问 | 说明 |
  * | --- | --- | --- |
  * | GET /login | 任何人 | 邮箱表单；已登录直接跳到 next |
- * | POST /login | 任何人（来源检查） | 发验证码到 dev outbox，显示输入验证码的表单 |
+ * | POST /login | 任何人（来源检查） | 把验证码交给发件箱（本地文件或 SMTP），显示输入验证码的表单；发不出去 → 503 并说明 |
  * | POST /login/verify | 任何人（来源检查） | 校验验证码 → 新会话 cookie → 跳到 next（首次登录先去 /welcome） |
  * | GET /welcome、POST /welcome | 已登录（POST 需 CSRF） | 首次登录填昵称 |
  * | POST /logout | 已登录（需 CSRF） | 删除会话 |
@@ -12,9 +12,10 @@
  *
  * `next` 只允许站内相对路径（security/redirect.ts）。
  */
-import { DEV_OUTBOX_LIMIT } from '../constants.js';
+import { DEV_OUTBOX_LIMIT, RATE_RULES } from '../constants.js';
 import type { AppDeps, AppHono } from '../context.js';
 import { DEMO_ACCOUNTS, DEMO_WALL_NAME, demoAccountFor } from '../demo-access.js';
+import { clientAddress } from '../security/client.js';
 import { requireForm, requireOriginForm } from '../security/forms.js';
 import { safeNextPath } from '../security/redirect.js';
 import { authOf, clearSessionCookie, readSessionToken, setSessionCookie, welcomeRedirectPath } from '../security/session.js';
@@ -34,7 +35,8 @@ import { renderNotFound } from '../views/errors.js';
 export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
   const { config } = deps;
   const originForm = requireOriginForm(deps);
-  const devOutbox = !config.isProduction && !deps.demo;
+  // 只有本地发件箱（文件 / 内存）才有 /dev/outbox；真实投递时验证码只在用户的邮箱里
+  const devOutbox = !config.isProduction && !deps.demo && deps.outbox.inspectable;
   const demoAccounts = deps.demo ? DEMO_ACCOUNTS : undefined;
 
   app.get('/login', (c) => {
@@ -60,7 +62,7 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
     });
   }
 
-  app.post('/login', originForm, (c) => {
+  app.post('/login', originForm, async (c) => {
     const form = c.get('form');
     const next = safeNextPath(form.next, config.webOrigin);
     const email = normalizeEmail(form.email);
@@ -72,7 +74,20 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
         body: <LoginView next={next} email={form.email} demoAccounts={demoAccounts} error="邮箱格式不对，请检查后再试。" />,
       });
     }
-    const result = requestLoginCode(deps, email);
+    // 按来源地址：挡住换着邮箱批量让平台发信（按邮箱的限流在 requestLoginCode 里）
+    const fromAddress = deps.rateLimiter.hit('login-request', clientAddress(c, config.trustProxyHops), RATE_RULES.loginRequest);
+    if (!fromAddress.ok) {
+      c.header('Retry-After', String(fromAddress.retryAfterSeconds));
+      return renderPage(c, { title: '登录', status: 429, body: <LoginView next={next} email={email} demoAccounts={demoAccounts} error="这个网络发验证码太频繁了，请过几分钟再试。" /> });
+    }
+    const result = await requestLoginCode(deps, email);
+    if (!result.ok && result.reason === 'send_failed') {
+      return renderPage(c, {
+        title: '登录',
+        status: 503,
+        body: <LoginView next={next} email={email} demoAccounts={demoAccounts} error="验证码邮件暂时发不出去。请稍等一会儿再试；一直不行的话，换一个邮箱试试。" />,
+      });
+    }
     if (!result.ok) {
       return renderPage(c, {
         title: '输入验证码',
@@ -96,6 +111,11 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
     const email = normalizeEmail(form.email);
     if (deps.demo && (!email || !demoAccountFor(email))) return renderNotFound(c);
     if (!email) return c.redirect('/login', 303);
+    const fromAddress = deps.rateLimiter.hit('login-verify', clientAddress(c, config.trustProxyHops), RATE_RULES.loginVerify);
+    if (!fromAddress.ok) {
+      c.header('Retry-After', String(fromAddress.retryAfterSeconds));
+      return renderPage(c, { title: '输入验证码', status: 429, body: <VerifyView email={email} next={next} devOutbox={devOutbox} error="这个网络尝试得太频繁了，请过几分钟再试。" /> });
+    }
     const result = verifyLoginCode(deps, email, form.code);
     if (!result.ok) {
       const error =

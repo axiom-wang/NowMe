@@ -71,3 +71,17 @@ describe('正常路径', () => {
     }
   });
 });
+
+describe('健康检查（contracts 10.5）', () => {
+  const { app } = makeFixture();
+
+  it('/healthz 返回固定文字，带页面托管的安全头，不设 cookie；只接受 GET', async () => {
+    const res = await app.request('/healthz');
+    expect(res.status).toBe(200);
+    expect(await res.text()).toBe('ok');
+    expect(res.headers.get('x-content-type-options')).toBe('nosniff');
+    expect(res.headers.get('content-security-policy')).toBe("default-src 'none'");
+    expect(res.headers.getSetCookie()).toEqual([]);
+    expect((await app.request('/healthz', { method: 'POST' })).status).toBe(405);
+  });
+});

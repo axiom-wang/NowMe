@@ -20,7 +20,7 @@ export function messageProblem(text: string): string | null {
   return null;
 }
 
-export type SendResult = { ok: true; message: ChatMessage } | { ok: false; status: 400 | 404 | 409; error: string };
+export type SendResult = { ok: true; message: ChatMessage } | { ok: false; status: 400 | 404 | 409 | 429; error: string };
 
 export function sendMessage(deps: ChatDeps, userId: string, conversationId: string, clientId: string, raw: string): SendResult {
   return transaction(deps.db, (): SendResult => {

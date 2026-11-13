@@ -24,7 +24,7 @@ import { createWebApp, type WebApp, type WebConfig } from '../src/app.js';
 import { openDatabase, type Database } from '../src/db/index.js';
 import type { Repos } from '../src/db/index.js';
 import { createInstruction, type AgentInstruction } from '../src/services/instruction.js';
-import { createMemoryOutbox, type OutboxMessage } from '../src/services/outbox.js';
+import { createMemoryOutbox, type Outbox, type OutboxMessage } from '../src/services/outbox.js';
 import type { ProcessedSubmission, SubmissionProcessor } from '../src/services/processor.js';
 import type { RemoteRenderer, RemoteRenderResult } from '../src/services/remote-preview.js';
 import { addMember, createWall, type MemberPage } from '../src/services/walls.js';
@@ -178,6 +178,10 @@ export interface TestWebOptions {
   remoteRenderer?: RemoteRenderer;
   /** 默认一个共享的测试 Skill 包；null 表示没有 Skill 包。 */
   skillPackageDir?: string | null;
+  /** 替换发件箱（真实投递的测试）；默认内存发件箱（`TestWeb.outbox`）。 */
+  mailOutbox?: Outbox;
+  /** 收集主站日志（默认丢弃）。 */
+  log?: (message: string) => void;
 }
 
 export function createTestWeb(options: TestWebOptions = {}): TestWeb {
@@ -194,9 +198,9 @@ export function createTestWeb(options: TestWebOptions = {}): TestWeb {
     db,
     processor,
     clock: clock.now,
-    outbox,
+    outbox: options.mailOutbox ?? outbox,
     kitFonts: KIT_FONTS,
-    log: () => {},
+    log: options.log ?? (() => {}),
     model: options.model,
     secretEnv: options.secretEnv,
     modelFetch: options.modelFetch,

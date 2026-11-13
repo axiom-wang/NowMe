@@ -30,3 +30,19 @@ export const STATIC_PATH_PREFIX = '/static/';
 
 /** `/dev/outbox` 显示的最近邮件条数。 */
 export const DEV_OUTBOX_LIMIT = 50;
+
+/**
+ * 按来源地址 / 按用户的短时限流（contracts 10.3，security/rate-limit.ts）。
+ * 按地址的上限放得比较宽：目标用户常在同一个校园网出口后面，一场招新会有上百人在十分钟内登录。
+ * 这些上限挡的是脚本批量轰炸（换着邮箱让平台发信、暴力试验证码），不是正常人的使用。
+ */
+export const RATE_RULES = {
+  /** 同一地址请求发验证码。 */
+  loginRequest: { max: 120, windowMs: 10 * 60 * 1000 },
+  /** 同一地址提交验证码。 */
+  loginVerify: { max: 300, windowMs: 10 * 60 * 1000 },
+  /** 同一地址用一次性 token 换页面凭证。 */
+  agentExchange: { max: 60, windowMs: 10 * 60 * 1000 },
+  /** 同一用户发消息（群聊 + 私聊合计）。 */
+  chatSend: { max: 40, windowMs: 60 * 1000 },
+} as const;

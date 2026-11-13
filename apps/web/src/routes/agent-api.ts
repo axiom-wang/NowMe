@@ -29,6 +29,8 @@ import {
   type RevisionResponse,
 } from '@nowme/contracts';
 import type { AppDeps, AppEnv, AppHono } from '../context.js';
+import { RATE_RULES } from '../constants.js';
+import { clientAddress } from '../security/client.js';
 import { authenticateCredential, buildAgentContext, exchangeAgentToken } from '../services/agent.js';
 
 export const AGENT_API_PREFIX = '/api/agent';
@@ -90,6 +92,12 @@ export function registerAgentApiRoutes(app: AppHono, deps: AppDeps): void {
   const revisionLimit = limit(REVISION_REQUEST_MAX_BYTES);
 
   app.post(`${AGENT_API_PREFIX}/exchange`, jsonLimit, async (c) => {
+    // 没有凭证的入口：按来源地址限流，挡住批量试 token（contracts 10.3）
+    const fromAddress = deps.rateLimiter.hit('agent-exchange', clientAddress(c, deps.config.trustProxyHops), RATE_RULES.agentExchange);
+    if (!fromAddress.ok) {
+      c.header('Retry-After', String(fromAddress.retryAfterSeconds));
+      return apiError(c, 'RATE_LIMITED', '这个网络换取凭证太频繁了，请过几分钟再试');
+    }
     const body = await readJson(c);
     if (body === INVALID_JSON) return apiError(c, 'BAD_REQUEST', '请求体不是合法的 JSON');
     const parsed = exchangeRequestSchema.safeParse(body);

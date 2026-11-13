@@ -3,7 +3,8 @@ import { AVATAR_REQUEST_MAX_BYTES, AVATAR_ERROR } from '@nowme/contracts';
  * 主站应用（contracts 4.1、4.2、5）：`createWebApp({ config, db, processor?, clock? })`。
  *
  * 全局中间件（按顺序）：
- * 1. 安全响应头：`buildWebCsp()`、nosniff、DENY、no-store；
+ * 1. 安全响应头：`buildWebCsp()`、nosniff、DENY、no-store、Permissions-Policy、COOP / CORP、https 时 HSTS；
+ *    之后是 `/healthz`、`/readyz`（不经过 Host 头校验）；
  * 2. Host 头校验：不是 `NOWME_WEB_ORIGIN` 的主机 → 421；
  * 3. 主站表单请求体上限（Agent API 各自有上限）；
  * 4. 加载会话（只认 `nowme_session` cookie；`/api/` 不加载会话）。
@@ -21,8 +22,10 @@ import { createRepos, migrate, type Database } from './db/index.js';
 import { registerRoutes } from './routes/index.js';
 import { apiError } from './routes/agent-api.js';
 import { securityHeaders } from './security/headers.js';
+import { createRateLimiter } from './security/rate-limit.js';
 import { hostCheck } from './security/host.js';
 import { sessionLoader } from './security/session.js';
+import { createSmtpOutbox } from './services/mailer.js';
 import { createFileOutbox, type Outbox } from './services/outbox.js';
 import { createRenderProcessor, type SubmissionProcessor } from './services/processor.js';
 import { createSubmissionService } from './services/submissions.js';
@@ -61,7 +64,7 @@ export interface CreateWebAppOptions {
   log?: (message: string) => void;
   /** 非生产环境假模型测试注入；真实模型始终使用用户账号配置。 */
   model?: ModelClient;
-  /** 只读取 NOWME_AI_ENCRYPTION_KEY 与开发本机访问开关，不读取模型 Key。 */
+  /** 只读取 NOWME_AI_ENCRYPTION_KEY、开发本机访问开关与 NOWME_SMTP_URL（发信连接串），不读取模型 Key。 */
   secretEnv?: Readonly<Record<string, string | undefined>>;
   /** OpenAI 兼容服务的 fetch（测试注入模拟服务）。 */
   modelFetch?: typeof fetch;
@@ -103,7 +106,11 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
   const now = options.clock ?? (() => new Date());
   const repos = createRepos(db);
   const kitFonts = options.kitFonts ?? loadKitFonts();
-  const outbox = options.outbox ?? createFileOutbox(dataPaths(config.dataDir).outbox, log);
+  const outbox =
+    options.outbox ??
+    (config.mail.transport === 'smtp'
+      ? createSmtpOutbox({ url: options.secretEnv?.NOWME_SMTP_URL, from: config.mail.from, isProduction: config.isProduction, log })
+      : createFileOutbox(dataPaths(config.dataDir).outbox, log));
   const processor = options.processor ?? createRenderProcessor();
   const submissions = createSubmissionService({ config, db, repos, now, kitFonts, processor, log });
   const tickets = createTicketIssuer({ secret: config.ticketSecret, pagesOrigin: config.pagesOrigin, now });
@@ -114,11 +121,22 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
     allowLocal: !config.isProduction && options.secretEnv?.NOWME_AI_ALLOW_LOCAL === '1',
     fetch: options.modelFetch, lookup: options.modelLookup, now,
   });
-  const deps: AppDeps = { demo: options.demo ?? null, userModels, config, db, repos, now, kitFonts, tickets, submissions, outbox, hosted: null, skillPackage, remotePreview, log };
+  const deps: AppDeps = { demo: options.demo ?? null, userModels, config, db, repos, now, kitFonts, tickets, submissions, outbox, rateLimiter: createRateLimiter(now), hosted: null, skillPackage, remotePreview, log };
   deps.hosted = createHosted(deps, options);
 
   const app: AppHono = new Hono<AppEnv>();
   app.use(securityHeaders(config));
+  // 健康检查（contracts 10.5）：给负载均衡 / 容器编排用，放在 Host 头校验之前（探针常用 IP 访问）。
+  // 不读会话、不设 cookie、不返回任何业务信息。
+  app.get('/healthz', (c) => c.text('ok', 200, { 'Cache-Control': 'no-store' }));
+  app.get('/readyz', (c) => {
+    try {
+      db.prepare('SELECT 1').get();
+      return c.json({ status: 'ok' }, 200, { 'Cache-Control': 'no-store' });
+    } catch {
+      return c.json({ status: 'unavailable' }, 503, { 'Cache-Control': 'no-store' });
+    }
+  });
   app.use(hostCheck(config));
   const formLimit = bodyLimit({
     maxSize: FORM_BODY_MAX_BYTES,
@@ -164,6 +182,7 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
       await deps.hosted?.close();
       await submissions.close();
       await remotePreview.close();
+      await outbox.close?.();
     },
   };
 }

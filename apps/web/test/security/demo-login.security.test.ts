@@ -107,7 +107,7 @@ describe('评审演示登录隔离', () => {
   it('验证码发放与验证都拒绝背景人物和新注册，已有背景会话也失效', async () => {
     const email = 'background@demo.nowme.test';
     const id = createUser(t, email, '背景人物');
-    requestLoginCode(t.web.deps, email);
+    await requestLoginCode(t.web.deps, email);
     const code = latestCode(t, email);
     const before = dumpDb(t.db);
     for (const target of [email, 'new@example.com']) {

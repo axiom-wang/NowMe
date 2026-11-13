@@ -233,13 +233,16 @@ test('历史消息分页与阅读位置：收到新消息不打断阅读，隐�
     const path = new URL(b.page.url()).pathname;
     await a.page.goto(path);
     // 使用真实登录 cookie 与 CSRF，通过同源请求批量填充历史。
-    await a.page.evaluate(async (url) => {
+    // 每人每分钟最多发 40 条（contracts 10.3），65 条由两个人交替各发一段。
+    const fill = (start: number, end: number) => async (args: { url: string; start: number; end: number }) => {
       const csrf = (document.querySelector('[data-chat-form] input[name="_csrf"]') as HTMLInputElement).value;
-      for (let i = 0; i < 65; i++) {
-        const response = await fetch(url + '/send', { method: 'POST', headers: { Accept: 'application/json' }, body: new URLSearchParams({ _csrf: csrf, clientId: crypto.randomUUID(), text: '历史消息' + i }) });
+      for (let i = args.start; i < args.end; i++) {
+        const response = await fetch(args.url + '/send', { method: 'POST', headers: { Accept: 'application/json' }, body: new URLSearchParams({ _csrf: csrf, clientId: crypto.randomUUID(), text: '历史消息' + i }) });
         if (!response.ok) throw new Error('填充历史失败');
       }
-    }, path);
+    };
+    await a.page.evaluate(fill(0, 33), { url: path, start: 0, end: 33 });
+    await b.page.evaluate(fill(33, 65), { url: path, start: 33, end: 65 });
     await b.page.reload();
     await expect(b.page.locator('.message')).toHaveCount(50);
     await b.page.locator('[data-chat-history]').evaluate((el) => { el.scrollTop = 0; });

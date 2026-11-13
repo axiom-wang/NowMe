@@ -3,19 +3,28 @@
  * 与页面托管共享 `NOWME_DATA_DIR` 与票据密钥（`NOWME_TICKET_SECRET`，留空时两边都读写 `<dataDir>/secret`）。
  */
 import { serve } from '@hono/node-server';
-import { dataPaths, loadConfig, loadRepoDotEnv, resolveTicketSecret } from '@nowme/contracts';
+import { assertProductionConfig, ConfigError, dataPaths, loadConfig, loadRepoDotEnv, resolveTicketSecret, type NowmeConfig } from '@nowme/contracts';
 import { createWebApp } from './app.js';
 import { describeHostedModels } from './hosted/describe.js';
 import { openDatabase } from './db/index.js';
 
 loadRepoDotEnv();
-const config = loadConfig();
+let config: NowmeConfig;
+try {
+  config = loadConfig();
+  // 生产环境：配置不完整（http 源、没有凭证库密钥、邮件只写本地文件……）直接拒绝启动，并一次列出全部问题
+  for (const warning of assertProductionConfig(config, process.env, 'web')) console.warn(`[web] 配置提醒：${warning}`);
+} catch (error) {
+  if (!(error instanceof ConfigError)) throw error;
+  console.error(`[web] ${error.message}`);
+  process.exit(1);
+}
 const db = openDatabase(dataPaths(config.dataDir).db);
 // 环境变量只提供凭证库加密密钥；模型 Key 来自用户账号。
 const web = createWebApp({ config: { ...config, ticketSecret: resolveTicketSecret(config) }, db, secretEnv: process.env });
 
 const server = serve({ fetch: web.fetch, port: config.web.port, hostname: config.web.hostname }, () => {
-  console.log(`[web] NOWMe 主站已启动：${config.webOrigin}（数据目录 ${config.dataDir}）`);
+  console.log(`[web] NOWMe 主站已启动：${config.webOrigin}（监听 ${config.web.hostname}:${config.web.port}，数据目录 ${config.dataDir}）`);
   if (!config.isProduction) console.log(`[web] 开发发件箱：${config.webOrigin}/dev/outbox`);
   if (web.deps.hosted) {
     const hosted = web.deps.hosted.settings;

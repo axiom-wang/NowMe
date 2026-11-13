@@ -48,10 +48,31 @@ function codeHash(codeId: string, code: string): string {
   return hashToken(`${codeId}.${code}`);
 }
 
-export type RequestCodeResult = { ok: true } | { ok: false; reason: 'rate_limited' };
+export type RequestCodeResult = { ok: true } | { ok: false; reason: 'rate_limited' | 'send_failed' };
 
-/** 签发验证码并写入发件箱。 */
-export function requestLoginCode(deps: Pick<AppDeps, 'db' | 'repos' | 'now' | 'outbox'>, email: string): RequestCodeResult {
+/** 邮件正文（纯文本 + 简单的 HTML）。验证码放在主题最前面：手机通知里一眼能看到。 */
+export function loginCodeMail(code: string): { subject: string; body: string; html: string } {
+  const minutes = LOGIN_CODE_TTL_SECONDS / 60;
+  return {
+    subject: `${code} 是你的 NOWMe 登录验证码`,
+    body: `你的验证码是 ${code}，${minutes} 分钟内有效。不是你本人操作请忽略。`,
+    html: [
+      '<div style="font-family:-apple-system,BlinkMacSystemFont,\'PingFang SC\',\'Microsoft YaHei\',sans-serif;color:#16150f;max-width:420px;margin:0 auto;padding:24px 8px">',
+      '<p style="font-size:18px;font-weight:700;margin:0 0 16px">NOW<span style="background:#d4f54a;border:1.5px solid #16150f;border-radius:8px;padding:0 6px;margin-left:2px">Me</span></p>',
+      '<p style="font-size:15px;line-height:1.6;margin:0 0 12px">你的登录验证码：</p>',
+      `<p style="font-family:ui-monospace,Menlo,Consolas,monospace;font-size:32px;font-weight:700;letter-spacing:6px;margin:0 0 16px">${code}</p>`,
+      `<p style="font-size:14px;line-height:1.6;color:#45413a;margin:0 0 8px">${minutes} 分钟内有效，只能用一次。</p>`,
+      '<p style="font-size:13px;line-height:1.6;color:#776f62;margin:0">不是你本人操作的话，忽略这封邮件就好，不需要做任何事。</p>',
+      '</div>',
+    ].join(''),
+  };
+}
+
+/**
+ * 签发验证码并交给发件箱。真实邮件发不出去时返回 `send_failed`：这个验证码立即作废
+ * （用户没收到，不该留着一个可用的码），但仍计入限流次数。
+ */
+export async function requestLoginCode(deps: Pick<AppDeps, 'db' | 'repos' | 'now' | 'outbox'>, email: string): Promise<RequestCodeResult> {
   const now = deps.now();
   const nowIso = now.toISOString();
   const windowStart = new Date(now.getTime() - LOGIN_CODE_RATE_WINDOW_SECONDS * 1000).toISOString();
@@ -70,12 +91,12 @@ export function requestLoginCode(deps: Pick<AppDeps, 'db' | 'repos' | 'now' | 'o
     return true;
   });
   if (!issued) return { ok: false, reason: 'rate_limited' };
-  deps.outbox.send({
-    at: nowIso,
-    to: email,
-    subject: 'NOWMe 登录验证码',
-    body: `你的验证码是 ${code}，${LOGIN_CODE_TTL_SECONDS / 60} 分钟内有效。不是你本人操作请忽略。`,
-  });
+  try {
+    await deps.outbox.send({ at: nowIso, to: email, ...loginCodeMail(code) });
+  } catch {
+    deps.repos.loginCodes.invalidateUnused(email, deps.now().toISOString());
+    return { ok: false, reason: 'send_failed' };
+  }
   return { ok: true };
 }
 

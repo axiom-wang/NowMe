@@ -5,7 +5,8 @@ import type { AppDeps, AppEnv, AppHono } from '../context.js';
 import { requireForm } from '../security/forms.js';
 import { authOf, requireUser } from '../security/session.js';
 import { findMemberWall, findPublishedMemberPage } from '../services/access.js';
-import { openDirect, sendMessage } from '../services/chat.js';
+import { RATE_RULES } from '../constants.js';
+import { openDirect, sendMessage, type SendResult } from '../services/chat.js';
 import { icebreakerOpener } from '../services/icebreaker.js';
 import { parsePublishedCard } from '../services/wall-view.js';
 import { renderNotFound } from '../views/errors.js';
@@ -96,7 +97,14 @@ export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
     const auth = authOf(c);
     const id = c.req.param('id');
     const fields = c.get('form');
-    const result = sendMessage(deps, auth.user.id, id, fields.clientId ?? '', fields.text ?? '');
+    // 按用户限流（群聊 + 私聊合计）：挡住脚本刷屏，正常聊天碰不到
+    const pace = deps.rateLimiter.hit('chat-send', auth.user.id, RATE_RULES.chatSend);
+    const result: SendResult = pace.ok
+      ? sendMessage(deps, auth.user.id, id, fields.clientId ?? '', fields.text ?? '')
+      : deps.repos.chat.findVisible(id, auth.user.id)
+        ? { ok: false, status: 429, error: '发得太快了，歇几秒再发。' }
+        : { ok: false, status: 404, error: '会话不存在或已失去访问权限' };
+    if (!pace.ok) c.header('Retry-After', String(pace.retryAfterSeconds));
     if (c.req.header('accept')?.includes('application/json')) return result.ok ? c.json({ message: result.message }) : c.json({ error: result.error }, result.status);
     if (result.ok) return c.redirect(`/messages/${id}`, 303);
     if (result.status === 404) return renderNotFound(c);

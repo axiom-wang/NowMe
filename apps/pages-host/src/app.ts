@@ -111,6 +111,9 @@ export function createPagesApp(config: PagesHostConfig, options: PagesHostOption
     return new Response(stream, { status: 200, headers: base });
   }
 
+  // 健康检查（contracts 10.5）：固定文字，不读任何文件
+  app.get('/healthz', (c) => c.text('ok', 200, { 'Cache-Control': 'no-store' }));
+
   app.all('*', async (c) => {
     const method = c.req.method;
     if (method !== 'GET' && method !== 'HEAD') {

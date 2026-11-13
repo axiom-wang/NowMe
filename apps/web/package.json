@@ -39,6 +39,7 @@
     "@nowme/skill": "workspace:*",
     "@nowme/validator": "workspace:*",
     "hono": "catalog:",
+    "nodemailer": "catalog:",
     "qrcode": "catalog:",
     "sharp": "catalog:",
     "zod": "catalog:"
@@ -46,6 +47,7 @@
   "devDependencies": {
     "@nowme/pages-host": "workspace:*",
     "@types/node": "catalog:",
+    "@types/nodemailer": "catalog:",
     "@types/qrcode": "catalog:",
     "parse5": "catalog:",
     "playwright": "catalog:",
