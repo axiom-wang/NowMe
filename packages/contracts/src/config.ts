@@ -43,9 +43,19 @@ export interface NowmeConfig {
   webOrigin: string;
   /** 页面托管源（`NOWME_PAGES_ORIGIN`）。 */
   pagesOrigin: string;
-  /** 由源推导出的监听主机与端口。 */
+  /**
+   * 监听主机与端口。默认由源推导（本地开发）；部署在反向代理之后时，对外的源是 https 域名，
+   * 进程实际监听的地址用 `NOWME_WEB_LISTEN` / `NOWME_PAGES_LISTEN` 单独指定（contracts 10.1）。
+   */
   web: { hostname: string; port: number };
   pages: { hostname: string; port: number };
+  /**
+   * 进程前面可信反向代理的层数（`NOWME_TRUST_PROXY`，0–5，默认 0）。
+   * 大于 0 时客户端地址取 `X-Forwarded-For` 从右数第 N 个；为 0 时只用 TCP 连接地址，忽略该头。
+   */
+  trustProxyHops: number;
+  /** 邮件发送（登录验证码）。不含 SMTP 密码本身。 */
+  mail: MailConfig;
   /** 本地数据目录（绝对路径，`NOWME_DATA_DIR`，默认 `<仓库根>/.data`）。 */
   dataDir: string;
   /** `NOWME_TICKET_SECRET`；为 null 时用 resolveTicketSecret() 读写 `<dataDir>/secret`。 */
@@ -63,6 +73,14 @@ export interface NowmeConfig {
    * 安装页与 install.md 多显示一种安装方式；都不设为 null。
    */
   skillMarket: SkillMarketConfig | null;
+}
+
+/** 邮件发送方式（contracts 10.2）。SMTP 连接串含密码，只从环境变量读，不进配置对象。 */
+export interface MailConfig {
+  /** `file`：写进 `<dataDir>/outbox.log`（开发）；`smtp`：经 `NOWME_SMTP_URL` 真实发送。 */
+  transport: 'file' | 'smtp';
+  /** 发件人（`NOWME_MAIL_FROM`），例如 `NOWMe <no-reply@example.com>`；`smtp` 时必填。 */
+  from: string | null;
 }
 
 export interface SkillMarketConfig {
@@ -127,6 +145,46 @@ function listenAddress(origin: string): { hostname: string; port: number } {
   const hostname = url.hostname.replace(/^\[(.*)\]$/, '$1');
   return { hostname, port };
 }
+
+/** `NOWME_*_LISTEN`：`端口`、`主机:端口` 或 `[IPv6]:端口`。没设置时用由源推导的地址。 */
+function parseListen(env: Env, name: string, fallback: { hostname: string; port: number }): { hostname: string; port: number } {
+  const raw = nonEmpty(env[name]);
+  if (raw === undefined) return fallback;
+  const match = /^(?:(\[[0-9a-fA-F:.]+\]|[A-Za-z0-9.-]+):)?(\d{1,5})$/.exec(raw);
+  const port = match ? Number(match[2]) : NaN;
+  if (!match || port < 1 || port > 65535) {
+    throw new ConfigError(`${name} 应为 端口、主机:端口 或 [IPv6]:端口，例如 0.0.0.0:3000：${raw}`);
+  }
+  const hostname = (match[1] ?? fallback.hostname).replace(/^\[(.*)\]$/, '$1');
+  return { hostname, port };
+}
+
+const MAIL_FROM_MAX = 200;
+
+/** 邮件发送配置。`smtp` 需要 `NOWME_SMTP_URL`（smtp:// 或 smtps://）与 `NOWME_MAIL_FROM`。 */
+export function loadMailConfig(env: Env): MailConfig {
+  const transport = nonEmpty(env.NOWME_MAIL_TRANSPORT) ?? 'file';
+  if (transport !== 'file' && transport !== 'smtp') throw new ConfigError(`NOWME_MAIL_TRANSPORT 只能是 file 或 smtp：${transport}`);
+  const from = nonEmpty(env.NOWME_MAIL_FROM) ?? null;
+  if (from !== null && (from.length > MAIL_FROM_MAX || /[\u0000-\u001f\u007f]/.test(from) || !/[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+/.test(from))) {
+    throw new ConfigError('NOWME_MAIL_FROM 应为一行，并包含发件邮箱，例如 NOWMe <no-reply@example.com>');
+  }
+  if (transport === 'smtp') {
+    const url = nonEmpty(env.NOWME_SMTP_URL);
+    let protocol: string | null = null;
+    try {
+      protocol = url ? new URL(url).protocol : null;
+    } catch {
+      protocol = null;
+    }
+    // 不把连接串写进错误信息：里面有密码。
+    if (protocol !== 'smtp:' && protocol !== 'smtps:') throw new ConfigError('NOWME_MAIL_TRANSPORT=smtp 时，NOWME_SMTP_URL 应为 smtp:// 或 smtps:// 开头的连接串');
+    if (from === null) throw new ConfigError('NOWME_MAIL_TRANSPORT=smtp 时必须设置 NOWME_MAIL_FROM');
+  }
+  return { transport, from };
+}
+
+export const TRUST_PROXY_HOPS_RANGE = { min: 0, max: 5 } as const;
 
 function parseOrigin(env: Env, name: string, fallback: string): string {
   const raw = nonEmpty(env[name]) ?? fallback;
@@ -208,16 +266,18 @@ export function loadSkillMarketConfig(env: Env): SkillMarketConfig | null {
 export function loadConfig(env: Env = process.env): NowmeConfig {
   const webOrigin = parseOrigin(env, 'NOWME_WEB_ORIGIN', DEFAULT_WEB_ORIGIN);
   const pagesOrigin = parseOrigin(env, 'NOWME_PAGES_ORIGIN', DEFAULT_PAGES_ORIGIN);
-  const web = listenAddress(webOrigin);
-  const pages = listenAddress(pagesOrigin);
+  const webPublic = listenAddress(webOrigin);
+  const pagesPublic = listenAddress(pagesOrigin);
 
   // 主站与页面托管必须是不同站点：cookie 不按端口隔离，同主机不同端口会共享 cookie。
-  if (web.hostname === pages.hostname) {
+  if (webPublic.hostname === pagesPublic.hostname) {
     throw new ConfigError(
-      `NOWME_WEB_ORIGIN 与 NOWME_PAGES_ORIGIN 的主机名不能相同（${web.hostname}），` +
+      `NOWME_WEB_ORIGIN 与 NOWME_PAGES_ORIGIN 的主机名不能相同（${webPublic.hostname}），` +
         '例如主站用 localhost、页面托管用 127.0.0.1',
     );
   }
+  const web = parseListen(env, 'NOWME_WEB_LISTEN', webPublic);
+  const pages = parseListen(env, 'NOWME_PAGES_LISTEN', pagesPublic);
 
   const dataDirRaw = nonEmpty(env.NOWME_DATA_DIR);
   const dataDir = dataDirRaw
@@ -239,6 +299,8 @@ export function loadConfig(env: Env = process.env): NowmeConfig {
     pagesOrigin,
     web,
     pages,
+    trustProxyHops: parseIntRange(env, 'NOWME_TRUST_PROXY', 0, TRUST_PROXY_HOPS_RANGE),
+    mail: loadMailConfig(env),
     dataDir,
     ticketSecret,
     agentTokenTtlHours: parseTtlHours(env.NOWME_AGENT_TOKEN_TTL_HOURS),
@@ -247,6 +309,71 @@ export function loadConfig(env: Env = process.env): NowmeConfig {
     hosted: loadHostedConfig(env, env.NODE_ENV === 'production'),
     skillMarket: loadSkillMarketConfig(env),
   };
+}
+
+/** 常见的两段式公共后缀：判断“是否同一个可注册域名”时多取一段。不求完整，只用于启动时的提醒。 */
+const TWO_LABEL_SUFFIXES: ReadonlySet<string> = new Set([
+  'com.cn', 'net.cn', 'org.cn', 'gov.cn', 'edu.cn', 'ac.cn', 'com.hk', 'com.tw', 'co.jp', 'co.uk', 'org.uk', 'co.kr', 'com.au', 'com.sg',
+  'github.io', 'pages.dev', 'workers.dev', 'vercel.app', 'netlify.app', 'fly.dev', 'onrender.com', 'railway.app', 'herokuapp.com', 'web.app',
+]);
+
+/** 粗略的可注册域名（没有完整的公共后缀表）；IP 与单段主机名原样返回。 */
+export function registrableDomainGuess(hostname: string): string {
+  if (/^[\d.]+$/.test(hostname) || hostname.includes(':')) return hostname;
+  const labels = hostname.split('.');
+  if (labels.length <= 2) return hostname;
+  const take = TWO_LABEL_SUFFIXES.has(labels.slice(-2).join('.')) ? 3 : 2;
+  return labels.slice(-take).join('.');
+}
+
+export interface ProductionCheck {
+  /** 必须修复，否则拒绝启动。 */
+  errors: string[];
+  /** 建议修复，启动时打印。 */
+  warnings: string[];
+}
+
+/**
+ * 生产环境启动前的配置检查（contracts 10.1）。只在 `NODE_ENV=production` 时由进程入口调用；
+ * `role` 区分主站与页面托管（凭证库密钥与邮件只有主站需要）。不读写文件，不把任何密钥写进返回的文字。
+ */
+export function checkProductionConfig(config: NowmeConfig, env: Env, role: 'web' | 'pages'): ProductionCheck {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  for (const [name, origin] of [['NOWME_WEB_ORIGIN', config.webOrigin], ['NOWME_PAGES_ORIGIN', config.pagesOrigin]] as const) {
+    if (!origin.startsWith('https://')) errors.push(`${name} 在生产环境必须是 https 源（当前 ${origin}）：会话 cookie 的 Secure 属性与 HSTS 都依赖它`);
+  }
+  const webHost = new URL(config.webOrigin).hostname;
+  const pagesHost = new URL(config.pagesOrigin).hostname;
+  if (registrableDomainGuess(webHost) === registrableDomainGuess(pagesHost)) {
+    warnings.push(
+      `主站（${webHost}）与页面托管（${pagesHost}）看起来在同一个可注册域名下。子域名之间属于“同站”，` +
+        'SameSite cookie 不把它们当作跨站；建议给用户页面单独注册一个域名（类似 githubusercontent.com 的做法）',
+    );
+  }
+  if (config.ticketSecret === null) {
+    warnings.push('没有设置 NOWME_TICKET_SECRET：将使用数据目录里的 secret 文件，主站与页面托管必须挂载同一个数据目录');
+  }
+  if (config.trustProxyHops === 0) {
+    warnings.push('NOWME_TRUST_PROXY=0：如果进程在反向代理或负载均衡之后，所有请求会被当成同一个来源地址，按地址的限流会误伤正常用户');
+  }
+  if (role === 'web') {
+    if (!/^[0-9a-fA-F]{64}$/.test(nonEmpty(env.NOWME_AI_ENCRYPTION_KEY) ?? '')) {
+      errors.push('NOWME_AI_ENCRYPTION_KEY 必须是 64 位十六进制（openssl rand -hex 32）：没有它用户无法保存模型 Key，网页创作不可用');
+    }
+    if (config.mail.transport === 'file') {
+      errors.push('NOWME_MAIL_TRANSPORT=file 只把验证码写进本地文件，真实用户收不到：生产环境请配置 smtp');
+    }
+  }
+  return { errors, warnings };
+}
+
+/** 生产环境配置有错误时抛出 ConfigError（列出全部问题）；返回提醒列表。非生产环境直接返回空。 */
+export function assertProductionConfig(config: NowmeConfig, env: Env, role: 'web' | 'pages'): string[] {
+  if (!config.isProduction) return [];
+  const { errors, warnings } = checkProductionConfig(config, env, role);
+  if (errors.length > 0) throw new ConfigError(`生产环境配置不完整：\n${errors.map((line) => `- ${line}`).join('\n')}`);
+  return warnings;
 }
 
 /** 本地数据目录内的约定路径（contracts 0、3）。 */

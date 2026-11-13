@@ -26,6 +26,8 @@ describe('loadConfig', () => {
       pagesOrigin: 'http://127.0.0.1:4000',
       web: { hostname: 'localhost', port: 3000 },
       pages: { hostname: '127.0.0.1', port: 4000 },
+      trustProxyHops: 0,
+      mail: { transport: 'file', from: null },
       dataDir: resolve(REPO_ROOT, '.data'),
       ticketSecret: null,
       agentTokenTtlHours: 72,
