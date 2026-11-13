@@ -287,6 +287,17 @@ describe('成员页上的流程', () => {
     expect(await memberHtml(t, wall, viewer, target)).toContain('帮我找话题');
   });
 
+  it('墙上给找过话题的卡片打标记：只有自己看得到，对方更新后消失', async () => {
+    const { t, wall, viewer, target } = await world();
+    const wallHtml = async (who: HostedOwner) => (await get(t, `/w/${wall.id}`, { cookie: who.session.cookie })).text();
+    expect(await wallHtml(viewer)).not.toContain('wall-card__talk');
+    await askIcebreaker(t, wall, viewer, target);
+    expect(await wallHtml(viewer)).toContain('wall-card__talk');
+    expect(await wallHtml(target)).not.toContain('wall-card__talk');
+    await putOnWall(t, wall, target, 'hackathon-terminal', { tagline: '换了一句新的介绍' });
+    expect(await wallHtml(viewer)).not.toContain('wall-card__talk');
+  });
+
   it('对方更新发布后，旧结果不再展示，旧的开场白也不能再用', async () => {
     const { t, wall, viewer, target } = await world();
     await askIcebreaker(t, wall, viewer, target);

@@ -36,6 +36,7 @@ export function createIcebreakersRepo(db: Database) {
   const deleteForViewerWall = db.prepare('DELETE FROM icebreakers WHERE viewer_id = ? AND wall_id = ?');
   const deleteForPage = db.prepare('DELETE FROM icebreakers WHERE page_id = ?');
   const deleteForWall = db.prepare('DELETE FROM icebreakers WHERE wall_id = ?');
+  const listForViewerWall = db.prepare('SELECT page_id, publication_id FROM icebreakers WHERE viewer_id = ? AND wall_id = ?');
   const countViewerSince = db.prepare("SELECT COUNT(*) AS n FROM events WHERE type = 'icebreaker_generate' AND actor_id = ? AND created_at > ?");
   const countViewerPageSince = db.prepare(
     "SELECT COUNT(*) AS n FROM events WHERE type = 'icebreaker_generate' AND actor_id = ? AND page_id = ? AND created_at > ?",
@@ -51,6 +52,11 @@ export function createIcebreakersRepo(db: Database) {
     findLatest(viewerId: string, pageId: string): IcebreakerRecord | null {
       const row = latest.get(viewerId, pageId) as Record<string, unknown> | undefined;
       return row ? toRecord(row) : null;
+    },
+    /** 查看者在某面墙已有结果的页面（`pageId → 结果绑定的发布`），给墙上的“有话题了”标记用。 */
+    publicationsForViewerWall(viewerId: string, wallId: string): Map<string, string> {
+      const rows = listForViewerWall.all(viewerId, wallId) as { page_id: string; publication_id: string }[];
+      return new Map(rows.map((row) => [row.page_id, row.publication_id]));
     },
     /** 按 ID 取，必须是查看者本人的。 */
     findById(id: string, viewerId: string): IcebreakerRecord | null {

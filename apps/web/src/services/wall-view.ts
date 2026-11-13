@@ -144,6 +144,8 @@ export interface WallCard {
   coverSrc: string | null;
   card: PublishedCard;
   own: boolean;
+  /** 查看者已经为这一页找过话题，且对方之后没有更新过页面（contracts 11；只有查看者自己看得到）。 */
+  hasTalk: boolean;
 }
 
 export interface WallModel {
@@ -161,7 +163,7 @@ function nicknameOf(deps: Pick<AppDeps, 'repos'>, userId: string): string {
   return deps.repos.users.findById(userId)?.nickname ?? '成员';
 }
 
-function toWallCard(deps: Pick<AppDeps, 'repos' | 'config'>, wallId: string, entry: PublishedEntry, viewerId: string): WallCard {
+function toWallCard(deps: Pick<AppDeps, 'repos' | 'config'>, wallId: string, entry: PublishedEntry, viewerId: string, talks: Map<string, string>): WallCard {
   const hasCover = existsSync(coverFilePath(deps.config.dataDir, entry.revisionId));
   return {
     pageId: entry.pageId,
@@ -169,6 +171,7 @@ function toWallCard(deps: Pick<AppDeps, 'repos' | 'config'>, wallId: string, ent
     coverSrc: hasCover ? coverPath(wallId, entry.pageId) : null,
     card: parsePublishedCard(entry.cardJson, nicknameOf(deps, entry.ownerId)),
     own: entry.ownerId === viewerId,
+    hasTalk: entry.ownerId !== viewerId && talks.get(entry.pageId) === entry.publicationId,
   };
 }
 
@@ -178,6 +181,7 @@ export function loadWallModel(deps: Pick<AppDeps, 'db' | 'repos' | 'config'>, me
   const myPage = deps.repos.pages.findByMembership(membership.id);
   const myState: PageDisplayState = myPage ? deps.repos.publications.displayState(myPage.id) : 'unpublished';
   const myEntry = entries.find((entry) => entry.ownerId === membership.userId) ?? null;
+  const talks = deps.repos.icebreakers.publicationsForViewerWall(membership.userId, wall.id);
   return {
     wall,
     role: membership.role,
@@ -186,7 +190,7 @@ export function loadWallModel(deps: Pick<AppDeps, 'db' | 'repos' | 'config'>, me
       state: myState,
       href: myEntry ? memberPagePath(wall.id, myEntry.pageId) : null,
     },
-    cards: shuffle(entries.map((entry) => toWallCard(deps, wall.id, entry, membership.userId))),
+    cards: shuffle(entries.map((entry) => toWallCard(deps, wall.id, entry, membership.userId, talks))),
     memberCount: deps.repos.memberships.countActiveForWall(wall.id),
   };
 }

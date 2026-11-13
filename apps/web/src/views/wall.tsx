@@ -54,6 +54,7 @@ const WallCardItem: FC<{ item: WallCard }> = ({ item }) => {
             )}
           </span>
           {item.own ? <span class="sticker sticker--orange wall-card__me">我</span> : null}
+          {item.hasTalk ? <span class="wall-card__talk">✦ 有话题了</span> : null}
         </span>
         {first ? (
           <span class="wall-card__say">
