@@ -20,6 +20,8 @@ const CONTRACT_TABLES: Record<string, string[]> = {
   brief_assets: ['id', 'brief_id', 'page_id', 'owner_id', 'file_name', 'mime', 'bytes', 'sha256', 'created_at'],
   user_model_settings: ['user_id', 'role', 'endpoint_json', 'encrypted_key', 'version', 'updated_at'],
   generation_jobs: ['id', 'page_id', 'owner_id', 'kind', 'status', 'base_revision_id', 'target_block', 'request_text', 'result_message', 'revision_id', 'error_code', 'charged', 'usage_json', 'created_at', 'started_at', 'finished_at'],
+  // contracts 11（迁移 008_icebreakers.sql）
+  icebreakers: ['id', 'wall_id', 'viewer_id', 'page_id', 'publication_id', 'result_json', 'created_at'],
   users: ['id', 'email', 'nickname', 'created_at'],
   login_codes: ['id', 'email', 'code_hash', 'attempts', 'expires_at', 'used_at'],
   sessions: ['id', 'user_id', 'csrf_token', 'created_at', 'expires_at'],
@@ -135,7 +137,7 @@ describe('数据库迁移', () => {
     expect(migrate(db)).toEqual([]);
     db.close();
     const again = open(file);
-    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }, { version: '004_user_models.sql' }, { version: '005_chat.sql' }, { version: '006_wall_covers.sql' }, { version: '007_user_avatar.sql' }]);
+    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }, { version: '004_user_models.sql' }, { version: '005_chat.sql' }, { version: '006_wall_covers.sql' }, { version: '007_user_avatar.sql' }, { version: '008_icebreakers.sql' }]);
   });
 
   it('从旧数据库增量升级保留用户、页面、brief、版本、发布与历史任务', () => {

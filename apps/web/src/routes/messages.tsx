@@ -6,6 +6,7 @@ import { requireForm } from '../security/forms.js';
 import { authOf, requireUser } from '../security/session.js';
 import { findMemberWall, findPublishedMemberPage } from '../services/access.js';
 import { openDirect, sendMessage } from '../services/chat.js';
+import { icebreakerOpener } from '../services/icebreaker.js';
 import { parsePublishedCard } from '../services/wall-view.js';
 import { renderNotFound } from '../views/errors.js';
 import { renderPage } from '../views/layout.js';
@@ -75,6 +76,9 @@ export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
     if (source && !source.own && summary.kind === 'direct' && [conversation.userA, conversation.userB].includes(source.entry.ownerId)) {
       const hook = parsePublishedCard(source.entry.cardJson, '').hooks.find((h) => h.id === c.req.query('hookId'));
       if (hook) draft = hook.opener || `你好！我在墙上看到你的页面，想和你聊聊「${hook.text}」。`;
+      // “和 TA 聊什么”里选的那一句：只预填，由本人修改后发送（contracts 11）
+      const opener = /^[0-2]$/.test(c.req.query('o') ?? '') ? icebreakerOpener(deps, source, auth.user.id, c.req.query('ice') ?? '', Number(c.req.query('o'))) : null;
+      if (opener) draft = opener;
     }
     return renderPage(c, { title: summary.title, body: <ConversationView summary={summary} history={deps.repos.chat.history(summary.id)} userId={auth.user.id} csrf={auth.session.csrfToken} clientId={randomUUID()} draft={draft} members={summary.kind === 'group' ? deps.repos.chat.members(summary.wallId) : []} /> });
   });

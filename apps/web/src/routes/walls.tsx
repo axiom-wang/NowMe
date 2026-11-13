@@ -10,6 +10,9 @@
  * | POST /w/:wallId/p/:pageId/chat | 墙内有效成员；接话点存在且不是自己 → 进入站内私聊，预填开场白 |
  * | POST /w/:wallId/p/:pageId/direct | 墙内有效成员；不是自己的已发布页面 → 进入私聊 |
  * | POST /w/:wallId/p/:pageId/contact | 墙内有效成员；公开联系方式、接话点存在且不是自己 → 查看联系方式 |
+ * | POST /w/:wallId/p/:pageId/icebreaker | 墙内有效成员；不是自己的已发布页面 → 用查看者自己的模型找话题（contracts 11） |
+ * | POST /w/:wallId/p/:pageId/icebreaker/chat | 同上；用结果里的某一句开场白进入私聊（只预填，不发送） |
+ * | POST /w/:wallId/p/:pageId/icebreaker/clear | 同上；清除查看者自己的结果 |
  * | GET /w/:wallId/covers/:pageId.png | 墙内有效成员（墙上可见页面的当前发布版本封面） |
  *
  * GET 用 `requireUser`（未登录 → /login?next=）；POST 用 `requireForm`（会话 + CSRF + Origin，忽略 Authorization）。
@@ -26,6 +29,7 @@ import { findMemberWall, findPublishedMemberPage } from '../services/access.js';
 import { coverFilePath, loadMemberPageModel, loadWallModel, parsePublishedCard, resolveChat } from '../services/wall-view.js';
 import { createWall, joinState, joinWall, parseWallForm } from '../services/walls.js';
 import { openDirect } from '../services/chat.js';
+import { clearIcebreaker, generateIcebreaker, ICEBREAKER_ERROR_TEXT, icebreakerOpener, loadIcebreakerPanel, type IcebreakerFailure } from '../services/icebreaker.js';
 import { renderNotFound } from '../views/errors.js';
 import { JoinView, RemovedFromWallView } from '../views/join.js';
 import { renderPage } from '../views/layout.js';
@@ -196,10 +200,54 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
         createdAt: deps.now().toISOString(),
       });
     }
+    const failure = c.req.query('ice');
     return renderPage(c, {
       title: `${model.card.displayName} · ${found.wall.name}`,
-      body: <MemberPageView model={model} csrf={auth.session.csrfToken} />,
+      body: (
+        <MemberPageView
+          model={model}
+          csrf={auth.session.csrfToken}
+          icebreaker={found.own ? null : loadIcebreakerPanel(deps, found, auth.user.id)}
+          icebreakerError={failure && Object.hasOwn(ICEBREAKER_ERROR_TEXT, failure) ? ICEBREAKER_ERROR_TEXT[failure as IcebreakerFailure] : null}
+          aiSettings={!deps.demo}
+        />
+      ),
     });
+  });
+
+  // -------------------------------------------------------------------------
+  // 和 TA 聊什么（contracts 11）
+  // -------------------------------------------------------------------------
+
+  app.post('/w/:wallId/p/:pageId/icebreaker', form, async (c) => {
+    const auth = authOf(c);
+    const found = findPublishedMemberPage(deps, auth.user.id, c.req.param('wallId'), c.req.param('pageId'));
+    if (!found || found.own) return renderNotFound(c);
+    const result = await generateIcebreaker(deps, found, auth.user.id);
+    const base = `/w/${found.wall.id}/p/${found.entry.pageId}`;
+    return c.redirect(result.ok ? `${base}#talk` : `${base}?ice=${result.error}#talk`, 303);
+  });
+
+  app.post('/w/:wallId/p/:pageId/icebreaker/chat', form, (c) => {
+    const auth = authOf(c);
+    const found = findPublishedMemberPage(deps, auth.user.id, c.req.param('wallId'), c.req.param('pageId'));
+    if (!found || found.own) return renderNotFound(c);
+    const fields = c.get('form');
+    const index = /^[0-2]$/.test(fields.opener ?? '') ? Number(fields.opener) : -1;
+    const icebreakerId = fields.icebreakerId ?? '';
+    if (icebreakerOpener(deps, found, auth.user.id, icebreakerId, index) === null) return renderNotFound(c);
+    const id = openDirect(deps, auth.user.id, found.wall.id, found.entry.ownerId);
+    if (!id) return renderNotFound(c);
+    deps.repos.events.record({ type: 'want_to_chat', wallId: found.wall.id, pageId: found.entry.pageId, actorId: auth.user.id, props: { ai: true, openerIndex: index }, createdAt: deps.now().toISOString() });
+    return c.redirect(`/messages/${id}?pageId=${found.entry.pageId}&ice=${icebreakerId}&o=${index}`, 303);
+  });
+
+  app.post('/w/:wallId/p/:pageId/icebreaker/clear', form, (c) => {
+    const auth = authOf(c);
+    const found = findPublishedMemberPage(deps, auth.user.id, c.req.param('wallId'), c.req.param('pageId'));
+    if (!found || found.own) return renderNotFound(c);
+    clearIcebreaker(deps, found, auth.user.id);
+    return c.redirect(`/w/${found.wall.id}/p/${found.entry.pageId}#talk`, 303);
   });
 
   app.post('/w/:wallId/p/:pageId/chat', form, (c) => {

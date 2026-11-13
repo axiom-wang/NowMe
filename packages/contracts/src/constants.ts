@@ -188,6 +188,8 @@ export const WEB_EVENT_TYPES = [
   'profile_delete',
   // Skill 分发（contracts 4.5）：服务端远程预览，服务端自动记录，用于按页限流
   'remote_preview',
+  // “和 TA 聊什么”（contracts 11）：一次模型调用（成功与失败都记，用于限流与统计；只记数字，不记内容）
+  'icebreaker_generate',
 ] as const;
 
 export const EVENT_TYPES = [...STORED_AGENT_EVENT_TYPES, ...WEB_EVENT_TYPES] as const;
@@ -215,6 +217,22 @@ export const DEFAULT_HOSTED_DAILY_ATTEMPTS = 10;
 /** 每页滚动 24 小时最多几次采访模型调用（`NOWME_INTERVIEW_DAILY_CALLS`）。 */
 export const DEFAULT_INTERVIEW_DAILY_CALLS = 20;
 export const HOSTED_DAILY_RANGE = { min: 1, max: 1000 } as const;
+// ---------------------------------------------------------------------------
+// “和 TA 聊什么”（contracts 11）
+// ---------------------------------------------------------------------------
+
+/** 每个查看者滚动 24 小时最多发起几次（跨墙合计）。运行保护，不是付费额度。 */
+export const ICEBREAKER_DAILY_PER_VIEWER = 40;
+/** 同一个查看者对同一页滚动 24 小时最多发起几次（含“换一批”）。 */
+export const ICEBREAKER_DAILY_PER_TARGET = 4;
+/** 一次调用的总时限。 */
+export const ICEBREAKER_TIMEOUT_MS = 60 * 1000;
+/** 交给模型的资料长度上限（码点）：对方页面的渲染文字、查看者自己页面的渲染文字。 */
+export const ICEBREAKER_TARGET_TEXT_MAX = 2400;
+export const ICEBREAKER_VIEWER_TEXT_MAX = 1600;
+/** 输出限制：连接点 0–3 条、开场白 1–3 条。 */
+export const ICEBREAKER_LIMITS = { links: 3, openers: 3, title: 18, evidence: 40, opener: 90, about: 16 } as const;
+
 /** 一次托管任务的总时限。 */
 export const HOSTED_JOB_TIMEOUT_MS = 10 * 60 * 1000;
 /** 采访上传图片：类型按文件头魔数判断。 */

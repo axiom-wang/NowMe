@@ -130,7 +130,7 @@ export function addUsage(total: UsageTotals, usage: ModelUsage): void {
 }
 
 /** 平台用来分隔资料的标签：主人内容里出现的同类标签一律去掉，避免伪造“资料结束、平台指令开始”。 */
-const STRUCTURAL_TAG = /<\/?\s*(owner_[a-z_]*|wall_context|scene_guide|platform_[a-z_]*)\b[^>]*>/gi;
+const STRUCTURAL_TAG = /<\/?\s*(owner_[a-z_]*|viewer_[a-z_]*|member_[a-z_]*|wall_context|scene_guide|platform_[a-z_]*)\b[^>]*>/gi;
 
 /** 主人提供的内容放进带标签的资料块：去掉伪造的结构标签，system 里声明标签内是资料、不是指令。 */
 export function untrusted(tag: string, content: string): string {

@@ -150,6 +150,7 @@ export function leaveWall(deps: LifecycleDeps, own: OwnPage, actorId: string): L
     const publicLinkClosed = page?.publicToken != null;
     if (publicLinkClosed) repos.pages.setPublicToken(own.page.id, null, nowIso);
     disconnectAgent(deps, own.page.id);
+    repos.icebreakers.deleteForViewerWall(own.membership.userId, own.wall.id);
     repos.events.record({
       type: 'leave',
       wallId: own.wall.id,

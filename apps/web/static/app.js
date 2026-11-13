@@ -1,7 +1,8 @@
 /*
  * 主站的少量客户端脚本（主站 CSP 不允许内联脚本，所以都放在这里）：
  * - [data-copy="<元素 id>"]：复制该元素的文字（Agent 指令）；
- * - form[data-confirm="<提示>"]：提交前确认（断开、删除等危险操作）。
+ * - form[data-confirm="<提示>"]：提交前确认（断开、删除等危险操作）；
+ * - form[data-busy-label="<说明>"]：提交后显示等待状态（“和 TA 聊什么”）。
  */
 (function () {
   'use strict';
@@ -56,7 +57,44 @@
     var form = event.target;
     if (!(form instanceof HTMLFormElement)) return;
     var message = form.getAttribute('data-confirm');
-    if (message && !window.confirm(message)) event.preventDefault();
+    if (message && !window.confirm(message)) {
+      event.preventDefault();
+      return;
+    }
+    // form[data-busy-label]：提交后要等一会儿的操作（请 AI 找话题）。所在的 [data-busy-scope] 进入等待状态，
+    // 写明正在做什么，并禁用里面的按钮防止重复提交。页面随后整页跳转，不需要恢复。
+    var busy = form.getAttribute('data-busy-label');
+    var scope = busy ? form.closest('[data-busy-scope]') : null;
+    if (!scope || scope.classList.contains('is-busy')) {
+      if (scope) event.preventDefault();
+      return;
+    }
+    scope.classList.add('is-busy');
+    scope.setAttribute('aria-busy', 'true');
+    var status = scope.querySelector('[data-busy-status]');
+    if (status) {
+      status.textContent = busy;
+      status.hidden = false;
+    }
+    // 等这次提交发出去之后再禁用按钮（现在禁用不影响提交，但保持顺序更稳妥）
+    setTimeout(function () {
+      scope.querySelectorAll('button').forEach(function (button) {
+        button.disabled = true;
+      });
+    }, 0);
+  });
+  // 从往返缓存回到页面时（后退），解除等待状态
+  window.addEventListener('pageshow', function (event) {
+    if (!event.persisted) return;
+    document.querySelectorAll('[data-busy-scope].is-busy').forEach(function (scope) {
+      scope.classList.remove('is-busy');
+      scope.removeAttribute('aria-busy');
+      var status = scope.querySelector('[data-busy-status]');
+      if (status) status.hidden = true;
+      scope.querySelectorAll('button').forEach(function (button) {
+        button.disabled = false;
+      });
+    });
   });
   // AI 设置只处理表单预设，不存储或发出 Key。
   document.querySelectorAll('form[data-ai-settings]').forEach(function (form) {

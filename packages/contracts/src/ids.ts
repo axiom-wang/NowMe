@@ -74,6 +74,8 @@ export const ID_PREFIXES = {
   brief: 'brf',
   briefAsset: 'bas',
   generationJob: 'gen',
+  // “和 TA 聊什么”（contracts 11）
+  icebreaker: 'ice',
 } as const;
 
 export type IdKind = keyof typeof ID_PREFIXES;
@@ -105,6 +107,7 @@ export const PROFILE_ENTRY_ID_PATTERN = idPattern(ID_PREFIXES.profileEntry);
 export const BRIEF_ID_PATTERN = idPattern(ID_PREFIXES.brief);
 export const BRIEF_ASSET_ID_PATTERN = idPattern(ID_PREFIXES.briefAsset);
 export const GENERATION_JOB_ID_PATTERN = idPattern(ID_PREFIXES.generationJob);
+export const ICEBREAKER_ID_PATTERN = idPattern(ID_PREFIXES.icebreaker);
 
 // ---------------------------------------------------------------------------
 // 令牌

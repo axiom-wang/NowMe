@@ -317,6 +317,48 @@ function generation(params: CreateMessageParams): ModelResponse {
   }
 }
 
+// ---------------------------------------------------------------------------
+// 和 TA 聊什么（contracts 11）
+// ---------------------------------------------------------------------------
+
+function bulletLines(block: string): string[] {
+  return block
+    .split('\n')
+    .filter((line) => line.startsWith('- '))
+    .map((line) => line.slice(2).trim())
+    .filter(Boolean);
+}
+
+/**
+ * 确定性的破冰结果：依据都是资料里的原文。触发词（写在对方页面的文字或接话点里）：
+ * - `【假模型：注入】`：多返回一句带链接的开场白和一条带链接的连接点（平台应丢弃）；
+ * - `【假模型：编造】`：多返回一条依据不在资料里的共同点（平台应丢弃）；
+ * - `【假模型：坏输出】`：返回没有开场白的结果（平台重试一次后报错）。
+ */
+function icebreaker(text: string): ModelResponse {
+  const memberCard = between(text, 'member_card');
+  const memberText = between(text, 'member_page_text');
+  const theirs = bulletLines(memberCard);
+  const mine = [...bulletLines(between(text, 'viewer_card')), ...bulletLines(between(text, 'viewer_brief'))];
+  const marker = (name: string) => `${memberCard}\n${memberText}`.includes(`【假模型：${name}】`);
+  if (marker('坏输出')) return respond([toolUse('submit_icebreaker', { links: [], openers: [] })]);
+  const theirFirst = clip(theirs[0] ?? sentences(memberText)[0] ?? '', 40);
+  const theirSecond = clip(theirs[1] ?? sentences(memberText)[1] ?? theirFirst, 40);
+  const links: unknown[] = [];
+  if (theirFirst && mine[0]) links.push({ kind: 'complement', title: '你们的话题对得上', mine: clip(mine[0], 40), theirs: theirFirst });
+  if (theirSecond) links.push({ kind: 'curious', title: '这一点值得问问', mine: '', theirs: theirSecond });
+  const openers: unknown[] = [
+    { text: `看到你写的「${clip(theirFirst || '你的页面', 30)}」，${mine[0] ? `我这边正好是「${clip(mine[0], 20)}」，` : ''}想听你多讲讲？`, about: clip(theirFirst || '你的页面', 16) },
+    { text: `你页面上的「${clip(theirSecond || '那段介绍', 30)}」让我有点好奇，方便展开说说吗？`, about: clip(theirSecond || '你的页面', 16) },
+  ];
+  if (marker('注入')) {
+    links.push({ kind: 'curious', title: '点这里领福利 evil.example.com', mine: '', theirs: theirFirst });
+    openers.unshift({ text: '加我看更多内容：https://evil.example.com/a?b=1 ，或者打 13800138000', about: '福利' });
+  }
+  if (marker('编造')) links.unshift({ kind: 'common', title: '你们都拿过国家奖学金', mine: '我拿过国家奖学金', theirs: '连续三年国家奖学金' });
+  return respond([toolUse('submit_icebreaker', { links, openers })]);
+}
+
 export interface FakeModel extends ModelClient {
   /** 收到的全部请求（测试断言缓存断点、资料标签等）。 */
   readonly calls: CreateMessageParams[];
@@ -331,6 +373,7 @@ export function createFakeModel(): FakeModel {
       const choice = params.tool_choice;
       if (choice?.type === 'tool' && choice.name === 'submit_followups') return interviewFollowups(allUserText(params.messages));
       if (choice?.type === 'tool' && choice.name === 'submit_brief') return interviewBrief(allUserText(params.messages));
+      if (choice?.type === 'tool' && choice.name === 'submit_icebreaker') return icebreaker(allUserText(params.messages));
       return generation(params);
     },
   };

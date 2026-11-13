@@ -14,6 +14,9 @@ export async function eraseBriefRecord(deps: DataDeps, brief: BriefRecord): Prom
   transaction(deps.db, () => {
     deps.repos.briefAssets.deleteForBrief(brief.id);
     deps.repos.briefs.deleteById(brief.id, brief.ownerId);
+    // “和 TA 聊什么”的结果是用这份采访推出来的：采访删除或重做时一并清掉（contracts 11）
+    const page = deps.repos.pages.findById(brief.pageId);
+    if (page) deps.repos.icebreakers.deleteForViewerWall(brief.ownerId, page.wallId);
   });
   await removeHostedPageFiles(deps.config.dataDir, brief.pageId);
 }
@@ -34,6 +37,8 @@ export async function eraseHostedPageData(deps: DataDeps, pageId: string): Promi
     deps.repos.briefAssets.deleteForPage(pageId);
     deps.repos.briefs.deleteForPage(pageId);
     deps.repos.jobs.eraseContentForPage(pageId);
+    // 别人针对这一页得到的破冰建议里引用了页面上的文字：页面删除时一并清掉（contracts 11）
+    deps.repos.icebreakers.deleteForPage(pageId);
   });
   await removeHostedPageFiles(deps.config.dataDir, pageId);
 }

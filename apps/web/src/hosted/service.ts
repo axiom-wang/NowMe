@@ -116,6 +116,10 @@ export interface HostedService {
   readAssetFile(userId: string, assetId: string, pageId: string): Promise<{ asset: BriefAsset; bytes: Uint8Array } | null>;
   startJob(own: OwnPage, userId: string, request: JobRequest): JobStartResult;
   findJob(own: OwnPage, userId: string, jobId: string): GenerationJob | null;
+  /** 这个用户有没有可用的模型配置。 */
+  modelReady(userId: string): boolean;
+  /** 取这个用户的模型客户端（只能用于他本人发起的请求）。没有可用配置时抛 ModelAccessError。 */
+  resolveModel(userId: string, role: ModelRole): ResolvedModel;
   /** 等待排队的任务全部结束（测试与关闭时用）。 */
   idle(): Promise<void>;
   close(): Promise<void>;
@@ -409,6 +413,8 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
     settings,
     loadBrief,
     scene,
+    modelReady: (userId) => options.ready(userId),
+    resolveModel: (userId, role) => options.resolve(userId, role),
     overview(own, userId) {
       return {
         modelReady: options.ready(userId),

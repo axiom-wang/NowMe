@@ -253,6 +253,7 @@ export function removeMember(deps: WallDeps, wall: Wall, organizerId: string, me
       wallQueries(deps.db).endActivePublication(page.id, 'removed', nowIso);
       disconnectAgent(deps, page.id);
     }
+    deps.repos.icebreakers.deleteForViewerWall(membership.userId, wall.id);
     recordEvent(deps, 'member_removed', { wallId: wall.id, pageId: page?.id ?? null, actorId: organizerId });
     return deps.repos.memberships.findById(membership.id);
   });
@@ -277,6 +278,7 @@ export function closeWall(deps: WallDeps, wall: Wall, organizerId: string): Clos
     const endedPublications = queries.endActivePublicationsForWall(wall.id, 'closed', nowIso);
     let revokedCredentials = 0;
     for (const pageId of queries.pageIdsForWall(wall.id)) revokedCredentials += disconnectAgent(deps, pageId);
+    deps.repos.icebreakers.deleteForWall(wall.id);
     recordEvent(deps, 'wall_closed', {
       wallId: wall.id,
       actorId: organizerId,

@@ -116,6 +116,33 @@ test('平台托管：采访、生成、预览、修改、发布', async ({ brows
   await expect(b.page.frameLocator('iframe[data-nm-page-frame]').locator('[data-nm-id="about"]')).toContainText('校赛二等奖');
   expect(await b.page.content()).not.toContain('/create/assets/');
 
+  // 8b. 和 TA 聊什么（contracts 11）：小白请 AI 找话题 → 结果只在小白这里 → 用一句开聊，只预填不发送
+  const talk = b.page.locator('#talk');
+  await expect(talk.getByRole('heading', { name: /和\s*阿柚\s*聊什么/ })).toBeVisible();
+  await talk.getByRole('button', { name: '帮我找话题' }).click();
+  await expect(b.page.locator('#talk.talk--ready')).toBeVisible({ timeout: 30_000 });
+  await expect(talk.getByText('可以这样开口')).toBeVisible();
+  await expect(talk.getByText('只有你能看到')).toBeVisible();
+  for (const width of [1280, 375]) {
+    await b.page.setViewportSize({ width, height: 900 });
+    expect(await b.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}px 成员页不溢出`).toBe(true);
+    await talk.scrollIntoViewIfNeeded();
+    await b.page.screenshot({ path: testInfo.outputPath(`talk-${width}.png`), fullPage: false });
+  }
+  const firstOpener = (await talk.locator('.talk-opener__bubble').first().innerText()).trim();
+  expect(firstOpener.length).toBeGreaterThan(6);
+  await talk.getByRole('button', { name: '用这句开聊' }).first().click();
+  await expect(b.page).toHaveURL(/\/messages\/cnv_/);
+  await expect(b.page.locator('textarea[name="text"]')).toHaveValue(firstOpener);
+  await expect(b.page.locator('main')).not.toContainText('发送失败');
+  // 阿柚那边没有收到任何消息：开场白没有被自动发出去
+  await a.page.goto('/messages');
+  await expect(a.page.locator('main')).not.toContainText(firstOpener.slice(0, 12));
+  // 阿柚自己看自己的页面，没有这个区块；也看不到小白得到的建议
+  await a.page.goto(new URL(b.page.url()).searchParams.get('pageId') ? `/w/${wallId}/p/${new URL(b.page.url()).searchParams.get('pageId')}` : `/w/${wallId}`);
+  await expect(a.page.locator('#talk')).toHaveCount(0);
+  expect(await a.page.content()).not.toContain(firstOpener.slice(0, 12));
+
   // 9. 组织者看不到 brief：后台不含；自己的 brief 路径 404
   await organizer.page.goto(`/w/${wallId}/admin`);
   const adminHtml = await organizer.page.content();
