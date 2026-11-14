@@ -73,7 +73,7 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
     renderPage(c, { title: '建一面墙', body: <NewWallView csrf={authOf(c).session.csrfToken} scenes={scenes} /> }),
   );
 
-  app.post('/walls', form, (c) => {
+  app.post('/walls', form, async (c) => {
     const auth = authOf(c);
     const parsed = parseWallForm(c.get('form'));
     if (!parsed.ok) {
@@ -81,6 +81,20 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
         title: '建一面墙',
         status: 400,
         body: <NewWallView csrf={auth.session.csrfToken} scenes={scenes} values={parsed.values} errors={parsed.errors} />,
+      });
+    }
+    // 内容安全（contracts 16.1）：墙的名称、简介、组织者的话
+    const errors: Record<string, string> = {};
+    for (const [field, text] of [['name', parsed.input.name], ['description', parsed.input.description], ['organizerNote', parsed.input.organizerNote]] as const) {
+      const verdict = await deps.contentSafety.checkText('wall', text);
+      if (!verdict.ok) errors[field] = verdict.message;
+    }
+    if (Object.keys(errors).length > 0) {
+      const { name, description, sceneType, organizerNote } = parsed.input;
+      return renderPage(c, {
+        title: '建一面墙',
+        status: 422,
+        body: <NewWallView csrf={auth.session.csrfToken} scenes={scenes} values={{ name, description, sceneType, organizerNote: organizerNote ?? '' }} errors={errors} />,
       });
     }
     const { wall } = createWall(deps, { organizerId: auth.user.id, ...parsed.input });

@@ -26,7 +26,7 @@ export function renderNotFound(c: Context<AppEnv>): Response | Promise<Response>
 
 export function renderError(
   c: Context<AppEnv>,
-  options: { status: 400 | 401 | 403 | 413 | 429 | 500; title: string; message: string; loginLink?: boolean },
+  options: { status: 400 | 401 | 403 | 413 | 429 | 500; title: string; message: string; loginLink?: boolean; back?: { href: string; label: string } },
 ): Response | Promise<Response> {
   return renderPage(c, {
     title: options.title,
@@ -44,8 +44,8 @@ export function renderError(
               去登录
             </a>
           ) : (
-            <a class="btn btn--primary" href="/">
-              回到“我的”
+            <a class="btn btn--primary" href={options.back?.href ?? '/'}>
+              {options.back?.label ?? '回到“我的”'}
             </a>
           )}
         </p>

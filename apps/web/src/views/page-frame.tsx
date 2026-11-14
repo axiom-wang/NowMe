@@ -14,6 +14,7 @@
 import type { FC } from 'hono/jsx';
 import { MOBILE_BASE_WIDTH, PAGE_IFRAME_SANDBOX, RENDER_VIEWPORT } from '@nowme/contracts';
 import type { IssuedTicket } from '../services/tickets.js';
+import { AiBadge } from './ai-badge.js';
 
 /** iframe 上的标记属性（page-frame.js 只处理带这个属性的 iframe）。 */
 export const PAGE_FRAME_ATTR = 'data-nm-page-frame';
@@ -39,6 +40,9 @@ export const PageFrame: FC<PageFrameProps> = ({ ticket, title }) => (
         title={title}
       ></iframe>
     </div>
+    <p class="page-frame__ai">
+      <AiBadge />
+    </p>
     <div class="page-frame__blocked notice notice--warning" data-nm-page-frame-notice="" role="alert" hidden>
       <span>这个页面试图跳转，已拦截。</span>
       <button type="button" class="btn btn--ghost" data-nm-page-frame-reload="">

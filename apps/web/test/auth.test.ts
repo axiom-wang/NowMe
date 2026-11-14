@@ -56,7 +56,7 @@ describe('登录与会话', () => {
     expect(welcome.status).toBe(200);
 
     const csrf = csrfOf(t, token);
-    const named = await postForm(t, '/welcome', { _csrf: csrf, nickname: '  阿柚  ', next }, { cookie: sessionCookie });
+    const named = await postForm(t, '/welcome', { _csrf: csrf, nickname: '  阿柚  ', agree: '1', next }, { cookie: sessionCookie });
     expect(named.status).toBe(303);
     expect(named.headers.get('location')).toBe(next);
     expect(t.repos.users.findByEmail('ayou@example.com')?.nickname).toBe('阿柚');
@@ -82,10 +82,10 @@ describe('登录与会话', () => {
     const cookie = `${SESSION_COOKIE_NAME}=${token}`;
     const csrf = csrfOf(t, token);
     for (const nickname of ['', '   ', '字'.repeat(25), '换\n行']) {
-      const response = await postForm(t, '/welcome', { _csrf: csrf, nickname }, { cookie });
+      const response = await postForm(t, '/welcome', { _csrf: csrf, nickname, agree: '1' }, { cookie });
       expect(response.status, JSON.stringify(nickname)).toBe(400);
     }
-    expect((await postForm(t, '/welcome', { _csrf: csrf, nickname: '字'.repeat(24) }, { cookie })).status).toBe(303);
+    expect((await postForm(t, '/welcome', { _csrf: csrf, nickname: '字'.repeat(24), agree: '1' }, { cookie })).status).toBe(303);
   });
 
   it('邮箱格式不对：400 并保留输入', async () => {

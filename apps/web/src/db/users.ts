@@ -8,6 +8,9 @@ export interface User {
   nickname: string | null;
   avatarVersion?: string | null;
   createdAt: string;
+  /** 最近一次确认的用户协议 / 隐私政策版本（contracts 16.3）；还没确认过为 null。 */
+  termsVersion?: string | null;
+  termsAcceptedAt?: string | null;
 }
 
 interface UserRow {
@@ -16,16 +19,26 @@ interface UserRow {
   nickname: string | null;
   avatar_version: string | null;
   created_at: string;
+  terms_version: string | null;
+  terms_accepted_at: string | null;
 }
 
 function toUser(row: UserRow | undefined): User | null {
   if (!row) return null;
-  return { id: row.id, email: row.email, nickname: row.nickname, avatarVersion: row.avatar_version, createdAt: row.created_at };
+  return {
+    id: row.id,
+    email: row.email,
+    nickname: row.nickname,
+    avatarVersion: row.avatar_version,
+    createdAt: row.created_at,
+    termsVersion: row.terms_version,
+    termsAcceptedAt: row.terms_accepted_at,
+  };
 }
 
 export function createUsersRepo(db: Database) {
-  const byId = db.prepare('SELECT id, email, nickname, created_at, avatar_version FROM users WHERE id = ?');
-  const byEmail = db.prepare('SELECT id, email, nickname, created_at, avatar_version FROM users WHERE email = ?');
+  const byId = db.prepare('SELECT id, email, nickname, created_at, avatar_version, terms_version, terms_accepted_at FROM users WHERE id = ?');
+  const byEmail = db.prepare('SELECT id, email, nickname, created_at, avatar_version, terms_version, terms_accepted_at FROM users WHERE email = ?');
   const insert = db.prepare('INSERT INTO users (id, email, nickname, created_at) VALUES (?, ?, ?, ?)');
   const updateNickname = db.prepare('UPDATE users SET nickname = ? WHERE id = ?');
 
@@ -50,6 +63,10 @@ export function createUsersRepo(db: Database) {
     },
     setNickname(id: string, nickname: string): void {
       updateNickname.run(nickname, id);
+    },
+    /** 记录用户确认了某个版本的用户协议与隐私政策（同时确认已年满 18 岁）。 */
+    recordConsent(id: string, version: string, at: string): void {
+      db.prepare('UPDATE users SET terms_version = ?, terms_accepted_at = ? WHERE id = ?').run(version, at, id);
     },
   };
 }

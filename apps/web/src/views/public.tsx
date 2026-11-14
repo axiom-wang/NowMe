@@ -45,6 +45,13 @@ export const PublicPageDocument: FC<PublicPageProps> = ({ displayName, tagline, 
           <PageFrame ticket={ticket} title={`${displayName}的页面`} />
           <p class="muted public-page__note">这是 {displayName} 用 NOWMe 做的个人页面，由主人通过公开链接分享。</p>
         </main>
+        <footer class="site-footer">
+          <p class="site-footer__legal">
+            <a href="/terms">用户协议</a>
+            <span aria-hidden="true"> · </span>
+            <a href="/privacy">隐私政策</a>
+          </p>
+        </footer>
       </body>
     </html>
   </>

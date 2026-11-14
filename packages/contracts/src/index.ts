@@ -18,3 +18,5 @@ export * from './chat.js';
 export * from './skill-distribution.js';
 export * from './wall-cover.js';
 export * from './account-profile.js';
+export * from './legal.js';
+export * from './content-safety.js';

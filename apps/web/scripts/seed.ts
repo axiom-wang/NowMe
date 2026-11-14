@@ -7,7 +7,7 @@
  * M3 会有真正的建墙 / 邀请流程；这个脚本只为本地开发与 M2 验收。
  */
 import { parseArgs } from 'node:util';
-import { dataPaths, generateId, loadConfig, loadRepoDotEnv } from '@nowme/contracts';
+import { dataPaths, generateId, LEGAL_VERSION, loadConfig, loadRepoDotEnv } from '@nowme/contracts';
 import { createRepos, openDatabase } from '../src/db/index.js';
 import { formatDateTime } from '../src/format.js';
 import { normalizeEmail, nicknameProblem } from '../src/services/auth.js';
@@ -40,6 +40,7 @@ const deps = { db, repos, now, config };
 let user = repos.users.findByEmail(email);
 if (!user) {
   user = repos.users.create({ id: generateId('usr'), email, nickname, createdAt: now().toISOString() });
+  repos.users.recordConsent(user.id, LEGAL_VERSION, now().toISOString()); // 开发种子账号视为已确认协议
 } else if (!user.nickname) {
   repos.users.setNickname(user.id, nickname);
   user = { ...user, nickname };

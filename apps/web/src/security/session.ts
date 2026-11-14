@@ -8,8 +8,8 @@
  */
 import type { Context, MiddlewareHandler } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from '@nowme/contracts';
-import type { AppDeps, AppEnv, WebConfig } from '../context.js';
+import { LEGAL_VERSION, SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from '@nowme/contracts';
+import type { AppDeps, AppEnv, SessionAuth, WebConfig } from '../context.js';
 import { demoAccountFor } from '../demo-access.js';
 import { loadSession, type CreatedSession } from '../services/auth.js';
 import { loginRedirectPath, safeNextPath } from './redirect.js';
@@ -57,15 +57,44 @@ export function welcomeRedirectPath(next: string, webOrigin: string): string {
   return safe === '/' ? '/welcome' : `/welcome?next=${encodeURIComponent(safe)}`;
 }
 
+/** `/consent?next=<当前路径>`（协议升版本后老用户重新确认，contracts 16.3）。 */
+export function consentRedirectPath(next: string, webOrigin: string): string {
+  const safe = safeNextPath(next, webOrigin);
+  return safe === '/' ? '/consent' : `/consent?next=${encodeURIComponent(safe)}`;
+}
+
+/** 用户确认过的协议版本是不是当前版本。 */
+export function hasCurrentConsent(user: SessionAuth['user']): boolean {
+  return user.termsVersion === LEGAL_VERSION;
+}
+
 /**
- * 需要登录的页面（GET）：未登录 → `303 /login?next=...`；还没填昵称 → `303 /welcome?next=...`。
- * 改变状态的 POST 用 `requireForm`（security/forms.ts）。
+ * 登录后还差哪一步才能使用站内页面：先填昵称（`/welcome`，同时勾选协议），
+ * 再是协议升版本后的重新确认（`/consent`）。演示模式的固定账号不走这两步。`null` 表示都已完成。
+ */
+export function onboardingStep(auth: Pick<SessionAuth, 'user'>, demo: boolean): 'welcome' | 'consent' | null {
+  if (!auth.user.nickname) return 'welcome';
+  if (!demo && !hasCurrentConsent(auth.user)) return 'consent';
+  return null;
+}
+
+/** 登录后去哪里：没做完的步骤，或者 next。 */
+export function afterLoginPath(auth: Pick<SessionAuth, 'user'>, demo: boolean, next: string, webOrigin: string): string {
+  const step = onboardingStep(auth, demo);
+  return step === 'welcome' ? welcomeRedirectPath(next, webOrigin) : step === 'consent' ? consentRedirectPath(next, webOrigin) : next;
+}
+
+/**
+ * 需要登录的页面（GET）：未登录 → `303 /login?next=...`；还没填昵称 → `303 /welcome?next=...`；
+ * 没确认当前版本的协议 → `303 /consent?next=...`。改变状态的 POST 用 `requireForm`（security/forms.ts）。
+ * `/api/` 不经过这里。
  */
 export function requireUser(deps: Pick<AppDeps, 'config'>): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const auth = c.get('auth');
     if (!auth) return c.redirect(loginRedirectPath(currentPath(c), deps.config.webOrigin), 303);
-    if (!auth.user.nickname) return c.redirect(welcomeRedirectPath(currentPath(c), deps.config.webOrigin), 303);
+    const step = onboardingStep(auth, c.get('demo'));
+    if (step) return c.redirect(afterLoginPath(auth, c.get('demo'), currentPath(c), deps.config.webOrigin), 303);
     return next();
   };
 }

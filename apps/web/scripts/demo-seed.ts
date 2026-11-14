@@ -11,7 +11,7 @@ import { seedDemoAvatars } from './demo-avatars.js';
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
-import { cardSchema, generateId, type ExchangeResponse, type RevisionResponse } from '@nowme/contracts';
+import { cardSchema, generateId, LEGAL_VERSION, type ExchangeResponse, type RevisionResponse } from '@nowme/contracts';
 import { EXAMPLES_DIR } from '@nowme/skill';
 import type { WebApp } from '../src/app.js';
 import type { Wall } from '../src/db/walls.js';
@@ -110,6 +110,7 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
   const newUser = (email: string, nickname: string): string => {
     const id = generateId('usr');
     repos.users.create({ id, email, nickname, createdAt: nowIso() });
+    repos.users.recordConsent(id, LEGAL_VERSION, nowIso()); // 种子账号视为已确认协议
     return id;
   };
 
@@ -234,6 +235,7 @@ export async function ensureDemoClubPages(web: WebApp, log: (message: string) =>
       // The test identity must already exist; never create a second test account.
       if (person.email === DEMO_TEST_EMAIL) throw new Error('摄影社增补缺少体验账号');
       user = deps.repos.users.create({ id: generateId('usr'), email: person.email, nickname: person.name, createdAt: deps.now().toISOString() });
+      deps.repos.users.recordConsent(user.id, LEGAL_VERSION, deps.now().toISOString());
     }
     const own = findOwnPage(deps.repos, user.id, wall.id);
     if (own && deps.repos.revisions.listForPage(own.page.id).length > 0) continue;

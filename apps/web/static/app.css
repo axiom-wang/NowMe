@@ -1501,3 +1501,75 @@ input[type='checkbox'] {
 /* 账号头像统一从主人自己的头像接口读取。 */
 .avatar:has(img) { overflow: hidden; padding: 0; }
 .avatar > img { display: block; width: 100%; height: 100%; object-fit: cover; border-radius: inherit; }
+
+/* ------------------------------------------------------------------ */
+/* 用户协议与隐私政策、AI 协助生成标识 */
+
+.site-footer__legal {
+  margin-top: 6px;
+}
+
+.site-footer__legal a {
+  color: inherit;
+}
+
+.legal h2 {
+  margin: 1.8em 0 0.5em;
+  font-size: 1.15rem;
+}
+
+.legal ul {
+  padding-left: 1.2em;
+  display: grid;
+  gap: 6px;
+}
+
+.legal__foot {
+  margin-top: 2em;
+}
+
+.legal__table-wrap {
+  overflow-x: auto;
+}
+
+.legal__table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.legal__table th,
+.legal__table td {
+  text-align: left;
+  vertical-align: top;
+  padding: 8px 10px;
+  border-bottom: 1px dashed var(--paper-3);
+}
+
+.legal__table th {
+  white-space: nowrap;
+}
+
+.ai-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px;
+  border: 1px solid var(--paper-3);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--muted);
+  background: transparent;
+  white-space: nowrap;
+}
+
+.page-frame__ai {
+  margin: 0;
+}
+
+.wall-card__body .ai-badge {
+  align-self: flex-start;
+  margin: 2px 0 3px;
+}

@@ -25,6 +25,7 @@ import { securityHeaders } from './security/headers.js';
 import { createRateLimiter } from './security/rate-limit.js';
 import { hostCheck } from './security/host.js';
 import { sessionLoader } from './security/session.js';
+import { createContentSafety } from './services/content-safety.js';
 import { createSmtpOutbox } from './services/mailer.js';
 import { createFileOutbox, type Outbox } from './services/outbox.js';
 import { createRenderProcessor, type SubmissionProcessor } from './services/processor.js';
@@ -79,6 +80,8 @@ export interface CreateWebAppOptions {
   previewer?: PagePreviewer;
   /** 托管任务临时目录的父目录（测试）。 */
   hostedTempRoot?: string;
+  /** 内容审核接口的传输层（测试注入；仍经过 URL 与 DNS 检查，DNS 用 modelLookup）。 */
+  moderationFetch?: typeof fetch;
   /** 远程预览的渲染器（`POST /api/agent/previews`），默认真实渲染器（第一次预览时才启动浏览器）。 */
   remoteRenderer?: RemoteRenderer;
   /**
@@ -138,7 +141,15 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
     client: config.isProduction ? undefined : options.platformModel,
     log,
   });
-  const deps: AppDeps = { demo: options.demo ?? null, userModels, platformModel, config, db, repos, now, kitFonts, tickets, submissions, outbox, rateLimiter: createRateLimiter(now), hosted: null, skillPackage, remotePreview, log };
+  const contentSafety = createContentSafety({
+    moderation: config.moderation,
+    apiKey: options.secretEnv?.NOWME_MODERATION_API_KEY,
+    allowLocal: !config.isProduction && options.secretEnv?.NOWME_AI_ALLOW_LOCAL === '1',
+    lookup: options.modelLookup,
+    transport: options.moderationFetch,
+    log,
+  });
+  const deps: AppDeps = { demo: options.demo ?? null, contentSafety, userModels, platformModel, config, db, repos, now, kitFonts, tickets, submissions, outbox, rateLimiter: createRateLimiter(now), hosted: null, skillPackage, remotePreview, log };
   deps.hosted = createHosted(deps, options);
 
   const app: AppHono = new Hono<AppEnv>();

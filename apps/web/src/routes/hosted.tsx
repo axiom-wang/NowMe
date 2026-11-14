@@ -18,7 +18,7 @@ import type { ConfirmEdits, HostedService, StepResult } from '../hosted/service.
 import { requireForm } from '../security/forms.js';
 import { authOf, requireUser } from '../security/session.js';
 import { findOwnPage, type OwnPage } from '../services/access.js';
-import { renderNotFound } from '../views/errors.js';
+import { renderError, renderNotFound } from '../views/errors.js';
 import { demoModelError } from '../demo-access.js';
 import { BriefPageView, CreateView, JOB_START_ERROR_TEXT, JobView, MyDataView, STEP_ERROR_TEXT, type JobCharge } from '../views/hosted.js';
 import { renderPage } from '../views/layout.js';
@@ -151,6 +151,9 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     const found = ownOf(c);
     if (!found) return renderNotFound(c);
     const answers = readInterviewAnswers(c.get('form'), found.hosted, found.own);
+    // 内容安全（contracts 16.1）：在交给模型之前检查
+    const verdict = await deps.contentSafety.checkTexts('interview', [answers.material, ...Object.values(answers.choices).map((choice) => choice.text)]);
+    if (!verdict.ok) return renderCreate(c, found.own, found.hosted, verdict.message, 422);
     const result = await found.hosted.startInterview(found.own, authOf(c).user.id, answers, c.get('uploads') ?? []);
     return afterStep(c, found.own, found.hosted, result);
   });
@@ -160,18 +163,24 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     if (!found) return renderNotFound(c);
     const userId = authOf(c).user.id;
     const questions = found.hosted.loadBrief(found.own, userId)?.followups?.questions ?? [];
-    const result = await found.hosted.answerFollowups(found.own, userId, readFollowupAnswers(c.get('form'), questions));
+    const answers = readFollowupAnswers(c.get('form'), questions);
+    const verdict = await deps.contentSafety.checkTexts('interview', Object.values(answers).map((answer) => answer.text));
+    if (!verdict.ok) return renderCreate(c, found.own, found.hosted, verdict.message, 422);
+    const result = await found.hosted.answerFollowups(found.own, userId, answers);
     return afterStep(c, found.own, found.hosted, result);
   });
 
   app.post('/w/:wallId/me/create/revise', form, async (c) => {
     const found = ownOf(c);
     if (!found) return renderNotFound(c);
-    const result = await found.hosted.revise(found.own, authOf(c).user.id, text(c.get('form'), 'note', 300));
+    const note = text(c.get('form'), 'note', 300);
+    const verdict = await deps.contentSafety.checkText('interview', note);
+    if (!verdict.ok) return renderCreate(c, found.own, found.hosted, verdict.message, 422);
+    const result = await found.hosted.revise(found.own, authOf(c).user.id, note);
     return afterStep(c, found.own, found.hosted, result);
   });
 
-  app.post('/w/:wallId/me/create/confirm', form, (c) => {
+  app.post('/w/:wallId/me/create/confirm', form, async (c) => {
     const found = ownOf(c);
     if (!found) return renderNotFound(c);
     const userId = authOf(c).user.id;
@@ -181,6 +190,8 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
       hooks: brief?.hooks.length ?? 0,
       profile: brief?.profileSuggestions.length ?? 0,
     });
+    const verdict = await deps.contentSafety.checkTexts('interview', [...edits.aiView.map((item) => item.text), ...edits.hooks.flatMap((hook) => [hook.text, hook.opener])]);
+    if (!verdict.ok) return renderCreate(c, found.own, found.hosted, verdict.message, 422);
     return afterStep(c, found.own, found.hosted, found.hosted.confirm(found.own, userId, edits));
   });
 
@@ -217,10 +228,14 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     return c.redirect(`/w/${found.own.wall.id}/me/jobs/${result.job.id}`, 303);
   });
 
-  app.post('/w/:wallId/me/edit', form, (c) => {
+  app.post('/w/:wallId/me/edit', form, async (c) => {
     const found = ownOf(c);
     if (!found) return renderNotFound(c);
     const fields = c.get('form');
+    const verdict = await deps.contentSafety.checkText('edit', fields.request);
+    if (!verdict.ok) {
+      return renderError(c, { status: 400, title: '这条修改要求先不执行', message: verdict.message, back: { href: `/w/${found.own.wall.id}/me`, label: '回到工作区' } });
+    }
     const block = fields.block && NM_ID_PATTERN.test(fields.block) ? fields.block : null;
     const result = found.hosted.startJob(found.own, authOf(c).user.id, {
       kind: 'edit',
@@ -326,7 +341,8 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     const auth = authOf(c);
     const fields = c.get('form');
     const nickname = (fields.nickname ?? '').trim();
-    const error = await saveAccountProfile(deps.repos.users, auth.user.id, nickname, c.get('uploads'), fields.removeAvatar === '1');
+    const verdict = await deps.contentSafety.checkText('nickname', nickname);
+    const error = verdict.ok ? await saveAccountProfile(deps.repos.users, auth.user.id, nickname, c.get('uploads'), fields.removeAvatar === '1') : verdict.message;
     if (error) return renderPage(c, {
       title: '我的资料', bodyClass: 'page--data', status: 400,
       body: <MyDataView nickname={auth.user.nickname ?? '我'} avatarVersion={auth.user.avatarVersion} nicknameDraft={nickname} error={error} csrf={auth.session.csrfToken} profile={deps.repos.profileEntries.listForUser(auth.user.id)} briefs={deps.repos.briefs.listForOwner(auth.user.id)} notice={null} />,

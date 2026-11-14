@@ -6,6 +6,7 @@ import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { homedir } from 'node:os';
 import { isAbsolute, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { MODERATION_FAILURE_MODES, type ModerationFailureMode } from './content-safety.js';
 import {
   DATA_DB_FILE,
   DATA_OUTBOX_FILE,
@@ -58,6 +59,10 @@ export interface NowmeConfig {
   mail: MailConfig;
   /** 点数与平台 AI（contracts 12）。不含平台模型的 API key 本身。 */
   billing: BillingConfig;
+  /** 内容安全检查的可选部分（contracts 16.1）。不含审核接口的密钥。 */
+  moderation: ModerationConfig;
+  /** 运营方联系邮箱（`NOWME_CONTACT_EMAIL`，可选），显示在用户协议与隐私政策里；没配置为 null。 */
+  contactEmail: string | null;
   /** 本地数据目录（绝对路径，`NOWME_DATA_DIR`，默认 `<仓库根>/.data`）。 */
   dataDir: string;
   /** `NOWME_TICKET_SECRET`；为 null 时用 resolveTicketSecret() 读写 `<dataDir>/secret`。 */
@@ -75,6 +80,16 @@ export interface NowmeConfig {
    * 安装页与 install.md 多显示一种安装方式；都不设为 null。
    */
   skillMarket: SkillMarketConfig | null;
+}
+
+/** 内容安全检查的可选部分：外部词表文件与外部审核接口。两者都不配置时只用内置规则。 */
+export interface ModerationConfig {
+  /** 外部词表文件（`NOWME_BLOCKLIST_FILE`，绝对路径；相对路径按仓库根解析）；没配置为 null。 */
+  blocklistFile: string | null;
+  /** 外部审核接口（`NOWME_MODERATION_URL`，只允许 https）；没配置为 null（默认关闭）。密钥 `NOWME_MODERATION_API_KEY` 只从环境变量读。 */
+  url: string | null;
+  /** 审核接口超时或失败时：`allow` 放行并记日志（默认）；`block` 拦截（`NOWME_MODERATION_ON_FAILURE`）。 */
+  onFailure: ModerationFailureMode;
 }
 
 /**
@@ -204,6 +219,37 @@ export function loadMailConfig(env: Env): MailConfig {
     if (from === null) throw new ConfigError('NOWME_MAIL_TRANSPORT=smtp 时必须设置 NOWME_MAIL_FROM');
   }
   return { transport, from };
+}
+
+/**
+ * 内容安全配置（contracts 16.1）。词表文件在这里只解析路径；文件是否存在、每一行是否合法在主站启动时检查
+ * （`loadBlocklistFile`，不合法就拒绝启动）。审核接口地址是否为公网 HTTPS 在这里检查语法，建立连接时再逐次解析 DNS 检查地址。
+ */
+export function loadModerationConfig(env: Env): ModerationConfig {
+  const fileRaw = nonEmpty(env.NOWME_BLOCKLIST_FILE);
+  const blocklistFile = fileRaw === undefined ? null : isAbsolute(fileRaw) ? resolve(fileRaw) : resolve(REPO_ROOT, fileRaw);
+  const urlRaw = nonEmpty(env.NOWME_MODERATION_URL);
+  let url: string | null = null;
+  if (urlRaw !== undefined) {
+    try {
+      const parsed = new URL(urlRaw);
+      if (parsed.protocol !== 'https:' || parsed.username || parsed.password || parsed.hash || urlRaw.length > 2048) throw new Error();
+      url = parsed.toString();
+    } catch {
+      throw new ConfigError('NOWME_MODERATION_URL 只允许 https 地址（不含账号密码）');
+    }
+  }
+  const failure = nonEmpty(env.NOWME_MODERATION_ON_FAILURE) ?? 'allow';
+  if (!(MODERATION_FAILURE_MODES as readonly string[]).includes(failure)) throw new ConfigError('NOWME_MODERATION_ON_FAILURE 只能是 allow 或 block');
+  return { blocklistFile, url, onFailure: failure as ModerationFailureMode };
+}
+
+/** 运营方联系邮箱（可选）：一行、含 @。 */
+export function loadContactEmail(env: Env): string | null {
+  const value = nonEmpty(env.NOWME_CONTACT_EMAIL);
+  if (value === undefined) return null;
+  if (value.length > 254 || !/^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(value)) throw new ConfigError('NOWME_CONTACT_EMAIL 应为一个邮箱地址');
+  return value;
 }
 
 export const TRUST_PROXY_HOPS_RANGE = { min: 0, max: 5 } as const;
@@ -367,6 +413,8 @@ export function loadConfig(env: Env = process.env): NowmeConfig {
     trustProxyHops: parseIntRange(env, 'NOWME_TRUST_PROXY', 0, TRUST_PROXY_HOPS_RANGE),
     mail: loadMailConfig(env),
     billing: loadBillingConfig(env),
+    moderation: loadModerationConfig(env),
+    contactEmail: loadContactEmail(env),
     dataDir,
     ticketSecret,
     agentTokenTtlHours: parseTtlHours(env.NOWME_AGENT_TOKEN_TTL_HOURS),

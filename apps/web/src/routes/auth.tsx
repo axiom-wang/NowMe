@@ -6,19 +6,21 @@
  * | GET /login | 任何人 | 邮箱表单；已登录直接跳到 next |
  * | POST /login | 任何人（来源检查） | 把验证码交给发件箱（本地文件或 SMTP），显示输入验证码的表单；发不出去 → 503 并说明 |
  * | POST /login/verify | 任何人（来源检查） | 校验验证码 → 新会话 cookie → 跳到 next（首次登录先去 /welcome） |
- * | GET /welcome、POST /welcome | 已登录（POST 需 CSRF） | 首次登录填昵称 |
+ * | GET /welcome、POST /welcome | 已登录（POST 需 CSRF） | 首次登录填昵称，并勾选“已年满 18 岁，同意用户协议和隐私政策”（contracts 16.3） |
+ * | GET /consent、POST /consent | 已登录（POST 需 CSRF） | 协议升版本后，老用户重新确认（不影响 /api/） |
  * | POST /logout | 已登录（需 CSRF） | 删除会话 |
  * | GET /dev/outbox | 仅非生产环境 | 开发发件箱（代替真实邮件） |
  *
  * `next` 只允许站内相对路径（security/redirect.ts）。
  */
+import { CONSENT_FIELD_NAME, LEGAL_VERSION } from '@nowme/contracts';
 import { DEV_OUTBOX_LIMIT, RATE_RULES } from '../constants.js';
 import type { AppDeps, AppHono } from '../context.js';
 import { DEMO_ACCOUNTS, DEMO_WALL_NAME, demoAccountFor } from '../demo-access.js';
 import { clientAddress } from '../security/client.js';
 import { requireForm, requireOriginForm } from '../security/forms.js';
 import { safeNextPath } from '../security/redirect.js';
-import { authOf, clearSessionCookie, readSessionToken, setSessionCookie, welcomeRedirectPath } from '../security/session.js';
+import { afterLoginPath, authOf, clearSessionCookie, hasCurrentConsent, readSessionToken, setSessionCookie } from '../security/session.js';
 import {
   createSession,
   destroySession,
@@ -28,7 +30,7 @@ import {
   verifyLoginCode,
 } from '../services/auth.js';
 import { formatDateTime } from '../format.js';
-import { LoginView, VerifyView, WelcomeView } from '../views/auth.js';
+import { CONSENT_REQUIRED_TEXT, ConsentView, LoginView, VerifyView, WelcomeView } from '../views/auth.js';
 import { renderPage } from '../views/layout.js';
 import { renderNotFound } from '../views/errors.js';
 
@@ -42,7 +44,7 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
   app.get('/login', (c) => {
     const next = safeNextPath(c.req.query('next'), config.webOrigin);
     const auth = c.get('auth');
-    if (auth && !deps.demo) return c.redirect(auth.user.nickname ? next : welcomeRedirectPath(next, config.webOrigin), 303);
+    if (auth && !deps.demo) return c.redirect(afterLoginPath(auth, false, next, config.webOrigin), 303);
     return renderPage(c, { title: '登录', bodyClass: deps.demo && auth ? 'page--switch' : undefined, body: <LoginView next={next} demoAccounts={demoAccounts} /> });
   });
 
@@ -134,31 +136,60 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
     destroySession(deps, readSessionToken(c));
     const session = createSession(deps, result.user.id);
     setSessionCookie(c, config, session);
-    return c.redirect(deps.demo ? '/' : result.user.nickname ? next : welcomeRedirectPath(next, config.webOrigin), 303);
+    return c.redirect(deps.demo ? '/' : afterLoginPath(result, false, next, config.webOrigin), 303);
   });
 
   app.get('/welcome', (c) => {
     const auth = c.get('auth');
     const next = safeNextPath(c.req.query('next'), config.webOrigin);
     if (!auth) return c.redirect(`/login${next === '/' ? '' : `?next=${encodeURIComponent(next)}`}`, 303);
-    if (auth.user.nickname) return c.redirect(next, 303);
+    if (auth.user.nickname) return c.redirect(afterLoginPath(auth, !!deps.demo, next, config.webOrigin), 303);
     return renderPage(c, { title: '欢迎', body: <WelcomeView next={next} csrf={auth.session.csrfToken} /> });
   });
 
-  app.post('/welcome', requireForm(deps, { allowMissingNickname: true }), (c) => {
+  app.post('/welcome', requireForm(deps, { allowMissingNickname: true }), async (c) => {
     const auth = authOf(c);
     const form = c.get('form');
     const next = safeNextPath(form.next, config.webOrigin);
     const nickname = (form.nickname ?? '').trim();
-    const problem = nicknameProblem(nickname);
-    if (problem) {
-      return renderPage(c, {
+    const fail = (error: string, status: 400 | 422 = 400) =>
+      renderPage(c, {
         title: '欢迎',
+        status,
+        body: <WelcomeView next={next} csrf={auth.session.csrfToken} nickname={form.nickname} agreed={form[CONSENT_FIELD_NAME] === '1'} error={error} />,
+      });
+    const problem = nicknameProblem(nickname);
+    if (problem) return fail(problem);
+    if (form[CONSENT_FIELD_NAME] !== '1') return fail(CONSENT_REQUIRED_TEXT);
+    const verdict = await deps.contentSafety.checkText('nickname', nickname);
+    if (!verdict.ok) return fail(verdict.message, 422);
+    deps.repos.users.setNickname(auth.user.id, nickname);
+    deps.repos.users.recordConsent(auth.user.id, LEGAL_VERSION, deps.now().toISOString());
+    return c.redirect(next, 303);
+  });
+
+  // 协议升版本后的重新确认（老用户）：不影响 /api/（Agent API 不加载会话）
+  app.get('/consent', (c) => {
+    const auth = c.get('auth');
+    const next = safeNextPath(c.req.query('next'), config.webOrigin);
+    if (!auth) return c.redirect(`/login${next === '/' ? '' : `?next=${encodeURIComponent(next)}`}`, 303);
+    if (!auth.user.nickname || deps.demo || hasCurrentConsent(auth.user)) return c.redirect(afterLoginPath(auth, !!deps.demo, next, config.webOrigin), 303);
+    return renderPage(c, { title: '请先确认协议', body: <ConsentView next={next} csrf={auth.session.csrfToken} previousVersion={auth.user.termsVersion ?? null} /> });
+  });
+
+  app.post('/consent', requireForm(deps, { allowMissingNickname: true }), (c) => {
+    const auth = authOf(c);
+    const form = c.get('form');
+    const next = safeNextPath(form.next, config.webOrigin);
+    if (!auth.user.nickname) return c.redirect('/welcome', 303);
+    if (form[CONSENT_FIELD_NAME] !== '1') {
+      return renderPage(c, {
+        title: '请先确认协议',
         status: 400,
-        body: <WelcomeView next={next} csrf={auth.session.csrfToken} nickname={form.nickname} error={problem} />,
+        body: <ConsentView next={next} csrf={auth.session.csrfToken} previousVersion={auth.user.termsVersion ?? null} error={CONSENT_REQUIRED_TEXT} />,
       });
     }
-    deps.repos.users.setNickname(auth.user.id, nickname);
+    deps.repos.users.recordConsent(auth.user.id, LEGAL_VERSION, deps.now().toISOString());
     return c.redirect(next, 303);
   });
 

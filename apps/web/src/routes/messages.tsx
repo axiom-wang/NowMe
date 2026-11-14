@@ -3,7 +3,7 @@ import type { MiddlewareHandler } from 'hono';
 import { isId } from '@nowme/contracts';
 import type { AppDeps, AppEnv, AppHono } from '../context.js';
 import { requireForm } from '../security/forms.js';
-import { authOf, requireUser } from '../security/session.js';
+import { authOf, onboardingStep, requireUser } from '../security/session.js';
 import { findMemberWall, findPublishedMemberPage } from '../services/access.js';
 import { RATE_RULES } from '../constants.js';
 import { openDirect, sendMessage, type SendResult } from '../services/chat.js';
@@ -40,7 +40,9 @@ export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
   const user = requireUser(deps);
   const form = requireForm(deps);
   const jsonUser: MiddlewareHandler<AppEnv> = async (c, next) => {
-    if (!c.get('auth')?.user.nickname) return c.json({ error: '登录已过期，请重新登录' }, 401);
+    const auth = c.get('auth');
+    if (!auth?.user.nickname) return c.json({ error: '登录已过期，请重新登录' }, 401);
+    if (onboardingStep(auth, c.get('demo'))) return c.json({ error: '请先确认用户协议和隐私政策' }, 403);
     return next();
   };
 
@@ -93,13 +95,17 @@ export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
     if ((beforeRaw !== undefined && before === undefined) || (afterRaw !== undefined && after === undefined) || (beforeRaw !== undefined && afterRaw !== undefined)) return c.json({ error: '消息游标无效' }, 400);
     return c.json(deps.repos.chat.history(id, { before, after }));
   });
-  app.post('/messages/:id/send', form, (c) => {
+  app.post('/messages/:id/send', form, async (c) => {
     const auth = authOf(c);
     const id = c.req.param('id');
     const fields = c.get('form');
     // 按用户限流（群聊 + 私聊合计）：挡住脚本刷屏，正常聊天碰不到
     const pace = deps.rateLimiter.hit('chat-send', auth.user.id, RATE_RULES.chatSend);
-    const result: SendResult = pace.ok
+    // 内容安全（contracts 16.1）：会话存在且没被限流时才检查，不替无权访问的人调用审核接口
+    const verdict = pace.ok && deps.repos.chat.findVisible(id, auth.user.id) ? await deps.contentSafety.checkText('message', fields.text) : { ok: true as const };
+    const result: SendResult = !verdict.ok
+      ? { ok: false, status: 400, error: verdict.message }
+      : pace.ok
       ? sendMessage(deps, auth.user.id, id, fields.clientId ?? '', fields.text ?? '')
       : deps.repos.chat.findVisible(id, auth.user.id)
         ? { ok: false, status: 429, error: '发得太快了，歇几秒再发。' }

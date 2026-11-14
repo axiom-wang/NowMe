@@ -10,6 +10,7 @@ import { parse } from 'parse5';
 import {
   generateId,
   hashToken,
+  LEGAL_VERSION,
   loadConfig,
   PAGE_INDEX_FILE,
   SESSION_COOKIE_NAME,
@@ -182,6 +183,8 @@ export interface TestWebOptions {
   platformModel?: ModelClient;
   /** 替换发件箱（真实投递的测试）；默认内存发件箱（`TestWeb.outbox`）。 */
   mailOutbox?: Outbox;
+  /** 内容审核接口的传输层（contracts 16.1）。 */
+  moderationFetch?: typeof fetch;
   /** 收集主站日志（默认丢弃）。 */
   log?: (message: string) => void;
   /** 打开访问日志（contracts 17；默认只在生产环境写）。 */
@@ -211,6 +214,7 @@ export function createTestWeb(options: TestWebOptions = {}): TestWeb {
     secretEnv: options.secretEnv,
     modelFetch: options.modelFetch,
     modelLookup: options.modelLookup,
+    moderationFetch: options.moderationFetch,
     previewer: options.previewer,
     hostedTempRoot: options.hostedTempRoot,
     remoteRenderer: options.remoteRenderer ?? createStaticRemoteRenderer(),
@@ -302,7 +306,7 @@ export async function login(t: TestWeb, email: string, nickname = '测试用户'
   const cookie = `${SESSION_COOKIE_NAME}=${token}`;
   const csrf = csrfOf(t, token);
   if (verified.headers.get('location')?.startsWith('/welcome')) {
-    const welcomed = await postForm(t, '/welcome', { _csrf: csrf, nickname }, { cookie });
+    const welcomed = await postForm(t, '/welcome', { _csrf: csrf, nickname, agree: '1' }, { cookie });
     if (welcomed.status !== 303) throw new Error(`填写昵称失败：${welcomed.status}`);
   }
   const user = t.repos.users.findByEmail(email.toLowerCase());
@@ -317,6 +321,7 @@ export async function login(t: TestWeb, email: string, nickname = '测试用户'
 export function createUser(t: TestWeb, email: string, nickname = '成员'): string {
   const id = generateId('usr');
   t.repos.users.create({ id, email, nickname, createdAt: t.clock.now().toISOString() });
+  t.repos.users.recordConsent(id, LEGAL_VERSION, t.clock.now().toISOString());
   return id;
 }
 

@@ -54,6 +54,11 @@ const Footer: FC = () => (
     <p>
       <span class="site-footer__brand">NOWMe</span> 和 AI 一起，做一页有个性的自己，挂在圈子共同的墙上。
     </p>
+    <p class="site-footer__legal">
+      <a href="/terms">用户协议</a>
+      <span aria-hidden="true"> · </span>
+      <a href="/privacy">隐私政策</a>
+    </p>
   </footer>
 );
 

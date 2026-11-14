@@ -4,7 +4,8 @@
  * | 文件 | 负责 | 内容 |
  * | --- | --- | --- |
  * | static.ts | T2.1 | `/static/*` |
- * | auth.tsx | T2.1 | 登录、验证码、昵称、退出、`/dev/outbox` |
+ * | auth.tsx | T2.1 | 登录、验证码、昵称与协议确认（`/welcome`、`/consent`）、退出、`/dev/outbox` |
+ * | legal.tsx | T8.4 | `/terms`、`/privacy` |
  * | agent-api.ts | T2.1 | `/api/agent/*` |
  * | home.tsx | T2.1（T3.1 重做） | `GET /` |
  * | workspace.tsx | T2.1 + T3.2 | `/w/:wallId/me*`、`/w/:wallId/leave` |
@@ -22,6 +23,7 @@ import { registerAgentApiRoutes } from './agent-api.js';
 import { registerAuthRoutes } from './auth.js';
 import { registerCreditsRoutes } from './credits.js';
 import { registerHomeRoutes } from './home.js';
+import { registerLegalRoutes } from './legal.js';
 import { registerMessageRoutes } from './messages.js';
 import { registerHostedRoutes } from './hosted.js';
 import { registerPublicRoutes } from './public.js';
@@ -33,6 +35,7 @@ import { registerWorkspaceRoutes } from './workspace.js';
 export function registerRoutes(app: AppHono, deps: AppDeps): void {
   registerStaticRoutes(app);
   registerAuthRoutes(app, deps);
+  registerLegalRoutes(app, deps);
   registerAgentApiRoutes(app, deps);
   registerSkillRoutes(app, deps);
   registerHomeRoutes(app, deps);

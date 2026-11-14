@@ -1,6 +1,6 @@
 /** 登录、验证码、首次登录填昵称（W01）。登录前没有会话，这几个表单只做来源检查。 */
 import type { FC, PropsWithChildren } from 'hono/jsx';
-import { LOGIN_CODE_DIGITS, LOGIN_CODE_TTL_SECONDS } from '@nowme/contracts';
+import { CONSENT_FIELD_NAME, LEGAL_VERSION, LOGIN_CODE_DIGITS, LOGIN_CODE_TTL_SECONDS, MIN_USER_AGE } from '@nowme/contracts';
 import { EMAIL_MAX_LENGTH, NICKNAME_LIMITS } from '../constants.js';
 import { CsrfField, Notice } from './forms.js';
 import { DEMO_ACCOUNTS } from '../demo-access.js';
@@ -128,7 +128,22 @@ export const VerifyView: FC<VerifyViewProps> = ({ email, next, error, expired, d
   </AuthShell>
 );
 
-export const WelcomeView: FC<{ next: string; csrf: string; nickname?: string; error?: string }> = ({ next, csrf, nickname, error }) => (
+export const CONSENT_REQUIRED_TEXT = `请先勾选“我已年满 ${MIN_USER_AGE} 岁，并同意《用户协议》和《隐私政策》”，才能继续。`;
+
+/** 年龄与协议勾选框（欢迎页与重新确认页共用）：必选，条款在新标签页打开。 */
+const ConsentCheck: FC<{ checked?: boolean }> = ({ checked }) => (
+  <label class="check check--strong">
+    <input type="checkbox" name={CONSENT_FIELD_NAME} value="1" required checked={checked} />
+    <span>
+      我已年满 {MIN_USER_AGE} 岁，并同意
+      <a href="/terms" target="_blank" rel="noopener">《用户协议》</a>
+      和
+      <a href="/privacy" target="_blank" rel="noopener">《隐私政策》</a>
+    </span>
+  </label>
+);
+
+export const WelcomeView: FC<{ next: string; csrf: string; nickname?: string; agreed?: boolean; error?: string }> = ({ next, csrf, nickname, agreed, error }) => (
   <AuthShell step="最后一步 · 昵称">
     <h1>欢迎来到 NOWMe</h1>
     <p class="muted">先起一个昵称。组织者和墙上的其他成员会看到它。</p>
@@ -140,8 +155,35 @@ export const WelcomeView: FC<{ next: string; csrf: string; nickname?: string; er
         <span class="field__label">昵称</span>
         <input type="text" name="nickname" value={nickname ?? ''} required maxlength={NICKNAME_LIMITS.max * 2} autocomplete="nickname" />
       </label>
+      <ConsentCheck checked={agreed} />
       <button type="submit" class="btn btn--primary btn--block">
         开始
+      </button>
+    </form>
+  </AuthShell>
+);
+
+/** 协议升版本后，老用户下次登录看到的确认页（contracts 16.3）。 */
+export const ConsentView: FC<{ next: string; csrf: string; previousVersion: string | null; error?: string }> = ({ next, csrf, previousVersion, error }) => (
+  <AuthShell step="需要你确认一下">
+    <h1>我们更新了协议</h1>
+    <p class="muted">
+      {previousVersion ? `《用户协议》和《隐私政策》更新到了 ${LEGAL_VERSION} 版。` : `使用 NOWMe 前，需要你确认《用户协议》和《隐私政策》（${LEGAL_VERSION} 版）。`}
+      确认之后就能继续使用，你的页面和资料不受影响。
+    </p>
+    {error ? <Notice tone="error">{error}</Notice> : null}
+    <form method="post" action="/consent" class="stack">
+      <CsrfField token={csrf} />
+      <input type="hidden" name="next" value={next} />
+      <ConsentCheck />
+      <button type="submit" class="btn btn--primary btn--block">
+        确认并继续
+      </button>
+    </form>
+    <form method="post" action="/logout" class="stack stack--tight auth__resend">
+      <CsrfField token={csrf} />
+      <button type="submit" class="link-button">
+        不同意，退出登录
       </button>
     </form>
   </AuthShell>

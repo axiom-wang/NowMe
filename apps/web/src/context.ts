@@ -17,6 +17,7 @@ import type { UserModels } from './hosted/user-models.js';
 import type { PlatformModel } from './hosted/platform-model.js';
 import type { HostedService } from './hosted/service.js';
 import type { RateLimiter } from './security/rate-limit.js';
+import type { ContentSafety } from './services/content-safety.js';
 import type { Outbox } from './services/outbox.js';
 import type { RemotePreviewService } from './services/remote-preview.js';
 import type { SkillPackage } from './services/skill-package.js';
@@ -24,7 +25,7 @@ import type { SubmissionService } from './services/submissions.js';
 import type { TicketIssuer } from './services/tickets.js';
 
 /** 主站运行配置（contracts 0.1、4.3、4.4）。`ticketSecret` 已解析（`resolveTicketSecret`）。 */
-export type WebConfig = Pick<NowmeConfig, 'webOrigin' | 'pagesOrigin' | 'dataDir' | 'agentTokenTtlHours' | 'isProduction' | 'hosted' | 'skillMarket' | 'mail' | 'trustProxyHops' | 'billing'> & {
+export type WebConfig = Pick<NowmeConfig, 'webOrigin' | 'pagesOrigin' | 'dataDir' | 'agentTokenTtlHours' | 'isProduction' | 'hosted' | 'skillMarket' | 'mail' | 'trustProxyHops' | 'billing' | 'moderation' | 'contactEmail'> & {
   ticketSecret: string;
 };
 
@@ -43,6 +44,8 @@ export interface AppDeps {
   outbox: Outbox;
   /** 平台 AI（contracts 12）；没有配置时 `available` 为 false。 */
   platformModel: PlatformModel;
+  /** 内容安全检查（contracts 16.1）：路由 / 服务边界在写入或发布前调用。 */
+  contentSafety: ContentSafety;
   /** 短时限流（按来源地址 / 按用户，contracts 10.3）。 */
   rateLimiter: RateLimiter;
   /** 平台托管路线（contracts 9）；用户未配置时引导到账号设置。 */

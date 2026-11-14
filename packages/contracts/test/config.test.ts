@@ -29,6 +29,8 @@ describe('loadConfig', () => {
       trustProxyHops: 0,
       mail: { transport: 'file', from: null },
       billing: { platform: null, prices: { generate: 10, edit: 4 }, signupCredits: 0, freeDailyCalls: 3000 },
+      moderation: { blocklistFile: null, url: null, onFailure: 'allow' },
+      contactEmail: null,
       dataDir: resolve(REPO_ROOT, '.data'),
       ticketSecret: null,
       agentTokenTtlHours: 72,

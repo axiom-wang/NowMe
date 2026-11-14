@@ -11,6 +11,7 @@ import type { Context, MiddlewareHandler } from 'hono';
 import { constantTimeEqual, CSRF_FIELD_NAME } from '@nowme/contracts';
 import type { AppDeps, AppEnv, FormFields } from '../context.js';
 import { renderError } from '../views/errors.js';
+import { onboardingStep } from './session.js';
 
 /** `Origin`（或 `Referer` 的源）是否是主站。两者都没有时拒绝。 */
 export function originAllowed(c: Context<AppEnv>, webOrigin: string): boolean {
@@ -81,7 +82,7 @@ export function requireOriginForm(deps: Pick<AppDeps, 'config'>): MiddlewareHand
 }
 
 export interface RequireFormOptions {
-  /** 允许还没填昵称的用户（`/welcome`、`/logout`）。 */
+  /** 允许还没填昵称、还没确认协议的用户（`/welcome`、`/consent`、`/logout`）。 */
   allowMissingNickname?: boolean;
   /** 接受 multipart 表单，文件字段名（文件在 `c.var.uploads`）。 */
   multipartFiles?: string;
@@ -112,7 +113,10 @@ export function requireForm(deps: Pick<AppDeps, 'config'>, options: RequireFormO
     if (!csrf || !constantTimeEqual(csrf, auth.session.csrfToken)) {
       return renderError(c, { status: 403, title: '页面已过期', message: '这个页面已经过期了。请刷新页面后再操作一次。' });
     }
-    if (!auth.user.nickname && !options.allowMissingNickname) return c.redirect('/welcome', 303);
+    if (!options.allowMissingNickname) {
+      const step = onboardingStep(auth, c.get('demo'));
+      if (step) return c.redirect(step === 'welcome' ? '/welcome' : '/consent', 303);
+    }
     c.set('form', form);
     return next();
   };

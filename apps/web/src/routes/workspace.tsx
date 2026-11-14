@@ -127,7 +127,7 @@ export function registerWorkspaceRoutes(app: AppHono, deps: AppDeps): void {
   // 发布、撤下、公开链接（W10、W11、W12、W15）
   // ---------------------------------------------------------------------------
 
-  app.post('/w/:wallId/me/publish', form, (c) => {
+  app.post('/w/:wallId/me/publish', form, async (c) => {
     const own = ownOf(c);
     if (!own) return renderNotFound(c);
     const fields = c.get('form');
@@ -150,6 +150,16 @@ export function registerWorkspaceRoutes(app: AppHono, deps: AppDeps): void {
         { revisionId: revision.id, notice: 'publish-errors', publishForm: { values, errors: checked.errors } },
         422,
       );
+    }
+    // 内容安全（contracts 16.1）：发布时页面的渲染文字，加上确认表单里主人改过的名字、介绍、接话点与开场白
+    const verdict = await deps.contentSafety.checkTexts('page', [
+      revision.renderedText,
+      values.displayName,
+      values.tagline,
+      ...values.hooks.filter((hook) => !hook.remove).flatMap((hook) => [hook.text, hook.opener]),
+    ]);
+    if (!verdict.ok) {
+      return renderError(c, { status: 400, title: '这一页暂时不能发布', message: verdict.message, back: { href: workspacePath(own.wall.id), label: '回到工作区' } });
     }
     const result = publishRevision(deps, own, revision, checked, authOf(c).user.id);
     if (!result) return renderWorkspace(c, deps, own.wall.id, { notice: 'publish-failed' }, 409);
