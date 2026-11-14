@@ -624,6 +624,7 @@ strong {
 }
 
 input[type='url'],
+input[type='number'],
 input[type='password'],
 input[type='email'],
 input[type='text'],
@@ -655,6 +656,7 @@ textarea::placeholder {
 }
 
 input[type='url']:hover,
+input[type='number']:hover,
 input[type='password']:hover,
 input[type='email']:hover,
 input[type='text']:hover,
@@ -664,6 +666,7 @@ select:hover {
 }
 
 input[type='url']:focus,
+input[type='number']:focus,
 input[type='password']:focus,
 input[type='email']:focus,
 input[type='text']:focus,
