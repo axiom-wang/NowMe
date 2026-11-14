@@ -116,7 +116,7 @@ export const HomeView: FC<{ nickname: string; items: HomeItem[]; notice: HomeNot
         </dl>
         <aside class="home-reminder">
           <span class="home-reminder__icon"><HomeIcon name={pending.length ? 'pencil' : 'check'} /></span>
-          <div class="home-reminder__copy"><h2>{pending.length ? `你还有 ${pending.length} 个页面未发布` : active.length ? '你的页面，都已闪亮上墙' : '从一面墙，开启新的相遇'}</h2><p>{pending.length ? '继续完善个人页面，让其他成员认识你。' : active.length ? '去看看圈子里的新朋友，也让灵感继续生长。' : '和你的 Agent 一起，做一页有个性的自己。'}</p></div>
+          <div class="home-reminder__copy"><h2>{pending.length ? `你还有 ${pending.length} 个页面未发布` : active.length ? '你的页面，都已闪亮上墙' : '从一面墙，开启新的相遇'}</h2><p>{pending.length ? '继续完善个人页面，让其他成员认识你。' : active.length ? '去看看圈子里的新朋友，也让灵感继续生长。' : '和 AI 一起，做一页有个性的自己。'}</p></div>
           <a class="home-button home-button--dark" href={pending[0] ? `/w/${pending[0].wall.id}/me` : active[0] ? `/w/${active[0].wall.id}` : '/walls/new'}>{pending.length ? '继续创作' : active.length ? '去看看墙' : '建一面墙'}<HomeIcon name="arrow" /></a>
           <HomeSpark />
         </aside>

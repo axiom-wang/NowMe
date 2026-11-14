@@ -1,19 +1,28 @@
 # NOWMe
 
-刚进入新圈子的年轻人，和自己的 AI Agent 一起做一页有个性的自己，挂在这个圈子共同的墙上。当前阶段：**本地开发原型试跑：本地 Agent 路线 + 网页内自带 API 创作（平台免费），不部署**。
+刚进入新圈子的年轻人，和 AI 一起做一页有个性的自己，挂在这个圈子共同的墙上；看到对的人，AI 帮你找到话题、起个头。
+
+当前阶段（2026-11-14 起）：**按计划正式上线、面向真实用户的产品来做**，不再按黑客松原型的标准。这一轮工作在分支 `feat/production-readiness` 上，`main` 保留黑客松版本，不要直接改。
 
 ## 先读什么
 
 | 文档 | 用途 |
 | --- | --- |
-| `docs/contracts.md` | **接口约定，所有实现的唯一依据**：页面输出契约、校验规则与错误码、数据模型、API、票据、CSP、安全不变量 S1–S6 |
+| `docs/contracts.md` | **接口约定，所有实现的唯一依据**：页面输出契约、校验规则与错误码、数据模型、API、票据、CSP、安全不变量 S1–S6；第 10 节部署与加固、第 11 节“和 TA 聊什么”（S9）、第 12 节点数与平台 AI（S10） |
 | `docs/hosted-route.md` | contracts 第 9 节：平台托管路线（采访、自带 API 生成、修改、用户凭证、S7/S8） |
 | `docs/build-plan.md` | 里程碑、任务、验收标准与状态 |
 | `docs/product-mvp-community-wall.md` | 产品需求（功能编号 W01–W21） |
 | `docs/page-generation-byo-agent.md` | Skill、页面生成、凭证、安全与托管 |
 | `docs/brief-collection.md` | 采访流程、场景指南、brief 结构、本地隐私规则 |
 
-范围：本地 Agent 路线 + 网页内自带 API 创作（采访、生成、修改，见 `docs/hosted-route.md`）。取消所有收费与赠送次数方案。模型请求由服务器使用当前用户的 Key 发出，费用由服务商向用户收取；用户 Key 按账号加密保存，可跨设备管理与删除。主站需要 `NOWME_AI_ENCRYPTION_KEY`，不提供或回退到平台模型 Key。派生到新墙（W18）、真实邮件、部署都不做。
+范围：
+
+- 创作有三条路：本地 Agent；网页内用自己的模型 Key（不收点数）；网页内用平台 AI（`NOWME_PLATFORM_*`，采访与“和 TA 聊什么”不收点数，生成 / 修改扣点数）。平台 AI 没配置时，行为与只有前两条路时相同。
+- 点数：个人余额（兑换码、运营发放）与墙的额度（组织者为成员买单，可设每人上限）。还没有接支付渠道。
+- “和 TA 聊什么”：成员在别人的页面上请 AI 找连接点、起草开场白（contracts 11）。
+- 登录只做邮箱验证码；`NOWME_MAIL_TRANSPORT=smtp` 时真实投递，本地默认写文件。
+- 用户自己的 Key 按账号加密保存（需要 `NOWME_AI_ENCRYPTION_KEY`），可跨设备管理与删除。
+- 还不做：派生到新墙（W18）、支付渠道、举报与拉黑、注销账号、组织者数据看板。
 
 ## 命令
 
@@ -29,6 +38,7 @@ pnpm nowme <命令>        # 源码方式运行 CLI，例如 pnpm nowme validate
 pnpm --filter @nowme/web seed [--json]   # 开发种子：用户 + 黑客松墙 + 页面 + 一条 Agent 指令
 pnpm --filter @nowme/skill pack:skill    # 打 Skill 包（含单文件 CLI）到 skill/dist-package/，本地镜像；公开安装走 GitHub；dev / start:source 会先自动打包
 pnpm --filter @nowme/skill publish:github --publish # 同步完整成品到 axiom-wang/nowme-skill 并发布版本；默认不带 --publish 时只导出
+pnpm --filter @nowme/web credits codes --count 20 --credits 100   # 生成兑换码（明文只输出一次）；另有 grant / balance
 pnpm --filter @nowme/<包> test   # 只测一个包
 ```
 
@@ -67,3 +77,6 @@ pnpm --filter @nowme/<包> test   # 只测一个包
 - 本地路线的 brief 与画像从不上传；提交只接受白名单文件。
 
 - 用户模型配置仅主人可管理；Key 使用 AES-256-GCM 认证加密，主密钥不入库；删除或更换后旧任务停止后续请求。自定义服务只允许公网 HTTPS，逐次解析 DNS 并固定连接地址，拒绝重定向。
+- “和 TA 聊什么”（S9）：只把查看者自己的资料和对方已经公开在墙上的内容交给模型；结果只属于查看者；连接点的依据必须是两边资料里的原文（服务端核对）；开场白只预填、从不代发；输出里不允许出现链接与联系方式。
+- 点数与平台 AI（S10）：平台模型的 Key 只来自环境变量，不入库、不写日志、不在页面出现；余额不为负，流水只追加；任务只扣一次，没做出新版本全额退回；兑换码只存哈希；组织者只看到墙额度的总数，看不到任何成员用了多少。
+- 没有登录态的入口按来源地址限流；只有声明了 `NOWME_TRUST_PROXY` 才读 `X-Forwarded-For`。生产环境启动前检查配置，不完整就拒绝启动。

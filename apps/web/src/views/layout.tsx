@@ -52,7 +52,7 @@ export const Brand: FC = () => (
 const Footer: FC = () => (
   <footer class="site-footer">
     <p>
-      <span class="site-footer__brand">NOWMe</span> 和你的 Agent 一起，做一页有个性的自己，挂在圈子共同的墙上。
+      <span class="site-footer__brand">NOWMe</span> 和 AI 一起，做一页有个性的自己，挂在圈子共同的墙上。
     </p>
   </footer>
 );
