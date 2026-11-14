@@ -4,7 +4,8 @@
  * - `findOwnPage`：墙未关闭、当前用户在墙内是有效成员 → 他在这面墙的页面（工作区只给页面主人）。
  * - `findMemberWall`：墙未关闭、当前用户在墙内是有效成员（墙、成员页、封面、chat）。
  * - `findOrganizerWall`：在 `findMemberWall` 之上还要求是这面墙的组织者（组织者后台）。
- * - `findPublishedMemberPage`：查看者是有效成员，且目标页在这面墙上可见（活跃发布 + 主人成员关系有效）。
+ * - `findPublishedMemberPage`：查看者是有效成员，且目标页在这面墙上可见（活跃发布 + 主人成员关系有效），
+ *   且查看者与页面主人之间没有拉黑（任一方向，contracts 15、S12）。
  *
  * 关闭的墙对所有人（含组织者、原成员）不可见；已退出、已移除的成员立即失去访问。
  */
@@ -68,5 +69,6 @@ export function findPublishedMemberPage(
   if (!member || !PAGE_ID_PATTERN.test(pageId)) return null;
   const entry = wallQueries(deps.db).findPublished(member.wall.id, pageId);
   if (!entry) return null;
+  if (deps.repos.moderation.blockedEitherWay(userId, entry.ownerId)) return null;
   return { ...member, entry, own: entry.ownerId === userId };
 }

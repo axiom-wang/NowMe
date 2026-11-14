@@ -2,6 +2,16 @@ import { CHAT_TEXT_MAX_LENGTH, type ChatHistory, type ConversationSummary, type 
 import type { FC } from 'hono/jsx';
 import { CsrfField } from './forms.js';
 import { HomeIcon } from './home-icons.js';
+import { ConversationSafety, type SafetyNotice } from './moderation.js';
+
+/** 一对一私聊里“举报 / 拉黑”的状态。`closed`：拉黑（任一方向）或停用后不能再发消息。 */
+export interface ConversationSafetyModel {
+  blockedByMe: boolean;
+  closed: boolean;
+  reported: boolean;
+  notice: SafetyNotice | null;
+  error: string | null;
+}
 
 /** 与客户端保持一致，以东京时区的自然日显示相对时间。 */
 export function formatConversationTime(value: string | null, now = new Date()): string {
@@ -90,7 +100,9 @@ export const ConversationView: FC<{
   draft?: string;
   error?: string;
   members: { userId: string; nickname: string; avatarUrl?: string | null }[];
-}> = ({ summary, history, userId, csrf, clientId, draft, error, members }) => (
+  /** 一对一私聊的举报 / 拉黑状态（contracts 15）；群聊为空。 */
+  safety?: ConversationSafetyModel | null;
+}> = ({ summary, history, userId, csrf, clientId, draft, error, members, safety = null }) => (
   <div class="container conversation-page" data-chat={summary.id} data-user-id={userId}>
     <nav class="back-link" aria-label="返回"><a href="/messages">← 消息列表</a><a href={`/w/${summary.wallId}`}>回到墙上</a></nav>
     <section class="card conversation-panel">
@@ -103,7 +115,9 @@ export const ConversationView: FC<{
         <ol class="message-list" role="log" aria-live="polite" aria-relevant="additions" data-message-list>{history.messages.map((message) => <MessageItem message={message} userId={userId} />)}</ol>
       </div>
       <button type="button" class="btn btn--accent chat-new" data-new-messages hidden>有新消息，点击查看 ↓</button>
-      <form class="chat-compose" method="post" action={`/messages/${summary.id}/send`} data-chat-form>
+      {safety ? <ConversationSafety conversationId={summary.id} csrf={csrf} name={summary.title} {...safety} /> : null}
+      {/* 不能再发消息时隐藏输入框（表单保留：客户端用其中的 CSRF 标记已读）；服务端发送接口同样拒绝 */}
+      <form class="chat-compose" method="post" action={`/messages/${summary.id}/send`} data-chat-form hidden={!!safety?.closed}>
         <CsrfField token={csrf} /><input type="hidden" name="clientId" value={clientId} />
         <label for="message-text">消息内容</label>
         <textarea id="message-text" name="text" rows={3} required data-max-length={CHAT_TEXT_MAX_LENGTH} placeholder="说点什么吧……">{draft ?? ''}</textarea>

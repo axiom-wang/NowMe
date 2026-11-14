@@ -409,6 +409,8 @@ export interface PublishModel {
   active: ActivePublicationView | null;
   /** 撤下状态下最近一次结束的时间。 */
   lastEndedAt: string | null;
+  /** 撤下状态下，最近一次是不是被组织者 / 平台请下墙的（contracts 15）。 */
+  takenDownBy: 'organizer' | 'platform' | null;
   publicLinkUrl: string | null;
   isOrganizer: boolean;
   /** 选中版本的发布确认（没有可发布的选中版本时为 null）。 */
@@ -440,6 +442,7 @@ export function loadPublishModel(
       }
     : null;
   const state = repos.publications.displayState(page.id);
+  const lastEnded = state === 'withdrawn' ? repos.publications.findLatestEndedForPage(page.id) : null;
 
   let form: PublishFormModel | null = null;
   if (selected && isRevisionUsable(selected)) {
@@ -465,7 +468,8 @@ export function loadPublishModel(
   return {
     state,
     active,
-    lastEndedAt: state === 'withdrawn' ? (repos.publications.findLatestEndedForPage(page.id)?.endedAt ?? null) : null,
+    lastEndedAt: lastEnded?.endedAt ?? null,
+    takenDownBy: lastEnded ? repos.moderation.takedownActorFor(lastEnded.id) : null,
     publicLinkUrl: page.publicToken ? publicLinkUrl(deps.config.webOrigin, page.publicToken) : null,
     isOrganizer: own.membership.role === 'organizer',
     form,

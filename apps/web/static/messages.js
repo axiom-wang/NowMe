@@ -43,7 +43,11 @@
         var error = new Error('网络暂时不可用，请稍后重试');
         error.status = response.status;
         if (response.status === 401) error.message = '登录已过期，请重新登录。草稿仍保留在输入框中。';
-        else if (response.status === 403) error.message = '页面已过期，请刷新后重试。请先复制输入框里的草稿。';
+        else if (response.status === 403) {
+          // 私聊已关闭（拉黑 / 停用）时服务端给出 JSON 说明；CSRF / 来源校验失败是 HTML 错误页
+          error.message = '页面已过期，请刷新后重试。请先复制输入框里的草稿。';
+          try { error.message = (await response.json()).error || error.message; } catch (_) { /* 非 JSON */ }
+        }
         else if (response.status === 404) error.message = '已失去该会话的访问权限，请返回消息列表。';
         else {
           try { error.message = (await response.json()).error || error.message; } catch (_) { /* 非 JSON 错误使用默认提示 */ }

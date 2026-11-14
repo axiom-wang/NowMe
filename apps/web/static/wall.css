@@ -2081,3 +2081,17 @@ fieldset.field legend {
 .wall-cover-settings__preview { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 14px; margin: 16px 0; background: var(--paper-2); }
 .wall-cover-settings input[type='file'] { max-width: 100%; width: 100%; font-size: 13px; }
 .wall-cover-settings__delete { margin-top: 12px; }
+
+/* 举报与拉黑（contracts 15）：成员页、私聊、组织者后台。 */
+.safety { margin-top: 16px; }
+.safety--chat { margin: 12px 0; }
+.safety__details > summary { cursor: pointer; color: var(--muted); font-size: 0.9rem; }
+.safety__form { margin-top: 14px; }
+.safety__reasons { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 8px 18px; }
+.safety__reasons legend { width: 100%; margin-bottom: 6px; }
+.safety__block { margin-top: 14px; padding-top: 14px; border-top: 1.5px dashed var(--line); }
+.reports__list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.reports__item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.reports__item h3 { margin: 0 0 4px; font-size: 1rem; }
+.reports__item p { margin: 0; }
+.reports__actions { display: flex; gap: 8px; }

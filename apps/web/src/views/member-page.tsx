@@ -11,6 +11,14 @@ import type { ChatModel, MemberPageModel } from '../services/wall-view.js';
 import { CsrfField } from './forms.js';
 import { initialOf } from './layout.js';
 import { PageFrame } from './page-frame.js';
+import { PageSafety, type SafetyNotice } from './moderation.js';
+
+/** 成员页底部“举报 / 拉黑”的状态（只在别人的页面上有）。 */
+export interface PageSafetyModel {
+  reported: boolean;
+  notice: SafetyNotice | null;
+  error: string | null;
+}
 
 const BackLink: FC<{ href: string; label: string }> = ({ href, label }) => (
   <nav class="back-link" aria-label="返回">
@@ -158,12 +166,13 @@ const TalkPanel: FC<{ base: string; name: string; csrf: string; panel: Icebreake
   );
 };
 
-export const MemberPageView: FC<{ model: MemberPageModel; csrf: string; icebreaker?: IcebreakerPanel | null; icebreakerError?: string | null; aiSettings?: boolean }> = ({
+export const MemberPageView: FC<{ model: MemberPageModel; csrf: string; icebreaker?: IcebreakerPanel | null; icebreakerError?: string | null; aiSettings?: boolean; safety?: PageSafetyModel | null }> = ({
   model,
   csrf,
   icebreaker = null,
   icebreakerError = null,
   aiSettings = true,
+  safety = null,
 }) => {
   const { wall, card, contact, own } = model;
   const canChat = !own;
@@ -217,6 +226,7 @@ export const MemberPageView: FC<{ model: MemberPageModel; csrf: string; icebreak
           )}
           {!own && contact && card.hooks[0] ? <form method="post" action={`${base}/contact`}><CsrfField token={csrf} /><input type="hidden" name="contactHookId" value={card.hooks[0].id} /><button type="submit" class="btn btn--ghost btn--small">查看公开联系方式</button></form> : null}
         </section>
+        {!own && safety ? <PageSafety base={base} csrf={csrf} name={card.displayName} reported={safety.reported} notice={safety.notice} error={safety.error} /> : null}
       </div>
     </div>
   );

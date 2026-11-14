@@ -125,7 +125,9 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
           ? `验证码不对，还可以再试 ${result.remaining} 次。`
           : result.reason === 'locked'
             ? '验证码错误次数太多，已经失效。请重新获取一个验证码。'
-            : '验证码已过期或已失效，请重新获取。';
+            : result.reason === 'suspended'
+              ? '这个账号已被平台停用，暂时不能登录。'
+              : '验证码已过期或已失效，请重新获取。';
       return renderPage(c, {
         title: '输入验证码',
         status: 400,

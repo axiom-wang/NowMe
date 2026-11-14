@@ -31,6 +31,7 @@ import { createWall, joinState, joinWall, parseWallForm } from '../services/wall
 import { openDirect } from '../services/chat.js';
 import { clearIcebreaker, generateIcebreaker, ICEBREAKER_ERROR_TEXT, icebreakerOpener, loadIcebreakerPanel, type IcebreakerFailure } from '../services/icebreaker.js';
 import { renderNotFound } from '../views/errors.js';
+import { pageSafetyModel } from './moderation.js';
 import { JoinView, RemovedFromWallView } from '../views/join.js';
 import { renderPage } from '../views/layout.js';
 import { ChatView, MemberPageView } from '../views/member-page.js';
@@ -38,7 +39,7 @@ import { NewWallView, type SceneChoice } from '../views/wall-new.js';
 import { WallView, type WallNotice } from '../views/wall.js';
 import { sceneLabels } from './home.js';
 
-const WALL_NOTICES: ReadonlySet<string> = new Set<WallNotice>(['joined', 'rejoined']);
+const WALL_NOTICES: ReadonlySet<string> = new Set<WallNotice>(['joined', 'rejoined', 'blocked']);
 
 export function wallPath(wallId: string): string {
   return `/w/${wallId}`;
@@ -224,6 +225,7 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
           icebreaker={found.own ? null : loadIcebreakerPanel(deps, found, auth.user.id)}
           icebreakerError={failure && Object.hasOwn(ICEBREAKER_ERROR_TEXT, failure) ? ICEBREAKER_ERROR_TEXT[failure as IcebreakerFailure] : null}
           aiSettings={!deps.demo}
+          safety={found.own ? null : pageSafetyModel(deps, found, auth.user.id, c.req.query('safety'))}
         />
       ),
     });

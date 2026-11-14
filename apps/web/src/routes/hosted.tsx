@@ -310,6 +310,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     'brief-deleted': 'brief 已删除：采访内容和上传的图片都已清除。',
     'profile-deleted': '已删除。',
     'profile-saved': '个人资料已保存。',
+    unblocked: '已解除拉黑。',
   };
 
   app.get('/account/data', user, (c) => {
@@ -324,7 +325,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
           avatarVersion={auth.user.avatarVersion}
           csrf={auth.session.csrfToken}
           profile={deps.repos.profileEntries.listForUser(auth.user.id)}
-          briefs={deps.repos.briefs.listForOwner(auth.user.id)}
+          briefs={deps.repos.briefs.listForOwner(auth.user.id)} blocked={deps.repos.moderation.listBlockedBy(auth.user.id)}
           notice={notice ? (DATA_NOTICES[notice] ?? null) : null}
         />
       ),
@@ -345,7 +346,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     const error = verdict.ok ? await saveAccountProfile(deps.repos.users, auth.user.id, nickname, c.get('uploads'), fields.removeAvatar === '1') : verdict.message;
     if (error) return renderPage(c, {
       title: '我的资料', bodyClass: 'page--data', status: 400,
-      body: <MyDataView nickname={auth.user.nickname ?? '我'} avatarVersion={auth.user.avatarVersion} nicknameDraft={nickname} error={error} csrf={auth.session.csrfToken} profile={deps.repos.profileEntries.listForUser(auth.user.id)} briefs={deps.repos.briefs.listForOwner(auth.user.id)} notice={null} />,
+      body: <MyDataView nickname={auth.user.nickname ?? '我'} avatarVersion={auth.user.avatarVersion} nicknameDraft={nickname} error={error} csrf={auth.session.csrfToken} profile={deps.repos.profileEntries.listForUser(auth.user.id)} briefs={deps.repos.briefs.listForOwner(auth.user.id)} blocked={deps.repos.moderation.listBlockedBy(auth.user.id)} notice={null} />,
     });
     return c.redirect('/account/data?notice=profile-saved', 303);
   });

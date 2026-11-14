@@ -31,7 +31,8 @@
     "stats": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/stats.ts",
     "backup": "tsx --conditions=source --disable-warning=ExperimentalWarning src/ops/backup-cli.ts backup",
     "restore": "tsx --conditions=source --disable-warning=ExperimentalWarning src/ops/backup-cli.ts restore",
-    "credits":"tsx --conditions=source --disable-warning=ExperimentalWarning scripts/credits.ts"
+    "credits": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/credits.ts",
+    "moderation": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/moderation.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "catalog:",

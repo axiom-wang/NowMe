@@ -27,6 +27,11 @@ const CONTRACT_TABLES: Record<string, string[]> = {
   credit_entries: ['id', 'account_kind', 'account_id', 'delta', 'balance_after', 'reason', 'ref_id', 'actor_id', 'created_at'],
   redeem_codes: ['id', 'code_hash', 'credits', 'batch', 'expires_at', 'redeemed_by', 'redeemed_at', 'created_at'],
   wall_sponsorships: ['wall_id', 'member_cap', 'updated_at'],
+  // contracts 15（迁移 012_moderation.sql）
+  reports: ['id', 'reporter_id', 'target_kind', 'wall_id', 'reported_user_id', 'page_id', 'publication_id', 'conversation_id', 'last_sequence', 'reason', 'note', 'status', 'resolved_by', 'resolved_at', 'created_at', 'updated_at'],
+  moderation_actions: ['id', 'actor', 'actor_user_id', 'action', 'wall_id', 'page_id', 'publication_id', 'report_id', 'user_id', 'note', 'created_at'],
+  blocks: ['blocker_id', 'blocked_id', 'created_at'],
+  user_suspensions: ['user_id', 'reason', 'suspended_at'],
   users: ['id', 'email', 'nickname', 'created_at'],
   login_codes: ['id', 'email', 'code_hash', 'attempts', 'expires_at', 'used_at'],
   sessions: ['id', 'user_id', 'csrf_token', 'created_at', 'expires_at'],
@@ -142,7 +147,7 @@ describe('数据库迁移', () => {
     expect(migrate(db)).toEqual([]);
     db.close();
     const again = open(file);
-    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }, { version: '004_user_models.sql' }, { version: '005_chat.sql' }, { version: '006_wall_covers.sql' }, { version: '007_user_avatar.sql' }, { version: '008_icebreakers.sql' }, { version: '009_credits.sql' }, { version: '013_consent.sql' }]);
+    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }, { version: '004_user_models.sql' }, { version: '005_chat.sql' }, { version: '006_wall_covers.sql' }, { version: '007_user_avatar.sql' }, { version: '008_icebreakers.sql' }, { version: '009_credits.sql' }, { version: '012_moderation.sql' }, { version: '013_consent.sql' }]);
   });
 
   it('从旧数据库增量升级保留用户、页面、brief、版本、发布与历史任务', () => {

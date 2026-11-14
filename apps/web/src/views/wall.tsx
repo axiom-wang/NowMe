@@ -14,7 +14,7 @@ import { PAGE_STATE_LABEL } from './home.js';
 import { AiBadge } from './ai-badge.js';
 import { initialOf } from './layout.js';
 
-export type WallNotice = 'joined' | 'rejoined';
+export type WallNotice = 'joined' | 'rejoined' | 'blocked';
 
 /** 墙上至少有这么多张卡片才显示搜索框。 */
 const WALL_SEARCH_MIN_CARDS = 4;
@@ -22,6 +22,7 @@ const WALL_SEARCH_MIN_CARDS = 4;
 const NOTICE_TEXT: Record<WallNotice, string> = {
   joined: '欢迎加入！先逛逛墙上的人；准备好了，再去创作工作区做你自己的一页。',
   rejoined: '欢迎回来！你原来的页面没有自动回到墙上，需要时在创作工作区重新发布。',
+  blocked: '已拉黑。你们互相看不到对方的页面，也不能再私信；TA 不会收到通知。可以在“我的资料”里解除。',
 };
 
 const MY_PAGE_TEXT: Record<PageDisplayState, string> = {

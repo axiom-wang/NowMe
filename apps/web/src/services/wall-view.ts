@@ -177,7 +177,9 @@ function toWallCard(deps: Pick<AppDeps, 'repos' | 'config'>, wallId: string, ent
 
 export function loadWallModel(deps: Pick<AppDeps, 'db' | 'repos' | 'config'>, member: MemberWall): WallModel {
   const { wall, membership } = member;
-  const entries = wallQueries(deps.db).listPublished(wall.id);
+  // 拉黑双向生效：互相看不到对方的卡片（contracts 15）
+  const hidden = deps.repos.moderation.hiddenPeers(membership.userId);
+  const entries = wallQueries(deps.db).listPublished(wall.id).filter((entry) => !hidden.has(entry.ownerId));
   const myPage = deps.repos.pages.findByMembership(membership.id);
   const myState: PageDisplayState = myPage ? deps.repos.publications.displayState(myPage.id) : 'unpublished';
   const myEntry = entries.find((entry) => entry.ownerId === membership.userId) ?? null;

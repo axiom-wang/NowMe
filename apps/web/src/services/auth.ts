@@ -103,7 +103,7 @@ export async function requestLoginCode(deps: Pick<AppDeps, 'db' | 'repos' | 'now
 
 export type VerifyCodeResult =
   | { ok: true; user: User }
-  | { ok: false; reason: 'no_code' | 'locked' }
+  | { ok: false; reason: 'no_code' | 'locked' | 'suspended' }
   | { ok: false; reason: 'mismatch'; remaining: number };
 
 /** 校验验证码；成功时找到或创建用户。每次尝试都计数，第 5 次失败后验证码作废。 */
@@ -133,6 +133,8 @@ export function verifyLoginCode(
     }
     if (!repos.loginCodes.markUsed(record.id, nowIso)) return { ok: false, reason: 'no_code' };
     const existing = repos.users.findByEmail(email);
+    // 停用的账号不能登录（contracts 15）；验证码照常作废
+    if (existing && repos.moderation.isSuspended(existing.id)) return { ok: false, reason: 'suspended' };
     const user = existing ?? repos.users.create({ id: generateId('usr'), email, nickname: null, createdAt: nowIso });
     // 新用户的注册赠送点数（contracts 12；配置为 0 时不做任何事）
     if (!existing) grantSignupCredits(deps, user.id);
@@ -168,7 +170,8 @@ export function loadSession(deps: Pick<AppDeps, 'repos' | 'now'>, token: string 
   const session = deps.repos.sessions.findValid(hashToken(token), deps.now().toISOString());
   if (!session) return null;
   const user = deps.repos.users.findById(session.userId);
-  return user ? { user, session } : null;
+  if (!user || deps.repos.moderation.isSuspended(user.id)) return null;
+  return { user, session };
 }
 
 export function destroySession(deps: Pick<AppDeps, 'repos'>, token: string | undefined): void {

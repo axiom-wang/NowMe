@@ -145,6 +145,7 @@ export const WallStatusSection: FC<{ model: WorkspaceModel }> = ({ model }) => {
           <span class="badge">已撤下</span>
           <span>
             {publish.lastEndedAt ? `${formatDateTime(publish.lastEndedAt)} 从墙上撤下。` : ''}
+            {publish.takenDownBy === 'organizer' ? '有成员举报了这一页，组织者请它先下墙。' : publish.takenDownBy === 'platform' ? '这一页被平台处理下墙。' : ''}
             墙上的成员现在看不到你的页面；在下面选一个版本、确认后即可重新发布。
           </span>
         </p>

@@ -10,11 +10,13 @@ import type { AdminMemberRow } from '../db/wall-queries.js';
 import type { Wall } from '../db/walls.js';
 import { formatDateTime } from '../format.js';
 import { CsrfField, Notice } from './forms.js';
+import { OrganizerReports } from './moderation.js';
+import type { OrganizerReport } from '../services/moderation.js';
 import { PAGE_STATE_LABEL } from './home.js';
 import { initialOf } from './layout.js';
 import { defaultWallCover } from './home.js';
 
-export type AdminNotice = 'created' | 'removed' | 'cover-updated' | 'cover-deleted' | 'credits-saved';
+export type AdminNotice = 'created' | 'removed' | 'cover-updated' | 'cover-deleted' | 'credits-saved' | 'report-takedown' | 'report-dismissed';
 
 /** 墙的 AI 额度（contracts 12）：只有聚合数字，没有任何成员的明细。演示模式与平台 AI 未开放时为 null。 */
 export interface AdminCredits {
@@ -37,6 +39,8 @@ const NOTICE_TEXT: Record<AdminNotice, string> = {
   removed: '已移出：TA 的页面已立即从墙上消失，本地 Agent 的连接也已断开。TA 不能再通过邀请加入。',
   'cover-updated': '墙封面已更新，成员会在首页看到新封面。',
   'cover-deleted': '已移除墙封面，恢复默认插画。',
+  'report-takedown': '这一页已从墙上撤下。TA 可以修改后重新发布；再有人举报会重新出现在这里。',
+  'report-dismissed': '已忽略这些举报，页面留在墙上。',
 };
 
 export interface AdminModel {
@@ -49,6 +53,8 @@ export interface AdminModel {
   members: AdminMemberRow[];
   counts: { members: number; published: number };
   credits: AdminCredits | null;
+  /** 待处理举报（contracts 15、S12）：只有页面、原因与次数。 */
+  reports: OrganizerReport[];
 }
 
 export interface AdminViewProps {
@@ -132,6 +138,8 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError,
               </figcaption>
             </figure>
           </section>
+
+          <OrganizerReports wallId={wall.id} csrf={csrf} reports={model.reports} />
 
           <section class="card" aria-labelledby="members-heading">
             <h2 id="members-heading">成员</h2>

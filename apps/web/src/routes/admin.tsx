@@ -18,6 +18,7 @@ import { requireForm } from '../security/forms.js';
 import { authOf, requireUser } from '../security/session.js';
 import { findMemberWall, findOrganizerWall } from '../services/access.js';
 import { uploadWallCover } from '../services/wall-cover.js';
+import { loadOrganizerReports } from '../services/moderation.js';
 import { qrSvgDataUri } from '../services/qr.js';
 import { closeWall, removeMember } from '../services/walls.js';
 import { userAccount, wallCredits } from '../services/billing.js';
@@ -27,7 +28,7 @@ import { renderPage } from '../views/layout.js';
 import { sceneLabels } from './home.js';
 import { invitePath, wallPath } from './walls.js';
 
-const NOTICES: ReadonlySet<string> = new Set<AdminNotice>(['created', 'removed', 'cover-updated', 'cover-deleted', 'credits-saved']);
+const NOTICES: ReadonlySet<string> = new Set<AdminNotice>(['created', 'removed', 'cover-updated', 'cover-deleted', 'credits-saved', 'report-takedown', 'report-dismissed']);
 const CREDITS_ERRORS: ReadonlySet<string> = new Set(['bad-amount', 'bad-cap', 'insufficient']);
 
 export function registerAdminRoutes(app: AppHono, deps: AppDeps): void {
@@ -48,6 +49,7 @@ export function registerAdminRoutes(app: AppHono, deps: AppDeps): void {
       inviteQr: qrSvgDataUri(inviteUrl),
       members,
       counts: { members: members.length, published: queries.countPublished(wall.id) },
+      reports: loadOrganizerReports(deps, wall, organizerId),
       // 墙的 AI 额度（contracts 12）：平台 AI 开放时才有意义；只有聚合数字
       credits:
         !deps.demo && deps.platformModel.available

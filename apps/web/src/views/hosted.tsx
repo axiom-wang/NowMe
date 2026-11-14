@@ -19,6 +19,8 @@ import type { AiStatus } from '../services/billing.js';
 import { CsrfField, Notice, PostButton } from './forms.js';
 import { initialOf } from './layout.js';
 import { HomeIcon } from './home-icons.js';
+import { BlockedList } from './moderation.js';
+import type { BlockedUserRow } from '../db/moderation.js';
 
 export const STEP_ERROR_TEXT: Record<StepError, string> = {
   MODEL_CONFIG: JOB_ERROR_TEXT.MODEL_CONFIG!,
@@ -589,7 +591,7 @@ const ProfileRow: FC<{ entry: ProfileEntry; csrf: string }> = ({ entry, csrf }) 
   </li>
 );
 
-export const MyDataView: FC<{ nickname: string; avatarVersion?: string | null | undefined; nicknameDraft?: string; error?: string; csrf: string; profile: ProfileEntry[]; briefs: OwnBriefListItem[]; notice: string | null }> = ({ nickname, avatarVersion, nicknameDraft, error, csrf, profile, briefs, notice }) => (
+export const MyDataView: FC<{ nickname: string; avatarVersion?: string | null | undefined; nicknameDraft?: string; error?: string; csrf: string; profile: ProfileEntry[]; briefs: OwnBriefListItem[]; notice: string | null; blocked?: BlockedUserRow[] }> = ({ nickname, avatarVersion, nicknameDraft, error, csrf, profile, briefs, notice, blocked = [] }) => (
   <div class="profile-page">
     <header class="profile-intro">
       <h1>我的资料</h1>
@@ -651,5 +653,6 @@ export const MyDataView: FC<{ nickname: string; avatarVersion?: string | null | 
         ))}</ul>
       )}
     </section>
+    <BlockedList csrf={csrf} blocked={blocked} />
   </div>
 );
