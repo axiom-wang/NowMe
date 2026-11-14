@@ -11,7 +11,7 @@ export interface Account {
   id: string;
 }
 
-export type CreditReason = 'redeem' | 'grant' | 'signup' | 'adjust' | 'sponsor_out' | 'sponsor_in' | 'sponsor_return' | 'job' | 'job_refund';
+export type CreditReason = 'redeem' | 'grant' | 'signup' | 'adjust' | 'sponsor_out' | 'sponsor_in' | 'sponsor_return' | 'job' | 'job_refund' | 'account_deleted';
 
 export interface CreditEntry {
   id: string;

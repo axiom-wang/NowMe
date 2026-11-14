@@ -31,15 +31,18 @@ export async function deleteOwnBrief(deps: DataDeps, userId: string, briefId: st
   return true;
 }
 
+/** `eraseHostedPageData` 在数据库里的部分（同步，调用方放在事务里；注销账号时与其他清除放在同一个事务）。 */
+export function eraseHostedPageRecords(deps: Pick<AppDeps, 'repos'>, pageId: string): void {
+  deps.repos.briefAssets.deleteForPage(pageId);
+  deps.repos.briefs.deleteForPage(pageId);
+  deps.repos.jobs.eraseContentForPage(pageId);
+  // 别人针对这一页得到的破冰建议里引用了页面上的文字：页面删除时一并清掉（contracts 11）
+  deps.repos.icebreakers.deleteForPage(pageId);
+}
+
 /** 删除页面时：brief、素材、任务内容（修改要求、结果说明）一并清除；任务行保留。 */
 export async function eraseHostedPageData(deps: DataDeps, pageId: string): Promise<void> {
-  transaction(deps.db, () => {
-    deps.repos.briefAssets.deleteForPage(pageId);
-    deps.repos.briefs.deleteForPage(pageId);
-    deps.repos.jobs.eraseContentForPage(pageId);
-    // 别人针对这一页得到的破冰建议里引用了页面上的文字：页面删除时一并清掉（contracts 11）
-    deps.repos.icebreakers.deleteForPage(pageId);
-  });
+  transaction(deps.db, () => eraseHostedPageRecords(deps, pageId));
   await removeHostedPageFiles(deps.config.dataDir, pageId);
 }
 

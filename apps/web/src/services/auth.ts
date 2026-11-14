@@ -45,7 +45,8 @@ export function nicknameProblem(nickname: string): string | null {
   return null;
 }
 
-function codeHash(codeId: string, code: string): string {
+/** 验证码哈希：SHA-256(`<id>.<code>`)（登录与注销确认共用）。 */
+export function codeHash(codeId: string, code: string): string {
   return hashToken(`${codeId}.${code}`);
 }
 
@@ -170,7 +171,8 @@ export function loadSession(deps: Pick<AppDeps, 'repos' | 'now'>, token: string 
   const session = deps.repos.sessions.findValid(hashToken(token), deps.now().toISOString());
   if (!session) return null;
   const user = deps.repos.users.findById(session.userId);
-  if (!user || deps.repos.moderation.isSuspended(user.id)) return null;
+  // 注销的账号不能有会话（注销时会话已全部删除，这里再挡一次）
+  if (!user || user.deletedAt || deps.repos.moderation.isSuspended(user.id)) return null;
   return { user, session };
 }
 

@@ -321,6 +321,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
       bodyClass: 'page--data',
       body: (
         <MyDataView
+          accountLinks={!deps.demo}
           nickname={auth.user.nickname ?? '我'}
           avatarVersion={auth.user.avatarVersion}
           csrf={auth.session.csrfToken}
@@ -346,7 +347,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     const error = verdict.ok ? await saveAccountProfile(deps.repos.users, auth.user.id, nickname, c.get('uploads'), fields.removeAvatar === '1') : verdict.message;
     if (error) return renderPage(c, {
       title: '我的资料', bodyClass: 'page--data', status: 400,
-      body: <MyDataView nickname={auth.user.nickname ?? '我'} avatarVersion={auth.user.avatarVersion} nicknameDraft={nickname} error={error} csrf={auth.session.csrfToken} profile={deps.repos.profileEntries.listForUser(auth.user.id)} briefs={deps.repos.briefs.listForOwner(auth.user.id)} blocked={deps.repos.moderation.listBlockedBy(auth.user.id)} notice={null} />,
+      body: <MyDataView accountLinks={!deps.demo} nickname={auth.user.nickname ?? '我'} avatarVersion={auth.user.avatarVersion} nicknameDraft={nickname} error={error} csrf={auth.session.csrfToken} profile={deps.repos.profileEntries.listForUser(auth.user.id)} briefs={deps.repos.briefs.listForOwner(auth.user.id)} blocked={deps.repos.moderation.listBlockedBy(auth.user.id)} notice={null} />,
     });
     return c.redirect('/account/data?notice=profile-saved', 303);
   });

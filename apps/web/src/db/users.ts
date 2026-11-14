@@ -11,6 +11,8 @@ export interface User {
   /** 最近一次确认的用户协议 / 隐私政策版本（contracts 16.3）；还没确认过为 null。 */
   termsVersion?: string | null;
   termsAcceptedAt?: string | null;
+  /** 注销时间（contracts 14）：非空表示这是注销后的墓碑，不能登录、不能有会话。 */
+  deletedAt?: string | null;
 }
 
 interface UserRow {
@@ -21,6 +23,7 @@ interface UserRow {
   created_at: string;
   terms_version: string | null;
   terms_accepted_at: string | null;
+  deleted_at: string | null;
 }
 
 function toUser(row: UserRow | undefined): User | null {
@@ -33,12 +36,14 @@ function toUser(row: UserRow | undefined): User | null {
     createdAt: row.created_at,
     termsVersion: row.terms_version,
     termsAcceptedAt: row.terms_accepted_at,
+    deletedAt: row.deleted_at,
   };
 }
 
 export function createUsersRepo(db: Database) {
-  const byId = db.prepare('SELECT id, email, nickname, created_at, avatar_version, terms_version, terms_accepted_at FROM users WHERE id = ?');
-  const byEmail = db.prepare('SELECT id, email, nickname, created_at, avatar_version, terms_version, terms_accepted_at FROM users WHERE email = ?');
+  const byId = db.prepare('SELECT id, email, nickname, created_at, avatar_version, terms_version, terms_accepted_at, deleted_at FROM users WHERE id = ?');
+  // 注销的账号（墓碑）按邮箱永远找不到：同一邮箱再次登录会注册成新账号
+  const byEmail = db.prepare('SELECT id, email, nickname, created_at, avatar_version, terms_version, terms_accepted_at, deleted_at FROM users WHERE email = ? AND deleted_at IS NULL');
   const insert = db.prepare('INSERT INTO users (id, email, nickname, created_at) VALUES (?, ?, ?, ?)');
   const updateNickname = db.prepare('UPDATE users SET nickname = ? WHERE id = ?');
 

@@ -591,7 +591,7 @@ const ProfileRow: FC<{ entry: ProfileEntry; csrf: string }> = ({ entry, csrf }) 
   </li>
 );
 
-export const MyDataView: FC<{ nickname: string; avatarVersion?: string | null | undefined; nicknameDraft?: string; error?: string; csrf: string; profile: ProfileEntry[]; briefs: OwnBriefListItem[]; notice: string | null; blocked?: BlockedUserRow[] }> = ({ nickname, avatarVersion, nicknameDraft, error, csrf, profile, briefs, notice, blocked = [] }) => (
+export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVersion?: string | null | undefined; nicknameDraft?: string; error?: string; csrf: string; profile: ProfileEntry[]; briefs: OwnBriefListItem[]; notice: string | null; blocked?: BlockedUserRow[] }> = ({ accountLinks, nickname, avatarVersion, nicknameDraft, error, csrf, profile, briefs, notice, blocked = [] }) => (
   <div class="profile-page">
     <header class="profile-intro">
       <h1>我的资料</h1>
@@ -654,5 +654,15 @@ export const MyDataView: FC<{ nickname: string; avatarVersion?: string | null | 
       )}
     </section>
     <BlockedList csrf={csrf} blocked={blocked} />
+    {accountLinks ? (
+      <section class="profile-card" aria-labelledby="account-heading">
+        <h2 id="account-heading">账号</h2>
+        <p class="muted">把你在 NOWMe 的页面文件和资料下载成一个 zip；或者彻底注销账号。</p>
+        <div class="profile-brief-actions">
+          <a class="profile-button" href="/account/export">导出我的数据</a>
+          <a class="profile-button" href="/account/delete">注销账号</a>
+        </div>
+      </section>
+    ) : null}
   </div>
 );

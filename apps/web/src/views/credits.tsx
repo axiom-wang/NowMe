@@ -34,6 +34,7 @@ const REASON_TEXT: Record<CreditReason, string> = {
   sponsor_return: '墙关闭，额度退回',
   job: '生成 / 修改页面',
   job_refund: '没做出新版本，退回',
+  account_deleted: '注销账号，余额作废',
 };
 
 function describe(entry: CreditEntry, wallName: CreditsViewProps['wallName']): string {

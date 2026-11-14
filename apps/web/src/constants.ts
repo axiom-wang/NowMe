@@ -47,4 +47,6 @@ export const RATE_RULES = {
   chatSend: { max: 40, windowMs: 60 * 1000 },
   /** 同一用户尝试兑换码。 */
   redeem: { max: 10, windowMs: 10 * 60 * 1000 },
+  /** 同一用户导出自己的数据（contracts 14：打包全部页面文件，比较重）。 */
+  accountExport: { max: 5, windowMs: 60 * 60 * 1000 },
 } as const;

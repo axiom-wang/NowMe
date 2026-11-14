@@ -15,9 +15,11 @@
  * | skill.tsx | T3.6 | Skill 分发：`/skill`、`/skill/install.md`、`/skill/manifest.json`、`/skill/<归档>` |
  * | credits.tsx | contracts 12 | 点数：`/account/credits`、兑换码、组织者给墙充额度 |
  * | moderation.tsx | contracts 15 | 举报、拉黑、组织者处理举报 |
+ * | account.tsx | contracts 14 | 注销账号与导出数据：`/account/export`、`/account/delete*` |
  * | hosted.tsx | M5 | 平台托管路线：`/w/:wallId/me/create*`、`/generate`、`/edit`、`/jobs/:jobId`、`/brief*`、`/account/data` 等 |
  */
 import type { AppDeps, AppHono } from '../context.js';
+import { registerAccountRoutes } from './account.js';
 import { registerAiSettingsRoutes } from './ai-settings.js';
 import { registerAdminRoutes } from './admin.js';
 import { registerAgentApiRoutes } from './agent-api.js';
@@ -47,6 +49,7 @@ export function registerRoutes(app: AppHono, deps: AppDeps): void {
   registerHostedRoutes(app, deps);
   registerAiSettingsRoutes(app, deps);
   registerCreditsRoutes(app, deps);
+  registerAccountRoutes(app, deps);
   registerWallRoutes(app, deps);
   registerAdminRoutes(app, deps);
   registerPublicRoutes(app, deps);

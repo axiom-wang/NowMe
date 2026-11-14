@@ -85,8 +85,12 @@ export interface DeletePageResult {
   revokedCredentials: number;
 }
 
-/** 删除页面（见文件头）。先在一个事务里改数据库，再删文件；文件删除失败只记日志。 */
-export async function deletePage(deps: LifecycleDeps, own: OwnPage, actorId: string): Promise<DeletePageResult> {
+/** 删除页面在数据库里的部分（同步，调用方放在事务里）：返回需要删除文件的版本 ID 与结果。 */
+export function erasePageRecords(
+  deps: Pick<AppDeps, 'db' | 'repos' | 'now'>,
+  own: OwnPage,
+  actorId: string,
+): { fileIds: string[]; result: DeletePageResult } {
   const { repos, db } = deps;
   const nowIso = deps.now().toISOString();
   const pageId = own.page.id;
@@ -98,36 +102,38 @@ export async function deletePage(deps: LifecycleDeps, own: OwnPage, actorId: str
             card_json = NULL, manifest_json = NULL, rendered_text = NULL, render_json = NULL
       WHERE page_id = ?`,
   );
+  // 全部版本（含之前已删除的：它们的目录早已不存在，rm 会跳过）
+  const all = repos.revisions.listForPage(pageId);
+  const live = all.filter((revision) => !isRevisionDeleted(revision));
+  const page = repos.pages.findById(pageId);
+  const ended = repos.publications.endActive(pageId, 'deleted', nowIso);
+  repos.publications.eraseContentForPage(pageId);
+  eraseRevisions.run(accepted, rejected, pageId);
+  const publicLinkClosed = page?.publicToken != null;
+  repos.pages.clearContactAndPublicLink(pageId, nowIso);
+  const revokedCredentials = disconnectAgent(deps, pageId);
+  if (ended) {
+    repos.events.record({ type: 'withdraw', wallId: own.wall.id, pageId, actorId, props: { pageDeleted: true }, createdAt: nowIso });
+  }
+  if (publicLinkClosed) {
+    repos.events.record({ type: 'public_link_off', wallId: own.wall.id, pageId, actorId, props: { pageDeleted: true }, createdAt: nowIso });
+  }
+  return {
+    fileIds: all.filter((revision) => revision.status === 'accepted').map((revision) => revision.id),
+    result: {
+      revisionCount: live.length,
+      fileRevisionCount: live.filter((revision) => revision.status === 'accepted').length,
+      withdrew: ended !== null,
+      publicLinkClosed,
+      revokedCredentials,
+    },
+  };
+}
 
-  const outcome = transaction(db, () => {
-    // 全部版本（含之前已删除的：它们的目录早已不存在，rm 会跳过）
-    const all = repos.revisions.listForPage(pageId);
-    const live = all.filter((revision) => !isRevisionDeleted(revision));
-    const page = repos.pages.findById(pageId);
-    const ended = repos.publications.endActive(pageId, 'deleted', nowIso);
-    repos.publications.eraseContentForPage(pageId);
-    eraseRevisions.run(accepted, rejected, pageId);
-    const publicLinkClosed = page?.publicToken != null;
-    repos.pages.clearContactAndPublicLink(pageId, nowIso);
-    const revokedCredentials = disconnectAgent(deps, pageId);
-    if (ended) {
-      repos.events.record({ type: 'withdraw', wallId: own.wall.id, pageId, actorId, props: { pageDeleted: true }, createdAt: nowIso });
-    }
-    if (publicLinkClosed) {
-      repos.events.record({ type: 'public_link_off', wallId: own.wall.id, pageId, actorId, props: { pageDeleted: true }, createdAt: nowIso });
-    }
-    return {
-      fileIds: all.filter((revision) => revision.status === 'accepted').map((revision) => revision.id),
-      result: {
-        revisionCount: live.length,
-        fileRevisionCount: live.filter((revision) => revision.status === 'accepted').length,
-        withdrew: ended !== null,
-        publicLinkClosed,
-        revokedCredentials,
-      } satisfies DeletePageResult,
-    };
-  });
-
+/** 删除页面（见文件头）。先在一个事务里改数据库，再删文件；文件删除失败只记日志。 */
+export async function deletePage(deps: LifecycleDeps, own: OwnPage, actorId: string): Promise<DeletePageResult> {
+  const pageId = own.page.id;
+  const outcome = transaction(deps.db, () => erasePageRecords(deps, own, actorId));
   // 托管资料（brief、素材、任务内容）一并清除（S7）；不依赖托管功能是否开启
   await eraseHostedPageData(deps, pageId);
   const failed = await removeAllRevisionFiles(deps.config.dataDir, outcome.fileIds);
