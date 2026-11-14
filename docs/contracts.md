@@ -1,4 +1,4 @@
-# NOWMe 接口约定（原型试跑 · 本地路线 + 平台托管路线）
+# NOWMe 接口约定（本地路线 + 平台托管路线）
 
 > 本文是所有模块共同遵守的契约：页面输出契约、数据模型、API、校验规则、安全不变量。
 > 需求来源：[MVP 需求](product-mvp-community-wall.md)、[页面生成方案](page-generation-byo-agent.md)、[信息收集与 brief](brief-collection.md)。
@@ -377,7 +377,7 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 
 仅服务端演示启动器可显式启用，配置必须绑定演示数据目录，生产与普通 `pnpm dev` 不开放。`POST /login/demo` 检查来源，字段只接受固定的 `identity=member|organizer`，分别映射已有 `newbie@demo.nowme.test` 和 `organizer@demo.nowme.test`，创建正常服务端会话；切换销毁当前会话，两个身份登录后均进入首页，首页不展示身份切换卡片；需要时从顶部“切换身份”进入选择页。邮箱验证码路径与会话加载同样禁止登录背景人物。S1–S8 与组织者权限保持不变。
 
-评审模式允许维护者在启动时将自己的真实模型配置通过现有账号加密机制预置给体验成员，费用由演示提供者承担；体验身份不可通过 AI 设置界面或 HTTP 接口改写、删除预置配置。只在演示启动读取专属环境变量，预置配置不作为普通账号的回退（普通账号的平台 AI 只由 `NOWME_PLATFORM_*` 决定，第 12 节），演示不接受假模型；演示模式没有点数页面。完整流程与配置见 [demo.md](demo.md) 与 [hosted-route.md 第 8 节](hosted-route.md#8-演示数据与评审模式)。
+评审模式允许维护者在启动时将自己的真实模型配置通过现有账号加密机制预置给体验成员，费用由演示提供者承担；体验身份不可通过 AI 设置界面或 HTTP 接口改写、删除预置配置。只在演示启动读取专属环境变量，预置配置不作为普通账号的回退（普通账号的平台 AI 只由 `NOWME_PLATFORM_*` 决定，第 12 节），演示不接受假模型；演示模式没有点数页面。完整流程与配置见 演示说明（已从仓库删除，见标签 `hackathon-2026` 中的 docs/demo.md） 与 [hosted-route.md 第 8 节](hosted-route.md#8-演示数据与评审模式)。
 
 ### 4.2.3 同墙成员头像展示
 
@@ -417,7 +417,7 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 
 - **Skill 包**：`pnpm --filter @nowme/skill pack:skill` 打到 `skill/dist-package/`（`build` 与主站 `dev` / `start:source` 会先打包）。只含 `SKILL.md`、`reference/`、`scenes/`、`templates/`、`examples/` 与 `scripts/nowme.mjs`；根目录 `nowme-page/`；ustar + gzip，可复现（排序、固定时间戳）；打包时发现 token / 凭证样式的字符串就失败。主站启动时读取并核对 sha256，不一致或没有打包时本地 manifest/归档不可用，但页面仍提供公开 GitHub 安装入口。manifest 中的 `url` 指向 GitHub 对应版本的 Release 下载地址。
 - **发布**：`pnpm --filter @nowme/skill publish:github --out <空目录>` 仅导出成品供检查；加 `--publish` 会自动构建、同步公开仓库、推送 `v<版本>` 标签并创建 Release（归档 + manifest）。仅导出打包白名单与生成的 README/install.md/manifest，不复制主项目或本机配置。已有版本拒绝覆盖；更新时先同步修改三个 Skill 版本位置。公开仓库是生成物，不手工维护第二份源码。
-- **跨电脑连接**：Skill 下载不依赖 NOWMe 服务；运行 fetch/preview/submit 仍需要可访问的 `--server`。localhost 仅指当前电脑，主站部署不在本任务范围。
+- **跨电脑连接**：Skill 下载不依赖 NOWMe 服务；运行 fetch/preview/submit 仍需要可访问的 `--server`。localhost 仅指当前电脑；主站部署见第 17 节与 [deploy.md](deploy.md)。
 - **版本**：`skill/package.json` 的 `version` = `SKILL_VERSION` = SKILL.md 里写的“Skill 版本”（测试保证一致）。
 - **通用写法**：安装页、install.md、工作区都不写具体 Agent 的名字和 Skill 目录。
 - **市场渠道**：`NOWME_SKILL_MARKET_LABEL` 与 `NOWME_SKILL_MARKET_COMMAND`（同时设置或都不设，一行、长度有上限）配置后，安装页与 install.md 多显示一种安装方式。
