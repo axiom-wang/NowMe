@@ -34,6 +34,3 @@ skill/dist-package/
 # 营销素材（本地保存，不纳入 git）
 marketing/
 
-# 项目内部文档保留在本地；仅公开评委体验指南
-docs/*
-!docs/demo.md
