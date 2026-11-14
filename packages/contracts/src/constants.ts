@@ -190,6 +190,9 @@ export const WEB_EVENT_TYPES = [
   'remote_preview',
   // “和 TA 聊什么”（contracts 11）：一次模型调用（成功与失败都记，用于限流与统计；只记数字，不记内容）
   'icebreaker_generate',
+  // 点数（contracts 12）：兑换、组织者给墙充值（props 只有点数，不含兑换码）
+  'credits_redeem',
+  'credits_sponsor',
 ] as const;
 
 export const EVENT_TYPES = [...STORED_AGENT_EVENT_TYPES, ...WEB_EVENT_TYPES] as const;
@@ -232,6 +235,19 @@ export const ICEBREAKER_TARGET_TEXT_MAX = 2400;
 export const ICEBREAKER_VIEWER_TEXT_MAX = 1600;
 /** 输出限制：连接点 0–3 条、开场白 1–3 条。 */
 export const ICEBREAKER_LIMITS = { links: 3, openers: 3, title: 18, evidence: 40, opener: 90, about: 16 } as const;
+
+// ---------------------------------------------------------------------------
+// 点数（contracts 12）
+// ---------------------------------------------------------------------------
+
+/** 兑换码：`NM-XXXX-XXXX-XXXX-XXXX`，16 位 Crockford Base32（80 bit），只存哈希。 */
+export const REDEEM_CODE_PATTERN = /^NM-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}-[0-9A-HJKMNP-TV-Z]{4}$/;
+/** 一个兑换码的点数范围；一次给墙充值、每位成员上限的范围。 */
+export const REDEEM_CREDITS_RANGE = { min: 1, max: 100000 } as const;
+export const SPONSOR_CREDITS_RANGE = { min: 1, max: 100000 } as const;
+export const SPONSOR_MEMBER_CAP_RANGE = { min: 0, max: 10000 } as const;
+/** “点数”页显示的最近流水条数。 */
+export const CREDIT_HISTORY_LIMIT = 50;
 
 /** 一次托管任务的总时限。 */
 export const HOSTED_JOB_TIMEOUT_MS = 10 * 60 * 1000;

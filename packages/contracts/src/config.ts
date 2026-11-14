@@ -56,6 +56,8 @@ export interface NowmeConfig {
   trustProxyHops: number;
   /** 邮件发送（登录验证码）。不含 SMTP 密码本身。 */
   mail: MailConfig;
+  /** 点数与平台 AI（contracts 12）。不含平台模型的 API key 本身。 */
+  billing: BillingConfig;
   /** 本地数据目录（绝对路径，`NOWME_DATA_DIR`，默认 `<仓库根>/.data`）。 */
   dataDir: string;
   /** `NOWME_TICKET_SECRET`；为 null 时用 resolveTicketSecret() 读写 `<dataDir>/secret`。 */
@@ -73,6 +75,26 @@ export interface NowmeConfig {
    * 安装页与 install.md 多显示一种安装方式；都不设为 null。
    */
   skillMarket: SkillMarketConfig | null;
+}
+
+/**
+ * 点数与平台 AI（contracts 12）。
+ *
+ * 没有自己模型 Key 的用户用平台的 AI：采访与“和 TA 聊什么”不收点数（有每日上限），生成与修改页面按价目扣点数。
+ * 点数来自个人余额（兑换码）或墙的额度（组织者为整面墙买单）。用自己 Key 的用户不消耗点数。
+ */
+export interface BillingConfig {
+  /**
+   * 平台 AI 的模型服务（`NOWME_PLATFORM_PROVIDER` 等）；没有配置时为 null——此时只有自带 Key 的用户能用 AI，行为与之前相同。
+   * `ready` 只表示端点信息完整；API key（`NOWME_PLATFORM_API_KEY`）由主站从环境变量读取，不进配置对象。
+   */
+  platform: { interview: ModelEndpointConfig; generate: ModelEndpointConfig } | null;
+  /** 价目（点数）：生成一版页面、修改一次。0 表示不收。 */
+  prices: { generate: number; edit: number };
+  /** 新用户注册时赠送的点数（默认 0）。 */
+  signupCredits: number;
+  /** 平台 AI 免费调用（采访、和 TA 聊什么）的全站每日上限：防止批量注册消耗平台的模型费用。 */
+  freeDailyCalls: number;
 }
 
 /** 邮件发送方式（contracts 10.2）。SMTP 连接串含密码，只从环境变量读，不进配置对象。 */
@@ -185,6 +207,49 @@ export function loadMailConfig(env: Env): MailConfig {
 }
 
 export const TRUST_PROXY_HOPS_RANGE = { min: 0, max: 5 } as const;
+
+export const PRICE_RANGE = { min: 0, max: 10000 } as const;
+export const DEFAULT_PRICE_GENERATE = 10;
+export const DEFAULT_PRICE_EDIT = 4;
+export const DEFAULT_PLATFORM_FREE_DAILY_CALLS = 3000;
+export const PLATFORM_FREE_DAILY_CALLS_RANGE = { min: 1, max: 1000000 } as const;
+
+/**
+ * 点数与平台 AI 的配置。`NOWME_PLATFORM_PROVIDER` 没设置时平台 AI 关闭。
+ * 地址是否为公网 HTTPS 由主站在建立连接时校验（security/model-network.ts），这里只检查取值范围。
+ */
+export function loadBillingConfig(env: Env): BillingConfig {
+  const prices = {
+    generate: parseIntRange(env, 'NOWME_PRICE_GENERATE', DEFAULT_PRICE_GENERATE, PRICE_RANGE),
+    edit: parseIntRange(env, 'NOWME_PRICE_EDIT', DEFAULT_PRICE_EDIT, PRICE_RANGE),
+  };
+  const base = {
+    prices,
+    signupCredits: parseIntRange(env, 'NOWME_SIGNUP_CREDITS', 0, PRICE_RANGE),
+    freeDailyCalls: parseIntRange(env, 'NOWME_PLATFORM_FREE_DAILY_CALLS', DEFAULT_PLATFORM_FREE_DAILY_CALLS, PLATFORM_FREE_DAILY_CALLS_RANGE),
+  };
+  const provider = nonEmpty(env.NOWME_PLATFORM_PROVIDER);
+  if (provider === undefined) return { ...base, platform: null };
+  if (!(provider in MODEL_PROVIDER_PRESETS)) throw new ConfigError(`NOWME_PLATFORM_PROVIDER 不是支持的模型服务：${provider}`);
+  const visionRaw = nonEmpty(env.NOWME_PLATFORM_VISION);
+  if (visionRaw !== undefined && visionRaw !== '0' && visionRaw !== '1') throw new ConfigError('NOWME_PLATFORM_VISION 只能是 1 或 0');
+  const endpoint = (role: 'interview' | 'generate'): ModelEndpointConfig => {
+    const value = defaultModelEndpoint(provider as ModelProvider, role);
+    const baseUrl = nonEmpty(env.NOWME_PLATFORM_BASE_URL);
+    if (baseUrl !== undefined) value.baseUrl = baseUrl.replace(/\/+$/, '');
+    // 明确指定的优先；采访模型没单独指定时用服务预设的采访模型，预设也没有就和生成用同一个
+    const explicit = nonEmpty(role === 'interview' ? env.NOWME_PLATFORM_INTERVIEW_MODEL : env.NOWME_PLATFORM_MODEL);
+    value.model = explicit ?? value.model ?? (role === 'interview' ? (nonEmpty(env.NOWME_PLATFORM_MODEL) ?? null) : null);
+    if (!value.model || !/^[A-Za-z0-9][A-Za-z0-9._\-:@/\[\]]{0,199}$/.test(value.model)) {
+      throw new ConfigError(`平台 AI 缺少${role === 'interview' ? '采访' : '生成'}模型：请设置 NOWME_PLATFORM_${role === 'interview' ? 'INTERVIEW_' : ''}MODEL`);
+    }
+    if (value.protocol === 'openai' && !value.baseUrl) throw new ConfigError('这个模型服务需要设置 NOWME_PLATFORM_BASE_URL');
+    if (visionRaw !== undefined) value.vision = visionRaw === '1';
+    value.ready = true;
+    return value;
+  };
+  return { ...base, platform: { interview: endpoint('interview'), generate: endpoint('generate') } };
+}
 
 function parseOrigin(env: Env, name: string, fallback: string): string {
   const raw = nonEmpty(env[name]) ?? fallback;
@@ -301,6 +366,7 @@ export function loadConfig(env: Env = process.env): NowmeConfig {
     pages,
     trustProxyHops: parseIntRange(env, 'NOWME_TRUST_PROXY', 0, TRUST_PROXY_HOPS_RANGE),
     mail: loadMailConfig(env),
+    billing: loadBillingConfig(env),
     dataDir,
     ticketSecret,
     agentTokenTtlHours: parseTtlHours(env.NOWME_AGENT_TOKEN_TTL_HOURS),
@@ -360,6 +426,9 @@ export function checkProductionConfig(config: NowmeConfig, env: Env, role: 'web'
   if (role === 'web') {
     if (!/^[0-9a-fA-F]{64}$/.test(nonEmpty(env.NOWME_AI_ENCRYPTION_KEY) ?? '')) {
       errors.push('NOWME_AI_ENCRYPTION_KEY 必须是 64 位十六进制（openssl rand -hex 32）：没有它用户无法保存模型 Key，网页创作不可用');
+    }
+    if (config.billing.platform && nonEmpty(env.NOWME_PLATFORM_API_KEY) === undefined) {
+      errors.push('设置了 NOWME_PLATFORM_PROVIDER 但没有 NOWME_PLATFORM_API_KEY：平台 AI 无法调用模型');
     }
     if (config.mail.transport === 'file') {
       errors.push('NOWME_MAIL_TRANSPORT=file 只把验证码写进本地文件，真实用户收不到：生产环境请配置 smtp');

@@ -41,8 +41,13 @@ export function registerAiSettingsRoutes(app: AppHono, deps: AppDeps): void {
     const generate = deps.userModels.summary(auth.user.id, 'generate');
     return renderPage(c, { title: 'AI 设置', bodyClass: 'page--ai', status, body: <div class="container container--form stack">
       <h1>使用自己的 AI 服务</h1>
-      <p>NOWMe 免费提供创作与页面托管。采访、生成和修改由平台服务器使用你的 API Key 请求你选择的模型服务，模型费用由该服务商向你收取。失败的请求也可能产生费用。</p>
-      <p class="muted">Key 加密保存在你的账号下，其他设备登录后可继续使用；只有你能管理。平台不提供公共 Key，也不会替你支付模型费用。</p>
+      {deps.platformModel.available ? (
+        <Notice tone="info">
+          不填也能用：没有自己的 Key 时，NOWMe 的 AI 会帮你做页面（生成与修改消耗<a href="/account/credits">点数</a>）。填了自己的 Key 之后，就改用你的 Key，不再消耗点数。
+        </Notice>
+      ) : null}
+      <p>采访、生成和修改由平台服务器使用你的 API Key 请求你选择的模型服务，模型费用由该服务商向你收取。失败的请求也可能产生费用。</p>
+      <p class="muted">Key 加密保存在你的账号下，其他设备登录后可继续使用；只有你能管理。{deps.platformModel.available ? '用自己的 Key 时，平台不会替你支付模型费用。' : '平台不提供公共 Key，也不会替你支付模型费用。'}</p>
       {!deps.userModels.available ? <Notice tone="error">平台尚未配置凭证加密功能，暂时无法保存或使用 API Key。请联系维护者；你仍可使用本地 Agent 创作。</Notice> : null}
       {error ? <Notice tone="error">{error}</Notice> : null}
       {c.req.query('saved') === '1' ? <Notice tone="info">配置已保存。你可以返回创作工作区继续；保存配置不会调用模型。</Notice> : null}

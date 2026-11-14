@@ -5,6 +5,7 @@
  * 工作区链接或个人浏览数据（S5，test/security/wall-admin.security.test.ts 守住）。
  */
 import type { FC } from 'hono/jsx';
+import type { WallCredits } from '../services/billing.js';
 import type { AdminMemberRow } from '../db/wall-queries.js';
 import type { Wall } from '../db/walls.js';
 import { formatDateTime } from '../format.js';
@@ -13,9 +14,25 @@ import { PAGE_STATE_LABEL } from './home.js';
 import { initialOf } from './layout.js';
 import { defaultWallCover } from './home.js';
 
-export type AdminNotice = 'created' | 'removed' | 'cover-updated' | 'cover-deleted';
+export type AdminNotice = 'created' | 'removed' | 'cover-updated' | 'cover-deleted' | 'credits-saved';
+
+/** 墙的 AI 额度（contracts 12）：只有聚合数字，没有任何成员的明细。演示模式与平台 AI 未开放时为 null。 */
+export interface AdminCredits {
+  wall: WallCredits;
+  /** 组织者自己的余额。 */
+  balance: number;
+  prices: { generate: number; edit: number };
+  error: 'bad-amount' | 'bad-cap' | 'insufficient' | null;
+}
+
+const CREDITS_ERROR_TEXT: Record<NonNullable<AdminCredits['error']>, string> = {
+  'bad-amount': '充入的点数要填 0 到 100000 的整数。',
+  'bad-cap': '每位成员上限要填 0 到 10000 的整数（0 表示不限）。',
+  insufficient: '你的点数不够这次充入。先去“点数”页用兑换码补充。',
+};
 
 const NOTICE_TEXT: Record<AdminNotice, string> = {
+  'credits-saved': '墙的 AI 额度已更新。',
   created: '墙建好了！把下面的邀请链接或二维码发出去，大家打开、登录就能加入。你自己的页面也在这面墙上，回到墙里点“我的页面”就能开始做。',
   removed: '已移出：TA 的页面已立即从墙上消失，本地 Agent 的连接也已断开。TA 不能再通过邀请加入。',
   'cover-updated': '墙封面已更新，成员会在首页看到新封面。',
@@ -31,6 +48,7 @@ export interface AdminModel {
   inviteQr: string;
   members: AdminMemberRow[];
   counts: { members: number; published: number };
+  credits: AdminCredits | null;
 }
 
 export interface AdminViewProps {
@@ -141,6 +159,45 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError,
             </form>
             {model.coverUrl ? <form method="post" action={`/w/${wall.id}/admin/cover/delete`} class="wall-cover-settings__delete"><CsrfField token={csrf} /><button type="submit" class="btn btn--ghost btn--small">移除封面，恢复默认</button></form> : null}
           </section>
+          {model.credits ? (
+            <section class="card wall-credits" id="credits" aria-labelledby="credits-heading">
+              <h2 id="credits-heading">给成员的 AI 额度</h2>
+              <p class="muted">
+                成员用 NOWMe 的 AI 做页面要点数（生成一版 {model.credits.prices.generate} 点，修改一次 {model.credits.prices.edit} 点）。你可以为整面墙充一笔额度：成员做页面时先用墙的，用完才用自己的。
+              </p>
+              <dl class="stat-tiles">
+                <div class="stat-tile stat-tile--accent">
+                  <dt>墙的额度</dt>
+                  <dd>{model.credits.wall.balance}</dd>
+                </div>
+                <div class="stat-tile">
+                  <dt>已用掉</dt>
+                  <dd>{model.credits.wall.spent}</dd>
+                </div>
+              </dl>
+              {model.credits.error ? <Notice tone="error">{CREDITS_ERROR_TEXT[model.credits.error]}</Notice> : null}
+              <form method="post" action={`/w/${wall.id}/admin/credits`} class="stack">
+                <CsrfField token={csrf} />
+                <label class="field" for="wall-credits-amount">
+                  从我的点数里充入（我有 {model.credits.balance} 点）
+                  <input id="wall-credits-amount" type="number" name="credits" min="0" max="100000" step="1" inputmode="numeric" placeholder="0" />
+                </label>
+                <label class="field" for="wall-credits-cap">
+                  每位成员最多用多少点
+                  <input id="wall-credits-cap" type="number" name="memberCap" min="0" max="10000" step="1" inputmode="numeric" value={String(model.credits.wall.memberCap)} aria-describedby="wall-credits-cap-help" />
+                </label>
+                <p id="wall-credits-cap-help" class="field-help">
+                  0 表示不限。比如填 {model.credits.prices.generate + 2 * model.credits.prices.edit}，够每人生成一版、再改两次。
+                </p>
+                <button type="submit" class="btn btn--primary">
+                  保存
+                </button>
+              </form>
+              <p class="muted">
+                这里只显示总数，看不到每位成员用了多少。关闭这面墙时，没用完的额度会退回你的点数。 <a href="/account/credits">我的点数</a>
+              </p>
+            </section>
+          ) : null}
           <section class="card overview" aria-labelledby="overview-heading">
             <h2 id="overview-heading">概况</h2>
             <dl class="stat-tiles">

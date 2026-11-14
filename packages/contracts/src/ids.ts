@@ -76,6 +76,9 @@ export const ID_PREFIXES = {
   generationJob: 'gen',
   // “和 TA 聊什么”（contracts 11）
   icebreaker: 'ice',
+  // 点数（contracts 12）
+  creditEntry: 'cre',
+  redeemCode: 'rdc',
 } as const;
 
 export type IdKind = keyof typeof ID_PREFIXES;

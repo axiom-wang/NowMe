@@ -34,7 +34,9 @@ import { createRealRemoteRenderer, createRemotePreviewService, type RemoteRender
 import { loadSkillPackage, type SkillPackage } from './services/skill-package.js';
 import { SKILL_PACKAGE_DIR } from '@nowme/skill';
 import { type ModelClient } from './hosted/model-client.js';
-import { createUserModels } from './hosted/user-models.js';
+import { ModelAccessError } from './hosted/model-errors.js';
+import { createPlatformModel } from './hosted/platform-model.js';
+import { createUserModels, type ModelRole, type ResolvedModel } from './hosted/user-models.js';
 import type { ModelLookup } from './security/model-network.js';
 import { resolve } from 'node:path';
 import type { DemoAccess } from './demo-access.js';
@@ -66,6 +68,8 @@ export interface CreateWebAppOptions {
   model?: ModelClient;
   /** 只读取 NOWME_AI_ENCRYPTION_KEY、开发本机访问开关与 NOWME_SMTP_URL（发信连接串），不读取模型 Key。 */
   secretEnv?: Readonly<Record<string, string | undefined>>;
+  /** 非生产环境测试注入：把这个客户端当作平台 AI 的模型（需要同时配置 NOWME_PLATFORM_PROVIDER）。 */
+  platformModel?: ModelClient;
   /** OpenAI 兼容服务的 fetch（测试注入模拟服务）。 */
   modelFetch?: typeof fetch;
   modelLookup?: ModelLookup;
@@ -121,7 +125,17 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
     allowLocal: !config.isProduction && options.secretEnv?.NOWME_AI_ALLOW_LOCAL === '1',
     fetch: options.modelFetch, lookup: options.modelLookup, now,
   });
-  const deps: AppDeps = { demo: options.demo ?? null, userModels, config, db, repos, now, kitFonts, tickets, submissions, outbox, rateLimiter: createRateLimiter(now), hosted: null, skillPackage, remotePreview, log };
+  // 平台 AI（contracts 12）：没有配置时不可用，只有自带 Key 的用户能用 AI
+  const platformModel = createPlatformModel({
+    config: config.billing.platform,
+    apiKey: options.secretEnv?.NOWME_PLATFORM_API_KEY,
+    allowLocal: !config.isProduction && options.secretEnv?.NOWME_AI_ALLOW_LOCAL === '1',
+    fetch: options.modelFetch,
+    lookup: options.modelLookup,
+    client: config.isProduction ? undefined : options.platformModel,
+    log,
+  });
+  const deps: AppDeps = { demo: options.demo ?? null, userModels, platformModel, config, db, repos, now, kitFonts, tickets, submissions, outbox, rateLimiter: createRateLimiter(now), hosted: null, skillPackage, remotePreview, log };
   deps.hosted = createHosted(deps, options);
 
   const app: AppHono = new Hono<AppEnv>();
@@ -200,12 +214,24 @@ function createHosted(deps: AppDeps, options: CreateWebAppOptions): HostedServic
   if (!settings.enabled) return null;
   if (deps.config.isProduction && (settings.fake || options.model)) throw new Error('生产环境不能注入测试模型');
   const fake = settings.fake ? options.model ?? createFakeModel() : null;
+  const platform = deps.platformModel;
+  const fakeModel = (role: ModelRole): ResolvedModel => ({ client: fake!, endpoint: { ...settings[role], ready: true } });
+  const ownReady = (userId: string) => !!fake || deps.userModels.ready(userId);
+  // 平台 AI 的免费调用（采访、和 TA 聊什么）有全站每日上限：防止批量注册消耗平台的模型费用
+  const platformFree = (role: ModelRole): ResolvedModel => {
+    if (!deps.rateLimiter.hit('platform-free', 'all', { max: deps.config.billing.freeDailyCalls, windowMs: 24 * 3600 * 1000 }).ok) {
+      deps.log('[web] 平台 AI 的每日免费调用已达上限（NOWME_PLATFORM_FREE_DAILY_CALLS）');
+      throw new ModelAccessError('MODEL_UNAVAILABLE');
+    }
+    return platform.resolve(role);
+  };
   return createHostedService(deps, {
     settings,
-    ready: (userId) => !!fake || deps.userModels.ready(userId),
-    resolve: (userId, role) => fake
-      ? { client: fake, endpoint: { ...settings[role], ready: true } }
-      : deps.userModels.resolve(userId, role),
+    ready: (userId) => ownReady(userId) || platform.available,
+    ownReady,
+    platformAvailable: platform.available,
+    resolve: (userId, role) => (fake ? fakeModel(role) : deps.userModels.ready(userId) ? deps.userModels.resolve(userId, role) : platformFree(role)),
+    resolveJob: (userId, source) => (fake ? fakeModel('generate') : source === 'own' ? deps.userModels.resolve(userId, 'generate') : platform.resolve('generate')),
     previewer: options.previewer ?? createRenderPreviewer(), tempRoot: options.hostedTempRoot,
   });
 }

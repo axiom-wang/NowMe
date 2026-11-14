@@ -20,13 +20,15 @@ import { findMemberWall, findOrganizerWall } from '../services/access.js';
 import { uploadWallCover } from '../services/wall-cover.js';
 import { qrSvgDataUri } from '../services/qr.js';
 import { closeWall, removeMember } from '../services/walls.js';
-import { AdminView, type AdminModel, type AdminNotice } from '../views/admin.js';
+import { userAccount, wallCredits } from '../services/billing.js';
+import { AdminView, type AdminCredits, type AdminModel, type AdminNotice } from '../views/admin.js';
 import { renderNotFound } from '../views/errors.js';
 import { renderPage } from '../views/layout.js';
 import { sceneLabels } from './home.js';
 import { invitePath, wallPath } from './walls.js';
 
-const NOTICES: ReadonlySet<string> = new Set<AdminNotice>(['created', 'removed', 'cover-updated', 'cover-deleted']);
+const NOTICES: ReadonlySet<string> = new Set<AdminNotice>(['created', 'removed', 'cover-updated', 'cover-deleted', 'credits-saved']);
+const CREDITS_ERRORS: ReadonlySet<string> = new Set(['bad-amount', 'bad-cap', 'insufficient']);
 
 export function registerAdminRoutes(app: AppHono, deps: AppDeps): void {
   const user = requireUser(deps);
@@ -34,7 +36,7 @@ export function registerAdminRoutes(app: AppHono, deps: AppDeps): void {
   const coverForm = requireForm(deps, { multipartFiles: 'cover' });
   const labels = sceneLabels();
 
-  function adminModel(wall: Wall): AdminModel {
+  function adminModel(wall: Wall, organizerId: string, creditsError: string | undefined): AdminModel {
     const queries = wallQueries(deps.db);
     const members = queries.listMembersForAdmin(wall.id);
     const inviteUrl = `${deps.config.webOrigin}${invitePath(wall.inviteCode)}`;
@@ -46,6 +48,16 @@ export function registerAdminRoutes(app: AppHono, deps: AppDeps): void {
       inviteQr: qrSvgDataUri(inviteUrl),
       members,
       counts: { members: members.length, published: queries.countPublished(wall.id) },
+      // 墙的 AI 额度（contracts 12）：平台 AI 开放时才有意义；只有聚合数字
+      credits:
+        !deps.demo && deps.platformModel.available
+          ? {
+              wall: wallCredits(deps, wall.id),
+              balance: deps.repos.credits.balanceOf(userAccount(organizerId)),
+              prices: deps.config.billing.prices,
+              error: creditsError && CREDITS_ERRORS.has(creditsError) ? (creditsError as NonNullable<AdminCredits['error']>) : null,
+            }
+          : null,
     };
   }
 
@@ -54,7 +66,7 @@ export function registerAdminRoutes(app: AppHono, deps: AppDeps): void {
       title: `${wall.name} · 组织者后台`,
       status: options.status,
       body: (
-        <AdminView model={adminModel(wall)} csrf={authOf(c).session.csrfToken} notice={options.notice ?? null} closeError={options.closeError} coverError={options.coverError} />
+        <AdminView model={adminModel(wall, authOf(c).user.id, c.req.query('credits'))} csrf={authOf(c).session.csrfToken} notice={options.notice ?? null} closeError={options.closeError} coverError={options.coverError} />
       ),
     });
   }

@@ -27,8 +27,10 @@ import type { Page } from '../db/pages.js';
 import { wallQueries } from '../db/wall-queries.js';
 import type { Wall } from '../db/walls.js';
 import { disconnectAgent } from './agent.js';
+import { returnWallCredits } from './billing.js';
 
 type WallDeps = Pick<AppDeps, 'db' | 'repos' | 'now'>;
+
 
 export interface CreateWallInput {
   organizerId: string;
@@ -279,6 +281,8 @@ export function closeWall(deps: WallDeps, wall: Wall, organizerId: string): Clos
     let revokedCredentials = 0;
     for (const pageId of queries.pageIdsForWall(wall.id)) revokedCredentials += disconnectAgent(deps, pageId);
     deps.repos.icebreakers.deleteForWall(wall.id);
+    // 墙的剩余额度退回组织者的个人余额（contracts 12）
+    returnWallCredits(deps, wall);
     recordEvent(deps, 'wall_closed', {
       wallId: wall.id,
       actorId: organizerId,

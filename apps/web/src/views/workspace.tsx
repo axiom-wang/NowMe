@@ -14,7 +14,7 @@ import { PageFrame } from './page-frame.js';
 import { MoreActionsSection, PublishForm, WallStatusSection } from './publish.js';
 import { ReportView } from './report.js';
 import { CopyBlock } from './skill.js';
-import { EditForm, JOB_START_ERROR_TEXT } from './hosted.js';
+import { allowanceText, EditForm, JOB_START_ERROR_TEXT, priceText } from './hosted.js';
 
 const NOTICE_TEXT: Record<WorkspaceNotice, { tone: 'success' | 'warning' | 'error'; text: string; link?: { href: string; label: string } }> = {
   disconnected: { tone: 'success', text: '已断开本地 Agent：旧的页面凭证与未使用的指令都已失效。需要时重新生成指令即可。' },
@@ -240,7 +240,7 @@ const HostedSection: FC<{ model: WorkspaceModel }> = ({ model }) => {
   return (
     <section class="card ws-hosted" id="hosted" aria-labelledby="hosted-heading">
       <h2 id="hosted-heading">在这里创作</h2>
-      <p class="muted">{hosted.demo ? overview.modelReady ? DEMO_MODEL_READY : DEMO_MODEL_MISSING : '填写你自己的 AI API，在应用里点选几道题、上传几张图，AI 按同一份 NOWMe Skill 帮你做页面。模型费用由服务商向你收取。'}</p>
+      <p class="muted">{hosted.demo ? overview.modelReady ? DEMO_MODEL_READY : DEMO_MODEL_MISSING : overview.ai.mode === 'platform' ? '在应用里点选几道题、上传几张图，AI 按同一份 NOWMe Skill 帮你做页面。' : '填写你自己的 AI API，在应用里点选几道题、上传几张图，AI 按同一份 NOWMe Skill 帮你做页面。模型费用由服务商向你收取。'}</p>
       {hosted.error ? <Notice tone="error">{(hosted.demo ? demoModelError(hosted.error) : null) ?? JOB_START_ERROR_TEXT[hosted.error]}</Notice> : null}
       <dl class="facts">
         <div>
@@ -249,8 +249,16 @@ const HostedSection: FC<{ model: WorkspaceModel }> = ({ model }) => {
         </div>
         <div>
           <dt>AI 服务</dt>
-          <dd>{hosted.demo ? overview.modelReady ? '演示模型已配置' : '请维护者补齐配置' : <>{overview.modelReady ? '已配置自己的 API' : '尚未配置'} · <a href="/account/ai">AI 设置</a></>}</dd>
+          <dd>{hosted.demo ? overview.modelReady ? '演示模型已配置' : '请维护者补齐配置' : overview.ai.mode === 'platform' ? <>NOWMe 的 AI · <a href="/account/ai">改用自己的 Key</a></> : <>{overview.modelReady ? '已配置自己的 API（不消耗点数）' : '尚未配置'} · <a href="/account/ai">AI 设置</a></>}</dd>
         </div>
+        {!hosted.demo && overview.ai.mode === 'platform' ? (
+          <div>
+            <dt>点数</dt>
+            <dd>
+              {priceText(overview.ai.prices)}。{allowanceText(overview.ai)} · <a href="/account/credits">点数</a>
+            </dd>
+          </div>
+        ) : null}
       </dl>
       {overview.activeJob ? (
         <Notice tone="info">

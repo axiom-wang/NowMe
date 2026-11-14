@@ -20,7 +20,7 @@ import { authOf, requireUser } from '../security/session.js';
 import { findOwnPage, type OwnPage } from '../services/access.js';
 import { renderNotFound } from '../views/errors.js';
 import { demoModelError } from '../demo-access.js';
-import { BriefPageView, CreateView, JOB_START_ERROR_TEXT, JobView, MyDataView, STEP_ERROR_TEXT } from '../views/hosted.js';
+import { BriefPageView, CreateView, JOB_START_ERROR_TEXT, JobView, MyDataView, STEP_ERROR_TEXT, type JobCharge } from '../views/hosted.js';
 import { renderPage } from '../views/layout.js';
 
 const STEP_ERRORS = new Set(Object.keys(STEP_ERROR_TEXT));
@@ -94,6 +94,24 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     return own ? { own, hosted: deps.hosted } : null;
   };
 
+  /** 隐私说明里“发给哪家模型服务”：自己配置的服务，或平台 AI 用的服务。 */
+  const providersFor = (userId: string): string => {
+    if (deps.config.hosted.fake) return '测试用的假模型';
+    const labels = deps.userModels.ready(userId)
+      ? (['interview', 'generate'] as const).map((role) => deps.userModels.summary(userId, role)?.endpoint.label)
+      : deps.platformModel.available && deps.config.billing.platform
+        ? [deps.config.billing.platform.interview.label, deps.config.billing.platform.generate.label]
+        : [];
+    return labels.filter((value, i, all) => value && all.indexOf(value) === i).join('、') || '你配置的服务';
+  };
+
+  /** 任务的点数情况（只读流水；页面主人才能走到这里）。 */
+  const jobCharge = (jobId: string): JobCharge | null => {
+    const charge = deps.repos.credits.findJobEntry('job', jobId);
+    if (!charge) return null;
+    return { credits: -charge.delta, payer: charge.account.kind, refunded: deps.repos.credits.findJobEntry('job_refund', jobId) !== null };
+  };
+
   const renderCreate = (c: Context<AppEnv>, own: OwnPage, hosted: HostedService, error: string | null, status = 200) => {
     const auth = authOf(c);
     return renderPage(c, {
@@ -108,7 +126,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
             scene: hosted.scene(own),
             examples: loadExamplesIndex().examples,
             demo: !!deps.demo,
-            providers: deps.config.hosted.fake ? '测试用的假模型' : (['interview', 'generate'] as const).map((role) => deps.userModels.summary(auth.user.id, role)?.endpoint.label).filter((value, i, all) => value && all.indexOf(value) === i).join('、') || '你配置的服务',
+            providers: providersFor(auth.user.id),
             overview: hosted.overview(own, auth.user.id),
             error,
           }}
@@ -232,6 +250,8 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
           demo={!!deps.demo}
           wall={found.own.wall}
           job={job}
+          charge={jobCharge(job.id)}
+          platform={!deps.userModels.ready(auth.user.id) && deps.platformModel.available}
           revisionNumber={revision?.pageId === found.own.page.id ? revision.number : null}
           csrf={auth.session.csrfToken}
           blocks={base?.pageId === found.own.page.id ? base.report.stats.blocks : []}

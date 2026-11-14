@@ -21,7 +21,9 @@ import type { AppDeps } from '../context.js';
 import { transaction } from '../db/index.js';
 import type { BriefAsset, BriefRecord, GenerationJob, JobKind, JobUsage, ProfileCategory } from '../db/hosted.js';
 import type { EventProps } from '../db/events.js';
+import { InsufficientCredits } from '../db/credits.js';
 import { findOwnPage, type OwnPage } from '../services/access.js';
+import { aiStatus, chargeJob, planJob, refundUnsettledJobs, settleJob, type AiStatus } from '../services/billing.js';
 import { buildAgentContext } from '../services/agent.js';
 import { createSerialQueue } from '../services/queue.js';
 import { revisionDir, REVISION_ORIGINAL_DIR } from '../services/revision-storage.js';
@@ -47,9 +49,19 @@ type HostedDeps = Pick<AppDeps, 'config' | 'db' | 'repos' | 'now' | 'kitFonts' |
 
 export interface HostedServiceOptions {
   settings: HostedConfig;
-  /** 采访与生成各用一个客户端（可以是不同的模型服务，hosted-route 1.1）。 */
+  /**
+   * 不收点数的调用（采访、和 TA 聊什么）用的客户端：用户有自己的模型配置就用自己的，否则用平台 AI（contracts 12）。
+   * 采访与生成可以是不同的模型（hosted-route 1.1）。
+   */
   resolve(userId: string, role: ModelRole): ResolvedModel;
+  /** 这个用户现在能不能用 AI（自己的配置或平台 AI，任一可用）。 */
   ready(userId: string): boolean;
+  /** 这个用户有没有自己的、可用的模型配置（不算平台 AI）。 */
+  ownReady(userId: string): boolean;
+  /** 平台 AI 是否可用。 */
+  platformAvailable: boolean;
+  /** 生成 / 修改任务用的客户端：按计划里的来源取（`planJob`）。 */
+  resolveJob(userId: string, source: 'own' | 'platform'): ResolvedModel;
   previewer: PagePreviewer;
   /** 任务临时目录的父目录，默认 `os.tmpdir()`（测试用来断言任务结束后目录被删除）。 */
   tempRoot?: string;
@@ -69,7 +81,7 @@ export type StepError =
   | 'note-empty';
 export type StepResult = { ok: true } | { ok: false; error: StepError };
 
-export type JobStartError = ModelAccessCode | 'busy' | 'daily' | 'no-brief' | 'no-revision' | 'bad-block' | 'bad-request';
+export type JobStartError = ModelAccessCode | 'busy' | 'daily' | 'no-brief' | 'no-revision' | 'bad-block' | 'bad-request' | 'credits';
 export type JobStartResult = { ok: true; job: GenerationJob } | { ok: false; error: JobStartError };
 
 /** 解析后的 brief 状态（只给主人）。 */
@@ -83,6 +95,8 @@ export interface BriefView {
 
 export interface HostedOverview {
   modelReady: boolean;
+  /** 用谁的模型、要不要点数、够不够（contracts 12）。 */
+  ai: AiStatus;
   brief: BriefView | null;
   activeJob: GenerationJob | null;
   recentJobs: GenerationJob[];
@@ -150,12 +164,12 @@ export const JOB_ERROR_TEXT: Record<string, string> = {
   MODEL_CONFIG: 'AI 配置缺失、已更换或无法解密，请在 AI 设置中重新保存后再试。',
   MODEL_AUTH: '模型服务拒绝了凭证，请在 AI 设置中检查 API Key、模型权限和服务地址。',
   MODEL_RATE_LIMITED: '模型服务限流或账号余额不足，请检查服务商账号后再试。',
-  MODEL_UNAVAILABLE: '暂时连不上你配置的模型服务，请检查服务地址或稍后再试。',
+  MODEL_UNAVAILABLE: '暂时连不上 AI 模型服务，请稍后再试。',
   REJECTED: '生成的页面没有通过平台校验，没有保存。可以再试一次。',
   MAX_TURNS: '这次生成用了太多步还没完成，已停止。可以再试一次。',
   NO_FINISH: '这次生成没有正常结束。可以再试一次。',
   TIMEOUT: '这次生成超时了。可以再试一次。',
-  API_ERROR: '暂时连不上生成服务。请检查 AI 设置或稍后再试。',
+  API_ERROR: '暂时连不上生成服务，请稍后再试。',
   REFUSED: '生成服务拒绝了这次请求。可以换一种说法再试。',
   RATE_LIMITED: '这一页今天的版本数已达上限，明天再试。',
   PAGE_GONE: '这一页已经不可用（可能已退出墙或页面已删除），结果没有保存。',
@@ -170,6 +184,10 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
 
   const interrupted = repos.jobs.interruptAll(deps.now().toISOString());
   if (interrupted > 0) deps.log(`[web] ${interrupted} 个托管任务因服务重启被标记为失败`);
+  // 被打断的任务如果扣过点数，在这里退回（contracts 12：没有产出新版本就不收）
+  const refunded = refundUnsettledJobs(deps);
+  if (refunded > 0) deps.log(`[web] ${refunded} 个被打断的任务已退回点数`);
+  const access = (userId: string) => ({ ownReady: options.ownReady(userId), platformAvailable: options.platformAvailable });
 
   const sinceDay = () => new Date(deps.now().getTime() - DAY_MS).toISOString();
   const countInterviewCalls = db.prepare("SELECT COUNT(*) AS n FROM events WHERE type = 'hosted_interview_call' AND page_id = ? AND created_at > ?");
@@ -315,12 +333,14 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
     const finish = (status: 'succeeded' | 'failed' | 'needs_input', input: { revisionId?: string; errorCode?: string; message?: string; httpStatus?: number | null }) => {
       const ok = status === 'succeeded';
       const jobUsage: JobUsage = { turns, ...usage };
+      // 结算点数：成功才保留扣点；失败、需要补充说明都全额退回
+      const charged = settleJob(deps, jobId, ok);
       repos.jobs.finish(jobId, {
         status,
         revisionId: input.revisionId ?? null,
         errorCode: input.errorCode ?? null,
         resultMessage: input.message ?? null,
-        charged: false,
+        charged,
         usage: jobUsage,
         finishedAt: deps.now().toISOString(),
       });
@@ -418,6 +438,7 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
     overview(own, userId) {
       return {
         modelReady: options.ready(userId),
+        ai: aiStatus(deps, userId, own.wall.id, access(userId)),
         brief: loadBrief(own, userId),
         activeJob: repos.jobs.findActive(own.page.id),
         recentJobs: repos.jobs.listRecent(own.page.id, userId, 5),
@@ -597,10 +618,12 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
     },
 
     startJob(own, userId, request) {
-      if (!options.ready(userId)) return { ok: false, error: 'MODEL_CONFIG' };
-      const model = options.resolve(userId, 'generate');
+      // 用谁的模型、收多少点、谁付（contracts 12）。这里只是计划；扣点在下面创建任务的事务里，届时再检查一次余额
+      const plan = planJob(deps, userId, own.wall.id, request.kind, access(userId));
+      if (!plan.ok) return { ok: false, error: plan.error };
+      const model = options.resolveJob(userId, plan.source);
       const nowIso = deps.now().toISOString();
-      const result = transaction(db, (): JobStartResult => {
+      const start = (): JobStartResult => transaction(db, (): JobStartResult => {
         if (repos.jobs.findActive(own.page.id)) return { ok: false, error: 'busy' };
         if (repos.jobs.countSince(own.page.id, sinceDay()) >= settings.dailyAttempts) return { ok: false, error: 'daily' };
         let baseRevisionId: string | null = null;
@@ -626,8 +649,17 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
         }
         const id = generateId('gen');
         repos.jobs.create({ id, pageId: own.page.id, ownerId: userId, kind: request.kind, baseRevisionId, targetBlock, requestText, createdAt: nowIso });
+        chargeJob(deps, id, plan, userId);
         return { ok: true, job: repos.jobs.findById(id) as GenerationJob };
       });
+      let result: JobStartResult;
+      try {
+        result = start();
+      } catch (error) {
+        // 计划之后余额被别的任务用掉了：事务已回滚，任务没有创建
+        if (!(error instanceof InsufficientCredits)) throw error;
+        result = { ok: false, error: 'credits' };
+      }
       if (result.ok) {
         const jobId = result.job.id;
         void queue.run(() => runJob(jobId, model)).catch((error: unknown) => deps.log(`[web] 托管任务 ${jobId} 未捕获的错误`));

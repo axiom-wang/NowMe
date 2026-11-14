@@ -28,7 +28,8 @@
     "seed": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/seed.ts",
     "demo": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/demo.ts",
     "fonts:build": "tsx --conditions=source scripts/build-ui-fonts.ts",
-    "stats": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/stats.ts"
+    "stats": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/stats.ts",
+    "credits": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/credits.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "catalog:",

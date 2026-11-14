@@ -1,0 +1,85 @@
+/* 点数（contracts 12）：“点数”页与组织者后台的墙额度。 */
+
+.credits-balance__number {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 0 0 8px;
+}
+
+.credits-balance__number strong {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 3.2rem;
+  line-height: 1;
+  letter-spacing: -0.03em;
+}
+
+.credits-balance__number span {
+  font-family: var(--font-display);
+  font-size: 1.2rem;
+  color: var(--ink-2);
+}
+
+.credits-code {
+  font-family: var(--font-mono);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.credits-history {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.credits-history__row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding: 12px 0;
+  border-top: 1px dashed var(--line);
+}
+
+.credits-history__row:first-child {
+  border-top: 0;
+}
+
+.credits-history__what {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  font-weight: 600;
+}
+
+.credits-history__when {
+  font-size: 0.8rem;
+  font-weight: 400;
+}
+
+.credits-history__delta {
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 1.05rem;
+  text-align: right;
+}
+
+.credits-history__delta--in {
+  color: var(--ok);
+}
+
+.credits-history__after {
+  min-width: 4.5em;
+  font-size: 0.82rem;
+  text-align: right;
+}
+
+.wall-credits .stat-tiles {
+  margin: 12px 0 16px;
+}
+
+.job-charge {
+  margin: 0;
+}

@@ -45,4 +45,6 @@ export const RATE_RULES = {
   agentExchange: { max: 60, windowMs: 10 * 60 * 1000 },
   /** 同一用户发消息（群聊 + 私聊合计）。 */
   chatSend: { max: 40, windowMs: 60 * 1000 },
+  /** 同一用户尝试兑换码。 */
+  redeem: { max: 10, windowMs: 10 * 60 * 1000 },
 } as const;

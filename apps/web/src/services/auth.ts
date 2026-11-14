@@ -23,6 +23,7 @@ import { EMAIL_MAX_LENGTH, LOGIN_CODE_RATE_MAX, LOGIN_CODE_RATE_WINDOW_SECONDS, 
 import type { AppDeps, SessionAuth } from '../context.js';
 import { transaction } from '../db/index.js';
 import type { User } from '../db/users.js';
+import { grantSignupCredits } from './billing.js';
 
 const EMAIL_PATTERN = /^[^\s@<>"'`]+@[^\s@<>"'`]+\.[^\s@<>"'`.]+$/;
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
@@ -107,7 +108,7 @@ export type VerifyCodeResult =
 
 /** 校验验证码；成功时找到或创建用户。每次尝试都计数，第 5 次失败后验证码作废。 */
 export function verifyLoginCode(
-  deps: Pick<AppDeps, 'db' | 'repos' | 'now'>,
+  deps: Pick<AppDeps, 'db' | 'repos' | 'now' | 'config'>,
   email: string,
   rawCode: string | undefined,
 ): VerifyCodeResult {
@@ -131,9 +132,10 @@ export function verifyLoginCode(
       return { ok: false, reason: 'mismatch', remaining: LOGIN_CODE_MAX_ATTEMPTS - attempts };
     }
     if (!repos.loginCodes.markUsed(record.id, nowIso)) return { ok: false, reason: 'no_code' };
-    const user =
-      repos.users.findByEmail(email) ??
-      repos.users.create({ id: generateId('usr'), email, nickname: null, createdAt: nowIso });
+    const existing = repos.users.findByEmail(email);
+    const user = existing ?? repos.users.create({ id: generateId('usr'), email, nickname: null, createdAt: nowIso });
+    // 新用户的注册赠送点数（contracts 12；配置为 0 时不做任何事）
+    if (!existing) grantSignupCredits(deps, user.id);
     return { ok: true, user };
   });
 }

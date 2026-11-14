@@ -28,6 +28,7 @@ describe('loadConfig', () => {
       pages: { hostname: '127.0.0.1', port: 4000 },
       trustProxyHops: 0,
       mail: { transport: 'file', from: null },
+      billing: { platform: null, prices: { generate: 10, edit: 4 }, signupCredits: 0, freeDailyCalls: 3000 },
       dataDir: resolve(REPO_ROOT, '.data'),
       ticketSecret: null,
       agentTokenTtlHours: 72,

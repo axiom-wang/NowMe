@@ -20,6 +20,7 @@ import { createSessionsRepo } from './sessions.js';
 import { createUsersRepo } from './users.js';
 import { createWallsRepo } from './walls.js';
 import { createChatRepo } from './chat.js';
+import { createCreditsRepo } from './credits.js';
 import { createIcebreakersRepo } from './icebreakers.js';
 
 export { migrate, openDatabase, transaction, MIGRATIONS_DIR, type Database } from './database.js';
@@ -43,6 +44,7 @@ export function createRepos(db: Database) {
     briefAssets: createBriefAssetsRepo(db),
     jobs: createGenerationJobsRepo(db),
     icebreakers: createIcebreakersRepo(db),
+    credits: createCreditsRepo(db),
   };
 }
 

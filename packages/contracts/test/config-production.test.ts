@@ -2,7 +2,7 @@
  * 部署相关的配置（contracts 10.1、10.2）：监听地址与对外的源分开、反向代理层数、邮件发送、生产环境启动检查。
  */
 import { describe, expect, it } from 'vitest';
-import { assertProductionConfig, checkProductionConfig, ConfigError, loadConfig, loadMailConfig, registrableDomainGuess } from '../src/index.js';
+import { assertProductionConfig, checkProductionConfig, ConfigError, loadBillingConfig, loadConfig, loadMailConfig, registrableDomainGuess } from '../src/index.js';
 
 const KEY = 'a'.repeat(64);
 const PROD = {
@@ -135,5 +135,48 @@ describe('生产环境启动检查', () => {
     const { errors, warnings } = checkProductionConfig(loadConfig(env), env, 'web');
     const text = [...errors, ...warnings].join('\n');
     for (const secret of ['secret-pass', 'not-a-key-but-secret', PROD.NOWME_TICKET_SECRET]) expect(text).not.toContain(secret);
+  });
+});
+
+describe('点数与平台 AI 的配置（contracts 12）', () => {
+  it('默认：平台 AI 关闭，价目 10 / 4，不赠送', () => {
+    expect(loadBillingConfig({})).toEqual({ platform: null, prices: { generate: 10, edit: 4 }, signupCredits: 0, freeDailyCalls: 3000 });
+  });
+
+  it('设置模型服务后开启：采访与生成各用预设的模型，可以分别覆盖；配置里没有 key', () => {
+    const env = { NOWME_PLATFORM_PROVIDER: 'deepseek', NOWME_PLATFORM_API_KEY: 'sk-platform-secret' };
+    const billing = loadBillingConfig(env);
+    expect(billing.platform?.generate).toMatchObject({ provider: 'deepseek', protocol: 'openai', ready: true });
+    expect(billing.platform?.generate.model).toBeTruthy();
+    expect(billing.platform?.interview.model).toBeTruthy();
+    expect(JSON.stringify(loadConfig(env))).not.toContain('sk-platform-secret');
+    const custom = loadBillingConfig({ ...env, NOWME_PLATFORM_MODEL: 'big', NOWME_PLATFORM_INTERVIEW_MODEL: 'small', NOWME_PLATFORM_BASE_URL: 'https://llm.example.com/v1/', NOWME_PLATFORM_VISION: '1' });
+    expect(custom.platform?.generate).toMatchObject({ model: 'big', baseUrl: 'https://llm.example.com/v1', vision: true });
+    expect(custom.platform?.interview.model).toBe('small');
+  });
+
+  it('预设没有默认模型的服务：只给生成模型时，采访沿用它；都不给就报错', () => {
+    const base = { NOWME_PLATFORM_PROVIDER: 'openai-compatible', NOWME_PLATFORM_BASE_URL: 'https://llm.example.com/v1' };
+    const billing = loadBillingConfig({ ...base, NOWME_PLATFORM_MODEL: 'only-one' });
+    expect([billing.platform?.interview.model, billing.platform?.generate.model]).toEqual(['only-one', 'only-one']);
+    expect(() => loadBillingConfig(base)).toThrow(ConfigError);
+    expect(() => loadBillingConfig({ NOWME_PLATFORM_PROVIDER: 'openai-compatible', NOWME_PLATFORM_MODEL: 'm' })).toThrow(/NOWME_PLATFORM_BASE_URL/);
+  });
+
+  it('取值不对时报错：未知服务、负的价目、非法的图片开关', () => {
+    expect(() => loadBillingConfig({ NOWME_PLATFORM_PROVIDER: 'nope' })).toThrow(ConfigError);
+    expect(() => loadBillingConfig({ NOWME_PRICE_GENERATE: '-1' })).toThrow(ConfigError);
+    expect(() => loadBillingConfig({ NOWME_PRICE_EDIT: '2.5' })).toThrow(ConfigError);
+    expect(() => loadBillingConfig({ NOWME_PLATFORM_PROVIDER: 'deepseek', NOWME_PLATFORM_VISION: 'yes' })).toThrow(ConfigError);
+    expect(loadBillingConfig({ NOWME_PRICE_GENERATE: '0', NOWME_PRICE_EDIT: '0', NOWME_SIGNUP_CREDITS: '20' })).toMatchObject({ prices: { generate: 0, edit: 0 }, signupCredits: 20 });
+  });
+
+  it('生产环境：配置了平台 AI 却没有 key → 拒绝启动', () => {
+    const env = { ...PROD, NOWME_PLATFORM_PROVIDER: 'deepseek' };
+    const { errors } = checkProductionConfig(loadConfig(env), env, 'web');
+    expect(errors).toHaveLength(1);
+    expect(errors[0]).toContain('NOWME_PLATFORM_API_KEY');
+    const withKey = { ...env, NOWME_PLATFORM_API_KEY: 'sk-platform-secret' };
+    expect(checkProductionConfig(loadConfig(withKey), withKey, 'web').errors).toEqual([]);
   });
 });

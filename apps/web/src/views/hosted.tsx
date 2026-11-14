@@ -15,6 +15,7 @@ import type { Wall } from '../db/walls.js';
 import { formatDateTime } from '../format.js';
 import { isDefaultChecked, isWriteInOption, type StructuredBrief } from '../hosted/brief.js';
 import { JOB_ERROR_TEXT, type HostedOverview, type JobStartError, type StepError } from '../hosted/service.js';
+import type { AiStatus } from '../services/billing.js';
 import { CsrfField, Notice, PostButton } from './forms.js';
 import { initialOf } from './layout.js';
 import { HomeIcon } from './home-icons.js';
@@ -25,7 +26,7 @@ export const STEP_ERROR_TEXT: Record<StepError, string> = {
   MODEL_RATE_LIMITED: JOB_ERROR_TEXT.MODEL_RATE_LIMITED!,
   MODEL_UNAVAILABLE: JOB_ERROR_TEXT.MODEL_UNAVAILABLE!,
   'rate-limited': '今天的采访次数用完了（为防止任务过载，每页每天有运行上限），明天再继续。已填写的内容没有丢。',
-  'model-failed': '这一步没成功（AI 没有给出能用的结果）。可以重试或检查 AI 设置；服务商可能已收取调用费用。',
+  'model-failed': '这一步没成功（AI 没有给出能用的结果）。可以再试一次。',
   'wrong-state': '这一步已经过期了，请从当前步骤继续。',
   'too-many-images': `图片最多 ${BRIEF_ASSETS_MAX_COUNT} 张。`,
   'image-type': '只支持 PNG、JPEG、WebP、GIF 图片。',
@@ -47,10 +48,24 @@ export const JOB_START_ERROR_TEXT: Record<JobStartError, string> = {
   'no-revision': '这个版本不能修改（可能没通过校验或已删除）。',
   'bad-block': '选的区块不在这个版本里。',
   'bad-request': `修改要求要写 ${EDIT_REQUEST_LIMITS.min}–${EDIT_REQUEST_LIMITS.max} 个字。`,
+  credits: '点数不够，这次没有开始。可以用兑换码补充点数、请组织者给这面墙充额度，或在 AI 设置里填自己的模型 Key（不消耗点数）。',
 };
 
-export function privacyNote(providers: string, demo = false): string {
-  return `你填写的内容和图片会发送给 AI 模型服务（${providers}）用来生成页面，${demo ? '模型费用由演示提供者承担' : '模型费用由服务商向你收取'}；资料保存在 NOWMe 平台、只有你自己能看到，不会给组织者或其他成员看；随时可以在“我的资料”里删除。`;
+/** 价目的一句话：生成一版 N 点、修改一次 M 点；都为 0 时说明不收。 */
+export function priceText(prices: AiStatus['prices']): string {
+  if (prices.generate === 0 && prices.edit === 0) return '生成与修改都不收点数';
+  return `生成一版页面 ${prices.generate} 点，修改一次 ${prices.edit} 点；没做出新版本不收`;
+}
+
+/** 平台 AI 模式下“我现在有多少点可用”。 */
+export function allowanceText(ai: AiStatus): string {
+  const parts = [ai.wallAllowance > 0 ? `这面墙还能为你出 ${ai.wallAllowance} 点` : '', `你有 ${ai.balance} 点`].filter(Boolean);
+  return parts.join('，');
+}
+
+export function privacyNote(providers: string, demo = false, platform = false): string {
+  const cost = demo ? '模型费用由演示提供者承担' : platform ? '采访不收点数' : '模型费用由服务商向你收取';
+  return `你填写的内容和图片会发送给 AI 模型服务（${providers}）用来生成页面，${cost}；资料保存在 NOWMe 平台、只有你自己能看到，不会给组织者或其他成员看；随时可以在“我的资料”里删除。`;
 }
 
 const MOTION_OPTIONS = [
@@ -75,9 +90,18 @@ function base(wall: Wall): string {
   return `/w/${wall.id}/me`;
 }
 
-const ModelNotice: FC<{ overview: HostedOverview; demo?: boolean }> = ({ overview, demo }) => (
-  <p class="muted">{demo ? DEMO_MODEL_MISSING : overview.modelReady ? '使用你的 AI API，模型费用由服务商向你收取；失败请求也可能计费。' : '请先配置你自己的 AI API，已有资料与页面不受影响。'} {!demo ? <a href="/account/ai">AI 设置</a> : null}</p>
-);
+const ModelNotice: FC<{ overview: HostedOverview; demo?: boolean }> = ({ overview, demo }) => {
+  if (!demo && overview.ai.mode === 'platform') {
+    return (
+      <p class="muted">
+        使用 NOWMe 的 AI：采访不收点数；{priceText(overview.ai.prices)}。{allowanceText(overview.ai)}。 <a href="/account/credits">点数</a>
+      </p>
+    );
+  }
+  return (
+    <p class="muted">{demo ? DEMO_MODEL_MISSING : overview.modelReady ? '使用你的 AI API，模型费用由服务商向你收取；失败请求也可能计费。' : '请先配置你自己的 AI API，已有资料与页面不受影响。'} {!demo ? <a href="/account/ai">AI 设置</a> : null}</p>
+  );
+};
 
 const STEP_LABELS = [
   { label: '认识你', detail: '素材、兴趣和一点偏好' },
@@ -200,7 +224,7 @@ const InterviewForm: FC<{ model: CreateViewModel }> = ({ model }) => {
         </fieldset>
       </section>
       <div class="create-submit">
-        <div class="create-submit__privacy"><HomeIcon name="eye" /><p class="muted hosted-privacy">{privacyNote(model.providers, model.demo)}</p></div>
+        <div class="create-submit__privacy"><HomeIcon name="eye" /><p class="muted hosted-privacy">{privacyNote(model.providers, model.demo, model.overview.ai.mode === 'platform')}</p></div>
         <div class="create-submit__action"><p>接下来，AI 会和你聊两句。<small>确认资料后，才开始生成页面。</small></p><button type="submit" class="btn btn--primary btn--lg">下一步<HomeIcon name="arrow" /></button></div>
       </div>
     </form>
@@ -399,7 +423,7 @@ export const CreateView: FC<{ model: CreateViewModel }> = ({ model }) => {
           <p class="create-journey__title">你的创作旅程<span>0{step + 1} / 04</span></p>
           <Steps current={step} />
           {model.demo && model.overview.modelReady ? null : <div class={`create-model${model.overview.modelReady ? ' create-model--ready' : ''}`}>
-            <p class="create-model__title"><span aria-hidden="true"></span>{model.overview.modelReady ? '你的 AI 已就绪' : '先连接你的 AI'}</p>
+            <p class="create-model__title"><span aria-hidden="true"></span>{model.overview.ai.mode === 'platform' ? 'AI 已就绪' : model.overview.modelReady ? '你的 AI 已就绪' : '先连接你的 AI'}</p>
             <ModelNotice overview={model.overview} demo={model.demo} />
           </div>}
           <p class="create-journey__note"><HomeIcon name="eye" /><span>资料先留给自己。<br />页面由你预览、确认发布。</span></p>
@@ -432,7 +456,14 @@ export const JOB_STATUS_TEXT: Record<GenerationJob['status'], string> = {
   needs_input: '需要你补充一句',
 };
 
-export const JobView: FC<{ demo?: boolean; wall: Wall; job: GenerationJob; revisionNumber: number | null; csrf: string; blocks: string[] }> = ({ wall, job, revisionNumber, csrf, blocks, demo }) => {
+/** 任务的点数情况：扣了多少、由谁付、有没有退回（没有扣过点时为 null）。 */
+export interface JobCharge {
+  credits: number;
+  payer: 'wall' | 'user';
+  refunded: boolean;
+}
+
+export const JobView: FC<{ demo?: boolean; wall: Wall; job: GenerationJob; revisionNumber: number | null; csrf: string; blocks: string[]; charge?: JobCharge | null; platform?: boolean }> = ({ wall, job, revisionNumber, csrf, blocks, demo, charge = null, platform = false }) => {
   const label = job.kind === 'generate' ? '生成页面' : '修改页面';
   const running = job.status === 'queued' || job.status === 'running';
   return (
@@ -447,6 +478,13 @@ export const JobView: FC<{ demo?: boolean; wall: Wall; job: GenerationJob; revis
           <span class="muted"> · {formatDateTime(job.createdAt)} 开始</span>
         </p>
         {running ? <p class="muted">AI 正在按 Skill 写页面、校验、看截图自查……这个页面会自动刷新。大约需要一两分钟。</p> : null}
+        {charge ? (
+          <p class="muted job-charge">
+            {charge.refunded
+              ? `这次没有做出新版本，${charge.credits} 点已退回${charge.payer === 'wall' ? '这面墙的额度' : '你的余额'}。`
+              : `${running ? '已预扣' : '这次用了'} ${charge.credits} 点（${charge.payer === 'wall' ? '这面墙的额度，组织者为你付' : '你的点数'}）${running ? '；没做出新版本会全额退回' : ''}。`}
+          </p>
+        ) : null}
         {job.status === 'succeeded' && job.revisionId ? (
           <>
             {job.resultMessage ? <p>{job.resultMessage}</p> : null}
@@ -460,7 +498,7 @@ export const JobView: FC<{ demo?: boolean; wall: Wall; job: GenerationJob; revis
             </p>
           </>
         ) : null}
-        {job.status === 'failed' ? <><Notice tone="error">{(demo ? demoModelError(job.errorCode ?? '') : null) ?? JOB_ERROR_TEXT[job.errorCode ?? 'INTERNAL'] ?? JOB_ERROR_TEXT.INTERNAL}</Notice><p class="muted">{demo ? '请重试；若仍失败，请维护者检查模型权限、余额和连接。费用由演示提供者承担。' : <>模型服务商可能已收取调用费用。<a href="/account/ai">检查 AI 设置</a></>}</p></> : null}
+        {job.status === 'failed' ? <><Notice tone="error">{(demo ? demoModelError(job.errorCode ?? '') : null) ?? JOB_ERROR_TEXT[job.errorCode ?? 'INTERNAL'] ?? JOB_ERROR_TEXT.INTERNAL}</Notice><p class="muted">{demo ? '请重试；若仍失败，请维护者检查模型权限、余额和连接。费用由演示提供者承担。' : platform ? '可以再试一次；一直不行的话，过一会儿再来。' : <>模型服务商可能已收取调用费用。<a href="/account/ai">检查 AI 设置</a></>}</p></> : null}
         {job.status === 'failed' ? job.kind === 'generate'
           ? <PostButton action={`${base(wall)}/generate`} csrf={csrf} label="重新生成页面" />
           : job.baseRevisionId ? <EditForm wallId={wall.id} csrf={csrf} revisionId={job.baseRevisionId} blocks={blocks} request={job.requestText ?? ''} /> : null : null}

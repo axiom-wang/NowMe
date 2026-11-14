@@ -20,7 +20,7 @@ import { CsrfField } from './forms.js';
 import { HomeIcon } from './home-icons.js';
 
 /** 页面链接的样式表（按顺序；`app.css` 总是链接）。 */
-export const STYLESHEETS: readonly string[] = ['app.css', ...['wall.css', 'workspace.css', 'hosted.css', 'messages.css', 'home.css'].filter((name) => existsSync(join(STATIC_DIR, name)))];
+export const STYLESHEETS: readonly string[] = ['app.css', ...['wall.css', 'workspace.css', 'hosted.css', 'messages.css', 'home.css', 'credits.css'].filter((name) => existsSync(join(STATIC_DIR, name)))];
 
 export interface LayoutProps {
   title: string;
@@ -71,6 +71,7 @@ export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; active?:
         <details class="home-account">
           <summary class="user-chip"><span class="avatar avatar--sm" aria-hidden="true">{auth.user.avatarVersion ? <img src={`/account/avatar?v=${auth.user.avatarVersion}`} alt="" /> : initialOf(auth.user.nickname ?? '')}</span><span class="user-chip__name">{auth.user.nickname}</span><HomeIcon name="chevron" /></summary>
           <div class="home-account__menu">
+            {!demo ? <a href="/account/credits">点数</a> : null}
             {!demo ? <a href="/account/ai">AI 设置</a> : null}
             {demo ? <a href="/login">切换身份</a> : null}
             <form method="post" action="/logout"><CsrfField token={auth.session.csrfToken} /><button type="submit">退出登录</button></form>

@@ -22,6 +22,11 @@ const CONTRACT_TABLES: Record<string, string[]> = {
   generation_jobs: ['id', 'page_id', 'owner_id', 'kind', 'status', 'base_revision_id', 'target_block', 'request_text', 'result_message', 'revision_id', 'error_code', 'charged', 'usage_json', 'created_at', 'started_at', 'finished_at'],
   // contracts 11（迁移 008_icebreakers.sql）
   icebreakers: ['id', 'wall_id', 'viewer_id', 'page_id', 'publication_id', 'result_json', 'created_at'],
+  // contracts 12（迁移 009_credits.sql）
+  credit_balances: ['account_kind', 'account_id', 'balance', 'updated_at'],
+  credit_entries: ['id', 'account_kind', 'account_id', 'delta', 'balance_after', 'reason', 'ref_id', 'actor_id', 'created_at'],
+  redeem_codes: ['id', 'code_hash', 'credits', 'batch', 'expires_at', 'redeemed_by', 'redeemed_at', 'created_at'],
+  wall_sponsorships: ['wall_id', 'member_cap', 'updated_at'],
   users: ['id', 'email', 'nickname', 'created_at'],
   login_codes: ['id', 'email', 'code_hash', 'attempts', 'expires_at', 'used_at'],
   sessions: ['id', 'user_id', 'csrf_token', 'created_at', 'expires_at'],
@@ -137,7 +142,7 @@ describe('数据库迁移', () => {
     expect(migrate(db)).toEqual([]);
     db.close();
     const again = open(file);
-    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }, { version: '004_user_models.sql' }, { version: '005_chat.sql' }, { version: '006_wall_covers.sql' }, { version: '007_user_avatar.sql' }, { version: '008_icebreakers.sql' }]);
+    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }, { version: '004_user_models.sql' }, { version: '005_chat.sql' }, { version: '006_wall_covers.sql' }, { version: '007_user_avatar.sql' }, { version: '008_icebreakers.sql' }, { version: '009_credits.sql' }]);
   });
 
   it('从旧数据库增量升级保留用户、页面、brief、版本、发布与历史任务', () => {

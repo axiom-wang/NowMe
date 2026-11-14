@@ -178,6 +178,8 @@ export interface TestWebOptions {
   remoteRenderer?: RemoteRenderer;
   /** 默认一个共享的测试 Skill 包；null 表示没有 Skill 包。 */
   skillPackageDir?: string | null;
+  /** 把这个客户端当作平台 AI 的模型（contracts 12；需要 env 里有 NOWME_PLATFORM_PROVIDER）。 */
+  platformModel?: ModelClient;
   /** 替换发件箱（真实投递的测试）；默认内存发件箱（`TestWeb.outbox`）。 */
   mailOutbox?: Outbox;
   /** 收集主站日志（默认丢弃）。 */
@@ -202,6 +204,7 @@ export function createTestWeb(options: TestWebOptions = {}): TestWeb {
     kitFonts: KIT_FONTS,
     log: options.log ?? (() => {}),
     model: options.model,
+    platformModel: options.platformModel,
     secretEnv: options.secretEnv,
     modelFetch: options.modelFetch,
     modelLookup: options.modelLookup,
