@@ -1,0 +1,35 @@
+# 不进入构建上下文：版本库、依赖、构建产物、本地数据与密钥
+.git
+.github
+.claude
+**/node_modules
+**/dist
+**/*.tsbuildinfo
+.data
+backups
+.env
+.env.*
+!.env.example
+!.env.production.example
+
+# 测试与文档产物（镜像里不需要）
+test-results
+playwright-report
+.nowme-test-home
+**/.nowme-preview
+tests
+docs
+marketing
+coverage
+
+# Skill 包在镜像内重新打；字体在镜像内重新下载
+skill/dist-package
+packages/kit/fonts/*.ttf
+packages/kit/fonts/*.otf
+packages/kit/fonts/*.woff2
+
+# 编辑器 / 系统
+.DS_Store
+.vscode
+.idea
+.history

@@ -1,0 +1,86 @@
+# NOWMe 部署编排（docs/deploy.md）。三个长期运行的服务共用一个镜像和一个数据卷：
+#   web     主站（Hono SSR + SQLite），监听 3000
+#   pages   用户页面托管（独立源，只读数据卷），监听 4000
+#   worker  后台任务进程（页面生成等长任务；与 web 共享数据库）
+# 另有 backup（profile: tools）：一次性备份，见 docs/deploy.md。
+#
+# 用法：cp .env.production.example .env，填好后 `docker compose up -d --build`。
+# 反向代理（Caddy / Nginx）把主站域名转到 127.0.0.1:3000，页面域名转到 127.0.0.1:4000；端口只绑定本机回环地址。
+
+x-nowme: &nowme
+  image: nowme:latest
+  build:
+    context: .
+    dockerfile: Dockerfile
+  restart: unless-stopped
+  init: true
+  env_file:
+    - .env
+  stop_grace_period: 20s
+
+services:
+  web:
+    <<: *nowme
+    command: ["pnpm", "--filter", "@nowme/web", "start"]
+    environment:
+      NODE_ENV: production
+      NOWME_DATA_DIR: /data
+      # 容器里要监听所有网卡；对外的源（NOWME_WEB_ORIGIN）仍然是 .env 里的 https 域名
+      NOWME_WEB_LISTEN: 0.0.0.0:3000
+    ports:
+      - "127.0.0.1:3000:3000"
+    volumes:
+      - nowme-data:/data
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/readyz').then((r)=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  pages:
+    <<: *nowme
+    command: ["pnpm", "--filter", "@nowme/pages-host", "start"]
+    environment:
+      NODE_ENV: production
+      NOWME_DATA_DIR: /data
+      NOWME_PAGES_LISTEN: 0.0.0.0:4000
+    ports:
+      - "127.0.0.1:4000:4000"
+    # 页面托管只读数据卷（它不需要写任何东西）。因此必须在 .env 里设置 NOWME_TICKET_SECRET，
+    # 不能依赖数据目录里自动生成的 secret 文件。
+    volumes:
+      - nowme-data:/data:ro
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:4000/healthz').then((r)=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 15s
+
+  worker:
+    <<: *nowme
+    # start:worker 脚本由后台任务进程（T8.1）提供
+    command: ["pnpm", "--filter", "@nowme/web", "start:worker"]
+    environment:
+      NODE_ENV: production
+      NOWME_DATA_DIR: /data
+    volumes:
+      - nowme-data:/data
+
+  backup:
+    <<: *nowme
+    profiles: ["tools"]
+    restart: "no"
+    command: ["node", "--disable-warning=ExperimentalWarning", "apps/web/dist/ops/backup-cli.js", "backup"]
+    environment:
+      NODE_ENV: production
+      NOWME_DATA_DIR: /data
+      NOWME_BACKUP_DIR: /backups
+    volumes:
+      - nowme-data:/data
+      # 备份写到宿主机目录（默认 ./backups），注意该目录要对容器内 node 用户（uid 1000）可写
+      - ${NOWME_BACKUP_HOST_DIR:-./backups}:/backups
+
+volumes:
+  nowme-data:
