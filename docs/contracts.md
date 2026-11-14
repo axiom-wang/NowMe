@@ -2,7 +2,7 @@
 
 > 本文是所有模块共同遵守的契约：页面输出契约、数据模型、API、校验规则、安全不变量。
 > 需求来源：[MVP 需求](product-mvp-community-wall.md)、[页面生成方案](page-generation-byo-agent.md)、[信息收集与 brief](brief-collection.md)。
-> 范围：原型试跑的**本地路线**，以及平台托管路线的应用内采访、托管生成、应用内修改与账号 AI 配置（第 9 节，正文见 [hosted-route.md](hosted-route.md)）；收费与免费次数方案已取消，派生（W18）不做。
+> 范围：原型试跑的**本地路线**，以及平台托管路线的应用内采访、托管生成、应用内修改与账号 AI 配置（第 9 节，正文见 [hosted-route.md](hosted-route.md)）；部署与加固（第 10 节）、“和 TA 聊什么”（第 11 节）、点数与平台 AI（第 12 节）；派生（W18）不做。
 > 修改本文需要总规划师同意；实现与本文冲突时，以本文为准并提出修改建议。
 > 文中标 **[原型默认]** 的数值是需求文档里 [待定] 项的临时取值，统一放在 `packages/contracts` 的常量里，便于以后调整。
 
@@ -26,6 +26,8 @@
 | CLI 预览外壳 / 页面 | `http://localhost:4100` / `http://127.0.0.1:4101` | `nowme preview --port` |
 
 主站和页面托管故意使用 `localhost` 与 `127.0.0.1` 两个不同的**站点**（cookie 不按端口隔离，同主机不同端口会共享 cookie）。
+
+源是对外地址；进程默认监听源里的主机与端口，部署在反向代理之后时用 `NOWME_WEB_LISTEN` / `NOWME_PAGES_LISTEN` 单独指定（10.1）。
 
 ### 0.2 模块与目录归属
 
@@ -229,7 +231,7 @@ readPageDir(dir: string): Promise<PageFiles>;                                   
 
 ## 3. 数据模型（SQLite）
 
-ID 一律为 `<前缀>_<16 字节随机 base32 小写>`；时间为 ISO 8601 UTC 字符串。一次性 token、页面凭证、会话令牌、登录验证码**只存 SHA-256 哈希**；邀请码与公开链接令牌是需要反复展示给组织者/主人的可分享链接，明文保存，可随时轮换。
+ID 一律为 `<前缀>_<16 字节随机 base32 小写>`；时间为 ISO 8601 UTC 字符串。一次性 token、页面凭证、会话令牌、登录验证码、兑换码（第 12 节）**只存 SHA-256 哈希**；邀请码与公开链接令牌是需要反复展示给组织者/主人的可分享链接，明文保存，可随时轮换。
 
 | 令牌 | 格式 |
 | --- | --- |
@@ -257,9 +259,18 @@ ID 一律为 `<前缀>_<16 字节随机 base32 小写>`；时间为 ISO 8601 UTC
 | `chat_messages` | `sequence` 整数递增主键、`conversation_id`、`sender_id`、`client_id`、`body`、`created_at` | `(conversation_id,sender_id,client_id)` 唯一，消息按 sequence 排序；正文只存纯文字 |
 | `chat_reads` | `conversation_id`、`user_id`、`last_sequence` | 联合主键；已读位置仅允许单调前进 |
 
+| `icebreakers` | `id ice_`、`wall_id`、`viewer_id`、`page_id`、`publication_id`、`result_json`、`created_at` | “和 TA 聊什么”的结果，只属于查看者（迁移 `008_icebreakers.sql`，第 11 节） |
+| `credit_balances`、`credit_entries`、`redeem_codes`、`wall_sponsorships` | 见 12.2 | 点数余额、只追加的流水、兑换码哈希、墙额度每人上限（迁移 `009_credits.sql`，第 12 节） |
+
+平台托管路线的表（`user_model_settings`、`profile_entries`、`briefs`、`brief_assets`、`generation_jobs`）见 [hosted-route.md 第 4 节](hosted-route.md)。
+
 页面的展示状态由数据推导：有活跃 publication → `published`；有 publication 历史但当前无 → `withdrawn`；否则 `unpublished`。
 
 `revisions/<id>/` 布局：`original/`（提交的原文件）、`served/index.html`（注入字体 `@font-face` 后的版本）、`served/assets/...`、`served/_fonts/<fontId>-<weight>.woff2`、`cover.png`、`render/full.png`。
+
+### 3.1 账号资料与头像
+
+头像上传接受静态 PNG / JPEG / WebP，按文件魔数识别并实际解码，拒绝 SVG、GIF、多帧图片、损坏图片。单张不超过 2 MB，请求不超过 2 MB + 64 KB，解码不超过 1600 万像素。自动按 EXIF 旋转、居中裁成正方形（最长 256px，小图不放大），重新编码为 WebP 并剥离元数据；不保存原图、文件名或外部图片 URL。删除头像清空位图与版本号。资料卡、主站导航使用当前会话头像，未设置时显示昵称首字；不改写已生成的用户页面或长期画像。
 
 ## 4. API
 
@@ -309,7 +320,7 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 | `GET/POST /welcome` | 登录用户 | 首次登录填写昵称 |
 | `POST /account/profile` | 登录用户，会话 + Origin + CSRF | multipart：`nickname`（去空白后 1–24 字，不含控制字符）、可选单张 `avatar`、`removeAvatar=1` 移除头像；仅更新会话本人，忽略用户 ID 和 Authorization；昵称与头像原子保存，失败保留原资料 |
 | `GET /account/avatar` | 登录用户 | 仅返回会话本人的头像，忽略用户 ID；无头像 404，`image/webp`、`private, no-store`、`nosniff`；`v` 参数用于页面刷新后更换图片地址，不决定授权 |
-| `GET /dev/outbox` | 仅非生产环境 | 本地查看发出的验证码（代替真实邮件） |
+| `GET /dev/outbox` | 仅非生产、非演示且 `NOWME_MAIL_TRANSPORT=file` | 本地查看发出的验证码（10.2） |
 | `GET /` | 登录用户 | 创作工作台：有效墙的统计、待完成 / 已发布分组；`filter=all\|pending\|published` 筛选（未知值按 all）；已撤下归入待完成；已结束的墙只显示状态 |
 | `GET /walls/new`、`POST /walls` | 登录用户 | 建墙：名称、简介、场景类型、可选一句话 |
 | `GET /join/:inviteCode`、`POST /join/:inviteCode` | 登录用户 | 加入墙（已被移除的成员不能再加入；已关闭的墙不能加入） |
@@ -317,7 +328,7 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 | `GET /w/:wallId/cover` | 墙内有效成员 | 当前墙封面（WebP）；不存在、非成员、已退出 / 移出或墙关闭均 404；`Cache-Control: private, no-store`，每次检查权限 |
 | `POST /w/:wallId/admin/cover` | 组织者 | multipart 表单 `_csrf` + 单个 `cover` 文件；JPG / PNG / WebP、最多 5 MiB、最多 4000 万像素；按内容识别、完整解码、自动转正、按 1:1 居中裁切至最多 1200×1200、去除元数据并重编码为静态 WebP；拒绝 SVG、动图、伪造 / 损坏图片；成功后替换旧封面，失败保留原图 |
 | `POST /w/:wallId/admin/cover/delete` | 组织者 | 删除自定义墙封面，首页与后台恢复场景默认插画 |
-| `GET /w/:wallId/p/:pageId` | 墙内有效成员 | 成员页面（沙箱 iframe）+ 接话点 + “想聊这个” |
+| `GET /w/:wallId/p/:pageId` | 墙内有效成员 | 成员页面（沙箱 iframe）+ 接话点 + “想聊这个”；别人的页面另有“和 TA 聊什么”（第 11 节，路由见 11.5） |
 | `POST /w/:wallId/p/:pageId/chat` | 墙内有效成员 | `hookId` 取当前发布快照；记录事件，303 进入私聊并预填开场白，不自动发送；不依赖外部联系方式 |
 | `POST /w/:wallId/p/:pageId/direct` | 墙内有效成员 | 303 进入与页面主人的同墙私聊；自己页面或未发布页面返回 404 |
 | `POST /w/:wallId/p/:pageId/contact` | 墙内有效成员 | `hookId` 或 `contactHookId`；只返回发布快照中公开的联系方式和开场白；未公开时返回 404 |
@@ -333,6 +344,8 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 | `POST /w/:wallId/admin/remove`、`POST /w/:wallId/admin/close` | 组织者 | 移除成员（其页面立即下墙、凭证吊销）；关闭墙 |
 | `GET /s/:publicToken` | 任何人 | 公开链接：只显示当前发布版本的页面，不显示联系方式与“想聊这个” |
 | `GET /w/:wallId/covers/:pageId.png` | 墙内有效成员 | 已发布版本的封面图 |
+| `GET /account/credits` 等 | 见 12.6 | 点数、兑换码、墙额度 |
+| `GET /healthz`、`GET /readyz` | 任何人（不经过 Host 校验） | 健康检查（10.5） |
 
 无权访问时一律返回 `404`（不暴露墙或页面是否存在）；未登录访问需登录的页面重定向到 `/login?next=...`。
 
@@ -364,7 +377,11 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 
 仅服务端演示启动器可显式启用，配置必须绑定演示数据目录，生产与普通 `pnpm dev` 不开放。`POST /login/demo` 检查来源，字段只接受固定的 `identity=member|organizer`，分别映射已有 `newbie@demo.nowme.test` 和 `organizer@demo.nowme.test`，创建正常服务端会话；切换销毁当前会话，两个身份登录后均进入首页，首页不展示身份切换卡片；需要时从顶部“切换身份”进入选择页。邮箱验证码路径与会话加载同样禁止登录背景人物。S1–S8 与组织者权限保持不变。
 
-评审模式允许维护者在启动时将自己的真实模型配置通过现有账号加密机制预置给体验成员，费用由演示提供者承担；体验身份不可通过 AI 设置界面或 HTTP 接口改写、删除预置配置。只在演示启动读取专属环境变量，不给普通账号引入平台 Key 回退，演示不接受假模型。完整流程与配置见 [demo.md](demo.md) 与 [hosted-route.md 第 8 节](hosted-route.md#8-演示数据与评审模式)。
+评审模式允许维护者在启动时将自己的真实模型配置通过现有账号加密机制预置给体验成员，费用由演示提供者承担；体验身份不可通过 AI 设置界面或 HTTP 接口改写、删除预置配置。只在演示启动读取专属环境变量，预置配置不作为普通账号的回退（普通账号的平台 AI 只由 `NOWME_PLATFORM_*` 决定，第 12 节），演示不接受假模型；演示模式没有点数页面。完整流程与配置见 [demo.md](demo.md) 与 [hosted-route.md 第 8 节](hosted-route.md#8-演示数据与评审模式)。
+
+### 4.2.3 同墙成员头像展示
+
+`GET /w/:wallId/members/:userId/avatar` 仅向该墙有效成员返回另一位有效成员的账号头像；墙关闭、任意一方退出或被移除、目标无头像均返回 404。返回 `image/webp`、`private, no-store` 和 `nosniff`，不返回邮箱、画像或 brief。聊天摘要可含 `avatarUrl`，消息可含 `senderAvatarUrl`，组织者成员列表可含头像地址；客户端轮询与服务端初始渲染均展示头像，无头像继续显示原占位。账号头像是同圈可见的身份信息，账号资料与私密采访内容仍由原授权规则保护。资料与头像的上传规则见 3.1。
 
 ### 4.3 Agent 指令格式（W05）
 
@@ -417,7 +434,9 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 | S5 | 组织者看不到私密内容：组织者后台只有昵称、加入时间、发布状态；组织者无法访问他人的工作区、版本、未发布内容、未公开的联系方式；本地路线的 brief / 画像从不上传 | 组织者身份请求他人工作区、版本预览、票据签发 → 404；后台 HTML 不含版本 ID、未发布 card 内容、私密联系方式；提交接口丢弃白名单外文件 |
 | S6 | 非成员看不到墙：未登录、非成员、已退出、已移除的用户访问墙、成员页、封面、chat 接口都拿不到内容；pages-host 无票据、票据伪造、过期、篡改版本 ID 时拒绝；被移除成员立即失去访问且其页面立即下墙；关闭的墙对所有人不可见；关闭公开链接后旧链接失效 | 集成测试覆盖每种身份 × 每个路由；pages-host 票据测试 |
 
-主站自身也设 CSP：`default-src 'self'`、`frame-src <pages>`、`script-src 'self'`、`style-src 'self'`、`img-src 'self' data:`、`form-action 'self'`、`object-src 'none'`、`base-uri 'none'`、`frame-ancestors 'none'`（主站不用内联脚本和内联样式）。主站校验 `Host` 头：不等于 `NOWME_WEB_ORIGIN` 的主机时返回 421 或重定向到 `NOWME_WEB_ORIGIN`（cookie 不按端口隔离，不能让主站在页面托管的主机名下签发 cookie）。
+S7、S8（第 9 节）、S9（第 11 节）、S10（第 12 节）与 S1–S6 同等要求自动化测试。
+
+主站自身也设 CSP：`default-src 'self'`、`frame-src <pages>`、`script-src 'self'`、`style-src 'self'`、`img-src 'self' data:`、`form-action 'self'`、`object-src 'none'`、`base-uri 'none'`、`frame-ancestors 'none'`（主站不用内联脚本和内联样式）。主站校验 `Host` 头：不等于 `NOWME_WEB_ORIGIN` 的主机时返回 421 或重定向到 `NOWME_WEB_ORIGIN`（cookie 不按端口隔离，不能让主站在页面托管的主机名下签发 cookie）。主站的其他安全头见 10.4。
 
 ### 5.1 `nowme.openLink` 协议
 
@@ -433,6 +452,9 @@ Kit 调用 `parent.postMessage({ type: 'nowme:open-link', url }, '*')`。主站�
 | --- | --- |
 | CLI（凭证上报，不含内容） | `agent_fetch`、`agent_validate`、`agent_preview`、`agent_generate`、`agent_submit` |
 | 主站 | `wall_view`、`page_open`、`want_to_chat`、`publish`、`withdraw`、`public_link_on`、`public_link_off`、`join`、`leave`、`member_removed`、`wall_closed`；`remote_preview`（服务端远程预览，用于限流，4.1） |
+| 平台托管路线 | `hosted_interview_call`、`hosted_brief_confirm`、`hosted_generate`、`hosted_edit`、`brief_delete`、`profile_delete`（hosted-route 6） |
+| 和 TA 聊什么 | `icebreaker_generate`（成功与失败都记，用于限流，11.5）；用开场白开聊记 `want_to_chat`，`props` 含 `ai: true`、`openerIndex` |
+| 点数 | `credits_redeem`（`props: { credits }`）、`credits_sponsor`（`props: { credits, memberCap }`），不含兑换码（12.4、12.5） |
 
 `props` 只含数字与布尔值（例如 `ok`、`durationMs`、`errorCount`）。按墙聚合统计由 `pnpm --filter @nowme/web stats <wallId>` 输出；组织者界面不提供个人层面的浏览轨迹。
 
@@ -472,19 +494,245 @@ interface SceneGuide {
 
 ## 9. 平台托管路线
 
-正文见 [hosted-route.md](hosted-route.md)（2026-11-07 确认）：配置与模型、应用内采访、使用用户 API 的生成与修改、运行保护限制、加密凭证与数据模型（迁移 `002_hosted.sql` 和 `004_user_models.sql`）、主站路由、事件、安全不变量 S7（托管资料只属于主人）与 S8（生成环境隔离且结果不受信）。S7、S8 与第 5 节的 S1–S6 同等要求自动化测试。
+正文见 [hosted-route.md](hosted-route.md)（2026-11-07 确认）：配置与模型、应用内采访、使用用户 API 的生成与修改、运行保护限制、加密凭证与数据模型（迁移 `002_hosted.sql` 和 `004_user_models.sql`）、主站路由、事件、安全不变量 S7（托管资料只属于主人）与 S8（生成环境隔离且结果不受信）。S7、S8 与第 5 节的 S1–S6 同等要求自动化测试。平台 AI 与点数（`NOWME_PLATFORM_*`，迁移 `009_credits.sql`）见第 12 节；hosted-route 中“只能用用户自己的 Key”的说法已由第 12 节补充：没有自己配置的用户可以用平台 AI。
 
-## 10. 原型试跑不做
+## 10. 部署与加固
 
-收费方案已取消；本期不做 W09 应用内素材管理、修改时把新信息写回画像、派生到新墙（W18）、真实邮件发送、外部内容审核接入（只保存渲染文字和截图供人工审核）、部署。
+配置由 `packages/contracts/src/config.ts` 的 `loadConfig()` 读取并校验（取值不合法抛 `ConfigError`，进程退出）；示例与注释见仓库根 `.env.example`。主站与页面托管启动时载入仓库根 `.env`，已在环境中设置的变量优先。
 
-### 账号资料与头像
+### 10.1 环境变量与生产启动检查
 
-头像上传接受静态 PNG / JPEG / WebP，按文件魔数识别并实际解码，拒绝 SVG、GIF、多帧图片、损坏图片。单张不超过 2 MB，请求不超过 2 MB + 64 KB，解码不超过 1600 万像素。自动按 EXIF 旋转、居中裁成正方形（最长 256px，小图不放大），重新编码为 WebP 并剥离元数据；不保存原图、文件名或外部图片 URL。删除头像清空位图与版本号。资料卡、主站导航使用当前会话头像，未设置时显示昵称首字；不改写已生成的用户页面或长期画像。
+| 变量 | 默认 | 说明 |
+| --- | --- | --- |
+| `NODE_ENV` | `development` | `production` 时关闭 `/dev/outbox`、拒绝假模型，并执行下面的启动检查 |
+| `NOWME_WEB_ORIGIN` / `NOWME_PAGES_ORIGIN` | 见 0.1 | **对外的源**（用户在浏览器里看到的地址）；两者主机名不能相同 |
+| `NOWME_WEB_LISTEN` / `NOWME_PAGES_LISTEN` | 由源推导 | **进程实际监听的地址**：`端口`、`主机:端口` 或 `[IPv6]:端口`（只写端口时主机沿用源的主机名）。部署在反向代理之后时，源写 https 域名，这里写例如 `0.0.0.0:3000` |
+| `NOWME_TRUST_PROXY` | `0` | 进程前可信反向代理层数，0–5（10.3） |
+| `NOWME_DATA_DIR` | `.data` | 相对路径按仓库根解析 |
+| `NOWME_TICKET_SECRET` | 空 | ≥ 32 字符；空时两边共用 `<dataDir>/secret`（首次启动生成，0600） |
+| `NOWME_AGENT_TOKEN_TTL_HOURS` | `72` | 1–720 |
+| `NOWME_HOME` | `~/.nowme` | 仅 CLI |
+| `NOWME_MAIL_TRANSPORT` / `NOWME_SMTP_URL` / `NOWME_MAIL_FROM` | `file` / 空 / 空 | 10.2 |
+| `NOWME_AI_ENCRYPTION_KEY` | 空 | 用户模型 Key 的主密钥，64 位十六进制（hosted-route 1） |
+| `NOWME_AI_ALLOW_LOCAL` | `0` | 仅非生产：允许回环模型地址 |
+| `NOWME_HOSTED_MAX_TURNS` / `NOWME_HOSTED_DAILY_ATTEMPTS` / `NOWME_INTERVIEW_DAILY_CALLS` | `30` / `10` / `20` | 运行保护（hosted-route 3.4） |
+| `NOWME_MODEL_FAKE`（旧名 `NOWME_CLAUDE_FAKE`） | 空 | 非生产假模型；生产拒绝 |
+| `NOWME_PLATFORM_PROVIDER` / `_API_KEY` / `_BASE_URL` / `_MODEL` / `_INTERVIEW_MODEL` / `_VISION` | 空 | 平台 AI（12.1）；`PROVIDER` 不设则平台 AI 关闭 |
+| `NOWME_PRICE_GENERATE` / `NOWME_PRICE_EDIT` | `10` / `4` | 价目（点数），0–10000，0 表示不收 |
+| `NOWME_SIGNUP_CREDITS` | `0` | 注册赠送点数，0–10000 |
+| `NOWME_PLATFORM_FREE_DAILY_CALLS` | `3000` | 平台 AI 免费调用的全站每日上限，1–1 000 000 |
+| `NOWME_SKILL_MARKET_LABEL` / `NOWME_SKILL_MARKET_COMMAND` | 空 | 4.5，同时设置或都不设 |
 
-### 同墙成员头像展示
+密钥类变量（`NOWME_SMTP_URL`、`NOWME_AI_ENCRYPTION_KEY`、`NOWME_PLATFORM_API_KEY`）**不进配置对象**：主站入口只把它们作为 `secretEnv` 交给需要的模块；配置错误信息与日志里不出现它们的值。
 
-`GET /w/:wallId/members/:userId/avatar` 仅向该墙有效成员返回另一位有效成员的账号头像；墙关闭、任意一方退出或被移除、目标无头像均返回 404。返回 `image/webp`、`private, no-store` 和 `nosniff`，不返回邮箱、画像或 brief。聊天摘要可含 `avatarUrl`，消息可含 `senderAvatarUrl`，组织者成员列表可含头像地址；客户端轮询与服务端初始渲染均展示头像，无头像继续显示原占位。账号头像是同圈可见的身份信息，账号资料与私密采访内容仍由原授权规则保护。
+**生产启动检查**（`assertProductionConfig(config, env, role)`，仅 `NODE_ENV=production`；主站 `role='web'`、页面托管 `role='pages'`）。一次列出全部问题；有错误就拒绝启动，提醒只打印。
+
+| 级别 | 条件 | 适用 |
+| --- | --- | --- |
+| 错误 | `NOWME_WEB_ORIGIN` 或 `NOWME_PAGES_ORIGIN` 不是 `https://`（Secure cookie 与 HSTS 依赖它） | 两者 |
+| 错误 | `NOWME_AI_ENCRYPTION_KEY` 不是 64 位十六进制 | 主站 |
+| 错误 | 设置了 `NOWME_PLATFORM_PROVIDER` 但没有 `NOWME_PLATFORM_API_KEY` | 主站 |
+| 错误 | `NOWME_MAIL_TRANSPORT=file`（真实用户收不到验证码） | 主站 |
+| 提醒 | 主站与页面托管看起来在同一个可注册域名下（`registrableDomainGuess`，子域名属于同站；建议用户页面单独注册域名） | 两者 |
+| 提醒 | 没有设置 `NOWME_TICKET_SECRET`（两个进程必须挂载同一个数据目录） | 两者 |
+| 提醒 | `NOWME_TRUST_PROXY=0`（在代理之后时所有请求同一来源，按地址限流会误伤） | 两者 |
+
+### 10.2 邮件投递（登录验证码）
+
+| `NOWME_MAIL_TRANSPORT` | 行为 |
+| --- | --- |
+| `file`（默认） | 写进 `<dataDir>/outbox.log` 并打印到控制台；非生产且非演示时提供 `GET /dev/outbox` |
+| `smtp` | 经 `NOWME_SMTP_URL` 真实发送；必须同时设置 `NOWME_MAIL_FROM`（一行，含发件邮箱，≤ 200 字符）；没有 `/dev/outbox`，登录页也不显示开发入口 |
+
+- 连接串：`smtps://用户:密码@主机:465`（隐式 TLS）或 `smtp://用户:密码@主机:587`；用户名密码按 URL 规则百分号编码。`smtp://` 在生产环境强制 STARTTLS。连接池最多 3 个连接，连接 / 问候 / DNS 超时 10 s，套接字 20 s。
+- 邮件：主题以验证码开头，正文与 HTML 都只有验证码与有效期，不含链接。
+- 日志只记脱敏收件人（`a***@example.com`）与成功 / 失败，失败只记 nodemailer 错误类别（如 `EAUTH`），不记主题、正文、服务器回复原文、连接串。
+- 发送失败：刚签发的验证码立即作废（仍计入同邮箱限流），`POST /login` 返回 `503` 与固定中文说明。
+
+### 10.3 来源地址与限流
+
+**来源地址**（`apps/web/src/security/client.ts` 的 `clientAddress`）：`NOWME_TRUST_PROXY=0` 时只用 TCP 对端地址，**忽略 `X-Forwarded-For`**；`=N` 时取 `X-Forwarded-For` 从右数第 N 个（头缺失、层数不够或不是 IP 时退回连接地址）。IPv4 映射的 IPv6 按 IPv4 记，IPv6 转小写；拿不到地址时记为 `unknown`。
+
+**进程内限流**（`apps/web/src/security/rate-limit.ts`）：按“范围 + 键”的固定窗口计数，超过上限后不再累加；键数超过 5000 时清理过期记录。计数在进程内存，重启清零；多进程部署前要换共享存储。取值在 `apps/web/src/constants.ts` 的 `RATE_RULES`。
+
+| 范围 | 键 | 上限 | 超出时 |
+| --- | --- | --- | --- |
+| `login-request`（`POST /login`） | 来源地址 | 120 次 / 10 分钟 | `429` + `Retry-After`，固定说明 |
+| `login-verify`（`POST /login/verify`） | 来源地址 | 300 次 / 10 分钟 | 同上 |
+| `agent-exchange`（`POST /api/agent/exchange`） | 来源地址 | 60 次 / 10 分钟 | `429 RATE_LIMITED` + `Retry-After` |
+| `chat-send`（`POST /messages/:id/send`） | 用户 | 40 次 / 分钟（群聊 + 私聊合计） | `429` + `Retry-After`，草稿保留；无权访问的会话仍是 `404` |
+| `redeem`（`POST /account/credits/redeem`） | 用户 | 10 次 / 10 分钟 | `429` |
+| `platform-free`（平台 AI 免费调用） | 全站 | `NOWME_PLATFORM_FREE_DAILY_CALLS` / 24 小时 | `MODEL_UNAVAILABLE`（12.1） |
+
+按地址的上限故意放宽（校园网同一出口）；它们只挡脚本批量发信、试验证码、试 token。持久的额度仍在数据库里按滚动窗口计算：同邮箱验证码 5 次 / 10 分钟、每页提交 50 次 / 24 小时、远程预览 100 次 / 24 小时、托管任务与采访（hosted-route 3.4）、和 TA 聊什么（11.5）。
+
+### 10.4 补充安全头
+
+主站所有响应（`apps/web/src/security/headers.ts`）：第 5 节末尾的 CSP、`X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`、`Referrer-Policy: same-origin`、`Permissions-Policy`（与页面托管同一份关闭清单 `PERMISSIONS_POLICY`）、`Cross-Origin-Opener-Policy: same-origin`、`Cross-Origin-Resource-Policy: same-origin`；动态响应默认 `Cache-Control: no-store`。主站为 https 源时加 `Strict-Transport-Security: max-age=31536000`（不带 `includeSubDomains` / `preload`），会话 cookie 加 `Secure`。
+
+### 10.5 健康检查
+
+| 路径 | 服务 | 响应 |
+| --- | --- | --- |
+| `GET /healthz` | 主站、页面托管 | `200 ok`（纯文本） |
+| `GET /readyz` | 主站 | 执行 `SELECT 1`：成功 `200 {"status":"ok"}`，失败 `503 {"status":"unavailable"}` |
+
+主站的这两个路由放在 Host 头校验之前（探针常用 IP 访问），不读会话、不设 cookie、不返回业务信息，`Cache-Control: no-store`；其他路径仍做 Host 校验（421）。页面托管的 `/healthz` 不读文件。
+
+容器、编排、备份与日志见第 17 节。
+
+### 10.6 尚未做的事
+
+已做：真实邮件投递（10.2）；收费以点数形式提供（第 12 节，尚未接支付渠道）。M8 进行中：注销与导出（第 14 节）、举报与拉黑（第 15 节）、内容安全与 AI 标识（第 16 节）、运维（第 17 节）。仍不做：W09 应用内素材管理、修改时把新信息写回画像、派生到新墙（W18）、支付渠道、组织者数据看板。
+
+## 11. 和 TA 聊什么（S9）
+
+成员在**别人的**成员页（`GET /w/:wallId/p/:pageId` 的 `#talk` 区块）请 AI 找两人的连接点并起草开场白。代码：`apps/web/src/hosted/icebreaker.ts`（模型调用与核对）、`apps/web/src/services/icebreaker.ts`（授权、资料、限流、保存）、`apps/web/src/db/icebreakers.ts`、迁移 `008_icebreakers.sql`；常量 `ICEBREAKER_*` 在 `packages/contracts`。
+
+### 11.1 谁能发起、用谁的模型
+
+- 必须是这面墙的有效成员，目标是墙上**已发布**、且**不是自己**的页面（`findPublishedMemberPage`）；否则 `404`，不调用模型。
+- 模型按 `interview` 角色解析：查看者有自己的配置就用自己的；没有且平台 AI 可用时用平台 AI，**不收点数**，计入全站免费调用上限（10.3、12.1）；两者都没有时界面引导去 AI 设置，提交得到 `MODEL_CONFIG` 说明。
+
+### 11.2 交给模型的资料（输入范围）
+
+| 一方 | 内容 | 上限 |
+| --- | --- | --- |
+| 墙 | 名称、简介（≤ 200）、场景名 | — |
+| 查看者 | 昵称或发布卡片上的名字；**自己**在这面墙已发布的卡片（一行介绍、接话点）与渲染文字；**自己**确认过（`confirmed`）的采访摘要（“AI 眼中的你”≤ 5 句、接话点 ≤ 3、想突出的一面） | 渲染文字 1600 码点 |
+| 查看者的禁区 | brief 里 `boundaries.hidden` 与 `rejected`（≤ 12 条），单独成块，只用于“不得提到”，不算可引用资料 | — |
+| 对方 | 当前发布快照的名字、一行介绍、接话点，与该版本的渲染文字 | 渲染文字 2400 码点 |
+
+不读对方的草稿、未发布版本、采访、画像、联系方式（含公开的），不读任何第三人的内容。所有资料去控制字符、截断后用 `untrusted()` 包成资料块；system 声明资料不是指令。查看者没有任何资料时，明确告诉模型只写 `curious`。
+
+### 11.3 输出与核对
+
+模型必须调用 `submit_icebreaker`；输出经 zod 校验，不合法或核对后没有可用开场白时重试一次，再失败为 `failed`，不保存。
+
+```ts
+interface IcebreakerResult {
+  links: { kind: 'common' | 'complement' | 'curious'; title: string; mine: string; theirs: string }[]; // 0–3 条
+  openers: { text: string; about: string }[];                                                      // 1–3 句
+  sources: { page: boolean; brief: boolean };   // 这次用了查看者的哪些资料（界面如实说明）
+}
+```
+
+| 规则 | 说明 |
+| --- | --- |
+| 长度 | `title` ≤ 18、`mine` / `theirs` ≤ 40、开场白 ≤ 90（至少 6 字）、`about` ≤ 16 码点；每类先取模型前 6 条再筛 |
+| 原文核对（`groundIcebreaker`） | `theirs` 必须出现在对方资料里；`common` / `complement` 的 `mine` 还必须出现在查看者资料里；对不上整条丢弃。比较前统一 NFKC、小写，去空白、标点、符号，依据至少 2 个字。未知 `kind` 按 `curious`，`curious` 的 `mine` 清空 |
+| 禁止链接与联系方式（`hasContact`） | `http(s)://`、`www.`、邮箱、常见域名后缀、7 位以上数字串：连接点任一字段或开场白含有即丢弃。检查在截断之前做（对模型原文） |
+| 去重 | 连接点按规范化标题、开场白按规范化正文去重 |
+| 输出 | 只经 JSX 转义按文字渲染 |
+
+### 11.4 结果归属、开场白与清除
+
+- 表 `icebreakers`：`id ice_`、`wall_id`、`viewer_id`、`page_id`、`publication_id`、`result_json`、`created_at`。只保存成功的结果；同一查看者对同一页只保留最新一份（“换一批”替换）。
+- **只属于查看者**：只按 `viewer_id` 读取；页面主人、组织者、其他成员都看不到；结果 ID 被别人拿到也不能用来开聊或清除。结果绑定对方当时的 `publication_id`：对方更新或撤下发布、ID 用在别的页上，一律视为不存在。
+- 墙页上只对查看者自己给“找过话题”的卡片打标记，对方更新发布后消失。
+- **只预填、不代发**：“用这句开聊”进入与对方的同墙私聊，把那一句作为未发送草稿放进输入框，不产生任何消息；发送仍由查看者本人完成（4.2.1）。
+- 清除：查看者手动清除；对方删除页面（该页的全部结果）；查看者退出墙、被移除（他在这面墙的结果）；墙关闭（整面墙）；查看者删除自己的采访（他在那面墙的结果）。
+- 模型调用结束后重新做一次授权检查：期间对方更新 / 撤下、任一方失去访问、墙关闭 → 不保存，返回 `gone`。
+
+### 11.5 路由与限流
+
+| 路径 | 谁能访问 | 作用 |
+| --- | --- | --- |
+| `POST /w/:wallId/p/:pageId/icebreaker` | 墙内有效成员，非自己的已发布页 | 发起或“换一批”；303 回到 `#talk`，失败时带 `?ice=<错误>` |
+| `POST /w/:wallId/p/:pageId/icebreaker/chat` | 同上 | `icebreakerId`、`opener`（0–2）；校验结果属于本人、本页、当前发布 → 303 `/messages/:id?pageId=&ice=&o=`；记 `want_to_chat`（`props: { ai: true, openerIndex }`） |
+| `POST /w/:wallId/p/:pageId/icebreaker/clear` | 同上 | 清除本人对这一页的结果 |
+
+均为会话 + CSRF + Origin 的表单路由，忽略 `Authorization`。`/messages/:id` 只在会话是与该页主人的私聊、且结果仍有效时解析 `ice` / `o` 草稿。
+
+| 限制 | 取值 | 错误 |
+| --- | --- | --- |
+| 每位查看者（跨墙） | 40 次 / 滚动 24 小时 | `daily` |
+| 同一查看者对同一页（含换一批） | 4 次 / 滚动 24 小时 | `target-daily` |
+| 同一查看者并发 | 1 | `busy` |
+| 单次总时限 | 60 s | `timeout` |
+
+次数按 `icebreaker_generate` 事件计（成功与失败都记，`props` 只有 `ok`、`durationMs`、`links`、`openers`、`hasPage`、`hasBrief` 与 token 数）。其他错误：`MODEL_CONFIG` / `MODEL_AUTH` / `MODEL_RATE_LIMITED` / `MODEL_UNAVAILABLE`、`failed`、`gone`。界面只显示 `ICEBREAKER_ERROR_TEXT` 里的固定文案，不在名单里的 `ice` 参数不显示任何提示。
+
+### 11.6 S9 不变量（`apps/web/test/security/icebreaker.security.test.ts`）
+
+| # | 不变量 | 最低测试要求 |
+| --- | --- | --- |
+| S9 | 只把查看者自己的资料和对方已公开在墙上的内容交给模型；结果只属于查看者；连接点的依据必须是两边资料里的原文（服务端核对）；开场白只预填、从不代发；输出里不允许出现链接与联系方式 | 未登录、墙外、自己的页、未发布的页不能发起且不调用模型；凭证 / 缺 CSRF 无效；被移除立即失效；模型请求里没有第三人、对方草稿与联系方式，禁区单独成块；主人、组织者、其他成员看不到结果，别人的结果 ID 不能开聊或清除，不能跨页使用；注入的链接与手机号、编造的共同点进不了结果，标记按文字输出；开聊不产生消息；删除页面、退出、移除、关闭墙、删除采访时结果一并删除；事件只有数字与布尔 |
+
+## 12. 点数与平台 AI（S10）
+
+没有自己模型 Key 的用户可以用平台的 AI。代码：`apps/web/src/hosted/platform-model.ts`、`apps/web/src/services/billing.ts`、`apps/web/src/db/credits.ts`、`apps/web/src/routes/credits.tsx`、`apps/web/scripts/credits.ts`、迁移 `009_credits.sql`；常量在 `packages/contracts`（`REDEEM_*`、`SPONSOR_*`、`CREDIT_HISTORY_LIMIT`）。
+
+### 12.1 平台 AI
+
+- 配置：`NOWME_PLATFORM_PROVIDER`（`model-providers.ts` 的预设之一）设置后开启。生成模型取 `NOWME_PLATFORM_MODEL` 或预设；采访模型取 `NOWME_PLATFORM_INTERVIEW_MODEL`、预设采访模型或生成模型，都没有时配置报错；OpenAI 兼容协议必须有地址（`NOWME_PLATFORM_BASE_URL` 或预设）；`NOWME_PLATFORM_VISION` 只能是 `0` / `1`。
+- **Key 只来自 `NOWME_PLATFORM_API_KEY`**：不进配置对象、不入库、不进提示词与工具结果、不写日志、不在任何页面出现；只出现在发给模型服务的鉴权头里。没有 Key 时平台 AI 不可用，行为与没有配置平台 AI 时相同（生产环境则拒绝启动，10.1）。
+- 出站与用户自带服务相同：只允许公网 HTTPS（不合法的地址在启动时报错），逐次解析 DNS 并固定连接地址，拒绝重定向。
+- 平台模型出错时，用户只看到 `MODEL_UNAVAILABLE`；真实错误类别与 HTTP 状态只写服务端日志，不回显服务商回复。
+- 选择顺序：用户有自己的配置 → 用自己的（不收点数，不占平台）；否则平台 AI 可用 → 用平台的；否则 `MODEL_CONFIG`。
+- 免费调用：采访（hosted-route 2）与和 TA 聊什么（第 11 节）不收点数，受全站每日上限 `NOWME_PLATFORM_FREE_DAILY_CALLS` 约束（进程内计数，10.3），用完后返回 `MODEL_UNAVAILABLE`。
+- 收费调用：生成、修改按价目扣点（12.3）。工作区与任务页写明“用的是 NOWMe 的 AI”、价目和可用点数，并给出“改用自己的 Key”入口。
+
+### 12.2 账户、余额与流水
+
+两类账户：个人（`user`，`account_id` = 用户 ID）与墙的额度（`wall`，`account_id` = 墙 ID）。
+
+| 表 | 主要字段 | 说明 |
+| --- | --- | --- |
+| `credit_balances` | (`account_kind`,`account_id`) 主键、`balance`（`CHECK >= 0`）、`updated_at` | 当前余额 |
+| `credit_entries` | `id cre_`、`account_kind`、`account_id`、`delta`（≠ 0）、`balance_after`（≥ 0）、`reason`、`ref_id`、`actor_id`、`created_at` | 只追加的流水；触发器禁止 UPDATE / DELETE；对账以流水为准 |
+| `redeem_codes` | `id rdc_`、`code_hash` 唯一、`credits`（1–100 000）、`batch`、`expires_at`、`redeemed_by`、`redeemed_at`、`created_at` | 兑换码只存哈希 |
+| `wall_sponsorships` | `wall_id` 主键、`member_cap`（0–10 000，0 = 不限）、`updated_at` | 墙额度的每人上限 |
+
+| `reason` | 含义 | `ref_id` |
+| --- | --- | --- |
+| `redeem` | 兑换码入账 | 兑换码 ID（唯一） |
+| `grant` / `adjust` | 运营发放（只能为正）/ 调整（可为负，余额不能为负） | — |
+| `signup` | 注册赠送（`NOWME_SIGNUP_CREDITS` > 0 时，每个账号唯一一次，在首次创建用户时） | 用户 ID |
+| `sponsor_out` / `sponsor_in` | 组织者个人 → 墙 | 墙 ID |
+| `sponsor_return` | 墙关闭时剩余额度退回组织者 | 墙 ID |
+| `job` / `job_refund` | 任务扣点 / 退回 | 任务 ID（各自唯一） |
+
+记账（`credits.post`）：先写流水再改余额，变动后余额为负时抛 `InsufficientCredits`、什么都不写；`(reason, ref_id)` 对 `job`、`job_refund`、`redeem` 唯一，重复记账被数据库拒绝。
+
+### 12.3 扣点与退回
+
+- **谁付**（`planJob`）：价目为 0 → 不收；否则先看这面墙还能为这位成员出多少（`wallAllowance` = min(墙余额, 每人上限 − 他已用掉的墙额度)，上限 0 表示只受墙余额限制），够就由墙付；不够再看个人余额；都不够 → 不开始任务（`credits` 错误，界面说明价目、个人余额与墙的可用额度）。不拆分支付。
+- **扣点**（`chargeJob`）：与创建任务在**同一个事务**里，并再检查一次余额 / 墙额度；不够时事务回滚、任务不创建。并发的两个任务不会透支。
+- **结算**（`settleJob`）：任务 `succeeded`（产出新的 accepted 版本）才保留扣点，`generation_jobs.charged = 1`；`failed`（校验不通过、超轮数、超时、API 错误）、`needs_input`（需要补充说明）全额退回，只退一次。墙已关闭时，原本由墙付的退点改退给组织者。
+- 服务重启：遗留任务标记为 `INTERRUPTED` 失败后，`refundUnsettledJobs` 把扣过、未退的全部退回。
+- 用自己 Key 的任务不产生任何流水。
+
+### 12.4 兑换码
+
+- 格式 `NM-XXXX-XXXX-XXXX-XXXX`：16 位 Crockford Base32（80 bit 随机）。输入时忽略大小写、空格、连字符与 `NM` 前缀，`O→0`、`I`/`L→1`。
+- 只存 `hashToken(code)`；明文只在生成时由运营脚本输出一次。
+- 兑换（`POST /account/credits/redeem`）：在一个事务里查哈希 → 已用 / 过期判断 → 标记 `redeemed_by` → 入账 → 记 `credits_redeem` 事件（`props` 只有 `credits`）。格式不对与不存在返回同一种错误；一个码只能入账一次。按用户限流 10 次 / 10 分钟（10.3）。错误页与提示不回显别人的码。
+
+### 12.5 墙的额度
+
+- 组织者把**个人**点数转给墙（`sponsor_out` + `sponsor_in`，同一事务），并设置每位成员上限；`credits` 为 0 表示只改上限。金额 0–100 000 的整数，不能超过自己的余额；负数、小数、超大数被拒（`bad-amount` / `bad-cap` / `insufficient`）。记 `credits_sponsor` 事件（`props: { credits, memberCap }`）。
+- 墙额度只给这面墙的有效成员（发起任务本身要求成员关系有效）；被移除后立即用不到。
+- 墙关闭时，剩余额度在关闭墙的事务里退回组织者个人余额。
+- **组织者可见范围**：后台只显示墙额度的聚合数字（余额、已用、每人上限）和组织者自己的余额；看不到任何成员各自用了多少，也看不到成员的余额。
+
+### 12.6 路由与运营脚本
+
+| 路径 | 谁能访问 | 作用 |
+| --- | --- | --- |
+| `GET /account/credits` | 登录用户 | 自己的余额、价目、平台 AI 是否可用、最近 50 条流水、兑换码输入框 |
+| `POST /account/credits/redeem` | 登录用户（会话 + CSRF + Origin） | `code`；成功 303 `/account/credits?redeemed=<点数>`，失败 `400` / `429` |
+| `POST /w/:wallId/admin/credits` | 这面墙的组织者 | `credits`、`memberCap`；303 回到 `/w/:wallId/admin#credits`；非组织者 `404` |
+
+演示模式（4.2.2）没有这些路由，后台也不显示墙额度区块；平台 AI 未开放时后台同样不显示。每个人只能看到自己的余额与流水。
+
+运营脚本 `pnpm --filter @nowme/web credits <命令>`（直接读写 `NOWME_DATA_DIR` 的数据库，可在主站运行时执行）：`codes --count <1–1000> --credits <n> [--batch <备注>] [--expires <ISO 日期>]` 生成兑换码（明文只输出一次）；`grant --email <邮箱> --credits <n>` 发放；`balance --email <邮箱>` 查余额。目标账号必须先登录过一次。
+
+### 12.7 S10 不变量（`apps/web/test/security/billing.security.test.ts`）
+
+| # | 不变量 | 最低测试要求 |
+| --- | --- | --- |
+| S10 | 平台模型的 Key 只来自环境变量，不入库、不写日志、不在页面出现；余额不为负，流水只追加；任务只扣一次，没做出新版本全额退回；兑换码只存哈希；组织者只看到墙额度的总数，看不到任何成员用了多少 | 扫描数据库、配置、日志、页面不含平台 Key，出错不回显服务商回复；无 Key 时不可用；内网地址启动时拒绝；免费调用上限生效；点数页只有本人数据，后台无成员明细；库里只有兑换码哈希，一码只能用一次，兑换需会话 / CSRF / Origin 且限流；只有组织者能充墙额度，不能透支或用非法金额；墙额度不给别墙成员与被移除成员；关闭墙退回组织者；并发任务不透支；余额表拒绝负数，流水拒绝非法原因与零变动；演示模式没有点数入口 |
 
 ## 13. 后台任务进程与任务队列
 

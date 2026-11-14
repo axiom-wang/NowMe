@@ -1,7 +1,7 @@
 # NOWMe 接口约定 · 网页内自带 API 创作（contracts 第 9 节）
 
-> 状态：**用户已确认（2026-11-07）**。本文是 `docs/contracts.md` 第 9 节的正文；自带 API 与取消收费的决定取代此前平台 Key 和免费额度方案。
-> 范围：应用内采访（W05 托管部分、W06）、托管生成、应用内修改（W08 托管部分）、账号 AI 配置。**取消收费和平台赠送次数**，不做派生（W18）、W09 素材管理。
+> 状态：**用户已确认（2026-11-07）**。本文是 `docs/contracts.md` 第 9 节的正文；自带 API 的决定取代此前平台 Key 和免费额度方案。2026-11-14 起另有平台 AI 与点数（contracts 第 12 节）：没有自己配置的用户可用平台的模型，生成 / 修改扣点数；自带 Key 的用户行为与本文一致。
+> 范围：应用内采访（W05 托管部分、W06）、托管生成、应用内修改（W08 托管部分）、账号 AI 配置。不做派生（W18）、W09 素材管理。
 > 依据：brief-collection 第 3、4、7 节；page-generation 第 7、8 节；MVP 第 6 节与 W05 / W06 / W08。
 
 ## 0. 已确认的决定
@@ -10,7 +10,7 @@
 | --- | --- | --- |
 | D1 | 生成怎样“运行同一个 Skill” | 服务端 Agent 循环（Messages API + 工具调用）。system 里放 `SKILL.md` 全文与 `reference/*.md`、`templates/brief.md`，再加一段固定的“托管运行说明”，把 Skill 第 0、1、7 步（fetch / submit）映射成平台动作。模型只能用 6 个受限工具（见 3.2），不能执行命令、不能联网。不另写生成提示词或页面模板 |
 | D2 | 模型服务与默认模型 | 不绑定一家：支持 Anthropic Messages 与 OpenAI 兼容 Chat Completions 两种协议，预设 12 种服务（见 1.1）；采访与生成可以用不同的服务。默认 Anthropic：采访 `claude-haiku-5-5`，生成与修改 `claude-sonnet-5-5`。按成本测试结果再定（2026-11-07 用户要求扩展到多家服务） |
-| D3 | 凭证与费用 | 用户在账号填写自己的服务与 API Key，按账号加密保存、跨设备可用、可更换和删除。服务器使用该用户 Key；平台免费、不提供模型 Key、不代付费用；取消赠送次数与商业额度 |
+| D3 | 凭证与费用 | 用户在账号填写自己的服务与 API Key，按账号加密保存、跨设备可用、可更换和删除。服务器使用该用户 Key，平台不代付费用、不扣点数。（已补充：配置了 `NOWME_PLATFORM_*` 时，没有自己配置的用户可用平台 AI，生成 / 修改按 contracts 12 扣点数） |
 | D4 | 生成是同步还是异步 | 异步任务：提交后跳到任务页，`<meta http-equiv="refresh">` 每 3 秒刷新（主站 CSP 不允许内联脚本，用 meta 刷新不需要脚本）。进程内串行队列，与现有提交共用渲染器 |
 | D5 | brief 的形态 | 采访模型输出**结构化 brief（JSON，zod 校验）**，平台按 `templates/brief.md` 的结构渲染成 `brief.md`。这样结构一定与本地路线相同，主人改写“AI 眼中的你”/划掉接话点时直接改结构化数据再渲染 |
 | D6 | 画像范围 | 画像按**用户**保存（跨墙），只存“主人明确表达 / 主人确认”的条目，“模型暂定”不入库。主人确认 brief 时勾选要记住的条目（默认全选，可取消） |
@@ -19,7 +19,7 @@
 
 ## 1. 平台配置与用户模型配置
 
-网页创作始终可见；用户未配置时显示 **AI 设置**入口，不因平台没有模型 Key 而返回 404。`loadConfig()` 不读取任何模型 Key、模型地址或模型名称环境变量，也不回退到历史平台配置。
+网页创作始终可见；用户未配置且平台 AI 不可用时显示 **AI 设置**入口，不返回 404。`loadConfig()` 不读取任何模型 Key，也不回退到历史平台配置；平台 AI 的服务、地址、模型只从 `NOWME_PLATFORM_*` 读取，其 Key `NOWME_PLATFORM_API_KEY` 不进配置对象（contracts 12.1）。
 
 | 环境变量 | 默认 | 说明 |
 | --- | --- | --- |
@@ -124,9 +124,9 @@
 
 ### 3.4 运行保护限制
 
-- 不设置免费次数或购买额度，生成、修改不扣次数；旧 `NOWME_HOSTED_FREE_QUOTA` 不再生效。
+- 用自己的 Key 时生成、修改不扣点数；用平台 AI 时按 contracts 12.3 扣点（没做出新版本全额退回）。旧 `NOWME_HOSTED_FREE_QUOTA` 不再生效。
 - 同一页同时最多 1 个排队/运行中任务；每日发起次数、采访次数、工具轮数和超时仍有效，限制原因在界面明确为资源保护。
-- 历史 `generation_jobs.charged` 保留兼容已有数据，新任务恒为 0，不再参与判断或事件统计；任务成功与否只由 `status` 表示。
+- `generation_jobs.charged`：1 表示这个任务用平台 AI 成功并保留了扣点（`settleJob` 的结果）；自带 Key、价目为 0、失败或需要补充说明的任务为 0。任务成功与否只由 `status` 表示；扣退以点数流水为准。
 
 ## 4. 数据模型（迁移 `002_hosted.sql` 与 `004_user_models.sql`）
 
@@ -138,7 +138,7 @@ ID 前缀新增：`pfe_`（画像条目）、`brf_`（brief）、`bas_`（brief 
 | `profile_entries` | `id pfe_`、`user_id`、`category fact\|quote\|preference\|boundary`、`text`（1–200 字）、`source interview\|owner-file`、`confirmation owner-stated\|owner-confirmed`、`created_at`、`updated_at` | 长期画像，按用户。没有 `model-tentative`：暂定内容不入库。删除为物理删除 |
 | `briefs` | `id brf_`、`page_id` 唯一、`owner_id`、`status collecting\|followups\|review\|confirmed`、`answers_json`（素材文本与点选）、`followups_json`、`brief_json`、`brief_md`、`confirmed_at`、`created_at`、`updated_at` | 每页一份，可重新采访（覆盖）。只有主人可读 |
 | `brief_assets` | `id bas_`、`brief_id`、`page_id`、`owner_id`、`file_name`（平台生成）、`mime`、`bytes`、`sha256`、`created_at` | 文件在 `<dataDir>/hosted/<pageId>/assets/<file_name>` |
-| `generation_jobs` | `id gen_`、`page_id`、`owner_id`、`kind generate\|edit`、`status queued\|running\|succeeded\|failed\|needs_input`、`base_revision_id`、`target_block`、`request_text`、`result_message`、`revision_id`、`error_code`、`charged 0\|1`、`usage_json`（只有 token 数与轮数）、`created_at`、`started_at`、`finished_at` | `request_text` / `result_message` 是内容，只有主人可读；删除页面时清空 |
+| `generation_jobs` | `id gen_`、`page_id`、`owner_id`、`kind generate\|edit`、`status queued\|running\|succeeded\|failed\|needs_input`、`base_revision_id`、`target_block`、`request_text`、`result_message`、`revision_id`、`error_code`、`charged 0\|1`（含义见 3.4）、`usage_json`（只有 token 数与轮数）、`created_at`、`started_at`、`finished_at` | `request_text` / `result_message` 是内容，只有主人可读；删除页面时清空 |
 | `revisions`（改） | `source` 取值增加 `hosted`；`hosted` 版本 `credential_id` 为空 | SQLite 不能给已有列加 CHECK，迁移用 INSERT / UPDATE 触发器限制 `source IN ('local-agent','hosted')` |
 
 进程重启时把遗留的 `queued` / `running` 任务置为 `failed`（`error_code = INTERRUPTED`）。
@@ -197,7 +197,7 @@ ID 前缀新增：`pfe_`（画像条目）、`brf_`（brief）、`bas_`（brief 
 
 `pnpm demo` 保留黑客松、社团墙及现有背景人物与示例数据，每次运行清空并重建独立 `.data/demo`。仅演示启动流程显式启用两种体验身份：`newbie@demo.nowme.test`（成员）与 `organizer@demo.nowme.test`（组织者）。首页和登录页提供同源 POST 快捷入口，固定身份映射，不接受任意用户、邮箱、权限或跳转；切换替换会话；登录后统一进入首页，首页不展示身份切换卡片，从墙卡片进入工作区或后台。邮箱验证码及已有会话同样禁止背景账号访问，普通开发登录不变。
 
-维护者通过服务端 `NOWME_DEMO_*` 环境变量或未跟踪的 `.env.local` 提供真实服务与 Key，可共用或分别配置采访和生成。演示启动使用现有 `userModels.save()` 与 `NOWME_AI_ENCRYPTION_KEY` 将配置加密写入体验成员账号，沿用当前用户模型调用、网络限制与凭证版本失效。评委无需填 Key，费用由演示提供者承担；两个体验身份不能通过界面或接口覆盖、删除预置模型配置。未提供配置提示维护者补齐，模型错误可重试，演示拒绝假模型，无普通账号的平台 Key 回退。配置方法、两个身份及验收记录见 [黑客松演示说明](demo.md)。
+维护者通过服务端 `NOWME_DEMO_*` 环境变量或未跟踪的 `.env.local` 提供真实服务与 Key，可共用或分别配置采访和生成。演示启动使用现有 `userModels.save()` 与 `NOWME_AI_ENCRYPTION_KEY` 将配置加密写入体验成员账号，沿用当前用户模型调用、网络限制与凭证版本失效。评委无需填 Key，费用由演示提供者承担；两个体验身份不能通过界面或接口覆盖、删除预置模型配置。未提供配置提示维护者补齐，模型错误可重试，演示拒绝假模型；预置配置不作为普通账号的回退（普通账号的平台 AI 见 contracts 12），演示模式没有点数页面。配置方法、两个身份及验收记录见 [黑客松演示说明](demo.md)。
 
 ## 9. 验收（M5）
 
