@@ -11,10 +11,10 @@
  *   对方不会收到通知。
  * - 停用账号（只有平台运营）：会话全部删除、不能登录、全部页面下墙、本地 Agent 连接断开。
  */
-import { codePointLength, isId } from '@nowme/contracts';
+import { codePointLength, generateId, isId } from '@nowme/contracts';
 import type { AppDeps } from '../context.js';
 import { transaction } from '../db/index.js';
-import { isReportReason, moderationId, type Report, type ReportReason } from '../db/moderation.js';
+import { isReportReason, type Report, type ReportReason } from '../db/moderation.js';
 import { wallQueries } from '../db/wall-queries.js';
 import type { Wall } from '../db/walls.js';
 import type { PublishedMemberPage } from './access.js';
@@ -72,7 +72,7 @@ export function reportPage(deps: ModerationDeps, found: PublishedMemberPage, rep
       return 'updated';
     }
     deps.repos.moderation.insertReport({
-      id: moderationId('rpt'),
+      id: generateId('rpt'),
       reporterId,
       targetKind: 'page',
       wallId: found.wall.id,
@@ -120,7 +120,7 @@ export function reportConversation(deps: ModerationDeps, reporterId: string, con
       return 'updated';
     }
     deps.repos.moderation.insertReport({
-      id: moderationId('rpt'),
+      id: generateId('rpt'),
       reporterId,
       targetKind: 'conversation',
       wallId: conversation.wallId,

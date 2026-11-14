@@ -6,8 +6,7 @@
  * - `blocks`：单向记录，双向生效（`blockedEitherWay`、`hiddenPeers`）。
  * - `user_suspensions`：有记录即停用。
  */
-import { randomBytes } from 'node:crypto';
-import { base32Lower } from '@nowme/contracts';
+import { generateId } from '@nowme/contracts';
 import type { Database } from './database.js';
 
 export const REPORT_REASONS = ['harassment', 'inappropriate', 'impersonation', 'spam', 'other'] as const;
@@ -21,12 +20,6 @@ export function isReportReason(value: unknown): value is ReportReason {
   return typeof value === 'string' && (REPORT_REASONS as readonly string[]).includes(value);
 }
 
-/** `rpt_` / `mda_` + 26 位 base32 小写（与 contracts 的 ID 格式一致；前缀只在本模块使用）。 */
-export function moderationId(prefix: 'rpt' | 'mda'): string {
-  return `${prefix}_${base32Lower(randomBytes(16))}`;
-}
-
-export const REPORT_ID_PATTERN = /^rpt_[a-z2-7]{26}$/;
 
 export interface Report {
   id: string;
@@ -243,7 +236,7 @@ export function createModerationRepo(db: Database) {
       return Number((row as { n: number }).n);
     },
     recordAction(input: ModerationActionInput): string {
-      const id = moderationId('mda');
+      const id = generateId('mda');
       insertAction.run(
         id,
         input.actor,

@@ -10,9 +10,9 @@
  *
  * 这里能看到举报人与补充说明、私信举报的内容——只有平台运营能用这个命令（直接读写服务器上的数据库）。
  */
-import { CHAT_PAGE_SIZE } from '@nowme/contracts';
+import { CHAT_PAGE_SIZE, REPORT_ID_PATTERN } from '@nowme/contracts';
 import type { AppDeps } from '../context.js';
-import { REPORT_ID_PATTERN, type Report, type ReportKind, type ReportStatus } from '../db/moderation.js';
+import { type Report, type ReportKind, type ReportStatus } from '../db/moderation.js';
 import { normalizeEmail } from './auth.js';
 import { platformHidePage, platformResolveReport, REPORT_REASON_LABEL, suspendUser, unsuspendUser } from './moderation.js';
 

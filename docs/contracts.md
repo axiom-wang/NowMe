@@ -789,7 +789,7 @@ interface IcebreakerResult {
 | `blocks` | `blocker_id`、`blocked_id`、`created_at` | 主键 (`blocker_id`,`blocked_id`)，不能拉黑自己 |
 | `user_suspensions` | `user_id` 主键、`reason`、`suspended_at` | |
 
-`rpt_` / `mda_` 前缀目前在 `apps/web/src/db/moderation.ts` 本地生成（格式同 `generateId`），没有加进 `packages/contracts` 的 `ID_PREFIXES`。
+`rpt_`（`report`）/ `mda_`（`moderationAction`）在 `packages/contracts` 的 `ID_PREFIXES` 中，用 `generateId` 生成；举报 ID 的格式检查用 `REPORT_ID_PATTERN`。
 
 ### 15.6 路由
 

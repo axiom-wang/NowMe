@@ -79,6 +79,9 @@ export const ID_PREFIXES = {
   // 点数（contracts 12）
   creditEntry: 'cre',
   redeemCode: 'rdc',
+  // 举报与处理（contracts 15）
+  report: 'rpt',
+  moderationAction: 'mda',
 } as const;
 
 export type IdKind = keyof typeof ID_PREFIXES;
@@ -111,6 +114,7 @@ export const BRIEF_ID_PATTERN = idPattern(ID_PREFIXES.brief);
 export const BRIEF_ASSET_ID_PATTERN = idPattern(ID_PREFIXES.briefAsset);
 export const GENERATION_JOB_ID_PATTERN = idPattern(ID_PREFIXES.generationJob);
 export const ICEBREAKER_ID_PATTERN = idPattern(ID_PREFIXES.icebreaker);
+export const REPORT_ID_PATTERN = idPattern(ID_PREFIXES.report);
 
 // ---------------------------------------------------------------------------
 // 令牌
