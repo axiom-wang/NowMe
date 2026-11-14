@@ -7,13 +7,16 @@ import { assertProductionConfig, ConfigError, dataPaths, loadConfig, loadRepoDot
 import { createWebApp } from './app.js';
 import { describeHostedModels } from './hosted/describe.js';
 import { openDatabase } from './db/index.js';
+import { createLogger } from './observability/logging.js';
 
 loadRepoDotEnv();
+// 生产环境输出 JSON 行日志（contracts 17），开发环境保持可读文本
+const logger = createLogger({ service: 'web', json: process.env.NODE_ENV === 'production' });
 let config: NowmeConfig;
 try {
   config = loadConfig();
   // 生产环境：配置不完整（http 源、没有凭证库密钥、邮件只写本地文件……）直接拒绝启动，并一次列出全部问题
-  for (const warning of assertProductionConfig(config, process.env, 'web')) console.warn(`[web] 配置提醒：${warning}`);
+  for (const warning of assertProductionConfig(config, process.env, 'web')) logger.warn(`[web] 配置提醒：${warning}`);
 } catch (error) {
   if (!(error instanceof ConfigError)) throw error;
   console.error(`[web] ${error.message}`);
@@ -21,14 +24,14 @@ try {
 }
 const db = openDatabase(dataPaths(config.dataDir).db);
 // 环境变量只提供凭证库加密密钥；模型 Key 来自用户账号。
-const web = createWebApp({ config: { ...config, ticketSecret: resolveTicketSecret(config) }, db, secretEnv: process.env });
+const web = createWebApp({ config: { ...config, ticketSecret: resolveTicketSecret(config) }, db, secretEnv: process.env, log: logger });
 
 const server = serve({ fetch: web.fetch, port: config.web.port, hostname: config.web.hostname }, () => {
-  console.log(`[web] NOWMe 主站已启动：${config.webOrigin}（监听 ${config.web.hostname}:${config.web.port}，数据目录 ${config.dataDir}）`);
-  if (!config.isProduction) console.log(`[web] 开发发件箱：${config.webOrigin}/dev/outbox`);
+  logger.info(`[web] NOWMe 主站已启动：${config.webOrigin}（监听 ${config.web.hostname}:${config.web.port}，数据目录 ${config.dataDir}）`);
+  if (!config.isProduction) logger.info(`[web] 开发发件箱：${config.webOrigin}/dev/outbox`);
   if (web.deps.hosted) {
     const hosted = web.deps.hosted.settings;
-    console.log(`[web] 平台托管路线已开启（${describeHostedModels(hosted)}，用户自带 API）`);
+    logger.info(`[web] 平台托管路线已开启（${describeHostedModels(hosted)}，用户自带 API）`);
   }
 });
 
@@ -40,7 +43,7 @@ function shutdown(): void {
   server.close();
   web
     .close()
-    .catch((error: unknown) => console.error('[web] 关闭渲染器失败', error))
+    .catch((error: unknown) => logger.error(`[web] 关闭渲染器失败：${error instanceof Error ? error.message : String(error)}`))
     .finally(() => {
       db.close();
       process.exit(0);

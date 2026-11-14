@@ -184,6 +184,8 @@ export interface TestWebOptions {
   mailOutbox?: Outbox;
   /** 收集主站日志（默认丢弃）。 */
   log?: (message: string) => void;
+  /** 打开访问日志（contracts 17；默认只在生产环境写）。 */
+  accessLogEnabled?: boolean;
 }
 
 export function createTestWeb(options: TestWebOptions = {}): TestWeb {
@@ -203,6 +205,7 @@ export function createTestWeb(options: TestWebOptions = {}): TestWeb {
     outbox: options.mailOutbox ?? outbox,
     kitFonts: KIT_FONTS,
     log: options.log ?? (() => {}),
+    accessLog: options.accessLogEnabled,
     model: options.model,
     platformModel: options.platformModel,
     secretEnv: options.secretEnv,

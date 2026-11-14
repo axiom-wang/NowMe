@@ -29,7 +29,9 @@
     "demo": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/demo.ts",
     "fonts:build": "tsx --conditions=source scripts/build-ui-fonts.ts",
     "stats": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/stats.ts",
-    "credits": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/credits.ts"
+    "backup": "tsx --conditions=source --disable-warning=ExperimentalWarning src/ops/backup-cli.ts backup",
+    "restore": "tsx --conditions=source --disable-warning=ExperimentalWarning src/ops/backup-cli.ts restore",
+    "credits":"tsx --conditions=source --disable-warning=ExperimentalWarning scripts/credits.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "catalog:",

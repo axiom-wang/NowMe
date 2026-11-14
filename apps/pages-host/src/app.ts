@@ -19,6 +19,7 @@ import {
   verifyTicket,
   type NowmeConfig,
 } from '@nowme/contracts';
+import { asLogger, requestLogging } from './logging.js';
 import { isKitStaticFile, kitStaticContentType, readKitStaticFile } from '@nowme/kit';
 
 export type PagesHostConfig = Pick<NowmeConfig, 'pagesOrigin' | 'webOrigin' | 'dataDir'> & {
@@ -28,6 +29,10 @@ export type PagesHostConfig = Pick<NowmeConfig, 'pagesOrigin' | 'webOrigin' | 'd
 export interface PagesHostOptions {
   /** 记录拒绝原因（不含完整票据）。默认 console.warn；测试可传空函数。 */
   log?: (message: string) => void;
+  /** 写访问日志（方法、打码后的路径模板、状态码、耗时；contracts 17）。默认关闭，生产环境由进程入口开启。 */
+  accessLog?: boolean;
+  /** 接受上游的 X-Request-Id（声明了 NOWME_TRUST_PROXY 时）。默认不接受，每个请求自己生成。 */
+  trustRequestId?: boolean;
   /** 注入当前时间（测试用）。 */
   now?: () => Date;
 }
@@ -83,6 +88,7 @@ export function createPagesApp(config: PagesHostConfig, options: PagesHostOption
   const paths = dataPaths(config.dataDir);
   const app = new Hono();
 
+  app.use(requestLogging({ logger: asLogger(log), trustUpstreamRequestId: options.trustRequestId ?? false, accessLog: options.accessLog ?? false }));
   app.use(async (c, next) => {
     await next();
     for (const [name, value] of Object.entries(PAGE_SECURITY_HEADERS)) c.header(name, value);

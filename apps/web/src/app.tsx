@@ -45,6 +45,7 @@ import { createRenderPreviewer } from './hosted/previewer.js';
 import { createHostedService, type HostedService } from './hosted/service.js';
 import type { PagePreviewer } from './hosted/tools.js';
 import { renderError, renderNotFound } from './views/errors.js';
+import { asLogger, requestLogging } from './observability/logging.js';
 
 export type { AppDeps, AppEnv, WebConfig } from './context.js';
 export { openDatabase, type Database } from './db/index.js';
@@ -64,6 +65,8 @@ export interface CreateWebAppOptions {
   /** Kit 字体清单，默认 `loadKitFonts()`。 */
   kitFonts?: KitFont[];
   log?: (message: string) => void;
+  /** 是否写访问日志（contracts 17）；默认只在生产环境写。请求 ID 与 X-Request-Id 响应头始终有。 */
+  accessLog?: boolean;
   /** 非生产环境假模型测试注入；真实模型始终使用用户账号配置。 */
   model?: ModelClient;
   /** 只读取 NOWME_AI_ENCRYPTION_KEY、开发本机访问开关与 NOWME_SMTP_URL（发信连接串），不读取模型 Key。 */
@@ -139,6 +142,7 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
   deps.hosted = createHosted(deps, options);
 
   const app: AppHono = new Hono<AppEnv>();
+  app.use(requestLogging({ logger: asLogger(log), trustUpstreamRequestId: config.trustProxyHops > 0, accessLog: options.accessLog ?? config.isProduction }));
   app.use(securityHeaders(config));
   // 健康检查（contracts 10.5）：给负载均衡 / 容器编排用，放在 Host 头校验之前（探针常用 IP 访问）。
   // 不读会话、不设 cookie、不返回任何业务信息。
