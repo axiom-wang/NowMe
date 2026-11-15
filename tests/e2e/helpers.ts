@@ -48,6 +48,7 @@ export async function login(page: Page, email: string, nickname: string): Promis
   await page.waitForURL((url) => url.pathname !== '/login/verify' && url.pathname !== '/login');
   if (new URL(page.url()).pathname === '/welcome') {
     await page.getByLabel('昵称').fill(nickname);
+    await page.locator('input[type="checkbox"][required]').check();
     await page.getByRole('button', { name: '进入 NOWMe' }).click();
   }
   await page.waitForURL((url) => url.pathname !== '/welcome');
