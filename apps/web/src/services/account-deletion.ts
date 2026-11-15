@@ -227,6 +227,10 @@ export async function deleteAccount(deps: DeletionDeps, userId: string, rawCode:
     queries.replaceSentMessages(userId, DELETED_MESSAGE_TEXT);
     queries.deleteChatReads(userId);
     queries.deleteIcebreakersOfViewer(userId);
+    // 必答题的回答、提醒记录、他生成的群像（contracts 19）
+    repos.questions.deleteAnswersOfUser(userId);
+    repos.reminders.deleteForUser(userId);
+    repos.portraits.deleteByCreator(userId);
 
     // 6. 画像、模型配置、会话、验证码、墙封面
     repos.profileEntries.deleteAllForUser(userId);

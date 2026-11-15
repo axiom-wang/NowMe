@@ -281,6 +281,7 @@ export function closeWall(deps: WallDeps, wall: Wall, organizerId: string): Clos
     let revokedCredentials = 0;
     for (const pageId of queries.pageIdsForWall(wall.id)) revokedCredentials += disconnectAgent(deps, pageId);
     deps.repos.icebreakers.deleteForWall(wall.id);
+    deps.repos.portraits.deleteForWall(wall.id);
     // 墙的剩余额度退回组织者的个人余额（contracts 12）
     returnWallCredits(deps, wall);
     recordEvent(deps, 'wall_closed', {

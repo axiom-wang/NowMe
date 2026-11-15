@@ -255,6 +255,9 @@ export async function buildAccountExport(deps: ExportDeps, userId: string): Prom
       updatedAt: entry.updatedAt,
     })),
     icebreakers,
+    // 必答题的回答（contracts 19.1）
+    wallAnswers: repos.questions.allAnswersOfUser(userId).map((answer) => ({ ...answer, wallName: wallNames.get(answer.wallId) ?? null })),
+    receivesReminderEmails: repos.reminders.acceptsReminders(userId),
     conversations,
     blocked: repos.moderation.listBlockedBy(userId).map((row) => ({ nickname: row.nickname, since: row.blockedAt })),
     reportsFiled: queries.reportsFiled(userId).map((report) => ({ ...report, wallName: wallNames.get(report.wallId) ?? null })),

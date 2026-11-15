@@ -591,7 +591,7 @@ const ProfileRow: FC<{ entry: ProfileEntry; csrf: string }> = ({ entry, csrf }) 
   </li>
 );
 
-export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVersion?: string | null | undefined; nicknameDraft?: string; error?: string; csrf: string; profile: ProfileEntry[]; briefs: OwnBriefListItem[]; notice: string | null; blocked?: BlockedUserRow[] }> = ({ accountLinks, nickname, avatarVersion, nicknameDraft, error, csrf, profile, briefs, notice, blocked = [] }) => (
+export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVersion?: string | null | undefined; nicknameDraft?: string; error?: string; csrf: string; profile: ProfileEntry[]; briefs: OwnBriefListItem[]; notice: string | null; blocked?: BlockedUserRow[]; remindersOn?: boolean }> = ({ accountLinks, nickname, avatarVersion, nicknameDraft, error, csrf, profile, briefs, notice, blocked = [], remindersOn = true }) => (
   <div class="profile-page">
     <header class="profile-intro">
       <h1>我的资料</h1>
@@ -654,6 +654,19 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
       )}
     </section>
     <BlockedList csrf={csrf} blocked={blocked} />
+    <section class="profile-card" id="notifications" aria-labelledby="notifications-heading">
+      <h2 id="notifications-heading">提醒邮件</h2>
+      <p class="muted">墙的组织者可以一键提醒还没发布页面、没答完必答题的人，提醒会发到你的登录邮箱（组织者看不到你的邮箱）。同一面墙 48 小时内最多一封。</p>
+      <form method="post" action="/account/notifications" class="stack">
+        <CsrfField token={csrf} />
+        <input type="hidden" name="reminders" value="0" />
+        <label class="check">
+          <input type="checkbox" name="reminders" value="1" checked={remindersOn} />
+          <span>接收组织者的提醒邮件</span>
+        </label>
+        <div><button type="submit" class="profile-button">保存</button></div>
+      </form>
+    </section>
     {accountLinks ? (
       <section class="profile-card" aria-labelledby="account-heading">
         <h2 id="account-heading">账号</h2>

@@ -59,6 +59,7 @@ export function createEventsRepo(db: Database) {
   const forPage = db.prepare('SELECT * FROM events WHERE page_id = ? ORDER BY created_at, rowid');
   const countPageTypeSince = db.prepare('SELECT COUNT(*) AS n FROM events WHERE page_id = ? AND type = ? AND created_at > ?');
   const forWall = db.prepare('SELECT * FROM events WHERE wall_id = ? ORDER BY created_at, rowid');
+  const countWallTypeSince = db.prepare('SELECT COUNT(*) AS n FROM events WHERE wall_id = ? AND type = ? AND created_at > ?');
   const countsByType = db.prepare('SELECT type, COUNT(*) AS n FROM events WHERE wall_id = ? GROUP BY type');
   const distinctActors = db.prepare(
     'SELECT COUNT(DISTINCT actor_id) AS n FROM events WHERE wall_id = ? AND type = ? AND actor_id IS NOT NULL',
@@ -83,6 +84,10 @@ export function createEventsRepo(db: Database) {
     /** 某页某类事件在 `since`（ISO）之后的条数（远程预览限流用）。 */
     countForPageSince(pageId: string, type: EventType, since: string): number {
       return Number((countPageTypeSince.get(pageId, type, since) as { n: number }).n);
+    },
+    /** 某面墙某类事件在 `since`（ISO）之后的条数（群像限流用）。 */
+    countForWallSince(wallId: string, type: EventType, since: string): number {
+      return Number((countWallTypeSince.get(wallId, type, since) as { n: number }).n);
     },
     record(event: RecordEventInput): string {
       if (!EVENT_TYPE_SET.has(event.type)) throw new Error(`未知的事件类型：${event.type}`);

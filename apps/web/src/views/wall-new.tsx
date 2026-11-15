@@ -6,7 +6,9 @@ import type { FC } from 'hono/jsx';
 import type { SceneType } from '@nowme/contracts';
 import { WALL_TEXT_LIMITS } from '../constants.js';
 import type { WallFormErrors, WallFormValues } from '../services/walls.js';
+import { questionFormValues, type QuestionFormValue } from '../services/wall-questions.js';
 import { CsrfField, Notice } from './forms.js';
+import { QuestionEditor } from './organizer-tools.js';
 
 export interface SceneChoice {
   type: SceneType;
@@ -18,6 +20,9 @@ export interface NewWallViewProps {
   scenes: SceneChoice[];
   values?: WallFormValues;
   errors?: WallFormErrors;
+  /** 必答题（contracts 19.1）的回显与错误。 */
+  questions?: QuestionFormValue[];
+  questionErrors?: Record<number, string>;
 }
 
 const FieldError: FC<{ id: string; message?: string }> = ({ id, message }) =>
@@ -27,14 +32,14 @@ const FieldError: FC<{ id: string; message?: string }> = ({ id, message }) =>
     </span>
   ) : null;
 
-export const NewWallView: FC<NewWallViewProps> = ({ csrf, scenes, values, errors = {} }) => {
-  const hasErrors = Object.keys(errors).length > 0;
+export const NewWallView: FC<NewWallViewProps> = ({ csrf, scenes, values, errors = {}, questions, questionErrors = {} }) => {
+  const hasErrors = Object.keys(errors).length > 0 || Object.keys(questionErrors).length > 0;
   return (
     <div class="container container--form">
     <section class="card card--form">
       <p class="eyebrow">组织者 · 三分钟</p>
       <h1 class="display form-title">建一面墙</h1>
-      <p class="muted">起个名字，写句简介，选一种场景，就能拿到邀请链接和二维码，发给圈子里的人。不用设置别的。</p>
+      <p class="muted">起个名字，写句简介，选一种场景，就能拿到邀请链接和二维码，发给圈子里的人。想让大家都回答几个问题，可以加上必答题。</p>
       {hasErrors ? <Notice tone="error">有几项需要改一下，已经在对应的位置标出来了。</Notice> : null}
       <form method="post" action="/walls" class="stack">
         <CsrfField token={csrf} />
@@ -96,6 +101,10 @@ export const NewWallView: FC<NewWallViewProps> = ({ csrf, scenes, values, errors
           <span class="field__hint muted">会放在墙的顶部，成员的 AI 帮他们做页面时也会参考。</span>
           <FieldError id="note-error" message={errors.organizerNote} />
         </label>
+        <details class="question-editor__toggle" open={(questions ?? []).some((value) => value.prompt || value.options) || Object.keys(questionErrors).length > 0}>
+          <summary class="btn btn--ghost">＋ 加必答题（可选）：代替接龙和问卷</summary>
+          <QuestionEditor values={questions ?? questionFormValues([])} errors={questionErrors} />
+        </details>
         <button type="submit" class="btn btn--primary btn--block btn--lg">
           建好了，去拿邀请链接
         </button>

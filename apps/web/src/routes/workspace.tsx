@@ -21,7 +21,7 @@ import type { Context } from 'hono';
 import type { AppDeps, AppEnv, AppHono } from '../context.js';
 import { requireForm } from '../security/forms.js';
 import { authOf, requireUser } from '../security/session.js';
-import { findOwnPage, type OwnPage } from '../services/access.js';
+import { findMemberWall, findOwnPage, type OwnPage } from '../services/access.js';
 import { disconnectAgent, workspacePath } from '../services/agent.js';
 import { createInstruction } from '../services/instruction.js';
 import { deletePage, deletionImpact, isRevisionDeleted, isRevisionUsable, leaveWall } from '../services/page-lifecycle.js';
@@ -40,6 +40,7 @@ import { renderError, renderNotFound } from '../views/errors.js';
 import { renderPage } from '../views/layout.js';
 import { WorkspaceView } from '../views/workspace.js';
 import { JOB_START_ERROR_TEXT } from '../views/hosted.js';
+import { questionsGate } from './organizer-tools.js';
 import type { JobStartError } from '../hosted/service.js';
 
 /** `?notice=` 只接受这些（固定文案，不回显参数）。 */
@@ -99,6 +100,10 @@ export function registerWorkspaceRoutes(app: AppHono, deps: AppDeps): void {
   const ownOf = (c: Context<AppEnv>) => findOwnPage(deps.repos, authOf(c).user.id, c.req.param('wallId') ?? '');
 
   app.get('/w/:wallId/me', user, (c) => {
+    // 必答题没答完时先去回答（contracts 19.1）
+    const member = findMemberWall(deps.repos, authOf(c).user.id, c.req.param('wallId'));
+    const gate = member ? questionsGate(c, deps, member) : null;
+    if (gate) return gate;
     const notice = c.req.query('notice');
     const hostedError = c.req.query('hosted');
     return renderWorkspace(c, deps, c.req.param('wallId'), {

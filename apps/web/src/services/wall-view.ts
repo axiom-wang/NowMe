@@ -20,6 +20,8 @@ import type { Wall } from '../db/walls.js';
 import type { MemberWall, PublishedMemberPage } from './access.js';
 import { REVISION_COVER_FILE, revisionDir } from './revision-storage.js';
 import type { IssuedTicket } from './tickets.js';
+import { loadPortrait, type PortraitState } from './portrait.js';
+import { answersForWall, cardAnswers, questionStats, type CardAnswer, type QuestionStats } from './wall-questions.js';
 
 export interface PublishedHook {
   id: string;
@@ -146,6 +148,8 @@ export interface WallCard {
   own: boolean;
   /** 查看者已经为这一页找过话题，且对方之后没有更新过页面（contracts 11；只有查看者自己看得到）。 */
   hasTalk: boolean;
+  /** 页面主人对必答题的回答（contracts 19.1；墙上可见）。 */
+  answers: CardAnswer[];
 }
 
 export interface WallModel {
@@ -157,13 +161,19 @@ export interface WallModel {
   cards: WallCard[];
   /** 这面墙的有效成员数（含还没发布的；只是数字，不含任何人的信息）。 */
   memberCount: number;
+  /** 必答题与按回答的人数（只算查看者在墙上看得到的卡片），用于筛选。没有题目时为空数组。 */
+  questions: QuestionStats[];
+  /** 查看者自己有没有答完必答题（没有题目时为 true）。 */
+  answeredAll: boolean;
+  /** 墙的群像（contracts 19.3）。 */
+  portrait: PortraitState;
 }
 
 function nicknameOf(deps: Pick<AppDeps, 'repos'>, userId: string): string {
   return deps.repos.users.findById(userId)?.nickname ?? '成员';
 }
 
-function toWallCard(deps: Pick<AppDeps, 'repos' | 'config'>, wallId: string, entry: PublishedEntry, viewerId: string, talks: Map<string, string>): WallCard {
+function toWallCard(deps: Pick<AppDeps, 'repos' | 'config'>, wallId: string, entry: PublishedEntry, viewerId: string, talks: Map<string, string>, answers: CardAnswer[]): WallCard {
   const hasCover = existsSync(coverFilePath(deps.config.dataDir, entry.revisionId));
   return {
     pageId: entry.pageId,
@@ -172,6 +182,7 @@ function toWallCard(deps: Pick<AppDeps, 'repos' | 'config'>, wallId: string, ent
     card: parsePublishedCard(entry.cardJson, nicknameOf(deps, entry.ownerId)),
     own: entry.ownerId === viewerId,
     hasTalk: entry.ownerId !== viewerId && talks.get(entry.pageId) === entry.publicationId,
+    answers,
   };
 }
 
@@ -184,6 +195,9 @@ export function loadWallModel(deps: Pick<AppDeps, 'db' | 'repos' | 'config'>, me
   const myState: PageDisplayState = myPage ? deps.repos.publications.displayState(myPage.id) : 'unpublished';
   const myEntry = entries.find((entry) => entry.ownerId === membership.userId) ?? null;
   const talks = deps.repos.icebreakers.publicationsForViewerWall(membership.userId, wall.id);
+  const questions = deps.repos.questions.listForWall(wall.id);
+  const answers = answersForWall(deps, wall.id, questions);
+  const mine = answers.get(membership.userId);
   return {
     wall,
     role: membership.role,
@@ -192,8 +206,11 @@ export function loadWallModel(deps: Pick<AppDeps, 'db' | 'repos' | 'config'>, me
       state: myState,
       href: myEntry ? memberPagePath(wall.id, myEntry.pageId) : null,
     },
-    cards: shuffle(entries.map((entry) => toWallCard(deps, wall.id, entry, membership.userId, talks))),
+    cards: shuffle(entries.map((entry) => toWallCard(deps, wall.id, entry, membership.userId, talks, cardAnswers(questions, answers.get(entry.ownerId))))),
     memberCount: deps.repos.memberships.countActiveForWall(wall.id),
+    questions: questionStats(questions, answers, entries.map((entry) => entry.ownerId)),
+    answeredAll: questions.every((question) => mine?.has(question.id)),
+    portrait: loadPortrait(deps, wall.id),
   };
 }
 

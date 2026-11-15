@@ -147,3 +147,38 @@ document.querySelectorAll('form[data-demo-login]').forEach(function (form) {
     }
   });
 });
+
+/*
+ * 必答题编辑（contracts 19.1）：“用例子填”按钮把模板填进第一道还空着的题。没有脚本时按钮不显示。
+ */
+(function () {
+  'use strict';
+  Array.prototype.slice.call(document.querySelectorAll('[data-question-editor]')).forEach(function (editor) {
+    var templates = editor.querySelector('[data-question-templates]');
+    if (!templates) return;
+    templates.hidden = false;
+    templates.addEventListener('click', function (event) {
+      var target = event.target;
+      var button = target instanceof Element ? target.closest('[data-question-template]') : null;
+      if (!button) return;
+      var template;
+      try {
+        template = JSON.parse(button.getAttribute('data-question-template') || '{}');
+      } catch (error) {
+        return;
+      }
+      var items = Array.prototype.slice.call(editor.querySelectorAll('[data-question-item]'));
+      var item = items.filter(function (candidate) {
+        var prompt = candidate.querySelector('input[name$="_prompt"]');
+        var options = candidate.querySelector('textarea[name$="_options"]');
+        return prompt && options && !prompt.value.trim() && !options.value.trim();
+      })[0];
+      if (!item) return;
+      item.querySelector('input[name$="_prompt"]').value = template.prompt || '';
+      item.querySelector('textarea[name$="_options"]').value = template.options || '';
+      var kind = item.querySelector('input[name$="_kind"][value="' + (template.kind === 'multi' ? 'multi' : 'single') + '"]');
+      if (kind) kind.checked = true;
+      item.querySelector('input[name$="_prompt"]').focus();
+    });
+  });
+})();

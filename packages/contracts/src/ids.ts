@@ -84,6 +84,9 @@ export const ID_PREFIXES = {
   moderationAction: 'mda',
   // 后台任务队列（contracts 13）：提交渲染、远程预览
   renderJob: 'job',
+  // 组织者工具（contracts 19）
+  wallQuestion: 'wqn',
+  wallReminder: 'rmd',
 } as const;
 
 export type IdKind = keyof typeof ID_PREFIXES;
@@ -118,6 +121,7 @@ export const GENERATION_JOB_ID_PATTERN = idPattern(ID_PREFIXES.generationJob);
 export const ICEBREAKER_ID_PATTERN = idPattern(ID_PREFIXES.icebreaker);
 export const REPORT_ID_PATTERN = idPattern(ID_PREFIXES.report);
 export const RENDER_JOB_ID_PATTERN = idPattern(ID_PREFIXES.renderJob);
+export const WALL_QUESTION_ID_PATTERN = idPattern(ID_PREFIXES.wallQuestion);
 
 // ---------------------------------------------------------------------------
 // 令牌

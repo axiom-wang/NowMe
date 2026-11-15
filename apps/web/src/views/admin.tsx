@@ -15,8 +15,12 @@ import type { OrganizerReport } from '../services/moderation.js';
 import { PAGE_STATE_LABEL } from './home.js';
 import { initialOf } from './layout.js';
 import { defaultWallCover } from './home.js';
+import type { PortraitState } from '../services/portrait.js';
+import type { WallProgress } from '../services/reminders.js';
+import type { CardAnswer, QuestionFormValue, QuestionStats } from '../services/wall-questions.js';
+import { AdminQuestions, PortraitPanel, ProgressPanel } from './organizer-tools.js';
 
-export type AdminNotice = 'created' | 'removed' | 'cover-updated' | 'cover-deleted' | 'credits-saved' | 'report-takedown' | 'report-dismissed';
+export type AdminNotice = 'created' | 'removed' | 'cover-updated' | 'cover-deleted' | 'credits-saved' | 'report-takedown' | 'report-dismissed' | 'questions-saved' | 'portrait-ready';
 
 /** 墙的 AI 额度（contracts 12）：只有聚合数字，没有任何成员的明细。演示模式与平台 AI 未开放时为 null。 */
 export interface AdminCredits {
@@ -41,6 +45,8 @@ const NOTICE_TEXT: Record<AdminNotice, string> = {
   'cover-deleted': '已移除墙封面，恢复默认插画。',
   'report-takedown': '这一页已经从墙上撤下。TA 可以修改后重新发布；之后再有人举报，会重新出现在这里。',
   'report-dismissed': '已忽略这些举报，页面继续留在墙上。',
+  'questions-saved': '必答题已保存。还没答的成员下次打开墙时会先被请去回答。',
+  'portrait-ready': '群像生成好了，墙上的成员都能看到。可以复制下面的文字发到群里。',
 };
 
 export interface AdminModel {
@@ -55,6 +61,17 @@ export interface AdminModel {
   credits: AdminCredits | null;
   /** 待处理举报（contracts 15、S12）：只有页面、原因与次数。 */
   reports: OrganizerReport[];
+  /** 必答题（contracts 19.1）：统计范围是全部有效成员。 */
+  questions: { stats: QuestionStats[]; values: QuestionFormValue[]; errors?: Record<number, string> };
+  /** 成员关系 ID → 这个人的回答（成员列表里展示）。 */
+  memberAnswers: Map<string, CardAnswer[]>;
+  /** 完成度与一键提醒（contracts 19.2）。 */
+  progress: WallProgress;
+  groupReminder: string;
+  /** 刚刚一键提醒了几个人（跳转回来时显示）。 */
+  reminded: number | null;
+  /** 墙的群像（contracts 19.3）。 */
+  portrait: { state: PortraitState; shareText: string | null; error: string | null };
 }
 
 export interface AdminViewProps {
@@ -66,7 +83,7 @@ export interface AdminViewProps {
   coverError?: string;
 }
 
-const MemberItem: FC<{ member: AdminMemberRow; wallId: string; csrf: string }> = ({ member, wallId, csrf }) => (
+const MemberItem: FC<{ member: AdminMemberRow; wallId: string; csrf: string; answers: CardAnswer[] }> = ({ member, wallId, csrf, answers }) => (
   <li class="member-row">
     <span class="avatar" aria-hidden="true">
       {member.avatarUrl ? <img src={member.avatarUrl} alt="" loading="lazy" /> : initialOf(member.nickname)}
@@ -76,7 +93,18 @@ const MemberItem: FC<{ member: AdminMemberRow; wallId: string; csrf: string }> =
       {member.role === 'organizer' ? <span class="badge badge--accent">组织者</span> : null}
       <span class={`badge ${member.state === 'published' ? 'badge--ok' : 'badge--muted'}`}>{PAGE_STATE_LABEL[member.state]}</span>
     </div>
-    <div class="member-row__meta muted">{formatDateTime(member.joinedAt)} 加入</div>
+    <div class="member-row__meta muted">
+      {formatDateTime(member.joinedAt)} 加入
+      {answers.length > 0 ? (
+        <span class="member-row__answers">
+          {answers.map((answer) => (
+            <span class="answer-tag" title={answer.prompt}>
+              {answer.choices.map((choice) => choice.label).join('、')}
+            </span>
+          ))}
+        </span>
+      ) : null}
+    </div>
     {member.role === 'member' ? (
       <form
         method="post"
@@ -139,17 +167,23 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError,
             </figure>
           </section>
 
+          <ProgressPanel wall={wall} progress={model.progress} groupText={model.groupReminder} csrf={csrf} remindedCount={model.reminded} />
+
           <OrganizerReports wallId={wall.id} csrf={csrf} reports={model.reports} />
+
+          <AdminQuestions wall={wall} stats={model.questions.stats} total={model.progress.total} values={model.questions.values} errors={model.questions.errors} csrf={csrf} />
+
+          <PortraitPanel wall={wall} state={model.portrait.state} shareText={model.portrait.shareText} organizer={true} csrf={csrf} error={model.portrait.error} />
 
           <section class="card" aria-labelledby="members-heading">
             <h2 id="members-heading">成员</h2>
-            <p class="muted">这里只显示昵称、加入时间和有没有发布页面。成员的草稿、做好的页面和联系方式，只有他们自己看得到。</p>
+            <p class="muted">这里只显示昵称、加入时间、有没有发布页面和必答题的回答。成员的草稿、做好的页面和联系方式，只有他们自己看得到。</p>
             {model.members.every((member) => member.role === 'organizer') ? (
               <p class="muted">现在只有你一个人。把上面的邀请链接发出去，有人加入后会出现在这里。</p>
             ) : null}
             <ul class="member-list">
               {model.members.map((member) => (
-                <MemberItem member={member} wallId={wall.id} csrf={csrf} />
+                <MemberItem member={member} wallId={wall.id} csrf={csrf} answers={model.memberAnswers.get(member.membershipId) ?? []} />
               ))}
             </ul>
           </section>

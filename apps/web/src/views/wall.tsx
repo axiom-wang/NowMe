@@ -13,6 +13,7 @@ import { Notice } from './forms.js';
 import { PAGE_STATE_LABEL } from './home.js';
 import { AiBadge } from './ai-badge.js';
 import { initialOf } from './layout.js';
+import { answerKeys, CardAnswerTags, PortraitPanel, WallFilters } from './organizer-tools.js';
 
 export type WallNotice = 'joined' | 'rejoined' | 'blocked';
 
@@ -31,9 +32,11 @@ const MY_PAGE_TEXT: Record<PageDisplayState, string> = {
   published: '你的页面已经挂在墙上了，墙上的人都能看到。',
 };
 
-/** 卡片的检索文字（名字、一行介绍、全部接话点），给墙上的搜索用。 */
+/** 卡片的检索文字（名字、一行介绍、全部接话点、必答题的回答），给墙上的搜索用。 */
 function searchText(item: WallCard): string {
-  return [item.card.displayName, item.card.tagline, ...item.card.hooks.map((hook) => hook.text)].join(' ').toLowerCase();
+  return [item.card.displayName, item.card.tagline, ...item.card.hooks.map((hook) => hook.text), ...item.answers.flatMap((answer) => answer.choices.map((choice) => choice.label))]
+    .join(' ')
+    .toLowerCase();
 }
 
 /**
@@ -43,7 +46,7 @@ function searchText(item: WallCard): string {
 const WallCardItem: FC<{ item: WallCard }> = ({ item }) => {
   const [first, ...rest] = item.card.hooks;
   return (
-    <li class="wall-card" data-wall-card data-search={searchText(item)}>
+    <li class="wall-card" data-wall-card data-search={searchText(item)} data-answers={answerKeys(item.answers)}>
       <a class="wall-card__link" href={item.href}>
         <span class="wall-card__poster">
           <span class="wall-card__cover">
@@ -68,6 +71,7 @@ const WallCardItem: FC<{ item: WallCard }> = ({ item }) => {
           <span class="wall-card__name">{item.card.displayName}</span>
           <AiBadge />
           {item.card.tagline ? <span class="wall-card__tagline">{item.card.tagline}</span> : null}
+          <CardAnswerTags answers={item.answers} />
           {rest.length > 0 ? <span class="wall-card__more">还想聊 {rest.length} 个话题</span> : null}
         </span>
       </a>
@@ -96,7 +100,7 @@ export const OrganizerNote: FC<{ text: string }> = ({ text }) => (
   </blockquote>
 );
 
-export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNotice | null }> = ({ model, sceneLabel, notice }) => {
+export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNotice | null; csrf: string; portraitShare: string | null }> = ({ model, sceneLabel, notice, csrf, portraitShare }) => {
   const { wall, myPage, cards } = model;
   const published = myPage.state === 'published';
   return (
@@ -139,8 +143,15 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
               看看我的页面
             </a>
           ) : null}
+          {model.questions.length > 0 ? (
+            <a class="btn btn--on-dark" href={`/w/${wall.id}/questions`}>
+              我的回答
+            </a>
+          ) : null}
         </div>
       </section>
+
+      <PortraitPanel wall={wall} state={model.portrait} shareText={portraitShare} organizer={model.role === 'organizer'} csrf={csrf} />
 
       <section class="wall-members wall-board" aria-labelledby="members-heading" data-wall-board>
         <div class="section-head wall-board__head">
@@ -164,6 +175,7 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
             </label>
           ) : null}
         </div>
+        {cards.length > 0 ? <WallFilters questions={model.questions} /> : null}
         {cards.length > 0 ? (
           <ul class="wall-grid">
             {wall.organizerNote ? (

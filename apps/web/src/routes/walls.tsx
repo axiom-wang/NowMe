@@ -28,6 +28,9 @@ import { authOf, requireUser } from '../security/session.js';
 import { findMemberWall, findPublishedMemberPage } from '../services/access.js';
 import { coverFilePath, loadMemberPageModel, loadWallModel, parsePublishedCard, resolveChat } from '../services/wall-view.js';
 import { createWall, joinState, joinWall, parseWallForm } from '../services/walls.js';
+import { parseQuestionForm, questionTexts, saveQuestions } from '../services/wall-questions.js';
+import { questionsGate } from './organizer-tools.js';
+import { portraitShareText } from '../services/portrait.js';
 import { openDirect } from '../services/chat.js';
 import { clearIcebreaker, generateIcebreaker, ICEBREAKER_ERROR_TEXT, icebreakerOpener, loadIcebreakerPanel, type IcebreakerFailure } from '../services/icebreaker.js';
 import { renderNotFound } from '../views/errors.js';
@@ -79,29 +82,52 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
 
   app.post('/walls', form, async (c) => {
     const auth = authOf(c);
-    const parsed = parseWallForm(c.get('form'));
-    if (!parsed.ok) {
+    const fields = c.get('form');
+    const parsed = parseWallForm(fields);
+    const questions = parseQuestionForm(fields);
+    const questionErrors = questions.ok ? {} : questions.errors;
+    if (!parsed.ok || !questions.ok) {
       return renderPage(c, {
         title: '建一面墙',
         status: 400,
-        body: <NewWallView csrf={auth.session.csrfToken} scenes={scenes} values={parsed.values} errors={parsed.errors} />,
+        body: <NewWallView csrf={auth.session.csrfToken} scenes={scenes} values={parsed.ok ? { ...parsed.input, organizerNote: parsed.input.organizerNote ?? '' } : parsed.values} errors={parsed.ok ? {} : parsed.errors} questions={questions.values} questionErrors={questionErrors} />,
       });
     }
-    // 内容安全（contracts 16.1）：墙的名称、简介、组织者的话
+    // 内容安全（contracts 16.1）：墙的名称、简介、组织者的话、必答题
     const errors: Record<string, string> = {};
     for (const [field, text] of [['name', parsed.input.name], ['description', parsed.input.description], ['organizerNote', parsed.input.organizerNote]] as const) {
       const verdict = await deps.contentSafety.checkText('wall', text);
       if (!verdict.ok) errors[field] = verdict.message;
     }
-    if (Object.keys(errors).length > 0) {
+    const blockedQuestions: Record<number, string> = {};
+    const texts = questionTexts(questions.drafts);
+    for (const [index, draft] of questions.drafts.entries()) {
+      const verdict = await deps.contentSafety.checkText('wall', texts[index] ?? '');
+      if (!verdict.ok) blockedQuestions[draft.index] = verdict.message;
+    }
+    if (Object.keys(errors).length > 0 || Object.keys(blockedQuestions).length > 0) {
       const { name, description, sceneType, organizerNote } = parsed.input;
       return renderPage(c, {
         title: '建一面墙',
         status: 422,
-        body: <NewWallView csrf={auth.session.csrfToken} scenes={scenes} values={{ name, description, sceneType, organizerNote: organizerNote ?? '' }} errors={errors} />,
+        body: (
+          <NewWallView
+            csrf={auth.session.csrfToken}
+            scenes={scenes}
+            values={{ name, description, sceneType, organizerNote: organizerNote ?? '' }}
+            errors={errors}
+            questions={questions.values}
+            questionErrors={blockedQuestions}
+          />
+        ),
       });
     }
     const { wall } = createWall(deps, { organizerId: auth.user.id, ...parsed.input });
+    if (questions.drafts.length > 0) {
+      // 建墙时还没有任何题目：表单里的题目 ID 一律当作新题
+      saveQuestions(deps, wall.id, questions.drafts.map((draft) => ({ ...draft, id: null })));
+      deps.repos.events.record({ type: 'wall_questions_save', wallId: wall.id, pageId: null, actorId: auth.user.id, props: { questions: questions.drafts.length, created: true }, createdAt: deps.now().toISOString() });
+    }
     return c.redirect(`${wallPath(wall.id)}/admin?notice=created`, 303);
   });
 
@@ -157,6 +183,8 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
     const auth = authOf(c);
     const member = findMemberWall(deps.repos, auth.user.id, c.req.param('wallId'));
     if (!member) return renderNotFound(c);
+    const gate = questionsGate(c, deps, member);
+    if (gate) return gate;
     const model = loadWallModel(deps, member);
     deps.repos.events.record({
       type: 'wall_view',
@@ -175,6 +203,8 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
           model={model}
           sceneLabel={labels[member.wall.sceneType]}
           notice={notice && WALL_NOTICES.has(notice) ? (notice as WallNotice) : null}
+          csrf={auth.session.csrfToken}
+          portraitShare={model.portrait.kind === 'ready' ? portraitShareText(member.wall, model.portrait.view, `${deps.config.webOrigin}${wallPath(member.wall.id)}`) : null}
         />
       ),
     });
@@ -208,6 +238,8 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
     const auth = authOf(c);
     const found = findPublishedMemberPage(deps, auth.user.id, c.req.param('wallId'), c.req.param('pageId'));
     if (!found) return renderNotFound(c);
+    const gate = questionsGate(c, deps, found);
+    if (gate) return gate;
     const model = loadMemberPageModel(deps, found);
     if (!found.own) {
       deps.repos.events.record({

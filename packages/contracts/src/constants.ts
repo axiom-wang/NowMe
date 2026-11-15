@@ -193,6 +193,11 @@ export const WEB_EVENT_TYPES = [
   // 点数（contracts 12）：兑换、组织者给墙充值（props 只有点数，不含兑换码）
   'credits_redeem',
   'credits_sponsor',
+  // 组织者工具（contracts 19）：保存必答题、成员回答、一键提醒、生成墙的群像（只记数字与布尔）
+  'wall_questions_save',
+  'wall_answer',
+  'wall_remind',
+  'wall_portrait_generate',
 ] as const;
 
 export const EVENT_TYPES = [...STORED_AGENT_EVENT_TYPES, ...WEB_EVENT_TYPES] as const;

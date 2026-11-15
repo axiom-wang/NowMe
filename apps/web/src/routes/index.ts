@@ -10,7 +10,8 @@
  * | home.tsx | T2.1（T3.1 重做） | `GET /` |
  * | workspace.tsx | T2.1 + T3.2 | `/w/:wallId/me*`、`/w/:wallId/leave` |
  * | walls.tsx | T3.1 | 建墙、加入、墙、成员页、想聊这个、封面 |
- * | admin.tsx | T3.1 | 组织者后台 |
+ * | admin.tsx | T3.1 | 组织者后台（含必答题、完成度与提醒、群像，contracts 19） |
+ * | organizer-tools.tsx | contracts 19 | 成员回答必答题、`questionsGate`、提醒邮件开关 |
  * | public.tsx | T3.2 | `/s/:publicToken` |
  * | skill.tsx | T3.6 | Skill 分发：`/skill`、`/skill/install.md`、`/skill/manifest.json`、`/skill/<归档>` |
  * | credits.tsx | contracts 12 | 点数：`/account/credits`、兑换码、组织者给墙充额度 |
@@ -29,6 +30,7 @@ import { registerHomeRoutes } from './home.js';
 import { registerLegalRoutes } from './legal.js';
 import { registerMessageRoutes } from './messages.js';
 import { registerModerationRoutes } from './moderation.js';
+import { registerOrganizerToolRoutes } from './organizer-tools.js';
 import { registerHostedRoutes } from './hosted.js';
 import { registerPublicRoutes } from './public.js';
 import { registerSkillRoutes } from './skill.js';
@@ -50,6 +52,7 @@ export function registerRoutes(app: AppHono, deps: AppDeps): void {
   registerAiSettingsRoutes(app, deps);
   registerCreditsRoutes(app, deps);
   registerAccountRoutes(app, deps);
+  registerOrganizerToolRoutes(app, deps);
   registerWallRoutes(app, deps);
   registerAdminRoutes(app, deps);
   registerPublicRoutes(app, deps);

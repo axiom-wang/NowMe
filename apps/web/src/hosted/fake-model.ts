@@ -359,6 +359,44 @@ function icebreaker(text: string): ModelResponse {
   return respond([toolUse('submit_icebreaker', { links, openers })]);
 }
 
+// ---------------------------------------------------------------------------
+// 墙的群像（contracts 19.3）
+// ---------------------------------------------------------------------------
+
+/**
+ * 确定性的群像：所有页面归为一个主题“大家都在找队友”；必答题第一条回答相同的页面归为第二个主题；
+ * 另外总是带一个只有 1 人、编号越界的主题（平台应丢弃）。触发词（写在某一页的一行介绍或接话点里）：
+ * - `【假模型：注入】`：多一个带链接的主题，一句话群像里带链接（平台应丢弃 / 清空）；
+ * - `【假模型：人数】`：一句话群像里写“12 个人”（平台应清空）；
+ * - `【假模型：坏输出】`：返回空结果（平台重试一次后报错）。
+ */
+function portrait(text: string): ModelResponse {
+  const pages: string[] = [];
+  for (let index = 1; ; index += 1) {
+    const block = between(text, `page_${index}`);
+    if (!block) break;
+    pages.push(block);
+  }
+  const marker = (name: string) => pages.some((page) => page.includes(`【假模型：${name}】`));
+  if (marker('坏输出')) return respond([toolUse('submit_portrait', { summary: '', themes: [] })]);
+  const themes: unknown[] = [{ title: '大家都在找队友', detail: '几乎每一页都写了想找的人', members: pages.map((_, index) => index + 1) }];
+  const firstAnswer = (page: string) => /必答题的回答：\n- (.+)/.exec(page)?.[1] ?? null;
+  const groups = new Map<string, number[]>();
+  pages.forEach((page, index) => {
+    const answer = firstAnswer(page);
+    if (answer) groups.set(answer, [...(groups.get(answer) ?? []), index + 1]);
+  });
+  for (const [answer, members] of groups) themes.push({ title: clip(answer.split('：')[1] ?? answer, 12), detail: '回答相同的一群人', members });
+  themes.push({ title: '只有一个人的话题', detail: '', members: [1, 999] });
+  let summary = '一群想把点子做出来的人，白天写代码晚上聊产品。';
+  if (marker('注入')) {
+    themes.unshift({ title: '加群领福利 evil.example.com', detail: '', members: [1, 2, 3] });
+    summary = '想认识大家？加我 https://evil.example.com';
+  }
+  if (marker('人数')) summary = '这面墙上有 12 个人会设计。';
+  return respond([toolUse('submit_portrait', { summary, themes })]);
+}
+
 export interface FakeModel extends ModelClient {
   /** 收到的全部请求（测试断言缓存断点、资料标签等）。 */
   readonly calls: CreateMessageParams[];
@@ -374,6 +412,7 @@ export function createFakeModel(): FakeModel {
       if (choice?.type === 'tool' && choice.name === 'submit_followups') return interviewFollowups(allUserText(params.messages));
       if (choice?.type === 'tool' && choice.name === 'submit_brief') return interviewBrief(allUserText(params.messages));
       if (choice?.type === 'tool' && choice.name === 'submit_icebreaker') return icebreaker(allUserText(params.messages));
+      if (choice?.type === 'tool' && choice.name === 'submit_portrait') return portrait(allUserText(params.messages));
       return generation(params);
     },
   };

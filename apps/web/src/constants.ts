@@ -50,3 +50,34 @@ export const RATE_RULES = {
   /** 同一用户导出自己的数据（contracts 14：打包全部页面文件，比较重）。 */
   accountExport: { max: 5, windowMs: 60 * 60 * 1000 },
 } as const;
+
+/** 必答题（contracts 19.1）：每面墙最多 3 道；题目 2–30 字；每道 2–12 个选项，每个选项 1–12 字。 */
+export const WALL_QUESTION_LIMITS = {
+  maxQuestions: 3,
+  prompt: { min: 2, max: 30 },
+  options: { min: 2, max: 12 },
+  option: { min: 1, max: 12 },
+} as const;
+
+/** 一键提醒（contracts 19.2）：同一面墙里，每人 48 小时内最多一封，总共最多 3 封。 */
+export const REMINDER_LIMITS = {
+  cooldownMs: 48 * 3600 * 1000,
+  maxPerMember: 3,
+} as const;
+
+/** 墙的群像（contracts 19.3）。 */
+export const PORTRAIT_LIMITS = {
+  /** 至少这么多人上墙才能生成（人太少时“群像”就是在描述个人）。 */
+  minPages: 3,
+  /** 交给模型的页面数上限（超过时取最近发布的）。 */
+  maxPages: 150,
+  /** 每个主题至少几个人（同上，避免指向个人）。 */
+  minThemeMembers: 2,
+  themes: 5,
+  summary: 80,
+  title: 12,
+  detail: 36,
+  /** 每面墙每滚动 24 小时最多生成几次（成功与失败都算）。 */
+  dailyPerWall: 6,
+  timeoutMs: 90 * 1000,
+} as const;
