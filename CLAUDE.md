@@ -23,7 +23,9 @@
 - 组织者工具（contracts 19）：建墙时设 0–3 道必答题、墙上按回答筛选；后台看完成度并一键邮件提醒；AI 生成全墙可见的“墙的群像”。
 - 登录只做邮箱验证码；`NOWME_MAIL_TRANSPORT=smtp` 时真实投递，本地默认写文件。
 - 用户自己的 Key 按账号加密保存（需要 `NOWME_AI_ENCRYPTION_KEY`），可跨设备管理与删除。
-- 还不做：派生到新墙（W18）、支付渠道、举报与拉黑、注销账号、组织者数据看板。
+- 举报、拉黑与平台运营处理（contracts 15，`pnpm --filter @nowme/web moderation …`）；注销账号与导出个人数据（contracts 14）；内容安全检查、AI 协助生成标识、用户协议 / 隐私政策与 18 岁确认（contracts 16）。
+- 部署：主站、页面托管、后台 worker 三个进程（`NOWME_WORKER_MODE=separate`，contracts 13）；Docker / compose、备份恢复、结构化日志与 CI 见 `docs/deploy.md`（contracts 17）。
+- 还不做：派生到新墙（W18）、支付渠道、组织者数据看板、AI 质量评测、数据埋点与漏斗分析、上线地区的备案 / 实名等合规。
 
 ## 命令
 
@@ -40,6 +42,9 @@ pnpm --filter @nowme/web seed [--json]   # 开发种子：用户 + 黑客松墙 
 pnpm --filter @nowme/skill pack:skill    # 打 Skill 包（含单文件 CLI）到 skill/dist-package/，本地镜像；公开安装走 GitHub；dev / start:source 会先自动打包
 pnpm --filter @nowme/skill publish:github --publish # 同步完整成品到 axiom-wang/nowme-skill 并发布版本；默认不带 --publish 时只导出
 pnpm --filter @nowme/web credits codes --count 20 --credits 100   # 生成兑换码（明文只输出一次）；另有 grant / balance
+pnpm --filter @nowme/web worker      # 后台任务进程（源码方式；生产用 start:worker）
+pnpm --filter @nowme/web backup      # 在线备份数据库与页面文件；restore 恢复到空目录
+pnpm --filter @nowme/web moderation list   # 平台运营处理举报；另有 show / resolve / hide-page / suspend / unsuspend
 pnpm --filter @nowme/<包> test   # 只测一个包
 ```
 

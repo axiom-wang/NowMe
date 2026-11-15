@@ -8,7 +8,7 @@
 
 | 文档 | 用途 |
 | --- | --- |
-| `docs/contracts.md` | **接口约定，所有实现的唯一依据**：页面输出契约、校验规则与错误码、数据模型、API、票据、CSP、安全不变量 S1–S6；第 10 节部署与加固、第 11 节“和 TA 聊什么”（S9）、第 12 节点数与平台 AI（S10）；第 13–18 节为 M8 新增（任务队列、注销与导出、举报拉黑、内容安全与协议、运维、生成进度） |
+| `docs/contracts.md` | **接口约定，所有实现的唯一依据**：页面输出契约、校验规则与错误码、数据模型、API、票据、CSP、安全不变量 S1–S6；第 10 节部署与加固、第 11 节“和 TA 聊什么”（S9）、第 12 节点数与平台 AI（S10）；第 13–18 节为 M8 新增（任务队列、注销与导出、举报拉黑、内容安全与协议、运维、生成进度）；第 19 节组织者工具（必答题、完成度与提醒、墙的群像，S13） |
 | `docs/hosted-route.md` | contracts 第 9 节：平台托管路线（采访、自带 API 生成、修改、用户凭证、S7/S8） |
 | `docs/build-plan.md` | 里程碑、任务、验收标准与状态 |
 | `docs/product-mvp-community-wall.md` | 产品需求（功能编号 W01–W21） |
@@ -20,9 +20,12 @@
 - 创作有三条路：本地 Agent；网页内用自己的模型 Key（不收点数）；网页内用平台 AI（`NOWME_PLATFORM_*`，采访与“和 TA 聊什么”不收点数，生成 / 修改扣点数）。平台 AI 没配置时，行为与只有前两条路时相同。
 - 点数：个人余额（兑换码、运营发放）与墙的额度（组织者为成员买单，可设每人上限）。还没有接支付渠道。
 - “和 TA 聊什么”：成员在别人的页面上请 AI 找连接点、起草开场白（contracts 11）。
+- 组织者工具（contracts 19）：建墙时设 0–3 道必答题、墙上按回答筛选；后台看完成度并一键邮件提醒；AI 生成全墙可见的“墙的群像”。
 - 登录只做邮箱验证码；`NOWME_MAIL_TRANSPORT=smtp` 时真实投递，本地默认写文件。
 - 用户自己的 Key 按账号加密保存（需要 `NOWME_AI_ENCRYPTION_KEY`），可跨设备管理与删除。
-- 还不做：派生到新墙（W18）、支付渠道、举报与拉黑、注销账号、组织者数据看板。
+- 举报、拉黑与平台运营处理（contracts 15，`pnpm --filter @nowme/web moderation …`）；注销账号与导出个人数据（contracts 14）；内容安全检查、AI 协助生成标识、用户协议 / 隐私政策与 18 岁确认（contracts 16）。
+- 部署：主站、页面托管、后台 worker 三个进程（`NOWME_WORKER_MODE=separate`，contracts 13）；Docker / compose、备份恢复、结构化日志与 CI 见 `docs/deploy.md`（contracts 17）。
+- 还不做：派生到新墙（W18）、支付渠道、组织者数据看板、AI 质量评测、数据埋点与漏斗分析、上线地区的备案 / 实名等合规。
 
 ## 命令
 
@@ -39,6 +42,9 @@ pnpm --filter @nowme/web seed [--json]   # 开发种子：用户 + 黑客松墙 
 pnpm --filter @nowme/skill pack:skill    # 打 Skill 包（含单文件 CLI）到 skill/dist-package/，本地镜像；公开安装走 GitHub；dev / start:source 会先自动打包
 pnpm --filter @nowme/skill publish:github --publish # 同步完整成品到 axiom-wang/nowme-skill 并发布版本；默认不带 --publish 时只导出
 pnpm --filter @nowme/web credits codes --count 20 --credits 100   # 生成兑换码（明文只输出一次）；另有 grant / balance
+pnpm --filter @nowme/web worker      # 后台任务进程（源码方式；生产用 start:worker）
+pnpm --filter @nowme/web backup      # 在线备份数据库与页面文件；restore 恢复到空目录
+pnpm --filter @nowme/web moderation list   # 平台运营处理举报；另有 show / resolve / hide-page / suspend / unsuspend
 pnpm --filter @nowme/<包> test   # 只测一个包
 ```
 
@@ -72,11 +78,12 @@ pnpm --filter @nowme/<包> test   # 只测一个包
 - 页面文档的 CSP 只能用 `buildPageCsp()` 生成，不加 `'unsafe-eval'`、`'self'`、`*`，`connect-src 'none'`。
 - 一次性 token 只能换一次；页面凭证只能拉情境、提交版本、上报事件，**不能发布**；主站表单路由忽略 `Authorization` 头。
 - 令牌、凭证、会话、验证码只存哈希；凭证不打印、不写进 `page/`、不随提交上传。
-- 组织者只能看到成员昵称、加入时间、发布状态；看不到任何人的版本、草稿、未公开联系方式。
+- 组织者只能看到成员昵称、加入时间、发布状态，以及成员在墙内公开回答的必答题；看不到任何人的版本、草稿、未公开联系方式、邮箱。
 - 无权访问一律 404；非成员看不到墙；被移除的成员立即失去访问，其页面立即下墙。
 - 本地路线的 brief 与画像从不上传；提交只接受白名单文件。
 
 - 用户模型配置仅主人可管理；Key 使用 AES-256-GCM 认证加密，主密钥不入库；删除或更换后旧任务停止后续请求。自定义服务只允许公网 HTTPS，逐次解析 DNS 并固定连接地址，拒绝重定向。
 - “和 TA 聊什么”（S9）：只把查看者自己的资料和对方已经公开在墙上的内容交给模型；结果只属于查看者；连接点的依据必须是两边资料里的原文（服务端核对）；开场白只预填、从不代发；输出里不允许出现链接与联系方式。
 - 点数与平台 AI（S10）：平台模型的 Key 只来自环境变量，不入库、不写日志、不在页面出现；余额不为负，流水只追加；任务只扣一次，没做出新版本全额退回；兑换码只存哈希；组织者只看到墙额度的总数，看不到任何成员用了多少。
+- 组织者工具（S13）：只有组织者能改题、提醒、生成群像、下载名单；墙上只出现已上墙成员的回答；提醒邮件是固定模板，不发给关闭提醒、与组织者之间有拉黑、停用的账号；群像只读墙上公开的发布快照与回答，不给模型名字，输出里不允许链接、名字与数字人数。
 - 没有登录态的入口按来源地址限流；只有声明了 `NOWME_TRUST_PROXY` 才读 `X-Forwarded-For`。生产环境启动前检查配置，不完整就拒绝启动。
