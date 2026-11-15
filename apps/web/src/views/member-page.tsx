@@ -7,6 +7,8 @@
 import type { FC } from 'hono/jsx';
 import type { IcebreakerLink } from '../hosted/icebreaker.js';
 import type { IcebreakerPanel, IcebreakerView } from '../services/icebreaker.js';
+import { INTRO_KIND_LABEL } from '../services/intro.js';
+import type { IntroKind } from '../db/intros.js';
 import type { ChatModel, MemberPageModel } from '../services/wall-view.js';
 import { CsrfField } from './forms.js';
 import { initialOf } from './layout.js';
@@ -55,7 +57,14 @@ function sourceText(sources: IcebreakerView['sources']): string {
  * 和 TA 聊什么（contracts 11）：查看者请 AI 读两个人的页面，找连接点、起草开场白。
  * 结果只有查看者自己能看到；开场白只会预填进私聊输入框，不会自动发送。
  */
-const TalkPanel: FC<{ base: string; name: string; csrf: string; panel: IcebreakerPanel; error: string | null; aiSettings: boolean }> = ({ base, name, csrf, panel, error, aiSettings }) => {
+/** AI 为什么介绍你们认识（contracts 20；只有查看者自己看得到）。 */
+export interface MemberIntro {
+  kind: IntroKind;
+  title: string;
+  reason: string;
+}
+
+const TalkPanel: FC<{ base: string; name: string; csrf: string; panel: IcebreakerPanel; error: string | null; aiSettings: boolean; intro: MemberIntro | null }> = ({ base, name, csrf, panel, error, aiSettings, intro }) => {
   const view = panel.view;
   return (
     <section class={`talk${view ? ' talk--ready' : ''}`} id="talk" aria-labelledby="talk-heading" data-busy-scope>
@@ -66,6 +75,13 @@ const TalkPanel: FC<{ base: string; name: string; csrf: string; panel: Icebreake
       <h2 id="talk-heading" class="talk__title">
         和<span class="talk__name">{name}</span>聊什么？
       </h2>
+      {intro ? (
+        <p class="talk__intro">
+          <span class="talk__intro-label">AI 介绍你们认识 · {INTRO_KIND_LABEL[intro.kind]}</span>
+          <span class="talk__intro-title">{intro.title}</span>
+          <span class="talk__intro-reason">{intro.reason}</span>
+        </p>
+      ) : null}
       {error ? (
         <p class="talk__error" role="alert">
           {error}
@@ -166,10 +182,11 @@ const TalkPanel: FC<{ base: string; name: string; csrf: string; panel: Icebreake
   );
 };
 
-export const MemberPageView: FC<{ model: MemberPageModel; csrf: string; icebreaker?: IcebreakerPanel | null; icebreakerError?: string | null; aiSettings?: boolean; safety?: PageSafetyModel | null }> = ({
+export const MemberPageView: FC<{ model: MemberPageModel; csrf: string; icebreaker?: IcebreakerPanel | null; icebreakerError?: string | null; aiSettings?: boolean; safety?: PageSafetyModel | null; intro?: MemberIntro | null }> = ({
   model,
   csrf,
   icebreaker = null,
+  intro = null,
   icebreakerError = null,
   aiSettings = true,
   safety = null,
@@ -193,7 +210,7 @@ export const MemberPageView: FC<{ model: MemberPageModel; csrf: string; icebreak
         <div class="member-layout__frame">
           <PageFrame ticket={model.ticket} title={`${card.displayName}的页面`} />
         </div>
-        {icebreaker ? <TalkPanel base={base} name={card.displayName} csrf={csrf} panel={icebreaker} error={icebreakerError} aiSettings={aiSettings} /> : null}
+        {icebreaker ? <TalkPanel base={base} name={card.displayName} csrf={csrf} panel={icebreaker} error={icebreakerError} aiSettings={aiSettings} intro={intro} /> : null}
         <section class="card topics" aria-labelledby="hooks-heading">
           <h2 id="hooks-heading" class="topics__title">
             {own ? '我的接话点' : 'TA 自己想聊的'}

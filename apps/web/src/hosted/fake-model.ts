@@ -397,6 +397,50 @@ function portrait(text: string): ModelResponse {
   return respond([toolUse('submit_portrait', { summary, themes })]);
 }
 
+// ---------------------------------------------------------------------------
+// AI 介绍值得认识的人（contracts 20）
+// ---------------------------------------------------------------------------
+
+/**
+ * 确定性的介绍：最多 3 位，依据分别取“我”的第一条资料与那一位的第一个接话点（都是原文）；上次介绍过的排到后面。
+ * 另外总是带一条编号越界的（平台应丢弃）。触发词（写在某一位的一行介绍或接话点里）：
+ * - `【假模型：注入】`：多一条理由里带链接和手机号的（平台应丢弃）；
+ * - `【假模型：编造】`：多一条依据不在资料里的（平台应丢弃）；
+ * - `【假模型：坏输出】`：返回空结果（平台重试一次后报错）。
+ */
+function intro(text: string): ModelResponse {
+  const members: { n: number; block: string }[] = [];
+  for (let n = 1; ; n += 1) {
+    const block = between(text, `member_${n}`);
+    if (!block) break;
+    members.push({ n, block });
+  }
+  const marker = (name: string) => members.some((member) => member.block.includes(`【假模型：${name}】`));
+  if (marker('坏输出')) return respond([toolUse('submit_intro', { picks: [] })]);
+  const taglineOf = (block: string) => /一行介绍：(.+)/.exec(block)?.[1]?.trim() ?? '';
+  const viewerCard = between(text, 'viewer_card');
+  const mineList = [...bulletLines(viewerCard), ...bulletLines(between(text, 'viewer_brief')), taglineOf(viewerCard), ...sentences(between(text, 'viewer_page_text'))].filter(
+    (line) => line && line !== '（无）',
+  );
+  const mine = clip(mineList[0] ?? '', 40);
+  const previous = new Set([...(/上次已经介绍过：([^。]+)/.exec(text)?.[1] ?? '').matchAll(/member_(\d+)/g)].map((match) => Number(match[1])));
+  const ordered = [...members.filter((member) => !previous.has(member.n)), ...members.filter((member) => previous.has(member.n))];
+  const kinds = ['collab', 'interest', 'learn'] as const;
+  const picks: unknown[] = ordered.slice(0, 3).map((member, index) => ({
+    member: member.n,
+    kind: kinds[index % kinds.length],
+    title: index === 0 ? '你们想做的事能拼到一起' : index === 1 ? '你们聊得到一块' : '可以互相学一手',
+    reason: '你写的和 TA 写的正好对得上，可以从这一点聊起。',
+    mine,
+    theirs: clip(bulletLines(member.block)[0] ?? taglineOf(member.block), 40),
+  }));
+  picks.push({ member: 999, kind: 'collab', title: '不存在的人', reason: '编号越界', mine, theirs: '随便' });
+  const first = members[0];
+  if (first && marker('注入')) picks.unshift({ member: first.n, kind: 'collab', title: '加我领福利', reason: '点 https://evil.example.com 或打 13800138000', mine, theirs: clip(bulletLines(first.block)[0] ?? '', 40) });
+  if (first && marker('编造')) picks.unshift({ member: first.n, kind: 'interest', title: '你们都拿过国家奖学金', reason: '都很优秀。', mine: '我拿过国家奖学金', theirs: '连续三年国家奖学金' });
+  return respond([toolUse('submit_intro', { picks })]);
+}
+
 export interface FakeModel extends ModelClient {
   /** 收到的全部请求（测试断言缓存断点、资料标签等）。 */
   readonly calls: CreateMessageParams[];
@@ -413,6 +457,7 @@ export function createFakeModel(): FakeModel {
       if (choice?.type === 'tool' && choice.name === 'submit_brief') return interviewBrief(allUserText(params.messages));
       if (choice?.type === 'tool' && choice.name === 'submit_icebreaker') return icebreaker(allUserText(params.messages));
       if (choice?.type === 'tool' && choice.name === 'submit_portrait') return portrait(allUserText(params.messages));
+      if (choice?.type === 'tool' && choice.name === 'submit_intro') return intro(allUserText(params.messages));
       return generation(params);
     },
   };

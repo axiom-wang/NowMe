@@ -13,6 +13,8 @@
  * | POST /w/:wallId/p/:pageId/icebreaker | 墙内有效成员；不是自己的已发布页面 → 用查看者自己的模型找话题（contracts 11） |
  * | POST /w/:wallId/p/:pageId/icebreaker/chat | 同上；用结果里的某一句开场白进入私聊（只预填，不发送） |
  * | POST /w/:wallId/p/:pageId/icebreaker/clear | 同上；清除查看者自己的结果 |
+ * | POST /w/:wallId/intros | 墙内有效成员 → 请 AI 介绍值得认识的人（contracts 20）；`fragment=1` 时直接返回区块 HTML（墙页上原地替换） |
+ * | POST /w/:wallId/intros/clear | 同上；清除查看者自己在这面墙的结果 |
  * | GET /w/:wallId/covers/:pageId.png | 墙内有效成员（墙上可见页面的当前发布版本封面） |
  *
  * GET 用 `requireUser`（未登录 → /login?next=）；POST 用 `requireForm`（会话 + CSRF + Origin，忽略 Authorization）。
@@ -33,7 +35,10 @@ import { questionsGate } from './organizer-tools.js';
 import { portraitShareText } from '../services/portrait.js';
 import { openDirect } from '../services/chat.js';
 import { clearIcebreaker, generateIcebreaker, ICEBREAKER_ERROR_TEXT, icebreakerOpener, loadIcebreakerPanel, type IcebreakerFailure } from '../services/icebreaker.js';
+import { clearIntro, generateIntro, INTRO_ERROR_TEXT, introForPage, loadIntroPanel, type IntroFailure } from '../services/intro.js';
+import { demoModelError } from '../demo-access.js';
 import { renderNotFound } from '../views/errors.js';
+import { IntroPanelView } from '../views/intros.js';
 import { pageSafetyModel } from './moderation.js';
 import { JoinView, RemovedFromWallView } from '../views/join.js';
 import { renderPage } from '../views/layout.js';
@@ -60,6 +65,12 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
   const form = requireForm(deps);
   const labels = sceneLabels();
   const scenes: SceneChoice[] = SCENE_TYPES.map((type) => ({ type, label: labels[type] }));
+
+  /** 失败文案：只认名单里的错误码；演示模式下模型类错误换成演示说明（不要求评委去改配置）。 */
+  function introError(code: string | undefined): string | null {
+    if (!code || !Object.hasOwn(INTRO_ERROR_TEXT, code)) return null;
+    return (deps.demo ? demoModelError(code) : null) ?? INTRO_ERROR_TEXT[code as IntroFailure];
+  }
 
   // 头像仅向同墙的有效成员提供，移除或关墙后立即失效。
   app.get('/w/:wallId/members/:userId/avatar', user, (c) => {
@@ -197,6 +208,9 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
       createdAt: deps.now().toISOString(),
     });
     const notice = c.req.query('notice');
+    const intros = (
+      <IntroPanelView wallId={member.wall.id} panel={loadIntroPanel(deps, member)} csrf={auth.session.csrfToken} error={introError(c.req.query('intro'))} aiSettings={!deps.demo} />
+    );
     return renderPage(c, {
       title: member.wall.name,
       bodyClass: 'page--wall',
@@ -207,9 +221,37 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
           notice={notice && WALL_NOTICES.has(notice) ? (notice as WallNotice) : null}
           csrf={auth.session.csrfToken}
           portraitShare={model.portrait.kind === 'ready' ? portraitShareText(member.wall, model.portrait.view, `${deps.config.webOrigin}${wallPath(member.wall.id)}`) : null}
+          intros={intros}
         />
       ),
     });
+  });
+
+  // -------------------------------------------------------------------------
+  // AI 介绍值得认识的人（contracts 20）
+  // -------------------------------------------------------------------------
+
+  app.post('/w/:wallId/intros', form, async (c) => {
+    const auth = authOf(c);
+    const member = findMemberWall(deps.repos, auth.user.id, c.req.param('wallId'));
+    if (!member) return renderNotFound(c);
+    const result = await generateIntro(deps, member);
+    if (c.get('form').fragment === '1') {
+      // 墙页上的脚本原地替换区块：重新确认访问（调用模型期间可能被移出），然后只返回这个区块
+      const current = findMemberWall(deps.repos, auth.user.id, member.wall.id);
+      if (!current) return renderNotFound(c);
+      c.header('Cache-Control', 'private, no-store');
+      return c.html(<IntroPanelView wallId={current.wall.id} panel={loadIntroPanel(deps, current)} csrf={auth.session.csrfToken} error={result.ok ? null : introError(result.error)} aiSettings={!deps.demo} />);
+    }
+    return c.redirect(result.ok ? `${wallPath(member.wall.id)}#intros` : `${wallPath(member.wall.id)}?intro=${result.error}#intros`, 303);
+  });
+
+  app.post('/w/:wallId/intros/clear', form, (c) => {
+    const auth = authOf(c);
+    const member = findMemberWall(deps.repos, auth.user.id, c.req.param('wallId'));
+    if (!member) return renderNotFound(c);
+    clearIntro(deps, member);
+    return c.redirect(`${wallPath(member.wall.id)}#intros`, 303);
   });
 
   app.get('/w/:wallId/covers/:file', user, async (c) => {
@@ -260,6 +302,7 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
           model={model}
           csrf={auth.session.csrfToken}
           icebreaker={found.own ? null : loadIcebreakerPanel(deps, found, auth.user.id)}
+          intro={found.own ? null : introForPage(deps, auth.user.id, found.wall.id, found.entry)}
           icebreakerError={failure && Object.hasOwn(ICEBREAKER_ERROR_TEXT, failure) ? ICEBREAKER_ERROR_TEXT[failure as IcebreakerFailure] : null}
           aiSettings={!deps.demo}
           safety={found.own ? null : pageSafetyModel(deps, found, auth.user.id, c.req.query('safety'))}

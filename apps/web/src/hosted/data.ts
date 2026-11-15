@@ -17,6 +17,8 @@ export async function eraseBriefRecord(deps: DataDeps, brief: BriefRecord): Prom
     // “和 TA 聊什么”的结果是用这份采访推出来的：采访删除或重做时一并清掉（contracts 11）
     const page = deps.repos.pages.findById(brief.pageId);
     if (page) deps.repos.icebreakers.deleteForViewerWall(brief.ownerId, page.wallId);
+    // AI 介绍（contracts 20）同样是从这份采访推出来的
+    if (page) deps.repos.intros.deleteForViewerWall(brief.ownerId, page.wallId);
   });
   await removeHostedPageFiles(deps.config.dataDir, brief.pageId);
 }
@@ -38,6 +40,10 @@ export function eraseHostedPageRecords(deps: Pick<AppDeps, 'repos'>, pageId: str
   deps.repos.jobs.eraseContentForPage(pageId);
   // 别人针对这一页得到的破冰建议里引用了页面上的文字：页面删除时一并清掉（contracts 11）
   deps.repos.icebreakers.deleteForPage(pageId);
+  // 页面被删除：别人得到的、引用了这一页文字的 AI 介绍，与主人自己在这面墙的 AI 介绍（依据是这一页）都删掉（contracts 20）
+  deps.repos.intros.deleteForPage(pageId);
+  const page = deps.repos.pages.findById(pageId);
+  if (page) deps.repos.intros.deleteForViewerWall(page.ownerId, page.wallId);
 }
 
 /** 删除页面时：brief、素材、任务内容（修改要求、结果说明）一并清除；任务行保留。 */

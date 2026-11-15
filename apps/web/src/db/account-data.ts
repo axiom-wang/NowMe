@@ -214,6 +214,9 @@ export function accountDataQueries(db: Database) {
     deleteIcebreakersOfViewer(userId: string): void {
       db.prepare('DELETE FROM icebreakers WHERE viewer_id = ?').run(userId);
     },
+    deleteIntrosOfViewer(userId: string): void {
+      db.prepare('DELETE FROM intros WHERE viewer_id = ?').run(userId);
+    },
     /** 他组织过的墙（此时都已关闭）上传的封面。 */
     deleteOrganizedWallCovers(userId: string): void {
       db.prepare('DELETE FROM wall_covers WHERE wall_id IN (SELECT id FROM walls WHERE organizer_id = ?)').run(userId);

@@ -5,7 +5,7 @@
  * - 每次请求随机排序（services/wall-view.ts），不按热度；
  * - 封面是静态图片（墙上不运行页面），固定 3:4 画框 + `loading="lazy"`，手机上流畅浏览 100 张卡。
  */
-import type { FC } from 'hono/jsx';
+import type { Child, FC } from 'hono/jsx';
 import { COVER_CSS_HEIGHT, COVER_CSS_WIDTH } from '@nowme/contracts';
 import type { PageDisplayState } from '../db/publications.js';
 import type { WallCard, WallModel } from '../services/wall-view.js';
@@ -59,7 +59,7 @@ const WallCardItem: FC<{ item: WallCard }> = ({ item }) => {
             )}
           </span>
           {item.own ? <span class="sticker sticker--orange wall-card__me">我</span> : null}
-          {item.hasTalk ? <span class="wall-card__talk">✦ 有话题了</span> : null}
+          {item.hasTalk ? <span class="wall-card__talk">✦ 有话题了</span> : item.introduced ? <span class="wall-card__talk wall-card__talk--intro">✦ AI 介绍</span> : null}
         </span>
         {first ? (
           <span class="wall-card__say">
@@ -100,7 +100,7 @@ export const OrganizerNote: FC<{ text: string }> = ({ text }) => (
   </blockquote>
 );
 
-export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNotice | null; csrf: string; portraitShare: string | null }> = ({ model, sceneLabel, notice, csrf, portraitShare }) => {
+export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNotice | null; csrf: string; portraitShare: string | null; intros?: Child }> = ({ model, sceneLabel, notice, csrf, portraitShare, intros = null }) => {
   const { wall, myPage, cards } = model;
   const published = myPage.state === 'published';
   return (
@@ -150,6 +150,8 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
           ) : null}
         </div>
       </section>
+
+      {intros}
 
       <PortraitPanel wall={wall} state={model.portrait} shareText={portraitShare} organizer={model.role === 'organizer'} csrf={csrf} />
 

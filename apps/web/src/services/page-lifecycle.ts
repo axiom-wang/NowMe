@@ -161,6 +161,7 @@ export function leaveWall(deps: LifecycleDeps, own: OwnPage, actorId: string): L
     disconnectAgent(deps, own.page.id);
     cancelActiveJobsForPage(deps, own.page.id);
     repos.icebreakers.deleteForViewerWall(own.membership.userId, own.wall.id);
+    repos.intros.deleteForViewerWall(own.membership.userId, own.wall.id);
     repos.events.record({
       type: 'leave',
       wallId: own.wall.id,

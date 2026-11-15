@@ -198,6 +198,8 @@ export const WEB_EVENT_TYPES = [
   'wall_answer',
   'wall_remind',
   'wall_portrait_generate',
+  // AI 介绍值得认识的人（contracts 20）：一次模型调用（成功与失败都记，用于限流与“首次自动”判断；只记数字与布尔）
+  'intro_generate',
 ] as const;
 
 export const EVENT_TYPES = [...STORED_AGENT_EVENT_TYPES, ...WEB_EVENT_TYPES] as const;
@@ -240,6 +242,27 @@ export const ICEBREAKER_TARGET_TEXT_MAX = 2400;
 export const ICEBREAKER_VIEWER_TEXT_MAX = 1600;
 /** 输出限制：连接点 0–3 条、开场白 1–3 条。 */
 export const ICEBREAKER_LIMITS = { links: 3, openers: 3, title: 18, evidence: 40, opener: 90, about: 16 } as const;
+
+// ---------------------------------------------------------------------------
+// AI 介绍值得认识的人（contracts 20）
+// ---------------------------------------------------------------------------
+
+/** 每个查看者滚动 24 小时最多发起几次（跨墙合计，含首次自动）。运行保护，不是付费额度。 */
+export const INTRO_DAILY_PER_VIEWER = 12;
+/** 同一个查看者在同一面墙滚动 24 小时最多发起几次（含“换一批”）。 */
+export const INTRO_DAILY_PER_WALL = 4;
+/** 一次调用的总时限（要读整面墙，比“和 TA 聊什么”长）。 */
+export const INTRO_TIMEOUT_MS = 90 * 1000;
+/** 查看者自己页面的渲染文字上限（码点）。 */
+export const INTRO_VIEWER_TEXT_MAX = 1600;
+/** 全部候选页面的渲染文字摘录合计上限（码点），按人数均分，每页夹在 min–max 之间。 */
+export const INTRO_CANDIDATE_TEXT_BUDGET = 24_000;
+export const INTRO_CANDIDATE_TEXT_RANGE = { min: 160, max: 600 } as const;
+/**
+ * 输出与输入的限制：最多介绍 `picks` 位；候选（墙上对查看者可见、不是自己的已发布页面）少于 `minCandidates`
+ * 时不提供这个功能（人太少时直接逛墙就好）；超过 `maxCandidates` 时随机取样。
+ */
+export const INTRO_LIMITS = { picks: 5, title: 18, reason: 60, evidence: 40, minCandidates: 3, maxCandidates: 80 } as const;
 
 // ---------------------------------------------------------------------------
 // 点数（contracts 12）

@@ -85,3 +85,66 @@
     if (input && input.value) apply();
   });
 })();
+
+/*
+ * AI 介绍给你的人（contracts 20）：第一次进墙时自动请 AI 介绍一次。
+ * 服务端只在“这面墙从没发起过”时给表单加 data-intro-auto；这里在页面加载后把它提交一次（同源，带 CSRF），
+ * 拿到的区块 HTML 原地替换，不打断浏览。失败（网络、超时）时恢复成按钮，不自动重试。
+ * 没有脚本时它就是一个普通按钮。
+ */
+(function () {
+  'use strict';
+  var form = document.querySelector('form[data-intro-auto]');
+  if (!form || typeof window.fetch !== 'function') return;
+  var scope = form.closest('[data-intros]');
+  if (!scope) return;
+  var status = scope.querySelector('[data-busy-status]');
+  var buttons = Array.prototype.slice.call(scope.querySelectorAll('button'));
+
+  function setBusy(on) {
+    scope.classList.toggle('is-busy', on);
+    if (on) scope.setAttribute('aria-busy', 'true');
+    else scope.removeAttribute('aria-busy');
+    buttons.forEach(function (button) {
+      button.disabled = on;
+    });
+    if (status) status.textContent = on ? form.getAttribute('data-busy-label') || '' : '';
+  }
+
+  var body = new URLSearchParams(new FormData(form));
+  body.set('fragment', '1');
+  setBusy(true);
+  fetch(form.action, { method: 'POST', body: body, credentials: 'same-origin', headers: { accept: 'text/html' }, signal: AbortSignal.timeout(120000) })
+    .then(function (response) {
+      if (!response.ok) throw new Error(String(response.status));
+      return response.text();
+    })
+    .then(function (html) {
+      var holder = document.createElement('div');
+      holder.innerHTML = html;
+      var next = holder.querySelector('[data-intros]');
+      if (!next) throw new Error('fragment');
+      scope.replaceWith(next);
+      // 墙上被介绍的人的卡片也打上标记（与刷新后服务端渲染的一致）
+      (next.getAttribute('data-intro-pages') || '').split(' ').filter(Boolean).forEach(function (pageId) {
+        document.querySelectorAll('[data-wall-card] a.wall-card__link[href$="/p/' + pageId + '"] .wall-card__poster').forEach(function (poster) {
+          if (poster.querySelector('.wall-card__talk')) return;
+          var badge = document.createElement('span');
+          badge.className = 'wall-card__talk wall-card__talk--intro';
+          badge.textContent = '✦ AI 介绍';
+          poster.appendChild(badge);
+        });
+      });
+      var heading = next.querySelector('h2');
+      var live = next.querySelector('[data-busy-status]');
+      // 只给读屏播报“结果出来了”，不在页面上多显示一行
+      if (live && heading) {
+        live.classList.add('visually-hidden');
+        live.textContent = heading.textContent || '';
+      }
+    })
+    .catch(function () {
+      setBusy(false);
+      if (status) status.textContent = '这次没连上，点上面的按钮再试一次。';
+    });
+})();

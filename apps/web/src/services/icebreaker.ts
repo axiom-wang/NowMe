@@ -89,8 +89,11 @@ function clean(text: string | null | undefined, max: number): string {
   return clip(stripControl(text ?? '').replace(/[ \t]+/g, ' ').replace(/\n{3,}/g, '\n\n'), max);
 }
 
-/** 查看者自己在这面墙上的资料：已发布的页面（卡片 + 渲染文字）与确认过的采访摘要。只读查看者本人的数据。 */
-function viewerMaterial(deps: IcebreakerDeps, viewerId: string, wallId: string): IcebreakerInput['viewer'] {
+/**
+ * 查看者自己在这面墙上的资料：已发布的页面（卡片 + 渲染文字）与确认过的采访摘要。只读查看者本人的数据。
+ * “AI 介绍值得认识的人”（contracts 20）读的是同一份。
+ */
+export function viewerMaterial(deps: Pick<AppDeps, 'db' | 'repos'>, viewerId: string, wallId: string): IcebreakerInput['viewer'] {
   const { repos } = deps;
   const name = repos.users.findById(viewerId)?.nickname ?? '成员';
   const own = findOwnPage(repos, viewerId, wallId);

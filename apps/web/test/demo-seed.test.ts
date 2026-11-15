@@ -136,6 +136,18 @@ describe('demo 种子', () => {
     }
   });
 
+  it('AI 介绍（contracts 20）：体验成员在有自己页面的摄影社墙上看到区块；没有页面的墙引导先做页面', async () => {
+    const response = await postForm(t, '/login/demo', { identity: 'member' });
+    const cookie = `nowme_session=${sessionTokenFrom(response)}`;
+    const club = await (await t.request(`/w/${seed.club.wall.id}`, { headers: { cookie } })).text();
+    expect(club).toContain('id="intros"');
+    expect(club).toContain('墙上 4 位成员');
+    // 这个测试没有配置演示模型：区块如实说明，不显示 AI 设置入口
+    expect(club).toContain('体验账号暂时用不了这个功能');
+    const ai = await (await t.request(`/w/${seed.extraWalls[0]!.wall.id}`, { headers: { cookie } })).text();
+    expect(ai).toContain('AI 还不认识这面墙上的你');
+  });
+
   it('模拟聊天有双向消息、正确归属和已读/未读；未参与的私聊不出现在主测试账号中', () => {
     expect(seed.chat).toEqual({ groups: 4, directs: 15, messages: 92 });
     const list = t.repos.chat.list(seed.tester.userId).conversations;
