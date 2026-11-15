@@ -367,7 +367,7 @@ const EditDetails: FC<{ model: WorkspaceModel; summary: string }> = ({ model, su
 };
 
 const NextStepCard: FC<PropsWithChildren<{ eyebrow: string; title: string; tone?: string }>> = ({ eyebrow, title, children, tone }) => (
-  <section class={`card next-step${tone ? ` next-step--${tone}` : ''}`} id="next-step" aria-labelledby="next-step-heading">
+  <section class={`card card--pinned next-step${tone ? ` next-step--${tone}` : ''}`} id="next-step" aria-labelledby="next-step-heading">
     <p class="next-step__eyebrow">{eyebrow}</p>
     <h2 id="next-step-heading">{title}</h2>
     {children}
@@ -463,7 +463,7 @@ const NextStep: FC<{ model: WorkspaceModel }> = ({ model }) => {
       const job = hosted.overview.activeJob;
       if (!job) return null;
       return (
-        <section class="card next-step next-step--progress" id="next-step" aria-label="进度">
+        <section class="card card--pinned next-step next-step--progress" id="next-step" aria-label="进度">
           <JobProgress wallId={model.wall.id} jobId={job.id} kind={job.kind} view={hosted.progress ?? { seq: 0, stage: 'queued', step: 'queued', label: '排队中，马上轮到你', turn: null, maxTurns: null }} pollMs={model.progressPollMs} emailOn={model.notifyEmail} heading />
           <p>
             <a href={jobPath(model.wall.id, job.id)}>查看详情</a>

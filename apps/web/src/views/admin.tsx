@@ -144,7 +144,7 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError,
 
       <div class="admin-layout">
         <div class="admin-layout__main">
-          <section class="card invite" aria-labelledby="invite-heading">
+          <section class="card card--pinned invite" aria-labelledby="invite-heading">
             <div class="invite__text">
               <h2 id="invite-heading">邀请成员</h2>
               <p class="muted">把链接或二维码发到群公告、报名表或现场物料里。打开、登录就能加入，不用先做好页面。</p>

@@ -122,3 +122,8 @@
 .chat-avatar { width: 28px; height: 28px; border-radius: 50%; object-fit: cover; vertical-align: middle; flex-shrink: 0; }
 .message-meta { align-items: center; }
 .chat-members li > span { display: inline-flex; gap: 8px; align-items: center; }
+
+/* 会话标题的眉题是墙名（用户内容）：不转大写；举报入口与对话内容对齐 */
+.conversation-heading .eyebrow { text-transform: none; letter-spacing: 0.04em; }
+.conversation-panel .safety--chat { padding-inline: 28px; }
+@media (max-width: 639px) { .conversation-panel .safety--chat { padding-inline: 16px; } }

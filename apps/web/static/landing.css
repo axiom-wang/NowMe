@@ -172,7 +172,7 @@
   --tape: color-mix(in srgb, var(--ink) 78%, transparent);
   --tape-left: 60%;
   --note-bg: var(--orange);
-  --note-ink: var(--white);
+  --note-ink: var(--ink); /* 橙色底上白字对比度不够（3.1:1） */
 }
 
 .landing-note--blue {

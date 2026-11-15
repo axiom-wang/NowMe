@@ -30,6 +30,7 @@ test('墙上搜索：多个词都命中才显示，数量与空结果提示同�
   await page.evaluate((html) => {
     document.querySelector('main')!.innerHTML = html;
   }, WALL_HTML);
+  await page.addStyleTag({ url: '/static/wall.css' });
   await page.addScriptTag({ url: '/static/wall.js' });
 
   const visible = () => page.locator('[data-wall-card]:visible').allTextContents();

@@ -14,7 +14,7 @@
  * 中文正文用系统字体（苹方 / 冬青黑 / 微软雅黑）。
  *
  * 组件一览：.btn  表单（.field / .check / .chip-check）  .card  .note（便签）  .board（软木板）
- *          .chip / .badge / .sticker  .notice  .progress（步骤条）  .empty-state  .popover / .dialog
+ *          .chip / .badge / .sticker  .notice  .progress（步骤条）  .empty-state  .popover  .confirm
  *          .avatar  .code / .terminal  .facts  .page-frame  .report / .issue  .status-page
  */
 
@@ -382,9 +382,9 @@ strong {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 24px;
+  min-width: 30px; /* 两位数也放得下：未读数出现前后导航不移动 */
   height: 22px;
-  padding: 0 7px;
+  padding: 0 6px;
   border-radius: var(--radius-pill);
   background: var(--ink);
   color: var(--lime);
@@ -458,7 +458,7 @@ strong {
 }
 
 /* ------------------------------------------------------------------ */
-/* 弹出菜单（账号菜单、发起聊天、行内菜单）与对话框 */
+/* 弹出菜单（账号菜单、行内菜单）。确认类的“对话框”是独立的确认页（.confirm，见下）或 app.js 的原生确认 */
 
 .popover {
   position: absolute;
@@ -474,8 +474,7 @@ strong {
 }
 
 .popover > a,
-.popover > form > button,
-.popover__item {
+.popover > form > button {
   display: block;
   width: 100%;
   padding: 10px 14px;
@@ -491,27 +490,12 @@ strong {
 }
 
 .popover > a:hover,
-.popover > form > button:hover,
-.popover__item:hover {
+.popover > form > button:hover {
   background: var(--lime-soft);
 }
 
 .popover > form {
   margin: 0;
-}
-
-.dialog {
-  width: min(480px, calc(100vw - 32px));
-  padding: var(--space-6);
-  border: 1.5px solid var(--ink);
-  border-radius: var(--radius-lg);
-  background: var(--surface);
-  color: var(--ink);
-  box-shadow: var(--shadow-hard), var(--shadow-pop);
-}
-
-.dialog::backdrop {
-  background: color-mix(in srgb, var(--ink) 45%, transparent);
 }
 
 /* ------------------------------------------------------------------ */
@@ -1099,7 +1083,6 @@ input[type='checkbox'] {
   letter-spacing: -0.005em;
   text-align: center;
   text-decoration: none;
-  white-space: nowrap;
   border-radius: var(--radius-pill);
   border: 1.5px solid transparent;
   cursor: pointer;
@@ -1254,9 +1237,10 @@ input[type='checkbox'] {
   margin: 0 0 var(--space-4);
   padding: 12px 16px 12px 44px;
   border-radius: 14px;
+  --notice-ink: var(--info);
   border: 1px solid var(--info-line);
   background: var(--info-bg);
-  color: var(--info);
+  color: var(--notice-ink);
   font-size: var(--text-base);
 }
 
@@ -1268,7 +1252,7 @@ input[type='checkbox'] {
   width: 20px;
   height: 20px;
   border-radius: 50%;
-  background: currentColor;
+  background: var(--notice-ink);
   color: var(--surface);
   font: 700 var(--text-2xs) / 20px var(--font-head);
   text-align: center;
@@ -1285,9 +1269,9 @@ input[type='checkbox'] {
 }
 
 .notice--success {
+  --notice-ink: var(--ok);
   background: var(--ok-bg);
   border-color: var(--ok-line);
-  color: var(--ok);
 }
 
 .notice--success::before {
@@ -1295,9 +1279,9 @@ input[type='checkbox'] {
 }
 
 .notice--warning {
+  --notice-ink: var(--warn);
   background: var(--warn-bg);
   border-color: var(--warn-line);
-  color: var(--warn);
 }
 
 .notice--warning::before {
@@ -1305,9 +1289,9 @@ input[type='checkbox'] {
 }
 
 .notice--error {
+  --notice-ink: var(--bad);
   background: var(--bad-bg);
   border-color: var(--bad-line);
-  color: var(--bad);
 }
 
 .notice--error::before {
