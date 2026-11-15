@@ -11,10 +11,13 @@ describe('主站基础', () => {
     await t.close();
   });
 
-  it('未登录访问 / 重定向到登录页', async () => {
+  it('未登录访问 / 看到正式首页；需要登录的页面重定向到登录页', async () => {
     const response = await get(t, '/');
-    expect(response.status).toBe(303);
-    expect(response.headers.get('location')).toBe('/login');
+    expect(response.status).toBe(200);
+    expect(await response.text()).toContain('给你的圈子');
+    const messages = await get(t, '/messages');
+    expect(messages.status).toBe(303);
+    expect(messages.headers.get('location')).toBe('/login?next=%2Fmessages');
   });
 
   it('登录页是完整的中文 HTML 文档，带主站 CSP', async () => {

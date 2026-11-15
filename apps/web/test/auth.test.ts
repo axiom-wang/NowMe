@@ -111,7 +111,7 @@ describe('登录与会话', () => {
     expect(response.headers.get('location')).toBe('/login');
     expect(response.headers.getSetCookie().join()).toMatch(new RegExp(`${SESSION_COOKIE_NAME}=;.*Max-Age=0`));
     expect(t.db.prepare('SELECT COUNT(*) AS n FROM sessions WHERE id = ?').get(hashToken(session.token))).toEqual({ n: 0 });
-    expect((await get(t, '/', { cookie: session.cookie })).status).toBe(303);
+    expect((await get(t, '/messages', { cookie: session.cookie })).status).toBe(303);
   });
 
   it('会话 30 天后过期', async () => {
@@ -119,9 +119,9 @@ describe('登录与会话', () => {
     t.clock.advance(30 * 24 * HOUR - 1000);
     expect((await get(t, '/', { cookie: session.cookie })).status).toBe(200);
     t.clock.advance(2000);
-    const expired = await get(t, '/', { cookie: session.cookie });
+    const expired = await get(t, '/messages', { cookie: session.cookie });
     expect(expired.status).toBe(303);
-    expect(expired.headers.get('location')).toBe('/login');
+    expect(expired.headers.get('location')).toBe('/login?next=%2Fmessages');
   });
 
   it('/dev/outbox 在非生产环境列出发出的验证码', async () => {

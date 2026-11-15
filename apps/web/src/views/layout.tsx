@@ -20,7 +20,7 @@ import { CsrfField } from './forms.js';
 import { HomeIcon } from './home-icons.js';
 
 /** 页面链接的样式表（按顺序；`app.css` 总是链接）。 */
-export const STYLESHEETS: readonly string[] = ['app.css', ...['wall.css', 'workspace.css', 'hosted.css', 'messages.css', 'home.css', 'credits.css'].filter((name) => existsSync(join(STATIC_DIR, name)))];
+export const STYLESHEETS: readonly string[] = ['app.css', ...['wall.css', 'workspace.css', 'hosted.css', 'messages.css', 'home.css', 'landing.css', 'credits.css'].filter((name) => existsSync(join(STATIC_DIR, name)))];
 
 export interface LayoutProps {
   title: string;

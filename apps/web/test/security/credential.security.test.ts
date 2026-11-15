@@ -122,7 +122,7 @@ describe('S4 页面凭证不能当会话、不能发布', () => {
     const workspace = await get(t, `/w/${s.wall.id}/me`, { cookie, headers: { authorization: `Bearer ${s.credential}` } });
     expect(workspace.status).toBe(303);
     expect(workspace.headers.get('location')).toBe(`/login?next=${encodeURIComponent(`/w/${s.wall.id}/me`)}`);
-    const home = await get(t, '/', { cookie });
+    const home = await get(t, '/messages', { cookie });
     expect(home.status).toBe(303);
 
     for (const { path, fields } of stateChangingRoutes(s)) {
@@ -134,7 +134,7 @@ describe('S4 页面凭证不能当会话、不能发布', () => {
   });
 
   it('GET 页面只看会话：带凭证的 Authorization 头不会被当成登录', async () => {
-    for (const path of ['/', `/w/${s.wall.id}/me`, `/w/${s.wall.id}/me?rev=${s.revisionId}`]) {
+    for (const path of ['/messages', `/w/${s.wall.id}/me`, `/w/${s.wall.id}/me?rev=${s.revisionId}`]) {
       const response = await get(t, path, { headers: { authorization: `Bearer ${s.credential}` } });
       expect(response.status, path).toBe(303);
       expect(response.headers.get('location'), path).toMatch(/^\/login/);

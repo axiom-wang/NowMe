@@ -1,5 +1,6 @@
 /**
- * “我的”（`GET /`，登录用户）：我加入的墙、每页发布状态、进入墙 / 工作区 / 后台的入口、“建一面墙”，
+ * 首页（`GET /`）。未登录：正式首页（演示模式下是一键体验登录）。
+ * 登录用户看到“我的”：我加入的墙、每页发布状态、进入墙 / 工作区 / 后台的入口、“建一面墙”，
  * 以及已关闭、已退出、已移出的墙（只显示状态，没有链接）。
  */
 import { loadSceneGuide } from '@nowme/skill';
@@ -8,6 +9,7 @@ import type { AppDeps, AppHono } from '../context.js';
 import { authOf, requireUser } from '../security/session.js';
 import { HomeView, type HomeEntryStatus, type HomeFilter, type HomeItem, type HomeNotice } from '../views/home.js';
 import { LoginView } from '../views/auth.js';
+import { LandingView } from '../views/home-landing.js';
 import { DEMO_ACCOUNTS } from '../demo-access.js';
 import { renderPage } from '../views/layout.js';
 
@@ -22,7 +24,10 @@ export function registerHomeRoutes(app: AppHono, deps: AppDeps): void {
   const labels = sceneLabels();
 
   app.get('/', async (c, next) => {
-    if (deps.demo && !c.get('auth')) return renderPage(c, { title: '黑客松评审体验', body: <LoginView next="/" demoAccounts={DEMO_ACCOUNTS} /> });
+    if (!c.get('auth')) {
+      if (deps.demo) return renderPage(c, { title: '黑客松评审体验', body: <LoginView next="/" demoAccounts={DEMO_ACCOUNTS} /> });
+      return renderPage(c, { title: '给你的圈子建一面墙', bodyClass: 'page--landing', body: <LandingView /> });
+    }
     return requireUser(deps)(c, next);
   }, (c) => {
     const auth = authOf(c);

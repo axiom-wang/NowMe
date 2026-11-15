@@ -177,7 +177,7 @@ describe('S12 举报、拉黑与停用', () => {
     expect((await get(t, '/', { cookie: target.cookie })).status).toBe(200);
     suspendUser(t.web.deps, target.userId, '测试');
 
-    const home = await get(t, '/', { cookie: target.cookie });
+    const home = await get(t, '/messages', { cookie: target.cookie });
     expect(home.status).toBe(303);
     expect(home.headers.get('location')).toContain('/login');
     expect(t.db.prepare('SELECT COUNT(*) AS n FROM sessions WHERE user_id = ?').get(target.userId)).toEqual({ n: 0 });

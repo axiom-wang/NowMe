@@ -167,7 +167,7 @@ describe('S11 注销后不留可访问的个人数据', () => {
 
     // 会话：两台设备都失效
     for (const session of [owner.session, otherDevice]) {
-      const home = await get(web, '/', { cookie: session.cookie });
+      const home = await get(web, '/messages', { cookie: session.cookie });
       expect(home.status).toBe(303);
       expect(home.headers.get('location')).toContain('/login');
       expect((await get(web, '/account/export', { cookie: session.cookie })).status).toBe(303);
@@ -258,7 +258,7 @@ describe('S11 注销后不留可访问的个人数据', () => {
       w.t.clock.now().toISOString(),
       new Date(w.t.clock.now().getTime() + 3600_000).toISOString(),
     );
-    expect((await get(w.t, '/', { cookie: w.owner.session.cookie })).status).toBe(303);
+    expect((await get(w.t, '/messages', { cookie: w.owner.session.cookie })).status).toBe(303);
   });
 });
 

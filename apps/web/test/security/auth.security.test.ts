@@ -113,7 +113,7 @@ describe('验证码', () => {
     expect(t.db.prepare('SELECT COUNT(*) AS n FROM sessions WHERE id = ?').get(hashToken(first.token))).toEqual({ n: 0 });
     // 攻击者预先放进 cookie 的任意值不会成为会话
     const planted = `${SESSION_COOKIE_NAME}=nms_${'A'.repeat(43)}`;
-    expect((await get(t, '/', { cookie: planted })).status).toBe(303);
+    expect((await get(t, '/messages', { cookie: planted })).status).toBe(303);
   });
 });
 
