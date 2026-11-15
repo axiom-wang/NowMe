@@ -16,10 +16,13 @@ import { formatDateTime } from '../format.js';
 import { isDefaultChecked, isWriteInOption, type StructuredBrief } from '../hosted/brief.js';
 import { JOB_ERROR_TEXT, type HostedOverview, type JobStartError, type StepError } from '../hosted/service.js';
 import type { AiStatus } from '../services/billing.js';
+import { creationRoute, creditGap, type CreationRoute } from '../services/workspace-stage.js';
 import { CsrfField, Notice, PostButton } from './forms.js';
 import { initialOf } from './layout.js';
 import { HomeIcon } from './home-icons.js';
 import { BlockedList } from './moderation.js';
+import { JobProgress } from './progress.js';
+import { progressView, type ProgressView } from '../services/progress.js';
 import type { BlockedUserRow } from '../db/moderation.js';
 
 export const STEP_ERROR_TEXT: Record<StepError, string> = {
@@ -33,7 +36,7 @@ export const STEP_ERROR_TEXT: Record<StepError, string> = {
   'too-many-images': `图片最多 ${BRIEF_ASSETS_MAX_COUNT} 张。`,
   'image-type': '只支持 PNG、JPEG、WebP、GIF 图片。',
   'image-too-large': '单张图片不能超过 2 MB。',
-  'need-two-hooks': '接话点至少保留 2 个（缩略卡上要用）。',
+  'need-two-hooks': '接话点至少保留 2 个（墙上的小卡片要用）。',
   'need-one-sentence': '“AI 眼中的你”至少保留一句。',
   'hook-invalid': '接话点文字要 2–32 个字，开场白 1–80 个字。',
   'note-empty': '先写一句哪里不对，再让它重新整理。',
@@ -47,8 +50,8 @@ export const JOB_START_ERROR_TEXT: Record<JobStartError, string> = {
   busy: '已经有一个任务在进行，等它结束再开始新的。',
   daily: '今天发起的生成次数太多了，明天再试。',
   'no-brief': '先完成采访并确认“AI 眼中的你”，才能开始生成。',
-  'no-revision': '这个版本不能修改（可能没通过校验或已删除）。',
-  'bad-block': '选的区块不在这个版本里。',
+  'no-revision': '这一版不能修改（可能没做成或已删除）。',
+  'bad-block': '选的那一块不在这一版里。',
   'bad-request': `修改要求要写 ${EDIT_REQUEST_LIMITS.min}–${EDIT_REQUEST_LIMITS.max} 个字。`,
   credits: '点数不够，这次没有开始。可以用兑换码补充点数、请组织者给这面墙充额度，或在 AI 设置里填自己的模型 Key（不消耗点数）。',
 };
@@ -70,6 +73,11 @@ export function privacyNote(providers: string, demo = false, platform = false): 
   return `你填写的内容和图片会发送给 AI 模型服务（${providers}）用来生成页面，${cost}；资料保存在 NOWMe 平台、只有你自己能看到，不会给组织者或其他成员看；随时可以在“我的资料”里删除。`;
 }
 
+/** 给人看的资料：brief.md 与本地路线同一格式，只把标题里的 “brief” 换成“资料”（不改存储的文件）。 */
+export function displayBriefMd(markdown: string): string {
+  return markdown.replace(/^# brief：/, '# 资料：');
+}
+
 const MOTION_OPTIONS = [
   { value: 'calm', label: '安静' },
   { value: 'medium', label: '适中' },
@@ -86,6 +94,8 @@ export interface CreateViewModel {
   error: string | null;
   /** 隐私说明里“发给哪家模型服务”。 */
   providers: string;
+  /** 刚通过邀请加入（`?welcome=1`）：显示欢迎语与“先去墙上看看”。 */
+  welcome?: boolean;
 }
 
 function base(wall: Wall): string {
@@ -352,8 +362,8 @@ const ReviewForm: FC<{ model: CreateViewModel; brief: StructuredBrief; briefMd: 
     </form>
     {briefMd ? (
       <details class="card card--quiet">
-        <summary>查看完整的 brief</summary>
-        <pre class="code code--wrap">{briefMd}</pre>
+        <summary>查看完整的资料</summary>
+        <pre class="code code--wrap">{displayBriefMd(briefMd)}</pre>
       </details>
     ) : null}
   </div>
@@ -369,11 +379,26 @@ const ActiveJobNotice: FC<{ model: CreateViewModel }> = ({ model }) => {
   );
 };
 
-const ConfirmedPanel: FC<{ model: CreateViewModel }> = ({ model }) => {
+/** 点数不够 / 平台 AI 没开放时，采访页上的说明（不甩错误码）。 */
+const CreateRouteNotice: FC<{ model: CreateViewModel; route: CreationRoute }> = ({ model, route }) => {
+  if (model.demo) return null;
+  if (route === 'credits') {
+    const gap = creditGap(model.overview.ai, 'generate');
+    return (
+      <Notice tone="warning">
+        采访不收点数；用 NOWMe 的 AI 生成一版页面要 {gap.price} 点，你现在能用 {gap.available} 点。可以先采访，生成前<a href="/account/credits">用兑换码补充点数</a>，或者请组织者给这面墙充一点额度。
+      </Notice>
+    );
+  }
+  return null;
+};
+
+const ConfirmedPanel: FC<{ model: CreateViewModel; route: CreationRoute }> = ({ model, route }) => {
   const brief = model.overview.brief?.brief;
+  const canRun = model.demo || route === 'platform' || route === 'own';
   return (
     <section class="card stack">
-      <h2>brief 已确认</h2>
+      <h2>资料确认好了</h2>
       {brief ? (
         <blockquote class="hosted-quote">
           {brief.aiView.map((sentence) => (
@@ -381,43 +406,78 @@ const ConfirmedPanel: FC<{ model: CreateViewModel }> = ({ model }) => {
           ))}
         </blockquote>
       ) : null}
+      <p class="muted">AI 会按你确认的资料做一页你自己，一般要几分钟。做好后先给你预览，你确认了才会发布到墙上；平台不会替你发布。</p>
+      {canRun ? null : route === 'credits' ? (
+        <Notice tone="warning">
+          点数不够：生成一版要 {creditGap(model.overview.ai, 'generate').price} 点，你现在能用 {creditGap(model.overview.ai, 'generate').available} 点。可以用兑换码补充点数，或者请组织者给这面墙充一点额度；也可以在“我的页面”的“更多方式”里改用自己的模型 Key。
+        </Notice>
+      ) : (
+        <Notice tone="warning">这里暂时没有可以直接用的 AI。在 AI 设置里填自己的模型 Key 后就能生成；也可以在“我的页面”的“更多方式”里用你自己电脑上的 AI 助手。</Notice>
+      )}
       <div class="actions">
-        {model.overview.activeJob ? null : (
-          <PostButton
-            action={`${base(model.wall)}/generate`}
-            csrf={model.csrf}
-            label="开始生成页面"
-            variant="primary"
-          />
+        {model.overview.activeJob ? null : canRun ? (
+          <PostButton action={`${base(model.wall)}/generate`} csrf={model.csrf} label="生成页面" variant="primary" />
+        ) : route === 'credits' ? (
+          <a class="btn btn--primary" href="/account/credits">去兑换点数</a>
+        ) : (
+          <a class="btn btn--primary" href="/account/ai">填写自己的模型 Key</a>
         )}
         <a class="btn btn--ghost" href={`${base(model.wall)}/brief`}>
-          查看 brief
+          看看我的资料
         </a>
         <PostButton
           action={`${base(model.wall)}/create/restart`}
           csrf={model.csrf}
           label="重新采访"
-          confirm="重新采访会删除这一页的 brief 和上传的图片（已生成的版本不受影响）。继续吗？"
+          confirm="重新采访会删除这一页的资料和上传的图片（已做好的版本不受影响）。继续吗？"
         />
       </div>
-      <p class="muted">生成大约需要一两分钟。生成好的页面会出现在工作区的版本列表里，预览满意后由你确认发布；平台不会替你发布。</p>
     </section>
   );
 };
+
+/** 平台 AI 没开放、自己也没配置：说明原因与两种办法。 */
+const SetupPanel: FC<{ model: CreateViewModel }> = ({ model }) => (
+  <section class="card create-empty">
+    <HomeIcon name="pencil" />
+    <h2>先准备好 AI</h2>
+    {model.demo ? (
+      <p>{DEMO_MODEL_MISSING}</p>
+    ) : (
+      <>
+        <p>这里暂时没有可以直接用的 AI，需要你自己准备一个。两种办法任选一种：</p>
+        <ul class="next-help__list">
+          <li>有模型服务的 Key（比如 DeepSeek、通义千问）？在 AI 设置里填一次，就能在这里采访和生成，费用由服务商向你收取。</li>
+          <li>电脑上装了 AI 编程助手？回到“我的页面”，在“更多方式”里生成一条指令交给它。</li>
+        </ul>
+        <div class="actions">
+          <a class="btn btn--primary" href="/account/ai">填写自己的模型 Key<HomeIcon name="arrow" /></a>
+          <a class="btn btn--ghost" href={`${base(model.wall)}#more-ways`}>用自己电脑上的 AI 助手</a>
+        </div>
+      </>
+    )}
+  </section>
+);
 
 export const CreateView: FC<{ model: CreateViewModel }> = ({ model }) => {
   const view = model.overview.brief;
   const status = view?.record.status ?? 'collecting';
   const step = status === 'collecting' ? 0 : status === 'followups' ? 1 : status === 'review' ? 2 : 3;
+  const route = creationRoute(model.overview.ai, 'generate');
   return (
     <div class="container create-page">
       <nav class="crumbs create-crumbs" aria-label="当前位置">
         <a href="/">我的</a><span aria-hidden="true">/</span>
         <a href={`/w/${model.wall.id}`}>{model.wall.name}</a><span aria-hidden="true">/</span>
-        <a href={base(model.wall)}>创作工作区</a>
+        <a href={base(model.wall)}>我的页面</a>
       </nav>
+      {model.welcome ? (
+        <Notice tone="success">
+          欢迎加入「{model.wall.name}」！花几分钟做一页你自己，挂到墙上让大家认识你。想先逛逛？<a href={`/w/${model.wall.id}`}>先去墙上看看</a>
+        </Notice>
+      ) : null}
       <header class="create-intro">
-        <div><p class="create-eyebrow"><span aria-hidden="true">✳</span> 每一面，都是你</p><h1>在这里创作<span class="create-intro__dot" aria-hidden="true">.</span></h1><p class="create-intro__lead">不用从空白页开始。和 AI 聊聊，做一页有个性的自己。</p></div>
+        <div><p class="create-eyebrow"><span aria-hidden="true">✳</span> 每一面，都是你</p><h1>做一页你自己<span class="create-intro__dot" aria-hidden="true">.</span></h1><p class="create-intro__lead">不用从空白页开始。回答几个问题，AI 帮你做一页有个性的自己。</p></div>
         <p class="create-duration"><span>约 <strong>{Math.max(1, Math.round(model.scene.interviewBudgetSeconds / 60))}</strong> 分钟</span><small>完成这次小采访</small></p>
       </header>
       <div class="create-layout">
@@ -425,20 +485,21 @@ export const CreateView: FC<{ model: CreateViewModel }> = ({ model }) => {
           <p class="create-journey__title">你的创作旅程<span>0{step + 1} / 04</span></p>
           <Steps current={step} />
           {model.demo && model.overview.modelReady ? null : <div class={`create-model${model.overview.modelReady ? ' create-model--ready' : ''}`}>
-            <p class="create-model__title"><span aria-hidden="true"></span>{model.overview.ai.mode === 'platform' ? 'AI 已就绪' : model.overview.modelReady ? '你的 AI 已就绪' : '先连接你的 AI'}</p>
+            <p class="create-model__title"><span aria-hidden="true"></span>{model.overview.ai.mode === 'platform' ? 'AI 已就绪' : model.overview.modelReady ? '你的 AI 已就绪' : '还没有可用的 AI'}</p>
             <ModelNotice overview={model.overview} demo={model.demo} />
           </div>}
           <p class="create-journey__note"><HomeIcon name="eye" /><span>资料先留给自己。<br />页面由你预览、确认发布。</span></p>
-          <a class="create-back" href={base(model.wall)}>← 返回创作工作区</a>
+          <a class="create-back" href={base(model.wall)}>← 回到我的页面</a>
         </aside>
         <div class="create-content">
           {model.error ? <Notice tone="error">{model.error}</Notice> : null}
           <ActiveJobNotice model={model} />
-          {!model.overview.modelReady && status === 'collecting' ? <section class="card create-empty"><HomeIcon name="pencil" /><h2>连接 AI，开始认识你</h2><p>{model.demo ? DEMO_MODEL_MISSING : '先在 AI 设置中添加你的模型服务，再回来开始这次小采访。'}</p>{!model.demo ? <a class="btn btn--primary" href="/account/ai">前往 AI 设置<HomeIcon name="arrow" /></a> : null}</section> : null}
+          {status !== 'confirmed' ? <CreateRouteNotice model={model} route={route} /> : null}
+          {!model.overview.modelReady && status === 'collecting' ? <SetupPanel model={model} /> : null}
           {model.overview.modelReady && status === 'collecting' ? <InterviewForm model={model} /> : null}
           {status === 'followups' ? <FollowupForm model={model} /> : null}
           {status === 'review' && view?.brief ? <ReviewForm model={model} brief={view.brief} briefMd={view.record.briefMd} /> : null}
-          {status === 'confirmed' ? <ConfirmedPanel model={model} /> : null}
+          {status === 'confirmed' ? <ConfirmedPanel model={model} route={route} /> : null}
           {status !== 'collecting' && status !== 'confirmed' ? <div class="hosted-restart"><PostButton action={`${base(model.wall)}/create/restart`} csrf={model.csrf} label="从头再来" confirm="会删除这次采访已填写的内容和图片。继续吗？" /></div> : null}
         </div>
       </div>
@@ -465,21 +526,38 @@ export interface JobCharge {
   refunded: boolean;
 }
 
-export const JobView: FC<{ demo?: boolean; wall: Wall; job: GenerationJob; revisionNumber: number | null; csrf: string; blocks: string[]; charge?: JobCharge | null; platform?: boolean }> = ({ wall, job, revisionNumber, csrf, blocks, demo, charge = null, platform = false }) => {
+export const JobView: FC<{
+  demo?: boolean;
+  wall: Wall;
+  job: GenerationJob;
+  revisionNumber: number | null;
+  csrf: string;
+  blocks: string[];
+  charge?: JobCharge | null;
+  platform?: boolean;
+  progress?: ProgressView | null;
+  pollMs?: number;
+  emailOn?: boolean;
+}> = ({ wall, job, revisionNumber, csrf, blocks, demo, charge = null, platform = false, progress = null, pollMs = 3000, emailOn = false }) => {
   const label = job.kind === 'generate' ? '生成页面' : '修改页面';
   const running = job.status === 'queued' || job.status === 'running';
   return (
-    <div class="container container--form">
+    <div class="container container--form job-page">
       <p class="crumbs">
-        <a href={base(wall)}>创作工作区</a>
+        <a href={`/w/${wall.id}`}>{wall.name}</a>
+        <span aria-hidden="true">/</span>
+        <a href={base(wall)}>我的页面</a>
       </p>
       <h1 class="display form-title">{label}</h1>
-      <section class="card stack" aria-live="polite">
-        <p>
-          状态：<span class={`badge ${job.status === 'succeeded' ? 'badge--ok' : job.status === 'failed' ? 'badge--bad' : 'badge--warn'}`}>{JOB_STATUS_TEXT[job.status]}</span>
-          <span class="muted"> · {formatDateTime(job.createdAt)} 开始</span>
-        </p>
-        {running ? <p class="muted">AI 正在按 Skill 写页面、校验、看截图自查……这个页面会自动刷新。大约需要一两分钟。</p> : null}
+      <section class="card stack">
+        {running ? (
+          <JobProgress wallId={wall.id} jobId={job.id} kind={job.kind} view={progress ?? progressView(null)} pollMs={pollMs} emailOn={emailOn} />
+        ) : (
+          <p>
+            <span class={`badge ${job.status === 'succeeded' ? 'badge--ok' : job.status === 'failed' ? 'badge--bad' : 'badge--warn'}`}>{JOB_STATUS_TEXT[job.status]}</span>
+            <span class="muted"> · {formatDateTime(job.createdAt)} 开始</span>
+          </p>
+        )}
         {charge ? (
           <p class="muted job-charge">
             {charge.refunded
@@ -490,11 +568,9 @@ export const JobView: FC<{ demo?: boolean; wall: Wall; job: GenerationJob; revis
         {job.status === 'succeeded' && job.revisionId ? (
           <>
             {job.resultMessage ? <p>{job.resultMessage}</p> : null}
+            <p>做好了，这是你的第 {revisionNumber ?? '?'} 版。看看满不满意：满意就确认发布，不满意可以接着改。</p>
             <p>
-              已保存为第 {revisionNumber ?? '?'} 版。预览满意后，在工作区确认缩略卡和联系方式再发布。
-            </p>
-            <p>
-              <a class="btn btn--primary" href={`${base(wall)}?rev=${job.revisionId}#preview-heading`}>
+              <a class="btn btn--primary btn--lg" href={`${base(wall)}?rev=${job.revisionId}#preview-heading`}>
                 去预览第 {revisionNumber ?? '?'} 版
               </a>
             </p>
@@ -502,7 +578,7 @@ export const JobView: FC<{ demo?: boolean; wall: Wall; job: GenerationJob; revis
         ) : null}
         {job.status === 'failed' ? <><Notice tone="error">{(demo ? demoModelError(job.errorCode ?? '') : null) ?? JOB_ERROR_TEXT[job.errorCode ?? 'INTERNAL'] ?? JOB_ERROR_TEXT.INTERNAL}</Notice><p class="muted">{demo ? '请重试；若仍失败，请维护者检查模型权限、余额和连接。费用由演示提供者承担。' : platform ? '可以再试一次；一直不行的话，过一会儿再来。' : <>模型服务商可能已收取调用费用。<a href="/account/ai">检查 AI 设置</a></>}</p></> : null}
         {job.status === 'failed' ? job.kind === 'generate'
-          ? <PostButton action={`${base(wall)}/generate`} csrf={csrf} label="重新生成页面" />
+          ? <PostButton action={`${base(wall)}/generate`} csrf={csrf} label="再生成一次" variant="primary" />
           : job.baseRevisionId ? <EditForm wallId={wall.id} csrf={csrf} revisionId={job.baseRevisionId} blocks={blocks} request={job.requestText ?? ''} /> : null : null}
         {job.status === 'needs_input' ? (
           <>
@@ -512,6 +588,9 @@ export const JobView: FC<{ demo?: boolean; wall: Wall; job: GenerationJob; revis
         ) : null}
         {job.kind === 'edit' && job.requestText ? <p class="muted">你的修改要求：{job.requestText}</p> : null}
       </section>
+      <p class="job-page__back">
+        <a href={base(wall)}>← 回到我的页面</a>
+      </p>
     </div>
   );
 };
@@ -556,17 +635,17 @@ export const EditForm: FC<{ wallId: string; csrf: string; revisionId: string; bl
 export const BriefPageView: FC<{ wall: Wall; csrf: string; briefMd: string; briefId: string }> = ({ wall, csrf, briefMd, briefId }) => (
   <div class="container container--form">
     <p class="crumbs">
-      <a href={base(wall)}>创作工作区</a>
+      <a href={base(wall)}>我的页面</a>
       <span aria-hidden="true">/</span>
-      <a href={`${base(wall)}/create`}>在这里创作</a>
+      <a href={`${base(wall)}/create`}>采访</a>
     </p>
-    <h1 class="display form-title">这一页的 brief</h1>
-    <p class="muted">只有你自己能看到。删除后，这一页的采访内容和上传的图片都会清除（已生成的版本不受影响）。</p>
-    <pre class="code code--wrap card">{briefMd}</pre>
+    <h1 class="display form-title">这一页的资料</h1>
+    <p class="muted">这是 AI 根据采访整理、你确认过的资料，做页面时只用这些。只有你自己能看到。删除后，这一页的采访内容和上传的图片都会清除（已做好的版本不受影响）。</p>
+    <pre class="code code--wrap card">{displayBriefMd(briefMd)}</pre>
     <PostButton
       action={`${base(wall)}/brief/delete`}
       csrf={csrf}
-      label="删除这份 brief"
+      label="删除这份资料"
       variant="danger"
       fields={{ briefId }}
       confirm="删除后无法恢复。继续吗？"
@@ -591,11 +670,11 @@ const ProfileRow: FC<{ entry: ProfileEntry; csrf: string }> = ({ entry, csrf }) 
   </li>
 );
 
-export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVersion?: string | null | undefined; nicknameDraft?: string; error?: string; csrf: string; profile: ProfileEntry[]; briefs: OwnBriefListItem[]; notice: string | null; blocked?: BlockedUserRow[]; remindersOn?: boolean }> = ({ accountLinks, nickname, avatarVersion, nicknameDraft, error, csrf, profile, briefs, notice, blocked = [], remindersOn = true }) => (
+export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVersion?: string | null | undefined; nicknameDraft?: string; error?: string; csrf: string; profile: ProfileEntry[]; briefs: OwnBriefListItem[]; notice: string | null; blocked?: BlockedUserRow[]; remindersOn?: boolean; notifyEmail?: boolean }> = ({ accountLinks, nickname, avatarVersion, nicknameDraft, error, csrf, profile, briefs, notice, blocked = [], remindersOn = true, notifyEmail = true }) => (
   <div class="profile-page">
     <header class="profile-intro">
       <h1>我的资料</h1>
-      <p>在应用内创作时保存的长期画像与 brief 都在这里。<br />只有你自己能看到；组织者和其他成员都看不到。</p>
+      <p>在 NOWMe 上采访时保存的长期画像与各面墙的采访资料都在这里。<br />只有你自己能看到；组织者和其他成员都看不到。</p>
     </header>
     {notice ? <Notice tone="success">{notice}</Notice> : null}
     <section class="profile-card profile-identity" aria-label="个人资料">
@@ -623,11 +702,11 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
         <h2 id="profile-heading">长期画像（{profile.length} 条）</h2>
         <details class="profile-help">
           <summary><HomeIcon name="plus" />如何添加</summary>
-          <div class="profile-help__panel">在墙的创作工作区完成采访，确认 brief 时勾选“记住这些”，就能保存新的画像。<a href="/">前往我的墙 <span aria-hidden="true">→</span></a></div>
+          <div class="profile-help__panel">在墙里完成一次采访，确认资料时勾选“记住这些”，就能保存新的画像。<a href="/">前往我的墙 <span aria-hidden="true">→</span></a></div>
         </details>
       </div>
       {profile.length === 0 ? (
-        <div class="profile-empty"><p>还没有长期画像</p><span>确认 brief 时勾选“记住这些”，下次采访就不用再问。</span></div>
+        <div class="profile-empty"><p>还没有长期画像</p><span>确认资料时勾选“记住这些”，下次采访就不用再问。</span></div>
       ) : (
         <>
           <ul class="profile-list">{profile.slice(0, 6).map((entry) => <ProfileRow entry={entry} csrf={csrf} />)}</ul>
@@ -640,14 +719,14 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
       )}
     </section>
     <section class="profile-card profile-briefs" aria-labelledby="briefs-heading">
-      <h2 id="briefs-heading">各面墙的 brief（{briefs.length} 份）</h2>
-      {briefs.length === 0 ? <div class="profile-empty"><p>还没有保存的 brief</p><span>在墙里完成采访后，你的创作资料会出现在这里。</span></div> : (
+      <h2 id="briefs-heading">各面墙的采访资料（{briefs.length} 份）</h2>
+      {briefs.length === 0 ? <div class="profile-empty"><p>还没有保存的采访资料</p><span>在墙里完成采访后，你的创作资料会出现在这里。</span></div> : (
         <ul class="profile-brief-list">{briefs.map((item) => (
           <li>
             <div><h3>{item.wallName}</h3><p class="muted">{BRIEF_STATUS_LABEL[item.status]} · {formatDateTime(item.updatedAt)}{item.wallClosed ? ' · 墙已关闭' : item.membershipStatus !== 'active' ? ' · 你已不在这面墙' : ''}</p></div>
             <div class="profile-brief-actions">
               {!item.wallClosed && item.membershipStatus === 'active' ? <a class="profile-button" href={`/w/${item.wallId}/me/brief`}>查看</a> : null}
-              <PostButton action="/account/briefs/delete" csrf={csrf} label="删除" fields={{ briefId: item.id }} confirm="删除这份 brief 和上传的图片？无法恢复。" />
+              <PostButton action="/account/briefs/delete" csrf={csrf} label="删除" fields={{ briefId: item.id }} confirm="删除这份资料和上传的图片？无法恢复。" />
             </div>
           </li>
         ))}</ul>
@@ -656,13 +735,18 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
     <BlockedList csrf={csrf} blocked={blocked} />
     <section class="profile-card" id="notifications" aria-labelledby="notifications-heading">
       <h2 id="notifications-heading">提醒邮件</h2>
-      <p class="muted">墙的组织者可以一键提醒还没发布页面、没答完必答题的人，提醒会发到你的登录邮箱（组织者看不到你的邮箱）。同一面墙 48 小时内最多一封。</p>
+      <p class="muted">提醒都发到你的登录邮箱，只有一句话和链接，不含页面内容（组织者看不到你的邮箱）。</p>
       <form method="post" action="/account/notifications" class="stack">
         <CsrfField token={csrf} />
+        <input type="hidden" name="jobEmail" value="0" />
+        <label class="check">
+          <input type="checkbox" name="jobEmail" value="1" checked={notifyEmail} />
+          <span>页面做好（或没做成）时，如果我已经离开页面，发邮件告诉我</span>
+        </label>
         <input type="hidden" name="reminders" value="0" />
         <label class="check">
           <input type="checkbox" name="reminders" value="1" checked={remindersOn} />
-          <span>接收组织者的提醒邮件</span>
+          <span>接收组织者的提醒邮件（提醒还没发布页面、没答完必答题的人；同一面墙 48 小时内最多一封）</span>
         </label>
         <div><button type="submit" class="profile-button">保存</button></div>
       </form>

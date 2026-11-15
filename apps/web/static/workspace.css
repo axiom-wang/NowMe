@@ -702,3 +702,259 @@
 .revision--selected .badge--muted {
   background: var(--surface);
 }
+
+/* ------------------------------------------------------------------ */
+/* 现在该做的事（contracts 18.1）：每个阶段只有一个主要按钮 */
+
+.progress.progress--3 {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.next-step {
+  border: 1.5px solid var(--ink);
+  box-shadow: var(--shadow-hard);
+}
+
+.next-step h2 {
+  margin: 0 0 8px;
+  font-size: 1.35rem;
+}
+
+.next-step__eyebrow {
+  margin: 0 0 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.next-step--ready {
+  background: var(--lime-soft);
+}
+
+.next-step--live .next-step__eyebrow::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 6px;
+  border-radius: 50%;
+  background: var(--ok);
+  vertical-align: 1px;
+}
+
+.next-step .actions {
+  margin-top: 14px;
+}
+
+.next-step__ai {
+  font-size: 0.88rem;
+}
+
+.next-help {
+  margin: 12px 0 0;
+  padding: 12px 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--warn-line);
+  background: var(--warn-bg);
+  color: var(--ink-2);
+}
+
+.next-help p {
+  margin: 0 0 6px;
+}
+
+.next-help p:last-child {
+  margin-bottom: 0;
+}
+
+.next-help__list {
+  margin: 6px 0 0;
+  padding-left: 1.2em;
+}
+
+.next-help__list li + li {
+  margin-top: 4px;
+}
+
+/* 还没有做好的页面时，手机上不留一大块空白预览 */
+@media (max-width: 999px) {
+  .ws-layout--no-preview .ws-layout__side {
+    display: none;
+  }
+}
+
+/* 更多方式：自己的 Key、你电脑上的 AI 助手 */
+.more-ways > summary {
+  cursor: pointer;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  list-style: none;
+}
+
+.more-ways > summary::-webkit-details-marker {
+  display: none;
+}
+
+.more-ways > summary::before {
+  content: '+';
+  font-weight: 700;
+  font-family: var(--font-head);
+  width: 1.2em;
+}
+
+.more-ways[open] > summary::before {
+  content: '−';
+}
+
+.more-ways__title {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.more-ways__hint {
+  font-size: 0.88rem;
+}
+
+.more-ways__body {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  margin-top: 16px;
+}
+
+.more-ways__body h3 {
+  margin: 0 0 6px;
+  font-size: 1rem;
+}
+
+.ws-ownkey {
+  padding-bottom: 16px;
+  border-bottom: 1px dashed var(--line);
+}
+
+/* 检查报告的技术细节默认折叠 */
+.issue__tech {
+  margin-top: 4px;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.issue__tech summary {
+  cursor: pointer;
+}
+
+.issue__tech .issue__head {
+  margin: 4px 0 0;
+}
+
+/* ------------------------------------------------------------------ */
+/* 生成进度（contracts 18.2） */
+
+.job-progress__title {
+  margin: 0 0 6px;
+  font-size: 1.25rem;
+}
+
+.job-progress__label {
+  margin: 0 0 14px;
+  font-size: 1.05rem;
+  font-weight: 700;
+}
+
+.job-progress__steps {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(84px, 1fr));
+  gap: 8px;
+}
+
+.job-progress__step {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line);
+  background: rgba(255, 253, 248, 0.7);
+  font-size: 0.85rem;
+  color: var(--muted);
+}
+
+.job-progress__dot {
+  flex: none;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--paper-3);
+  background: var(--surface);
+}
+
+.job-progress__name {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.25;
+}
+
+.job-progress__turn {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.job-progress__turn:empty {
+  display: none;
+}
+
+.job-progress__step--done {
+  color: var(--ink-2);
+}
+
+.job-progress__step--done .job-progress__dot {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+.job-progress__step--current {
+  border-color: var(--ink);
+  background: var(--surface);
+  color: var(--ink);
+  font-weight: 700;
+}
+
+.job-progress__step--current .job-progress__dot {
+  background: var(--lime);
+  border-color: var(--ink);
+  animation: job-progress-pulse 1.2s var(--ease) infinite alternate;
+}
+
+@keyframes job-progress-pulse {
+  from {
+    transform: scale(0.85);
+  }
+  to {
+    transform: scale(1.2);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .job-progress__step--current .job-progress__dot {
+    animation: none;
+  }
+}
+
+.job-progress__hint {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.job-progress__hint a {
+  margin-left: 6px;
+}
+
+.job-page__back {
+  margin-top: 16px;
+}

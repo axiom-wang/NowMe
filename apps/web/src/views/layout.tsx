@@ -28,8 +28,8 @@ export interface LayoutProps {
   demo?: boolean;
   /** 页面主体的额外 class（例如 `page--narrow`）。 */
   bodyClass?: string;
-  /** 每隔几秒自动刷新（托管任务进行中；主站 CSP 不允许内联脚本，用 meta refresh）。 */
-  refreshSeconds?: number;
+  /** 页面上有生成进度（加载 `progress.js`：SSE 实时进度，退回轮询；contracts 18，不用 meta refresh）。 */
+  progress?: boolean;
 }
 
 /** 名字的第一个字（头像占位）。 */
@@ -87,7 +87,7 @@ export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; active?:
   </header>
 );
 
-export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyClass, refreshSeconds, demo, children }) => (
+export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyClass, progress, demo, children }) => (
   <>
     {raw('<!doctype html>')}
     <html lang="zh-CN">
@@ -95,7 +95,6 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="referrer" content="same-origin" />
-        {refreshSeconds ? <meta http-equiv="refresh" content={String(refreshSeconds)} /> : null}
         <title>{title === 'NOWMe' ? title : `${title} · NOWMe`}</title>
         {STYLESHEETS.map((name) => (
           <link rel="stylesheet" href={`${STATIC_PATH_PREFIX}${name}`} />
@@ -105,6 +104,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
         {auth?.user.nickname ? <script src={`${STATIC_PATH_PREFIX}messages.js`} defer></script> : null}
         {bodyClass === 'page--data' ? <link rel="stylesheet" href={`${STATIC_PATH_PREFIX}profile.css`} /> : null}
         {bodyClass === 'page--create' ? <script src={`${STATIC_PATH_PREFIX}hosted.js`} defer></script> : null}
+        {progress ? <script src={`${STATIC_PATH_PREFIX}progress.js`} defer></script> : null}
         {bodyClass === 'page--wall' ? <script src={`${STATIC_PATH_PREFIX}wall.js`} defer></script> : null}
         {auth?.user.nickname ? <script src={`${STATIC_PATH_PREFIX}home.js`} defer></script> : null}
       </head>
@@ -120,11 +120,11 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
 /** 用布局渲染一个页面（读取当前会话以显示账号栏）。 */
 export function renderPage(
   c: Context<AppEnv>,
-  options: { title: string; body: Child; status?: number; bodyClass?: string; refreshSeconds?: number },
+  options: { title: string; body: Child; status?: number; bodyClass?: string; progress?: boolean },
 ): Response | Promise<Response> {
   const auth = c.get('auth') ?? null;
   return c.html(
-    <Layout title={options.title} auth={auth} demo={c.get('demo')} bodyClass={options.bodyClass} refreshSeconds={options.refreshSeconds}>
+    <Layout title={options.title} auth={auth} demo={c.get('demo')} bodyClass={options.bodyClass} progress={options.progress}>
       {options.body}
     </Layout>,
     (options.status ?? 200) as 200,

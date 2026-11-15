@@ -51,6 +51,8 @@ import type { PagePreviewer } from './hosted/tools.js';
 import { renderError, renderNotFound } from './views/errors.js';
 import { asLogger, requestLogging } from './observability/logging.js';
 import { sweepDeletedAccounts } from './services/account-deletion.js';
+import { createJobNotifier, type JobNotifier } from './services/job-notify.js';
+import { createProgressHub, type ProgressSettings } from './services/progress.js';
 
 export type { AppDeps, AppEnv, WebConfig } from './context.js';
 export { openDatabase, type Database } from './db/index.js';
@@ -93,6 +95,10 @@ export interface CreateWebAppOptions {
    * 传 null 表示不托管 Skill 包（安装页提示先构建）。
    */
   skillPackageDir?: string | null;
+  /** 实时进度的连接限制与时间参数（contracts 18；测试用来缩短间隔）。 */
+  progress?: Partial<ProgressSettings>;
+  /** 完成提醒的扫描间隔（毫秒），默认 5 秒；null 表示不自动扫描（测试里手动调用 `notifier.tick()`）。 */
+  jobNotifyIntervalMs?: number | null;
 }
 
 export interface WebApp {
@@ -102,9 +108,13 @@ export interface WebApp {
   deps: AppDeps;
   /** inline 模式下本进程内的 worker（separate 模式为 null）。 */
   worker: BackgroundWorker | null;
+  /** 生成 / 修改结束后的提醒邮件（contracts 18.3）。 */
+  notifier: JobNotifier;
   /** 停止领取任务、等待进行中的任务（`graceMs` 默认无限）并关闭渲染器（不关闭数据库）。 */
   close(options?: { graceMs?: number }): Promise<void>;
 }
+
+const DEFAULT_JOB_NOTIFY_INTERVAL_MS = 5000;
 
 /** 带图片上传的托管采访表单（multipart，上限 HOSTED_UPLOAD_REQUEST_MAX_BYTES）。 */
 const HOSTED_UPLOAD_PATH = /^\/w\/wal_[a-z2-7]{26}\/me\/create\/start$/;
@@ -158,9 +168,12 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
   const submissions = createSubmissionService({ config, db, repos, now, dispatch });
   const remotePreview = createRemotePreviewService({ dataDir: config.dataDir, db, repos, now, dispatch });
 
-  const deps: AppDeps = { demo: options.demo ?? null, contentSafety, userModels, platformModel, config, db, repos, now, kitFonts, tickets, submissions, outbox, rateLimiter: createRateLimiter(now), hosted: null, skillPackage, remotePreview, log };
+  const deps: AppDeps = { demo: options.demo ?? null, contentSafety, userModels, platformModel, config, db, repos, now, kitFonts, tickets, submissions, outbox, rateLimiter: createRateLimiter(now), hosted: null, skillPackage, remotePreview, progress: createProgressHub(now, options.progress), log };
   deps.hosted = createHosted(deps, models, dispatch);
   runtime?.worker.start();
+  const notifier = createJobNotifier(deps, deps.progress);
+  const notifyInterval = options.jobNotifyIntervalMs === undefined ? DEFAULT_JOB_NOTIFY_INTERVAL_MS : options.jobNotifyIntervalMs;
+  if (notifyInterval !== null && deps.hosted) notifier.start(notifyInterval);
   // 已注销账号：清理到期的举报证据与残留文件（幂等，contracts 14.7）
   const sweep = sweepDeletedAccounts(deps).catch((error: unknown) => log(`[web] 清理已注销账号失败：${error instanceof Error ? error.message : String(error)}`));
 
@@ -220,8 +233,10 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
     request: app.request,
     deps,
     worker: runtime?.worker ?? null,
+    notifier,
     async close(closeOptions) {
       await sweep;
+      await notifier.stop();
       await runtime?.close(closeOptions);
       await outbox.close?.();
     },

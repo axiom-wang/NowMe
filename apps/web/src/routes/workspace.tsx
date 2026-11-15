@@ -66,9 +66,12 @@ function renderWorkspace(
   if (!own) return renderNotFound(c);
   const model = loadWorkspace(deps, own, { ...options, csrf: auth.session.csrfToken });
   if (!model) return renderNotFound(c);
+  const job = model.hosted?.overview.activeJob;
+  if (job) deps.progress.touch(job.id);
   return renderPage(c, {
-    title: `${own.wall.name} · 创作工作区`,
+    title: `${own.wall.name} · 我的页面`,
     status,
+    progress: Boolean(job),
     body: <WorkspaceView model={model} ownerName={auth.user.nickname ?? ''} />,
   });
 }
@@ -186,7 +189,7 @@ export function registerWorkspaceRoutes(app: AppHono, deps: AppDeps): void {
       return renderError(c, {
         status: 400,
         title: '没有看懂这个操作',
-        message: '公开链接的开关参数不对。请回到创作工作区，用“开启公开链接”或“关闭公开链接”按钮重新操作。',
+        message: '公开链接的开关参数不对。请回到“我的页面”，用“开启公开链接”或“关闭公开链接”按钮重新操作。',
       });
     }
     setPublicLink(deps, own, enabled === '1', authOf(c).user.id);

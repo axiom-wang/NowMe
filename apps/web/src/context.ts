@@ -19,6 +19,7 @@ import type { HostedService } from './hosted/service.js';
 import type { RateLimiter } from './security/rate-limit.js';
 import type { ContentSafety } from './services/content-safety.js';
 import type { Outbox } from './services/outbox.js';
+import type { ProgressHub } from './services/progress.js';
 import type { RemotePreviewService } from './services/remote-preview.js';
 import type { SkillPackage } from './services/skill-package.js';
 import type { SubmissionService } from './services/submissions.js';
@@ -55,6 +56,8 @@ export interface AppDeps {
   skillPackage: SkillPackage | null;
   /** 服务端远程预览（`POST /api/agent/previews`）。 */
   remotePreview: RemotePreviewService;
+  /** 生成进度的实时推送：连接数限制与“主人还在不在看”（contracts 18）。 */
+  progress: ProgressHub;
   log: (message: string) => void;
 }
 

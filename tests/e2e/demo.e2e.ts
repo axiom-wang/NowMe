@@ -74,11 +74,11 @@ test('黑客松评审：两个入口、浏览、真实采访生成修改、本�
   await expect(page.getByRole('heading', { name: '这是 AI 眼中的你' })).toBeVisible({ timeout: 300_000 });
   console.log('DEMO_VERIFY 真实采访与资料整理通过');
   await page.getByRole('button', { name: '确认，就是我' }).click();
-  await expect(page.getByRole('heading', { name: 'brief 已确认' })).toBeVisible();
-  await page.getByRole('button', { name: '开始生成页面' }).click();
+  await expect(page.getByRole('heading', { name: '资料确认好了' })).toBeVisible();
+  await page.getByRole('button', { name: '生成页面' }).click();
   await expect(page).toHaveURL(/\/me\/jobs\/gen_/);
-  await expect(page.getByRole('link', { name: '去预览第 1 版' })).toBeVisible({ timeout: 650_000 });
-  await page.getByRole('link', { name: '去预览第 1 版' }).click();
+  // 做好后自动跳到预览（contracts 18.2）
+  await expect(page).toHaveURL(/\/me\?rev=rev_/, { timeout: 650_000 });
   await expect(page.locator('iframe[data-nm-page-frame]')).toHaveAttribute('sandbox', 'allow-scripts');
   await expect(page.frameLocator('iframe[data-nm-page-frame]').locator('body')).toContainText('阿柚');
   await page.screenshot({ path: '.data/demo-generated-mobile.png', fullPage: true });
@@ -90,8 +90,7 @@ test('黑客松评审：两个入口、浏览、真实采访生成修改、本�
   if (options.length > 1) await edit.locator('select[name="block"]').selectOption({ index: 1 });
   await edit.locator('textarea[name="request"]').fill('在该区块加上一句“周末一起做点有趣的东西”，其余内容和结构保持。');
   await edit.getByRole('button', { name: /按这个修改/ }).click();
-  await expect(page.getByRole('link', { name: '去预览第 2 版' })).toBeVisible({ timeout: 650_000 });
-  await page.getByRole('link', { name: '去预览第 2 版' }).click();
+  await expect(page.getByRole('heading', { name: '预览：第 2 版' })).toBeVisible({ timeout: 650_000 });
   await expect(page.frameLocator('iframe[data-nm-page-frame]').locator('body')).toContainText('周末一起做点有趣的东西');
   console.log('DEMO_VERIFY 真实修改通过');
   const publish = page.locator('form[action$="/me/publish"]');

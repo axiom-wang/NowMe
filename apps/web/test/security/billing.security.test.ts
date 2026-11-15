@@ -80,7 +80,7 @@ describe('S10 平台模型的 key', () => {
     const owner = await login(web, 'owner@example.com', '阿柚');
     const { wall } = seedWall(web, owner.userId);
     const html = await workspaceHtml(web, owner, wall.id);
-    expect(html).toContain('尚未配置');
+    expect(html).toContain('填写自己的模型 Key');
     expect(html).not.toContain('NOWMe 的 AI');
     expect(planJob(web.web.deps, owner.userId, wall.id, 'generate', { ownReady: false, platformAvailable: false })).toEqual({ ok: false, error: 'MODEL_CONFIG' });
   });

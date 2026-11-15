@@ -170,6 +170,8 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
       case 'already':
         return c.redirect(wallPath(wall.id), 303);
       case 'joined':
+        // 新成员直接进入“做一页自己”的引导（contracts 18.1）：采访 → 确认资料 → 生成 → 预览 → 发布；可以随时先去逛墙
+        return c.redirect(deps.hosted ? `${wallPath(wall.id)}/me/create?welcome=1` : `${wallPath(wall.id)}/me`, 303);
       case 'rejoined':
         return c.redirect(`${wallPath(wall.id)}?notice=${result.kind}`, 303);
     }

@@ -5,7 +5,7 @@
  * | --- | --- | --- |
  * | GET /w/:wallId/questions | 墙内有效成员 | 回答 / 修改必答题；墙没有题目时回到墙 |
  * | POST /w/:wallId/questions | 同上 | 保存回答 → 303 `next`（只允许这面墙内的路径） |
- * | POST /account/notifications | 登录用户 | `reminders=1/0`：接收 / 关闭组织者的提醒邮件 |
+ * | POST /account/notifications | 登录用户 | `reminders=1/0`：接收 / 关闭组织者的提醒邮件；`jobEmail=1/0`：生成完成提醒（contracts 18.3）。只改出现在表单里的那一项 |
  *
  * `questionsGate`：没答完必答题的成员打开墙、成员页、工作区时，先 303 到回答页。
  */
@@ -96,8 +96,16 @@ export function registerOrganizerToolRoutes(app: AppHono, deps: AppDeps): void {
   });
 
   app.post('/account/notifications', form, (c) => {
-    const accept = c.get('form').reminders === '1';
-    deps.repos.reminders.setAcceptsReminders(authOf(c).user.id, accept);
+    const fields = c.get('form');
+    const userId = authOf(c).user.id;
+    // 只改会话用户自己的设置；表单里的其他字段（例如用户 ID）一律忽略
+    if (Object.hasOwn(fields, 'jobEmail')) {
+      deps.repos.notify.setJobEmail(userId, fields.jobEmail === '1');
+      if (Object.hasOwn(fields, 'reminders')) deps.repos.reminders.setAcceptsReminders(userId, fields.reminders === '1');
+      return c.redirect('/account/data?notice=notify-saved#notifications', 303);
+    }
+    const accept = fields.reminders === '1';
+    deps.repos.reminders.setAcceptsReminders(userId, accept);
     return c.redirect(`/account/data?notice=${accept ? 'reminders-on' : 'reminders-off'}#notifications`, 303);
   });
 }

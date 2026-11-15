@@ -1,6 +1,6 @@
 /**
  * 工作区里的发布相关组件（T3.2，W10、W11、W12、W15、W16）：
- * - `WallStatusSection`：墙上的页面（当前发布的版本、主人确认的缩略卡、联系方式是否公开、撤下）+ 公开链接；
+ * - `WallStatusSection`：墙上的页面（当前发布的版本、主人确认的小卡片、联系方式是否公开、撤下）+ 公开链接；
  * - `PublishForm`：选中版本的发布确认（缩略卡、联系方式、公开范围、必勾的确认），也用于恢复旧版本；
  * - `MoreActionsSection`：删除这一页、退出这面墙的入口（各自先进确认页）。
  *
@@ -22,7 +22,7 @@ function basePath(model: WorkspaceModel): string {
 /** 主人确认后的缩略卡（墙上看到的样子）。 */
 export const MiniCard: FC<{ card: Card }> = ({ card }) => (
   <div class="mini-card">
-    <p class="mini-card__label">墙上的缩略卡</p>
+    <p class="mini-card__label">墙上的小卡片</p>
     <p class="mini-card__name">{card.displayName}</p>
     <p class="mini-card__tagline">{card.tagline}</p>
     <ul class="mini-card__hooks">
@@ -146,13 +146,13 @@ export const WallStatusSection: FC<{ model: WorkspaceModel }> = ({ model }) => {
           <span>
             {publish.lastEndedAt ? `${formatDateTime(publish.lastEndedAt)} 从墙上撤下。` : ''}
             {publish.takenDownBy === 'organizer' ? '有成员举报了这一页，组织者请它先下墙。' : publish.takenDownBy === 'platform' ? '这一页被平台处理下墙。' : ''}
-            墙上的成员现在看不到你的页面；在下面选一个版本、确认后即可重新发布。
+            墙上的人现在看不到你的页面；选一版确认后即可重新发布。
           </span>
         </p>
       ) : (
         <p class="wall-status__line">
           <span class="badge badge--muted">未发布</span>
-          <span>墙上的成员还看不到你的页面。选一个通过校验的版本，确认缩略卡与联系方式后发布。</span>
+          <span>墙上的人还看不到你的页面。选一版做好的页面，确认小卡片与联系方式后发布。</span>
         </p>
       )}
       <PublicLinkBlock model={model} />
@@ -165,13 +165,13 @@ const MODE_TEXT: Record<PublishMode, { heading: (n: number) => string; button: (
   relaunch: { heading: (n) => `重新发布：第 ${n} 版`, button: () => '确认发布' },
   update: { heading: (n) => `用第 ${n} 版更新墙上的页面`, button: (n) => `更新为第 ${n} 版` },
   restore: { heading: (n) => `恢复为第 ${n} 版`, button: (n) => `恢复为第 ${n} 版` },
-  republish: { heading: () => '修改缩略卡或联系方式', button: () => '保存并重新发布' },
+  republish: { heading: () => '修改小卡片或联系方式', button: () => '保存并重新发布' },
 };
 
 function modeIntro(form: PublishFormModel, activeNumber: number | null): string {
   switch (form.mode) {
     case 'first':
-      return '确认下面的缩略卡与联系方式后发布。没有发布之前，墙上的其他人看不到这一页。';
+      return '确认下面的小卡片与联系方式后发布。没有发布之前，墙上的其他人看不到这一页。';
     case 'relaunch':
       return '你的页面已从墙上撤下。确认下面的内容后重新发布。';
     case 'update':
@@ -179,7 +179,7 @@ function modeIntro(form: PublishFormModel, activeNumber: number | null): string 
     case 'restore':
       return `墙上现在是第 ${activeNumber ?? '?'} 版。恢复会把墙上换回这一版，不会改变公开链接的开关，联系方式按你下面的选择。`;
     case 'republish':
-      return '墙上展示的就是这一版。改好后重新发布，墙上的缩略卡与联系方式会随之更新。';
+      return '墙上展示的就是这一版。改好后重新发布，墙上的小卡片与联系方式会随之更新。';
   }
 }
 
@@ -268,14 +268,14 @@ const PublishFormBody: FC<{ model: WorkspaceModel; form: PublishFormModel }> = (
             <span class="publish-form__num" aria-hidden="true">
               1
             </span>
-            缩略卡
+            墙上的小卡片
           </legend>
           <p class="field__hint">
             墙上显示的入口：名字、一行介绍和 {CARD_LIMITS.hooks.min}–{CARD_LIMITS.hooks.max} 个接话点。
             {form.prefill === 'publication'
               ? '预填的是你上次发布这一版时确认的内容。'
               : form.prefill === 'card'
-                ? '预填的是 Agent 写在这一版 card.json 里的草稿，你可以改写；只有你在这里确认的内容会出现在墙上。'
+                ? '预填的是 AI 写好的草稿，你可以改写；只有你在这里确认的内容会出现在墙上。'
                 : ''}
           </p>
           <TextField
@@ -404,7 +404,7 @@ export const PublishForm: FC<{ model: WorkspaceModel }> = ({ model }) => {
     return (
       <div class="publish" id="publish">
         <h2 class="publish__title">{text.heading(form.revisionNumber)}</h2>
-        <p class="notice notice--warning">这一版的缩略卡（card.json）读不出来，不能发布。请让 Agent 检查 card.json 后重新提交一版。</p>
+        <p class="notice notice--warning">这一版小卡片的信息读不出来，不能发布。可以再生成一次，或者让 AI 助手重新交回一版。</p>
       </div>
     );
   }
@@ -436,7 +436,7 @@ export const MoreActionsSection: FC<{ model: WorkspaceModel }> = ({ model }) => 
         <a class="link-danger" href={`${basePath(model)}/delete`}>
           删除这一页…
         </a>
-        <span class="muted">删除全部版本的文件、撤下页面、关闭公开链接、断开本地 Agent；你仍是这面墙的成员，可以重新开始。删除前会先说明影响范围。</span>
+        <span class="muted">删除做过的每一版、撤下页面、关闭公开链接、断开你电脑上的 AI 助手；你仍是这面墙的成员，可以重新开始。删除前会先说明影响范围。</span>
       </li>
       <li>
         {model.publish.isOrganizer ? (
@@ -446,7 +446,7 @@ export const MoreActionsSection: FC<{ model: WorkspaceModel }> = ({ model }) => 
             <a class="link-danger" href={`/w/${model.wall.id}/leave`}>
               退出这面墙…
             </a>
-            <span class="muted">撤下页面并断开本地 Agent；版本会保留，用邀请重新加入后需要重新确认发布。</span>
+            <span class="muted">撤下页面并断开 AI 助手；做过的版本会保留，用邀请重新加入后需要重新确认发布。</span>
           </>
         )}
       </li>

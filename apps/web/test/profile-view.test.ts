@@ -18,7 +18,7 @@ describe('资料页', () => {
     expect(html).toContain('<h2>小江</h2>');
     expect(html).toContain('还没有长期画像');
     expect(html).not.toContain('profile-more__closed');
-    expect(html).toContain('还没有保存的 brief');
+    expect(html).toContain('还没有保存的采访资料');
   });
 
   it('超过六条可展开，条目操作保留确认和 CSRF，文本安全转义', async () => {
@@ -35,6 +35,6 @@ describe('资料页', () => {
     expect(html).toContain('画像 0 &lt;script&gt;');
     expect(html).toContain('data-confirm="删除这条画像？无法恢复。"');
     expect(html).toContain(session.csrf);
-    expect(html).toContain('各面墙的 brief（0 份）');
+    expect(html).toContain('各面墙的采访资料（0 份）');
   });
 });

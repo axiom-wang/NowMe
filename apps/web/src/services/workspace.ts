@@ -17,6 +17,9 @@ import type { IssuedTicket } from './tickets.js';
 import { skillCheckExpected, skillCheckPrompt, skillInstallPrompt } from './skill-install.js';
 import { skillInstallPageUrl } from './skill-package.js';
 import type { HostedOverview, JobStartError } from '../hosted/service.js';
+import type { GenerationJob } from '../db/hosted.js';
+import { DEFAULT_PROGRESS_SETTINGS, progressView, type ProgressView } from './progress.js';
+import { creationRoute, workspaceStage, workspaceSteps, type CreationRoute, type StageInput, type WorkspaceStage, type WorkspaceStep } from './workspace-stage.js';
 
 export interface WorkspaceConnection {
   /** 有有效的页面凭证。 */
@@ -81,11 +84,29 @@ export interface WorkspaceModel {
   hosted: WorkspaceHosted | null;
   /** Skill 安装说明与版本（T3.6）。 */
   skill: WorkspaceSkill;
+  /** 现在该做的那一件事（contracts 18.1）。 */
+  stage: WorkspaceStage;
+  /** 顶部步骤条（与真实状态一致）。 */
+  steps: WorkspaceStep[];
+  /** 墙上看到的这一页（已发布时）。 */
+  wallPagePath: string | null;
+  /** 主人有没有打开“做好了发邮件告诉我”（contracts 18.3）。 */
+  notifyEmail: boolean;
+  /** 前端轮询进度的间隔（不支持 SSE 或断线时）。 */
+  progressPollMs: number;
 }
 
 export interface WorkspaceHosted {
   demo?: boolean;
   overview: HostedOverview;
+  /** 生成默认用哪种方式（平台 AI / 自己的 Key / 点数不够 / 需要设置）。 */
+  route: CreationRoute;
+  /** 修改一次默认用哪种方式（价目可能不同）。 */
+  editRoute: CreationRoute;
+  /** 进行中任务的当前进度（服务端先渲染一次，之后由 progress.js 实时更新）。 */
+  progress: ProgressView | null;
+  /** 最近一次任务没做成（且现在没有进行中的任务）。 */
+  lastFailure: GenerationJob | null;
   /** 选中版本的区块（“修改这一版”的下拉选项）。 */
   editBlocks: string[];
   /** 发起任务失败的原因（`?hosted=<码>`，固定文案）。 */
@@ -104,7 +125,7 @@ export interface LoadWorkspaceOptions {
 }
 
 export function loadWorkspace(
-  deps: Pick<AppDeps, 'repos' | 'tickets' | 'now' | 'config' | 'hosted'> & Partial<Pick<AppDeps, 'skillPackage' | 'demo'>>,
+  deps: Pick<AppDeps, 'repos' | 'tickets' | 'now' | 'config' | 'hosted'> & Partial<Pick<AppDeps, 'skillPackage' | 'demo' | 'progress'>>,
   own: OwnPage,
   options: LoadWorkspaceOptions,
 ): WorkspaceModel | null {
@@ -126,6 +147,16 @@ export function loadWorkspace(
 
   const credential = repos.credentials.findActiveForPage(page.id);
   const pending = repos.agentTokens.findPendingForPage(page.id, deps.now().toISOString());
+  const overview = deps.hosted ? deps.hosted.overview(own, page.ownerId) : null;
+  const publish = loadPublishModel(deps, own, revisions, selected, options.publishForm ?? null);
+  const stageInput: StageInput = {
+    briefStatus: overview?.brief?.record.status ?? null,
+    activeJob: Boolean(overview?.activeJob),
+    hasLive: revisions.some((revision) => !isRevisionDeleted(revision)),
+    hasUsable: revisions.some(isRevisionUsable),
+    published: publish.state === 'published',
+  };
+  const latestJob = overview?.recentJobs[0] ?? null;
 
   return {
     wall,
@@ -146,15 +177,24 @@ export function loadWorkspace(
     ticket: selected ? deps.tickets.issue(selected.id) : null,
     instruction: options.instruction ?? null,
     notice,
-    publish: loadPublishModel(deps, own, revisions, selected, options.publishForm ?? null),
-    hosted: deps.hosted
+    publish,
+    hosted: overview
       ? {
-          overview: deps.hosted.overview(own, page.ownerId),
+          overview,
           demo: !!deps.demo,
           editBlocks: selected?.report.stats.blocks ?? [],
           error: options.hostedError ?? null,
+          route: creationRoute(overview.ai, 'generate'),
+          editRoute: creationRoute(overview.ai, 'edit'),
+          progress: overview.activeJob ? progressView(repos.jobEvents.latest(overview.activeJob.id)) : null,
+          lastFailure: !overview.activeJob && latestJob && latestJob.status === 'failed' ? latestJob : null,
         }
       : null,
+    stage: workspaceStage(stageInput),
+    steps: workspaceSteps(stageInput, overview !== null),
+    wallPagePath: publish.state === 'published' ? `/w/${wall.id}/p/${page.id}` : null,
+    notifyEmail: repos.notify.jobEmailEnabled(page.ownerId),
+    progressPollMs: deps.progress?.settings.fallbackPollMs ?? DEFAULT_PROGRESS_SETTINGS.fallbackPollMs,
     skill: loadWorkspaceSkill(deps.config.webOrigin, deps.skillPackage?.manifest.version ?? SKILL_VERSION, credential?.clientSkillVersion ?? null),
   };
 }

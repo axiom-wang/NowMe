@@ -63,8 +63,10 @@ describe('发布确认（W11、W12）', () => {
 
   it('工作区：未发布时显示发布确认表单，预填这一版 card.json；黑客松场景默认勾选“公开联系方式”；确认勾选默认不勾', async () => {
     const html = await workspaceHtml(t, owner, wall.id);
-    expect(html).toContain('墙上的页面');
-    expect(html).toContain('未发布');
+    // 还没发布过：先突出“这一版做好了 → 发布到墙上”，“墙上的页面 / 公开链接”不抢在前面
+    expect(html).toContain('第 1 版做好了');
+    expect(html).toContain('href="#publish"');
+    expect(html).not.toContain('id="wall-status"');
     expect(html).toContain('发布第 1 版到墙上');
     expect(html).toContain(`name="revisionId" value="${first.id}"`);
     expect(html).toContain(`value="${escapeHtml(card.displayName)}"`);
@@ -74,7 +76,7 @@ describe('发布确认（W11、W12）', () => {
       expect(html).toContain(escapeHtml(hook.text));
       expect(html).toContain(escapeHtml(hook.opener));
     }
-    expect(html).toContain('预填的是 Agent 写在这一版 card.json 里的草稿');
+    expect(html).toContain('预填的是 AI 写好的草稿');
     expect(html).toMatch(/<input type="checkbox" name="contactPublic" value="1" checked=""/);
     expect(html).toMatch(/<input type="checkbox" name="confirm" value="1" required=""\/>/);
     expect(html).toContain('发布后，以上内容对这面墙的成员可见');
@@ -137,10 +139,10 @@ describe('发布确认（W11、W12）', () => {
     expect(JSON.stringify(events[0])).not.toContain('azhou');
 
     const html = await workspaceHtml(t, owner, wall.id, `?rev=${first.id}&notice=published`);
-    expect(html).toContain('已发布：墙上的成员现在看到的是这一版');
+    expect(html).toContain('已发布：墙上的人现在看到的是这一版');
     expect(html).toContain('墙上展示的是第 1 版');
     expect(html).toContain('墙上展示中');
-    expect(html).toContain('修改缩略卡或联系方式');
+    expect(html).toContain('修改小卡片或联系方式');
     expect(html).toContain('公开（微信：azhou_2026）');
     // 再次预填的是上次确认的内容（删掉的接话点不会回来）
     expect(html).toContain('预填的是你上次发布这一版时确认的内容');
@@ -242,7 +244,7 @@ describe('发布确认（W11、W12）', () => {
     const before = dumpDb(t.db);
     const response = await publish(t, owner, wall.id, rejected.id, card);
     expect(response.status).toBe(422);
-    expect(await response.text()).toContain('这个版本没有通过校验，不能发布');
+    expect(await response.text()).toContain('这一版没有做成（检查没通过），不能发布');
     expect(dumpDb(t.db)).toEqual(before);
     // rejected 版本在版本列表里没有发布入口
     const html = await workspaceHtml(t, owner, wall.id);
@@ -344,7 +346,7 @@ describe('发布确认（W11、W12）', () => {
     expect(html).toContain('墙上现在是第 2 版');
     expect(html).toContain('value="第一版的介绍"');
     // 预填的是第 1 版上次确认的内容：删掉的第 3 个接话点不会回到表单里（它只出现在“墙上现在的第 2 版”的缩略卡里）
-    const formHtml = html.slice(html.indexOf('id="publish"'));
+    const formHtml = html.slice(html.indexOf('id="publish"'), html.indexOf('id="wall-status"'));
     expect(formHtml).not.toContain('name="hooks[2][id]"');
     expect(formHtml).not.toContain(escapeHtml(card.hooks[2]?.text ?? ''));
 

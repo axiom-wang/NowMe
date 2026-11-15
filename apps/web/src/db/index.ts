@@ -25,6 +25,7 @@ import { createIcebreakersRepo } from './icebreakers.js';
 import { createModerationRepo } from './moderation.js';
 import { createJobEventsRepo, createJobQueueRepo } from './job-queue.js';
 import { createPortraitsRepo, createQuestionsRepo, createRemindersRepo } from './organizer-tools.js';
+import { createNotifyRepo } from './notify.js';
 
 export { migrate, openDatabase, transaction, MIGRATIONS_DIR, type Database } from './database.js';
 
@@ -54,6 +55,7 @@ export function createRepos(db: Database) {
     questions: createQuestionsRepo(db),
     reminders: createRemindersRepo(db),
     portraits: createPortraitsRepo(db),
+    notify: createNotifyRepo(db),
   };
 }
 

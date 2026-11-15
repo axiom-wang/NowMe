@@ -45,8 +45,11 @@ describe('用户尚未配置 API', () => {
     const { wall } = seedWall(web, organizerId);
     const owner = await joinAs(web, wall, 'a@example.com', '阿柚');
     const html = await workspaceHtml(web, owner.session, wall.id);
-    expect(html).toContain('在这里创作');
+    // 平台 AI 没开放、自己也没配置：说明原因，主要按钮是“填写自己的模型 Key”，其他方式展开
+    expect(html).toContain('这里暂时没有可以直接用的 AI');
+    expect(html).toContain('填写自己的模型 Key');
     expect(html).toContain('/account/ai');
+    expect(html).toMatch(/<details class="card more-ways" id="more-ways" open/);
     const response = await get(web, `/w/${wall.id}/me/create`, { cookie: owner.session.cookie });
     expect(response.status).toBe(200);
     expect(await response.text()).toContain('请先配置你自己的 AI API');
@@ -62,8 +65,9 @@ describe('应用内采访', () => {
     const { t, wall } = setup();
     const owner = await joinAs(t, wall, 'a@example.com', '阿柚');
     const workspace = await workspaceHtml(t, owner.session, wall.id);
-    expect(workspace).toContain('在这里创作');
-    expect(workspace).toContain('生成 Agent 指令'); // 与本地 Agent 并列
+    expect(workspace).toContain('开始采访');
+    expect(workspace).toContain('生成给 AI 助手的指令'); // 收在“更多方式”里
+    expect(workspace).toMatch(/<details class="card more-ways" id="more-ways">/); // 默认路线可用时折叠
     const createPage = await (await get(t, `/w/${wall.id}/me/create`, { cookie: owner.session.cookie })).text();
     expect(createPage).toContain('会发送给 AI 模型服务（测试用的假模型）');
     expect(createPage).toContain('想找什么样的队友'); // 场景指南的题目
@@ -183,8 +187,9 @@ describe('托管生成与修改', () => {
     expect(jobPage).not.toContain('http-equiv="refresh"');
     const workspace = await workspaceHtml(t, owner.session, wall.id, `?rev=${revision?.id}`);
     expect(workspace).toContain('data-nm-page-frame');
-    expect(workspace).toContain('在这里创作'); // 版本来源
-    expect(workspace).toContain('用日常语言修改第 1 版');
+    expect(workspace).toContain('在 NOWMe 上做的'); // 版本来源
+    expect(workspace).toContain('想改一改？用一句话告诉 AI');
+    expect(workspace).toContain('第 1 版做好了');
     expect(t.repos.publications.findActiveForPage(owner.member.page.id)).toBeNull(); // 不会自动发布
 
     const edited = await edit(t, wall, owner, { revisionId: revision?.id ?? '', block: 'about', request: '再加一句我拿过校赛二等奖' });
@@ -212,7 +217,7 @@ describe('托管生成与修改', () => {
     expect(t.leftoverJobDirs()).toEqual([]);
     const failedPage = await (await get(t, `/w/${wall.id}/me/jobs/${rejected.job?.id}`, { cookie: owner.session.cookie })).text();
     expect(failedPage).toContain('没有通过平台校验');
-    expect(failedPage).toContain('重新生成页面');
+    expect(failedPage).toContain('再生成一次');
     expect(failedPage).toContain(`action="/w/${wall.id}/me/generate"`);
     expect(failedPage).not.toContain('不扣免费次数');
 
@@ -266,13 +271,15 @@ describe('托管生成与修改', () => {
     expect((await post(t, owner.session, `/w/${wall.id}/me/edit`, { revisionId: 'rev_aaaaaaaaaaaaaaaaaaaaaaaaaa', request: '改' })).headers.get('location')).toContain('hosted=no-revision');
   });
 
-  it('任务进行中页面自动刷新；进程重启时遗留任务置为失败', async () => {
+  it('任务进行中页面显示实时进度（不用 meta refresh）；进程重启时遗留任务置为失败', async () => {
     const { t, wall } = setup();
     const owner = await joinAs(t, wall, 'a@example.com', '阿柚');
     const now = t.clock.now().toISOString();
     t.repos.jobs.create({ id: 'gen_aaaaaaaaaaaaaaaaaaaaaaaaaa', pageId: owner.member.page.id, ownerId: owner.session.userId, kind: 'generate', baseRevisionId: null, targetBlock: null, requestText: null, createdAt: now });
     const page = await (await get(t, `/w/${wall.id}/me/jobs/gen_aaaaaaaaaaaaaaaaaaaaaaaaaa`, { cookie: owner.session.cookie })).text();
-    expect(page).toContain('http-equiv="refresh"');
+    expect(page).not.toContain('http-equiv="refresh"');
+    expect(page).toContain('/static/progress.js');
+    expect(page).toContain(`data-stream="/w/${wall.id}/me/jobs/gen_aaaaaaaaaaaaaaaaaaaaaaaaaa/progress"`);
     expect(t.repos.jobs.interruptAll(now)).toBe(1);
     expect(t.repos.jobs.findById('gen_aaaaaaaaaaaaaaaaaaaaaaaaaa')).toMatchObject({ status: 'failed', errorCode: 'INTERRUPTED', charged: false });
   });

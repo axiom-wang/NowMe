@@ -156,7 +156,13 @@ describe('邀请与加入（W04）', () => {
 
     const joined = await postForm(t, `/join/${wall.inviteCode}`, { _csrf: member.csrf }, { cookie: member.cookie });
     expect(joined.status).toBe(303);
-    expect(joined.headers.get('location')).toBe(`/w/${wall.id}?notice=joined`);
+    // 新成员直接进入“做一页自己”的引导（contracts 18.1）
+    expect(joined.headers.get('location')).toBe(`/w/${wall.id}/me/create?welcome=1`);
+    const guide = await get(t, `/w/${wall.id}/me/create?welcome=1`, { cookie: member.cookie });
+    expect(guide.status).toBe(200);
+    const guideHtml = await guide.text();
+    expect(guideHtml).toContain('欢迎加入「周末黑客松」');
+    expect(guideHtml).toContain(`href="/w/${wall.id}">先去墙上看看</a>`);
     const membership = t.repos.memberships.findByWallAndUser(wall.id, member.userId);
     expect(membership).toMatchObject({ role: 'member', status: 'active' });
     const memberPage = t.repos.pages.findByMembership(membership?.id ?? '');

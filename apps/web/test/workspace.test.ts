@@ -42,13 +42,13 @@ describe('创作工作区', () => {
     return { response, html: await response.text() };
   };
 
-  it('新页面：未连接、没有版本、没有 iframe，提供“生成 Agent 指令”', async () => {
+  it('新页面：未连接、没有版本、没有 iframe，提供“生成给 AI 助手的指令”', async () => {
     const { response, html } = await open();
     expect(response.status).toBe(200);
     expect(html).toContain('周末黑客松');
     expect(html).toContain('未连接');
-    expect(html).toContain('生成 Agent 指令');
-    expect(html).toContain('还没有版本');
+    expect(html).toContain('生成给 AI 助手的指令');
+    expect(html).toContain('做好的页面会出现在这里');
     expect(html).toContain('发布需要你本人在这里确认');
     expect(iframesOf(html)).toEqual([]);
   });
@@ -93,10 +93,12 @@ describe('创作工作区', () => {
     expect(html).toContain('已连接');
     expect(html).toContain('第 1 版');
     expect(html).toContain('第 2 版');
-    expect(html).toContain('本地 Agent');
-    expect(html).toContain('通过');
-    expect(html).toContain('不通过');
-    expect(html).toContain('为什么没通过');
+    expect(html).toContain('你电脑上的 AI 助手做的');
+    expect(html).toContain('做好了');
+    expect(html).toContain('没做成');
+    expect(html).toContain('哪里出了问题');
+    // 给人看的说明在前，错误码收在“技术细节”里
+    expect(html).toContain('<summary>技术细节</summary>');
     const firstError = rejected.report.errors[0];
     expect(firstError).toBeDefined();
     expect(html).toContain(firstError?.code as string);
@@ -129,7 +131,7 @@ describe('创作工作区', () => {
 
     const rejected = await open(`?rev=${broken.id}`);
     expect(rejected.response.status).toBe(200);
-    expect(rejected.html).toContain('这个版本没有通过校验，不能预览');
+    expect(rejected.html).toContain('这一版没有做成，不能预览');
     expect(iframesOf(rejected.html)).toEqual([]);
 
     expect((await open('?rev=rev_aaaaaaaaaaaaaaaaaaaaaaaaaa')).response.status).toBe(404);
@@ -144,7 +146,7 @@ describe('创作工作区', () => {
     const response = await postForm(t, `/w/${wall.id}/me/disconnect`, { _csrf: owner.csrf }, { cookie: owner.cookie });
     expect(response.status).toBe(303);
     const { html } = await open('?notice=disconnected');
-    expect(html).toContain('已断开本地 Agent');
+    expect(html).toContain('已断开你电脑上的 AI 助手');
     expect(html).toContain('未连接');
     expect((await t.request('/api/agent/context', { headers: { authorization: `Bearer ${credential}` } })).status).toBe(401);
     expect((await exchange(t, wall.id, pending)).status).toBe(401);
@@ -175,7 +177,7 @@ describe('创作工作区', () => {
       expect(guide).toContain('重新打开一个会话');
       expect(guide).toContain(`NOWMe Skill ${TEST_SKILL_VERSION}`);
       expect(guide).toContain('scripts/nowme.mjs --version');
-      expect(guide).toContain('Agent 不支持 Skill？复制这段纯文本说明');
+      expect(guide).toContain('AI 助手不支持 Skill？复制这段纯文本说明');
       expect(guide).toContain('Unknown command: /nowme-page');
       expect(guide).toContain('同一条');
       expect(guide).toContain('data-copy="nm-skill-install"');
@@ -209,7 +211,7 @@ describe('创作工作区', () => {
       expect(html).toContain('去更新');
 
       html = await connectWith();
-      expect(html).toContain('未知（Agent 用的不是随 Skill 分发的命令行）');
+      expect(html).toContain('未知（AI 助手用的不是随 Skill 分发的命令行）');
     });
   });
 });

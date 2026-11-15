@@ -6,7 +6,8 @@ import { saveAccountProfile } from '../services/account-profile.js';
  * “我的资料”（`/account/data`、`/account/profile/delete`、`/account/briefs/delete`）不依赖托管功能是否开启：
  * 主人随时可以查看、删除自己已保存的画像与 brief（S7）。
  */
-import type { Context } from 'hono';
+import type { Context, MiddlewareHandler } from 'hono';
+import { streamSSE } from 'hono/streaming';
 import { BRIEF_MATERIAL_MAX_CHARS, BRIEF_ASSET_ID_PATTERN, BRIEF_ID_PATTERN, GENERATION_JOB_ID_PATTERN, NM_ID_PATTERN, PROFILE_ENTRY_ID_PATTERN } from '@nowme/contracts';
 import { EXAMPLES_DIR, listExampleDirs, loadExamplesIndex } from '@nowme/skill';
 import { readFile } from 'node:fs/promises';
@@ -16,7 +17,11 @@ import { clip, isMotionLevel, type FollowupAnswer, type InterviewAnswers } from 
 import { deleteOwnBrief, deleteOwnProfile } from '../hosted/data.js';
 import type { ConfirmEdits, HostedService, StepResult } from '../hosted/service.js';
 import { requireForm } from '../security/forms.js';
-import { authOf, requireUser } from '../security/session.js';
+import { authOf, onboardingStep, requireUser } from '../security/session.js';
+import type { GenerationJob } from '../db/hosted.js';
+import type { JobEvent } from '../db/job-queue.js';
+import { progressView } from '../services/progress.js';
+import { questionsGate } from './organizer-tools.js';
 import { findOwnPage, type OwnPage } from '../services/access.js';
 import { renderError, renderNotFound } from '../views/errors.js';
 import { demoModelError } from '../demo-access.js';
@@ -24,6 +29,22 @@ import { BriefPageView, CreateView, JOB_START_ERROR_TEXT, JobView, MyDataView, S
 import { renderPage } from '../views/layout.js';
 
 const STEP_ERRORS = new Set(Object.keys(STEP_ERROR_TEXT));
+
+const isRunning = (job: GenerationJob): boolean => job.status === 'queued' || job.status === 'running';
+
+/** 进度的 JSON（轮询与 SSE 的 `done` 共用）：阶段名、数字、是否结束、做好后去哪（站内相对路径）。不含任何内容。 */
+export function statusPayload(own: OwnPage, job: GenerationJob, latest: JobEvent | null) {
+  const done = !isRunning(job);
+  // 结束与否以任务行为准（结束事件可能晚一点才写进 job_events）
+  const final = !done ? null : job.status === 'succeeded' ? 'succeeded' : job.status === 'needs_input' ? 'needs_input' : 'failed';
+  const view = progressView(final ? { seq: latest?.seq ?? 0, stage: final, props: {} } : latest);
+  return {
+    ...view,
+    done,
+    status: job.status,
+    next: job.status === 'succeeded' && job.revisionId ? `/w/${own.wall.id}/me?rev=${job.revisionId}#preview-heading` : null,
+  };
+}
 const JOB_ERRORS = new Set(Object.keys(JOB_START_ERROR_TEXT));
 const MAX_STYLES = 2;
 
@@ -112,10 +133,10 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     return { credits: -charge.delta, payer: charge.account.kind, refunded: deps.repos.credits.findJobEntry('job_refund', jobId) !== null };
   };
 
-  const renderCreate = (c: Context<AppEnv>, own: OwnPage, hosted: HostedService, error: string | null, status = 200) => {
+  const renderCreate = (c: Context<AppEnv>, own: OwnPage, hosted: HostedService, error: string | null, status = 200, welcome = false) => {
     const auth = authOf(c);
     return renderPage(c, {
-      title: `在这里创作 · ${own.wall.name}`,
+      title: `做一页你自己 · ${own.wall.name}`,
       bodyClass: 'page--create',
       status,
       body: (
@@ -129,6 +150,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
             providers: providersFor(auth.user.id),
             overview: hosted.overview(own, auth.user.id),
             error,
+            welcome,
           }}
         />
       ),
@@ -143,8 +165,12 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
   app.get('/w/:wallId/me/create', user, (c) => {
     const found = ownOf(c);
     if (!found) return renderNotFound(c);
+    // 必答题没答完时先去回答（contracts 19.1）；邀请加入后的引导也先经过这里，答完回到引导
+    const gate = questionsGate(c, deps, found.own);
+    if (gate) return gate;
     const error = c.req.query('error');
-    return renderCreate(c, found.own, found.hosted, error && deps.demo && demoModelError(error) ? demoModelError(error) : error && JOB_ERRORS.has(error) ? JOB_START_ERROR_TEXT[error as keyof typeof JOB_START_ERROR_TEXT] : error && STEP_ERRORS.has(error) ? STEP_ERROR_TEXT[error as keyof typeof STEP_ERROR_TEXT] : null);
+    const message = error && deps.demo && demoModelError(error) ? demoModelError(error) : error && JOB_ERRORS.has(error) ? JOB_START_ERROR_TEXT[error as keyof typeof JOB_START_ERROR_TEXT] : error && STEP_ERRORS.has(error) ? STEP_ERROR_TEXT[error as keyof typeof STEP_ERROR_TEXT] : null;
+    return renderCreate(c, found.own, found.hosted, message, 200, c.req.query('welcome') === '1');
   });
 
   app.post('/w/:wallId/me/create/start', uploadForm, async (c) => {
@@ -247,19 +273,27 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     return c.redirect(`/w/${found.own.wall.id}/me/jobs/${result.job.id}`, 303);
   });
 
-  app.get('/w/:wallId/me/jobs/:jobId', user, (c) => {
+  /** 任务主人才能看到的任务（不是主人、页面不在、格式不对 → null，路由一律 404）。 */
+  const ownJobOf = (c: Context<AppEnv>): { own: OwnPage; hosted: HostedService; job: GenerationJob } | null => {
     const found = ownOf(c);
-    const jobId = c.req.param('jobId');
-    if (!found || !GENERATION_JOB_ID_PATTERN.test(jobId)) return renderNotFound(c);
+    const jobId = c.req.param('jobId') ?? '';
+    if (!found || !GENERATION_JOB_ID_PATTERN.test(jobId)) return null;
+    const job = found.hosted.findJob(found.own, authOf(c).user.id, jobId);
+    return job ? { ...found, job } : null;
+  };
+
+  app.get('/w/:wallId/me/jobs/:jobId', user, (c) => {
+    const found = ownJobOf(c);
+    if (!found) return renderNotFound(c);
+    const { job } = found;
     const auth = authOf(c);
-    const job = found.hosted.findJob(found.own, auth.user.id, jobId);
-    if (!job) return renderNotFound(c);
     const revision = job.revisionId ? deps.repos.revisions.findById(job.revisionId) : null;
     const base = job.baseRevisionId ? deps.repos.revisions.findById(job.baseRevisionId) : null;
-    const running = job.status === 'queued' || job.status === 'running';
+    const running = isRunning(job);
+    if (running) deps.progress.touch(job.id);
     return renderPage(c, {
-      title: `${job.kind === 'generate' ? '生成' : '修改'}页面 · ${found.own.wall.name}`,
-      refreshSeconds: running ? 3 : undefined,
+      title: `${job.kind === 'generate' ? '生成页面' : '修改页面'} · ${found.own.wall.name}`,
+      progress: running,
       body: (
         <JobView
           demo={!!deps.demo}
@@ -270,8 +304,74 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
           revisionNumber={revision?.pageId === found.own.page.id ? revision.number : null}
           csrf={auth.session.csrfToken}
           blocks={base?.pageId === found.own.page.id ? base.report.stats.blocks : []}
+          progress={running ? progressView(deps.repos.jobEvents.latest(job.id)) : null}
+          pollMs={deps.progress.settings.fallbackPollMs}
+          emailOn={deps.repos.notify.jobEmailEnabled(auth.user.id)}
         />
       ),
+    });
+  });
+
+  // 实时进度（contracts 18.2）：只对任务主人开放，其他人（含未登录）一律 404；只推阶段名与数字。
+  const progressOwner: MiddlewareHandler<AppEnv> = async (c, next) => {
+    const auth = c.get('auth');
+    if (!auth || onboardingStep(auth, c.get('demo'))) return renderNotFound(c);
+    return next();
+  };
+
+  /** 轮询用：当前阶段与是否结束（`progress.js` 在不支持 SSE 或断线时使用）。 */
+  app.get('/w/:wallId/me/jobs/:jobId/status', progressOwner, (c) => {
+    const found = ownJobOf(c);
+    if (!found) return renderNotFound(c);
+    deps.progress.touch(found.job.id);
+    return c.json(statusPayload(found.own, found.job, deps.repos.jobEvents.latest(found.job.id)));
+  });
+
+  app.get('/w/:wallId/me/jobs/:jobId/progress', progressOwner, (c) => {
+    const found = ownJobOf(c);
+    if (!found) return renderNotFound(c);
+    const userId = authOf(c).user.id;
+    const { wall } = found.own;
+    const jobId = found.job.id;
+    const slot = deps.progress.open(userId, jobId);
+    // 连接太多：前端收到非 200 会改为轮询
+    if (!slot) return c.json({ error: 'too-many-connections' }, 429);
+    const settings = deps.progress.settings;
+    const lastId = Number(c.req.header('Last-Event-ID') ?? '0');
+    let seq = Number.isInteger(lastId) && lastId > 0 ? lastId : 0;
+    return streamSSE(c, async (stream) => {
+      const started = Date.now();
+      let beat = started;
+      try {
+        await stream.writeSSE({ event: 'ready', data: '{}', retry: settings.fallbackPollMs });
+        while (!stream.aborted) {
+          // 每一轮都重新确认：仍是这面墙的有效成员、任务仍属于他（被移除、删除页面后立即停止推送）
+          const own = findOwnPage(deps.repos, userId, wall.id);
+          const job = own ? deps.repos.jobs.findForOwner(jobId, own.page.id, userId) : null;
+          if (!own || !job) {
+            await stream.writeSSE({ event: 'gone', data: '{}' });
+            break;
+          }
+          for (const event of deps.repos.jobEvents.listAfter(jobId, seq, 100)) {
+            seq = event.seq;
+            await stream.writeSSE({ event: 'stage', id: String(event.seq), data: JSON.stringify(progressView(event)) });
+          }
+          deps.progress.touch(jobId);
+          if (!isRunning(job)) {
+            await stream.writeSSE({ event: 'done', data: JSON.stringify(statusPayload(own, job, deps.repos.jobEvents.latest(jobId))) });
+            break;
+          }
+          // 到时关闭：浏览器会带 Last-Event-ID 自动重连，从断开处续传
+          if (Date.now() - started >= settings.maxStreamMs) break;
+          if (Date.now() - beat >= settings.heartbeatMs) {
+            await stream.write(': keep-alive\n\n');
+            beat = Date.now();
+          }
+          await stream.sleep(settings.pollMs);
+        }
+      } finally {
+        slot.release();
+      }
     });
   });
 
@@ -287,7 +387,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     const brief = deps.repos.briefs.findForPage(own.page.id, auth.user.id);
     if (!brief?.briefMd) return renderNotFound(c);
     return renderPage(c, {
-      title: `brief · ${own.wall.name}`,
+      title: `这一页的资料 · ${own.wall.name}`,
       body: <BriefPageView wall={own.wall} csrf={auth.session.csrfToken} briefMd={brief.briefMd} briefId={brief.id} />,
     });
   });
@@ -307,7 +407,8 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
   // ---------------------------------------------------------------------------
 
   const DATA_NOTICES: Record<string, string> = {
-    'brief-deleted': 'brief 已删除：采访内容和上传的图片都已清除。',
+    'brief-deleted': '资料已删除：采访内容和上传的图片都已清除。',
+    'notify-saved': '提醒邮件的设置已保存。',
     'profile-deleted': '已删除。',
     'profile-saved': '个人资料已保存。',
     unblocked: '已解除拉黑。',
@@ -329,6 +430,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
           csrf={auth.session.csrfToken}
           profile={deps.repos.profileEntries.listForUser(auth.user.id)}
           briefs={deps.repos.briefs.listForOwner(auth.user.id)} blocked={deps.repos.moderation.listBlockedBy(auth.user.id)} remindersOn={deps.repos.reminders.acceptsReminders(auth.user.id)}
+          notifyEmail={deps.repos.notify.jobEmailEnabled(auth.user.id)}
           notice={notice ? (DATA_NOTICES[notice] ?? null) : null}
         />
       ),
@@ -349,7 +451,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     const error = verdict.ok ? await saveAccountProfile(deps.repos.users, auth.user.id, nickname, c.get('uploads'), fields.removeAvatar === '1') : verdict.message;
     if (error) return renderPage(c, {
       title: '我的资料', bodyClass: 'page--data', status: 400,
-      body: <MyDataView accountLinks={!deps.demo} nickname={auth.user.nickname ?? '我'} avatarVersion={auth.user.avatarVersion} nicknameDraft={nickname} error={error} csrf={auth.session.csrfToken} profile={deps.repos.profileEntries.listForUser(auth.user.id)} briefs={deps.repos.briefs.listForOwner(auth.user.id)} blocked={deps.repos.moderation.listBlockedBy(auth.user.id)} remindersOn={deps.repos.reminders.acceptsReminders(auth.user.id)} notice={null} />,
+      body: <MyDataView accountLinks={!deps.demo} nickname={auth.user.nickname ?? '我'} avatarVersion={auth.user.avatarVersion} nicknameDraft={nickname} error={error} csrf={auth.session.csrfToken} profile={deps.repos.profileEntries.listForUser(auth.user.id)} briefs={deps.repos.briefs.listForOwner(auth.user.id)} blocked={deps.repos.moderation.listBlockedBy(auth.user.id)} remindersOn={deps.repos.reminders.acceptsReminders(auth.user.id)} notifyEmail={deps.repos.notify.jobEmailEnabled(auth.user.id)} notice={null} />,
     });
     return c.redirect('/account/data?notice=profile-saved', 303);
   });

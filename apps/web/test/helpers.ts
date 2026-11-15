@@ -189,6 +189,8 @@ export interface TestWebOptions {
   log?: (message: string) => void;
   /** 打开访问日志（contracts 17；默认只在生产环境写）。 */
   accessLogEnabled?: boolean;
+  /** 实时进度的连接限制与时间参数（contracts 18）。 */
+  progress?: Partial<import('../src/services/progress.js').ProgressSettings>;
 }
 
 export function createTestWeb(options: TestWebOptions = {}): TestWeb {
@@ -219,6 +221,9 @@ export function createTestWeb(options: TestWebOptions = {}): TestWeb {
     hostedTempRoot: options.hostedTempRoot,
     remoteRenderer: options.remoteRenderer ?? createStaticRemoteRenderer(),
     skillPackageDir: options.skillPackageDir === undefined ? defaultTestSkillPackageDir() : options.skillPackageDir,
+    progress: options.progress,
+    // 完成提醒由测试手动 `web.notifier.tick()`，不在后台定时扫描（避免往发件箱里多塞邮件）
+    jobNotifyIntervalMs: null,
   });
   return {
     web,

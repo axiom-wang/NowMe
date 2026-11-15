@@ -99,7 +99,7 @@ describe('工作区访问控制与沙箱 iframe', () => {
     const html = await response.text();
     expect(html).not.toContain(revisionId);
     expect(iframesOf(html)).toEqual([]);
-    expect(html).toContain('还没有版本');
+    expect(html).toContain('做好的页面会出现在这里');
 
     const sneaky = await get(t, `/w/${wall.id}/me?rev=${revisionId}`, { cookie: other.cookie });
     expect(sneaky.status).toBe(404);

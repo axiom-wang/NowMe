@@ -29,7 +29,7 @@ export const JoinView: FC<JoinViewProps> = ({ wall, sceneLabel, csrf, rejoin }) 
       {rejoin ? (
         <p class="notice notice--warning">你之前退出过这面墙。重新加入后，你原来的页面不会自动挂回墙上；想让大家看到，需要你自己重新发布。</p>
       ) : (
-        <p class="muted">加入后就能逛墙上的人，不用先做好自己的页面。</p>
+        <p class="muted">加入后，花几分钟和 AI 做一页你自己；也可以先逛逛墙上的人，不着急。</p>
       )}
       <form method="post" action={`/join/${wall.inviteCode}`} class="stack">
         <CsrfField token={csrf} />

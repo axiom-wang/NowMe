@@ -78,13 +78,16 @@ export async function createWall(page: Page, name: string): Promise<{ wallId: st
 export async function joinWall(page: Page, inviteUrl: string): Promise<void> {
   await page.goto(inviteUrl);
   await page.getByRole('button', { name: '加入这面墙' }).click();
-  await page.waitForURL(/\/w\/wal_[^/]+$/);
+  // 新成员直接进入“做一页自己”的引导（contracts 18.1）
+  await page.waitForURL(/\/w\/wal_[^/]+\/me\/create\?welcome=1$/);
 }
 
-/** 在工作区生成 Agent 指令，返回 token（指令格式：`/nowme-page <wallId> <token> --server <origin>`）。 */
+/** 在“我的页面”的“更多方式”里生成给 AI 助手的指令，返回 token（指令格式：`/nowme-page <wallId> <token> --server <origin>`）。 */
 export async function generateInstruction(page: Page, wallId: string): Promise<{ command: string; token: string }> {
   await page.goto(`/w/${wallId}/me`);
-  await page.getByRole('button', { name: '生成 Agent 指令' }).click();
+  const more = page.locator('details#more-ways');
+  if ((await more.count()) > 0 && !(await more.evaluate((element) => (element as HTMLDetailsElement).open))) await more.locator('summary').first().click();
+  await page.getByRole('button', { name: '生成给 AI 助手的指令' }).click();
   const command = (await page.locator('#nm-instruction-command').textContent())?.trim() ?? '';
   const match = /^\/nowme-page (wal_\S+) (nmt_\S+) --server (\S+)$/.exec(command);
   expect(match, command).not.toBeNull();

@@ -43,6 +43,7 @@ const CONTRACT_TABLES: Record<string, string[]> = {
   wall_answers: ['question_id', 'user_id', 'wall_id', 'choices_json', 'updated_at'],
   wall_reminders: ['id', 'wall_id', 'organizer_id', 'user_id', 'reason', 'status', 'created_at'],
   wall_portraits: ['wall_id', 'result_json', 'sources_json', 'page_count', 'created_by', 'created_at'],
+  job_notices: ['job_id', 'outcome', 'created_at'],
   users: ['id', 'email', 'nickname', 'created_at'],
   login_codes: ['id', 'email', 'code_hash', 'attempts', 'expires_at', 'used_at'],
   sessions: ['id', 'user_id', 'csrf_token', 'created_at', 'expires_at'],
@@ -158,7 +159,7 @@ describe('数据库迁移', () => {
     expect(migrate(db)).toEqual([]);
     db.close();
     const again = open(file);
-    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }, { version: '004_user_models.sql' }, { version: '005_chat.sql' }, { version: '006_wall_covers.sql' }, { version: '007_user_avatar.sql' }, { version: '008_icebreakers.sql' }, { version: '009_credits.sql' }, { version: '010_job_queue.sql' }, { version: '011_account_deletion.sql' }, { version: '012_moderation.sql' }, { version: '013_consent.sql' }, { version: '014_deletion_evidence.sql' }, { version: '020_organizer_tools.sql' }]);
+    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }, { version: '004_user_models.sql' }, { version: '005_chat.sql' }, { version: '006_wall_covers.sql' }, { version: '007_user_avatar.sql' }, { version: '008_icebreakers.sql' }, { version: '009_credits.sql' }, { version: '010_job_queue.sql' }, { version: '011_account_deletion.sql' }, { version: '012_moderation.sql' }, { version: '013_consent.sql' }, { version: '014_deletion_evidence.sql' }, { version: '015_notify_prefs.sql' }, { version: '020_organizer_tools.sql' }]);
   });
 
   it('从旧数据库增量升级保留用户、页面、brief、版本、发布与历史任务', () => {
