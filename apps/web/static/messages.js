@@ -40,15 +40,15 @@
         headers: { Accept: 'application/json' }, body: data ? new URLSearchParams(data) : undefined
       });
       if (!response.ok) {
-        var error = new Error('网络暂时不可用，请稍后重试');
+        var error = new Error('网络好像不太稳，稍后再试一次。');
         error.status = response.status;
-        if (response.status === 401) error.message = '登录已过期，请重新登录。草稿仍保留在输入框中。';
+        if (response.status === 401) error.message = '登录已经过期，请重新登录。输入框里的草稿还在。';
         else if (response.status === 403) {
           // 私聊已关闭（拉黑 / 停用）时服务端给出 JSON 说明；CSRF / 来源校验失败是 HTML 错误页
-          error.message = '页面已过期，请刷新后重试。请先复制输入框里的草稿。';
+          error.message = '页面打开太久了，刷新后再试。刷新前先复制一下输入框里的草稿。';
           try { error.message = (await response.json()).error || error.message; } catch (_) { /* 非 JSON */ }
         }
-        else if (response.status === 404) error.message = '已失去该会话的访问权限，请返回消息列表。';
+        else if (response.status === 404) error.message = '这段对话打不开了，回到消息列表看看。';
         else {
           try { error.message = (await response.json()).error || error.message; } catch (_) { /* 非 JSON 错误使用默认提示 */ }
         }
@@ -57,13 +57,13 @@
       return await response.json();
     } catch (error) {
       if (error.status) throw error;
-      throw new Error('网络暂时不可用，将自动重试。');
+      throw new Error('网络好像断了，恢复后会自动重试。');
     } finally { clearTimeout(timer); }
   }
 
   function showError(error) {
     if (!status) return;
-    status.textContent = error.message || '网络暂时不可用，将自动重试。';
+    status.textContent = error.message || '网络好像断了，恢复后会自动重试。';
     if ([401, 403, 404].includes(error.status)) {
       stopped = true; button.disabled = true; input.disabled = false;
       root.querySelector(error.status === 401 ? '[data-chat-login]' : '[data-chat-back]').hidden = false;
@@ -120,10 +120,13 @@
     inboxPanel.querySelector('[data-inbox-empty]').hidden = visible > 0;
     var more = !inboxPanel.querySelector('[data-conversation-next]').hidden || inboxPanel.getAttribute('data-inbox') === 'paged';
     inboxPanel.querySelector('[data-inbox-page-note]').hidden = !more;
-    var title = filter === 'unread' ? (more ? '本页暂无未读消息' : '消息都看过了') : filter === 'group' ? '本页暂无群聊' : '聊天，从一句你好开始';
-    var copy = filter === 'unread' ? (more ? '可以查看更早的会话，继续寻找未读消息。' : '新的问候到来时，会出现在这里。') : filter === 'group' ? '进入墙内全员群，和同墙的人打个招呼。' : '还没有聊天。先到墙内全员群打个招呼吧。';
+    var empty = inboxPanel.querySelector('[data-inbox-empty]');
+    var title = filter === 'unread' ? (more ? '这一页没有未读消息' : '消息都看过了') : filter === 'group' ? '这里还没有群聊' : empty.getAttribute('data-empty-title');
+    var copy = filter === 'unread' ? (more ? '更早的聊天里可能还有，点下面的“更早的会话”看看。' : '有新消息时会出现在这里。') : filter === 'group' ? '每面墙都有一个全员群，进去和大家打个招呼。' : empty.getAttribute('data-empty-copy');
     inboxPanel.querySelector('[data-inbox-empty-title]').textContent = title;
     inboxPanel.querySelector('[data-inbox-empty-copy]').textContent = copy;
+    var emptyAction = inboxPanel.querySelector('[data-inbox-empty-action]');
+    if (emptyAction) emptyAction.hidden = filter === 'unread';
     var next = inboxPanel.querySelector('[data-conversation-next]');
     var nextUrl = new URL(next.href);
     nextUrl.hash = filter === 'all' ? '' : filter;
@@ -261,8 +264,8 @@
       event.preventDefault();
       if (sending || stopped) return;
       var text = input.value;
-      if (!text.trim()) { status.textContent = '请输入消息内容'; return; }
-      if (Array.from(text.trim()).length > Number(input.getAttribute('data-max-length'))) { status.textContent = '每条消息最多 2000 个字'; return; }
+      if (!text.trim()) { status.textContent = '先写点什么再发送。'; return; }
+      if (Array.from(text.trim()).length > Number(input.getAttribute('data-max-length'))) { status.textContent = '每条消息最多 ' + input.getAttribute('data-max-length') + ' 个字，删减一些再发。'; return; }
       if (!pending || pending.text !== text) pending = { text: text, clientId: form.elements.clientId.value };
       sending = true; button.disabled = true; input.disabled = true; button.textContent = '发送中…'; status.textContent = '正在发送…';
       try {
@@ -270,7 +273,7 @@
         input.value = ''; pending = null; form.elements.clientId.value = crypto.randomUUID();
         status.textContent = '已发送';
       } catch (error) {
-        status.textContent = '发送失败，内容已保留，点击“重试发送”重试。';
+        status.textContent = '没发出去，内容还在输入框里，点“重试发送”再试一次。';
         if (error.status) showError(error);
       } finally {
         sending = false; input.disabled = false; button.disabled = stopped; button.textContent = pending ? '重试发送' : '发送';

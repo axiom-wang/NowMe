@@ -97,7 +97,7 @@ describe('入口限流', () => {
     const blocked = await postForm(t, '/login', { email: 'one-more@example.com' }, from('203.0.113.7'));
     expect(blocked.status).toBe(429);
     expect(Number(blocked.headers.get('retry-after'))).toBeGreaterThan(0);
-    expect(await blocked.text()).toContain('这个网络发验证码太频繁了');
+    expect(await blocked.text()).toContain('这个网络发验证码发得太频繁了');
     expect(t.outbox.messages.some((message) => message.to === 'one-more@example.com')).toBe(false);
 
     const spoofed = await postForm(t, '/login', { email: 'spoof@example.com' }, from('203.0.113.7', '8.8.8.8, '));
@@ -149,7 +149,7 @@ describe('入口限流', () => {
     const blocked = await send(a, 999);
     expect(blocked.status).toBe(429);
     expect(blocked.headers.get('retry-after')).toBeTruthy();
-    expect(await blocked.json()).toEqual({ error: '发得太快了，歇几秒再发。' });
+    expect(await blocked.json()).toEqual({ error: '发得有点快，大约 1 分钟后再发。' });
     expect((await send(b, 0)).status).toBe(200);
     t.clock.advance(MINUTE + 1000);
     expect((await send(a, 1000)).status).toBe(200);

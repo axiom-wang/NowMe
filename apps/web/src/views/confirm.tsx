@@ -24,7 +24,7 @@ const Breadcrumb: FC<{ wall: Wall; title: string }> = ({ wall, title }) => (
 
 const LocalFilesNote: FC = () => (
   <li>
-    你电脑上的 brief.md、长期画像（~/.nowme/profile.md）和 page/ 目录不受影响——它们从未上传到 NOWMe。想清理请在本地自己删除。
+    你电脑上的 brief.md、长期画像（~/.nowme/profile.md）和 page/ 目录不受影响，它们从没上传到 NOWMe。想清理的话，请在自己电脑上删除。
   </li>
 );
 
@@ -42,21 +42,21 @@ export const DeleteConfirmView: FC<{ wall: Wall; csrf: string; impact: DeletionI
       <ul class="impact">
         <li>
           {impact.revisionCount > 0
-            ? `删除这一页的 ${impact.revisionCount} 个版本${impact.fileRevisionCount > 0 ? `（其中 ${impact.fileRevisionCount} 个通过校验的版本的页面、图片、封面与截图文件）` : ''}和它们的校验报告；版本列表里只留下“已删除”的编号。`
-            : '这一页还没有任何版本。'}
+            ? `删除这一页做过的 ${impact.revisionCount} 版${impact.fileRevisionCount > 0 ? `（其中 ${impact.fileRevisionCount} 版有页面、图片、封面和截图文件）` : ''}，以及对应的检查记录；历史里只会留下“已删除”的编号。`
+            : '这一页还没有做出过任何一版。'}
         </li>
         <li>
           {impact.publishedRevisionNumber !== null
-            ? `墙上的第 ${impact.publishedRevisionNumber} 版立即撤下，墙上的缩略卡、接话点与联系方式一并清除。`
-            : '页面现在不在墙上；以前发布记录里的缩略卡与联系方式也会一并清除。'}
+            ? `墙上正在展示的第 ${impact.publishedRevisionNumber} 版立即撤下，墙上的小卡片、话题和联系方式一并清除。`
+            : '页面现在不在墙上；以前发布时留下的小卡片和联系方式也会一并清除。'}
         </li>
         {impact.publicLinkOn ? <li>关闭公开链接，旧链接立即失效。</li> : null}
-        {impact.agentConnected ? <li>断开本地 Agent：页面凭证与未使用的指令立即失效。</li> : null}
+        {impact.agentConnected ? <li>断开你电脑上的 AI 助手：给它的授权和还没用的那段话立即失效。</li> : null}
         {impact.contactSaved ? <li>清除你保存的联系方式。</li> : null}
       </ul>
       <h3 class="impact__keep-title">不受影响</h3>
       <ul class="impact impact--keep">
-        <li>你仍是「{wall.name}」的成员，可以继续浏览这面墙，也可以重新生成 Agent 指令、从头做一页。</li>
+        <li>你仍是「{wall.name}」的成员，可以继续逛这面墙，也可以重新开始做一页。</li>
         <LocalFilesNote />
       </ul>
       {error ? <Notice tone="error">{error}</Notice> : null}
@@ -98,13 +98,13 @@ export const LeaveConfirmView: FC<{ wall: Wall; csrf: string; impact: LeaveImpac
       <section class="card confirm">
         {error ? <Notice tone="error">{error}</Notice> : null}
         <p>你是这面墙的组织者，不能退出。</p>
-        <p class="muted">如果活动已经结束，可以在组织者后台关闭这面墙：关闭后墙对所有人不可见，所有页面一并下墙。</p>
+        <p class="muted">如果活动已经结束，可以在组织者后台关闭这面墙：关闭后，墙对所有人不可见，所有页面一并下墙。</p>
         <div class="actions">
           <a class="btn btn--primary" href={`/w/${wall.id}/admin`}>
             去组织者后台
           </a>
           <a class="btn btn--ghost" href={workspaceHref(wall)}>
-            回到工作区
+            回到我的页面
           </a>
         </div>
       </section>
@@ -115,12 +115,12 @@ export const LeaveConfirmView: FC<{ wall: Wall; csrf: string; impact: LeaveImpac
           <li>你将看不到这面墙和墙上的成员页面。</li>
           {impact.published ? <li>你的页面立即从墙上撤下。</li> : null}
           {impact.publicLinkOn ? <li>公开链接关闭，旧链接立即失效。</li> : null}
-          {impact.agentConnected ? <li>断开本地 Agent：页面凭证与未使用的指令立即失效。</li> : null}
+          {impact.agentConnected ? <li>断开你电脑上的 AI 助手：给它的授权立即失效。</li> : null}
         </ul>
         <h3 class="impact__keep-title">不受影响</h3>
         <ul class="impact impact--keep">
           <li>
-            你的版本会保留：以后用邀请链接重新加入可以找回它们，但需要重新确认发布。想彻底删除内容，请先
+            你做好的页面会保留：以后用邀请链接重新加入就能找回，但需要重新确认发布。想彻底删掉内容，请先
             <a href={`${workspaceHref(wall)}/delete`}>删除这一页</a>再退出。
           </li>
           <LocalFilesNote />
@@ -150,7 +150,7 @@ export const LeftView: FC<{ wallName: string; withdrew: boolean }> = ({ wallName
     </p>
     <h1 class="hero__title">已退出「{wallName}」</h1>
     <p>
-      {withdrew ? '你的页面已从墙上撤下，' : ''}本地 Agent 已断开。以后拿到邀请链接可以重新加入，之前的版本还在，重新确认后就能再发布。
+      {withdrew ? '你的页面已经从墙上撤下，' : ''}你电脑上 AI 助手的授权也已断开。以后拿到邀请链接还能重新加入，之前做好的页面还在，重新确认后就能再发布。
     </p>
     <p>
       <a class="btn btn--primary" href="/">

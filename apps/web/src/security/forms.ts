@@ -67,8 +67,8 @@ export async function readMultipartForm(c: Context<AppEnv>, fileField: string): 
 function forbiddenOrigin(c: Context<AppEnv>) {
   return renderError(c, {
     status: 403,
-    title: '请求来源不对',
-    message: '为了安全，NOWMe 只接受从本站页面提交的操作。请回到页面重新操作。',
+    title: '这次操作没有完成',
+    message: '这次请求不是从 NOWMe 的页面发出的，为了安全没有执行。回到 NOWMe，重新点一次按钮就可以。',
   });
 }
 
@@ -96,8 +96,8 @@ export function requireForm(deps: Pick<AppDeps, 'config'>, options: RequireFormO
     if (!auth) {
       return renderError(c, {
         status: 401,
-        title: '需要登录',
-        message: '还没有登录，或者登录已过期。请重新登录后再操作。',
+        title: '需要先登录',
+        message: '你还没有登录，或者登录已经过期。重新登录后，再做一次刚才的操作。',
         loginLink: true,
       });
     }
@@ -111,7 +111,7 @@ export function requireForm(deps: Pick<AppDeps, 'config'>, options: RequireFormO
     }
     const csrf = form[CSRF_FIELD_NAME];
     if (!csrf || !constantTimeEqual(csrf, auth.session.csrfToken)) {
-      return renderError(c, { status: 403, title: '页面已过期', message: '这个页面已经过期了。请刷新页面后再操作一次。' });
+      return renderError(c, { status: 403, title: '页面停留太久了', message: '这个页面打开得太久，操作没有生效。刷新一下页面，再做一次就好。' });
     }
     if (!options.allowMissingNickname) {
       const step = onboardingStep(auth, c.get('demo'));

@@ -185,7 +185,7 @@ describe('墙内聊天', () => {
     expect(html).toContain('发起聊天</summary>');
     expect(html).toContain(`href="/messages/${direct}"`);
     expect(html).toContain(`href="/messages/wall/${wallId}"`);
-    expect(html).toContain('从群内成员列表发起私聊');
+    expect(html).toContain('在群里点 TA 名字旁边的“私聊”');
     expect(html).not.toContain('提及我的');
   });
 });

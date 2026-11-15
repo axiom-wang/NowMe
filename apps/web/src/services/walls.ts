@@ -159,9 +159,9 @@ export function parseWallForm(form: FormFields): ParsedWallForm {
 
   const descriptionProblem = lengthProblem('简介', values.description, WALL_TEXT_LIMITS.description);
   if (descriptionProblem) errors.description = descriptionProblem;
-  else if (CONTROL_CHARS_EXCEPT_NEWLINE.test(values.description)) errors.description = '简介里有不支持的控制字符';
+  else if (CONTROL_CHARS_EXCEPT_NEWLINE.test(values.description)) errors.description = '简介里有不支持的字符，换个写法试试';
 
-  if (!SCENE_TYPE_SET.has(values.sceneType)) errors.sceneType = '请点选一种场景类型';
+  if (!SCENE_TYPE_SET.has(values.sceneType)) errors.sceneType = '请选一种场景';
 
   const noteProblem = lengthProblem('组织者的话', values.organizerNote, WALL_TEXT_LIMITS.organizerNote);
   if (noteProblem) errors.organizerNote = noteProblem;

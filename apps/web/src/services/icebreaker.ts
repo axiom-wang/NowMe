@@ -57,16 +57,16 @@ export type IcebreakerStartResult = { ok: true; view: IcebreakerView } | { ok: f
 
 /** 失败时给查看者看的固定文案（不含模型输出）。 */
 export const ICEBREAKER_ERROR_TEXT: Record<IcebreakerFailure, string> = {
-  MODEL_CONFIG: '还没有可用的 AI 配置。请先在 AI 设置里保存模型服务，再回来试试。',
-  MODEL_AUTH: '模型服务拒绝了凭证，请在 AI 设置里检查 API Key 和模型权限。',
-  MODEL_RATE_LIMITED: '模型服务限流或余额不足，请稍后再试。',
-  MODEL_UNAVAILABLE: '暂时连不上模型服务，请稍后再试。',
-  busy: '上一次还在生成，稍等几秒再试。',
-  daily: `今天找话题的次数用完了（每 24 小时 ${ICEBREAKER_DAILY_PER_VIEWER} 次），明天再来。`,
-  'target-daily': `今天已经为这一页换过 ${ICEBREAKER_DAILY_PER_TARGET} 次了。不如直接挑一句改一改发出去。`,
-  failed: 'AI 这次没有给出可用的建议，没有保存。可以再试一次。',
-  timeout: 'AI 想得太久了，这次没有结果。可以再试一次。',
-  gone: '这一页刚刚更新或已从墙上撤下，请刷新后再试。',
+  MODEL_CONFIG: '现在还没有可用的 AI。先到“AI 设置”里填上你自己的模型，再回来试一次。',
+  MODEL_AUTH: '你的模型服务不认这个 Key（可能填错了、已过期，或没有权限）。到“AI 设置”里检查一下。',
+  MODEL_RATE_LIMITED: '模型服务那边限流了，或者账户余额不够。过几分钟再试；还是不行的话，去服务商那里看看余额。',
+  MODEL_UNAVAILABLE: '暂时连不上模型服务。过几分钟再试一次。',
+  busy: '上一次还没出结果，等十来秒再点。',
+  daily: `今天找话题的次数用完了（每 24 小时 ${ICEBREAKER_DAILY_PER_VIEWER} 次）。明天再来，或者直接给 TA 发条私信。`,
+  'target-daily': `这一页今天已经帮你换过 ${ICEBREAKER_DAILY_PER_TARGET} 次了。不如挑一句改成你的话，直接发出去。`,
+  failed: 'AI 这次没想出合适的话题。再点一次试试。',
+  timeout: 'AI 想了太久，这次没有结果。再点一次试试。',
+  gone: '这一页刚刚更新了，或者已经从墙上撤下。刷新一下再看看。',
 };
 
 function parseView(record: { id: string; resultJson: string; createdAt: string }): IcebreakerView | null {

@@ -22,10 +22,10 @@ import { renderNotFound } from '../views/errors.js';
 import { renderPage } from '../views/layout.js';
 
 const REDEEM_ERROR_TEXT = {
-  invalid: '这个兑换码不对。请核对后再输入一次（不区分大小写，连字符可以省略）。',
-  used: '这个兑换码已经用过了。',
-  expired: '这个兑换码已经过期。',
-  limited: '试的次数太多了，请过几分钟再来。',
+  invalid: '这个兑换码不对。核对一下再输入（不分大小写，横线可以省略）。',
+  used: '这个兑换码已经被用过了。一个码只能用一次；如果不是你用的，请联系发码的人。',
+  expired: '这个兑换码已经过期了。可以向发码的人再要一个。',
+  limited: '试得有点多了，大约 10 分钟后再试。',
 } as const;
 
 function wholeNumber(raw: string | undefined): number | null {

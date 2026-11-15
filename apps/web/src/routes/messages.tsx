@@ -28,6 +28,13 @@ function listCursor(raw: string | undefined) {
   return sequence !== undefined && isId(id, 'cnv') && raw === `${seq}:${id}` ? { sequence, id } : null;
 }
 
+/** 限流提示里的等待时间：不到 1 分钟说秒，否则向上取整到分钟。 */
+function waitText(seconds: number): string {
+  if (seconds <= 1) return '稍等一下';
+  if (seconds < 60) return `大约 ${seconds} 秒后`;
+  return `大约 ${Math.ceil(seconds / 60)} 分钟后`;
+}
+
 export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
   // 首屏与轮询使用同一份头像；群聊沿用墙的自定义封面或默认插画。
   const listWithAvatars = (userId: string, cursor?: { sequence: number; id: string }) => {
@@ -42,8 +49,8 @@ export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
   const form = requireForm(deps);
   const jsonUser: MiddlewareHandler<AppEnv> = async (c, next) => {
     const auth = c.get('auth');
-    if (!auth?.user.nickname) return c.json({ error: '登录已过期，请重新登录' }, 401);
-    if (onboardingStep(auth, c.get('demo'))) return c.json({ error: '请先确认用户协议和隐私政策' }, 403);
+    if (!auth?.user.nickname) return c.json({ error: '登录已经过期，请重新登录。' }, 401);
+    if (onboardingStep(auth, c.get('demo'))) return c.json({ error: '请先确认用户协议和隐私政策，再继续聊天。' }, 403);
     return next();
   };
 
@@ -56,7 +63,7 @@ export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
   });
   app.get('/messages/list', jsonUser, (c) => {
     const cursor = listCursor(c.req.query('before'));
-    if (cursor === null) return c.json({ error: '会话游标无效' }, 400);
+    if (cursor === null) return c.json({ error: '翻页参数不对，刷新页面再试。' }, 400);
     return c.json(listWithAvatars(authOf(c).user.id, cursor));
   });
   app.get('/messages/unread', jsonUser, (c) => c.json({ unread: deps.repos.chat.unread(authOf(c).user.id) }));
@@ -88,12 +95,12 @@ export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
   });
   app.get('/messages/:id/items', jsonUser, (c) => {
     const id = c.req.param('id');
-    if (!deps.repos.chat.findVisible(id, authOf(c).user.id)) return c.json({ error: '会话不存在或已失去访问权限' }, 404);
+    if (!deps.repos.chat.findVisible(id, authOf(c).user.id)) return c.json({ error: '这段对话打不开了。' }, 404);
     const beforeRaw = c.req.query('before');
     const afterRaw = c.req.query('after');
     const before = integer(beforeRaw);
     const after = integer(afterRaw);
-    if ((beforeRaw !== undefined && before === undefined) || (afterRaw !== undefined && after === undefined) || (beforeRaw !== undefined && afterRaw !== undefined)) return c.json({ error: '消息游标无效' }, 400);
+    if ((beforeRaw !== undefined && before === undefined) || (afterRaw !== undefined && after === undefined) || (beforeRaw !== undefined && afterRaw !== undefined)) return c.json({ error: '翻页参数不对，刷新页面再试。' }, 400);
     return c.json(deps.repos.chat.history(id, { before, after }));
   });
   app.post('/messages/:id/send', form, async (c) => {
@@ -109,8 +116,8 @@ export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
       : pace.ok
       ? sendMessage(deps, auth.user.id, id, fields.clientId ?? '', fields.text ?? '')
       : deps.repos.chat.findVisible(id, auth.user.id)
-        ? { ok: false, status: 429, error: '发得太快了，歇几秒再发。' }
-        : { ok: false, status: 404, error: '会话不存在或已失去访问权限' };
+        ? { ok: false, status: 429, error: `发得有点快，${waitText(pace.retryAfterSeconds)}再发。` }
+        : { ok: false, status: 404, error: '这段对话打不开了。' };
     if (!pace.ok) c.header('Retry-After', String(pace.retryAfterSeconds));
     if (c.req.header('accept')?.includes('application/json')) return result.ok ? c.json({ message: result.message }) : c.json({ error: result.error }, result.status);
     if (result.ok) return c.redirect(`/messages/${id}`, 303);
@@ -121,9 +128,9 @@ export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
   app.post('/messages/:id/read', form, (c) => {
     const id = c.req.param('id');
     const userId = authOf(c).user.id;
-    if (!deps.repos.chat.findVisible(id, userId)) return c.json({ error: '会话不存在或已失去访问权限' }, 404);
+    if (!deps.repos.chat.findVisible(id, userId)) return c.json({ error: '这段对话打不开了。' }, 404);
     const sequence = integer(c.get('form').sequence);
-    if (sequence === undefined || !deps.repos.chat.markRead(id, userId, sequence)) return c.json({ error: '已读位置无效' }, 400);
+    if (sequence === undefined || !deps.repos.chat.markRead(id, userId, sequence)) return c.json({ error: '没能标记为已读，刷新页面再试。' }, 400);
     return c.json({ ok: true });
   });
 }

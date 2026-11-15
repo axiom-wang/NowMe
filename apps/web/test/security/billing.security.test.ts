@@ -172,7 +172,7 @@ describe('S10 兑换码', () => {
     expect((await post(web, a, '/account/credits/redeem', { code })).status).toBe(303);
     const second = await post(web, b, '/account/credits/redeem', { code });
     expect(second.status).toBe(400);
-    expect(await second.text()).toContain('已经用过了');
+    expect(await second.text()).toContain('已经被用过了');
     expect([balanceOf(web, a.userId), balanceOf(web, b.userId)]).toEqual([50, 0]);
   });
 

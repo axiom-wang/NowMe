@@ -63,15 +63,15 @@ describe('删除页面（W16，墓碑语义）', () => {
     await s.t.close();
   });
 
-  it('GET 确认页说明影响范围：版本数、墙上的版本、公开链接、本地 Agent、联系方式；不改变任何状态', async () => {
+  it('GET 确认页说明影响范围：版本数、墙上的版本、公开链接、AI 助手、联系方式；不改变任何状态', async () => {
     const before = dumpDb(s.t.db);
     const response = await get(s.t, `/w/${s.wall.id}/me/delete`, { cookie: s.owner.cookie });
     expect(response.status).toBe(200);
     const html = await response.text();
-    expect(html).toContain('删除这一页的 3 个版本（其中 2 个通过校验的版本');
-    expect(html).toContain('墙上的第 2 版立即撤下');
+    expect(html).toContain('删除这一页做过的 3 版（其中 2 版有页面');
+    expect(html).toContain('墙上正在展示的第 2 版立即撤下');
     expect(html).toContain('关闭公开链接');
-    expect(html).toContain('断开本地 Agent');
+    expect(html).toContain('断开你电脑上的 AI 助手');
     expect(html).toContain('清除你保存的联系方式');
     expect(html).toContain('你仍是「周末黑客松」的成员');
     expect(html).toContain('name="confirm"');

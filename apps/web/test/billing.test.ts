@@ -293,7 +293,7 @@ describe('用平台 AI 做页面（完整流程）', () => {
     const { web, owner } = await world();
     const empty = await (await get(web, '/account/credits', { cookie: owner.session.cookie })).text();
     expect(empty).toContain('还没有记录');
-    expect(empty).toContain('生成一版页面 10 点，修改一次 4 点');
+    expect(empty).toContain('生成一版 10 点，修改一次 4 点');
     const response = await post(web, owner.session, '/account/credits/redeem', { code: newCode(web, 30) });
     expect(response.headers.get('location')).toBe('/account/credits?redeemed=30');
     const html = await (await get(web, '/account/credits?redeemed=30', { cookie: owner.session.cookie })).text();

@@ -35,12 +35,12 @@ const CREDITS_ERROR_TEXT: Record<NonNullable<AdminCredits['error']>, string> = {
 
 const NOTICE_TEXT: Record<AdminNotice, string> = {
   'credits-saved': '墙的 AI 额度已更新。',
-  created: '墙建好了！把下面的邀请链接或二维码发出去，大家打开、登录就能加入。你自己的页面也在这面墙上，回到墙里点“我的页面”就能开始做。',
-  removed: '已移出：TA 的页面已立即从墙上消失，本地 Agent 的连接也已断开。TA 不能再通过邀请加入。',
+  created: '墙建好了。把下面的邀请链接或二维码发给圈子里的人，打开、登录就能加入。你自己也在这面墙上，回到墙里点“我的页面”就能开始做。',
+  removed: '已移出。TA 的页面已经从墙上撤下，也不能再通过邀请链接加入。',
   'cover-updated': '墙封面已更新，成员会在首页看到新封面。',
   'cover-deleted': '已移除墙封面，恢复默认插画。',
-  'report-takedown': '这一页已从墙上撤下。TA 可以修改后重新发布；再有人举报会重新出现在这里。',
-  'report-dismissed': '已忽略这些举报，页面留在墙上。',
+  'report-takedown': '这一页已经从墙上撤下。TA 可以修改后重新发布；之后再有人举报，会重新出现在这里。',
+  'report-dismissed': '已忽略这些举报，页面继续留在墙上。',
 };
 
 export interface AdminModel {
@@ -119,7 +119,7 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError,
           <section class="card invite" aria-labelledby="invite-heading">
             <div class="invite__text">
               <h2 id="invite-heading">邀请成员</h2>
-              <p class="muted">把链接或二维码发到群公告、报名表或现场物料里。打开并登录就能加入，不需要先做好页面。</p>
+              <p class="muted">把链接或二维码发到群公告、报名表或现场物料里。打开、登录就能加入，不用先做好页面。</p>
               <div class="invite__link">
                 <code class="invite__url" id="nm-invite-link">
                   {model.inviteUrl}
@@ -143,7 +143,10 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError,
 
           <section class="card" aria-labelledby="members-heading">
             <h2 id="members-heading">成员</h2>
-            <p class="muted">这里只显示昵称、加入时间和发布状态。成员的草稿、版本和联系方式只有本人看得到。</p>
+            <p class="muted">这里只显示昵称、加入时间和有没有发布页面。成员的草稿、做好的页面和联系方式，只有他们自己看得到。</p>
+            {model.members.every((member) => member.role === 'organizer') ? (
+              <p class="muted">现在只有你一个人。把上面的邀请链接发出去，有人加入后会出现在这里。</p>
+            ) : null}
             <ul class="member-list">
               {model.members.map((member) => (
                 <MemberItem member={member} wallId={wall.id} csrf={csrf} />
@@ -155,7 +158,7 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError,
         <aside class="admin-layout__side">
           <section class="card wall-cover-settings" aria-labelledby="wall-cover-heading">
             <h2 id="wall-cover-heading">墙封面</h2>
-            <p class="muted">给这面墙选一张有个性的封面，它会展示在成员首页的墙卡片上。</p>
+            <p class="muted">给这面墙选一张有个性的封面，成员在首页的墙卡片上会看到它。</p>
             <img class="wall-cover-settings__preview" src={model.coverUrl ?? `/static/home-wall-${defaultWallCover(wall)}.svg`} alt={`「${wall.name}」的${model.coverUrl ? '当前封面' : '默认封面'}`} width="400" height="400" />
             {coverError ? <Notice tone="error">{coverError}</Notice> : null}
             <form method="post" action={`/w/${wall.id}/admin/cover`} enctype="multipart/form-data" class="stack">
@@ -223,7 +226,7 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError,
           <section class="card danger-zone" aria-labelledby="close-heading">
             <h2 id="close-heading">关闭这面墙</h2>
             <p>
-              关闭后所有人（包括你）都看不到这面墙，成员的页面全部下墙，大家本地 Agent 的连接全部断开，邀请链接失效。关闭后不能重新打开。
+              关闭后，所有人（包括你）都看不到这面墙，所有页面下墙，邀请链接失效，而且没法重新打开。
             </p>
             {closeError ? <Notice tone="error">请先勾选确认，再关闭墙。</Notice> : null}
             <form

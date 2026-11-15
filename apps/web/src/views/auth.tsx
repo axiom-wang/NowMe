@@ -17,7 +17,7 @@ const AuthShell: FC<PropsWithChildren<{ step: string }>> = ({ step, children }) 
         <br />
         挂上大家的墙。
       </p>
-      <p class="auth__lead">和你自己的 AI Agent 聊几句，它帮你做好一页；你确认之后，才会出现在墙上。</p>
+      <p class="auth__lead">和 AI 聊几句，它帮你做好一页；你确认之后，才会挂上墙。</p>
       <ul class="auth__stickers" aria-hidden="true">
         <li class="sticker sticker--lime">找一位会做视觉的队友</li>
         <li class="sticker sticker--paper">周末一起逛二手唱片店</li>
@@ -85,7 +85,7 @@ export const VerifyView: FC<VerifyViewProps> = ({ email, next, error, expired, d
   <AuthShell step="2 / 2 · 验证码">
     <h1>输入验证码</h1>
     <p class="muted">
-      验证码已发送到 <strong>{email}</strong>，{LOGIN_CODE_TTL_SECONDS / 60} 分钟内有效。
+      验证码已发送到 <strong>{email}</strong>，{LOGIN_CODE_TTL_SECONDS / 60} 分钟内有效。没收到的话，看看垃圾邮件箱。
     </p>
     {devOutbox ? (
       <Notice tone="info">
@@ -157,7 +157,7 @@ export const WelcomeView: FC<{ next: string; csrf: string; nickname?: string; ag
       </label>
       <ConsentCheck checked={agreed} />
       <button type="submit" class="btn btn--primary btn--block">
-        开始
+        进入 NOWMe
       </button>
     </form>
   </AuthShell>

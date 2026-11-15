@@ -52,7 +52,7 @@ describe('主站基础', () => {
   it('未知路径：页面 404 HTML，API 404 JSON', async () => {
     const page = await get(t, '/nope');
     expect(page.status).toBe(404);
-    expect(await page.text()).toContain('找不到这个页面');
+    expect(await page.text()).toContain('这里没有你要找的内容');
     const api = await get(t, '/api/agent/nope');
     expect(api.status).toBe(404);
     expect(await api.json()).toEqual({ error: { code: 'NOT_FOUND', message: '接口不存在' } });

@@ -42,7 +42,7 @@ describe('验证码', () => {
     }
     const fifth = await verify(wrong);
     expect(fifth.status).toBe(400);
-    expect(await fifth.text()).toContain('错误次数太多');
+    expect(await fifth.text()).toContain('错得太多次');
     const correct = await verify(code);
     expect(correct.status).toBe(400);
     expect(sessionTokenFrom(correct)).toBeNull();
@@ -66,7 +66,7 @@ describe('验证码', () => {
     t.clock.advance(10 * MINUTE);
     const response = await verify(code);
     expect(response.status).toBe(400);
-    expect(await response.text()).toContain('已过期');
+    expect(await response.text()).toContain('已经过期');
     expect(sessionTokenFrom(response)).toBeNull();
   });
 
@@ -85,7 +85,7 @@ describe('验证码', () => {
     for (let i = 0; i < 5; i++) expect((await postForm(t, '/login', { email: EMAIL })).status).toBe(200);
     const limited = await postForm(t, '/login', { email: EMAIL });
     expect(limited.status).toBe(429);
-    expect(await limited.text()).toContain('太频繁');
+    expect(await limited.text()).toContain('发得有点多');
     expect(t.outbox.messages.filter((message) => message.to === EMAIL)).toHaveLength(5);
     expect((await postForm(t, '/login', { email: 'other@example.com' })).status).toBe(200);
     t.clock.advance(10 * MINUTE + 1000);

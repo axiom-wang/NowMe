@@ -18,18 +18,18 @@ const Consequences: FC = () => (
     <h2 id="account-delete-heading">注销后会发生什么</h2>
     <p>注销后不能恢复，也没有冷静期。确认之前，先看看会删掉什么：</p>
     <ul class="impact">
-      <li>你在所有墙上的页面立刻下墙，所有版本的页面、图片、封面和截图都会删除；公开链接马上失效。</li>
-      <li>你在应用里的采访内容、brief、上传的图片、长期画像、头像，以及“和 TA 聊什么”的结果都会删除。</li>
+      <li>你在所有墙上的页面立刻下墙，做过的每一版页面、图片、封面和截图都会删除，公开链接马上失效。</li>
+      <li>你在 NOWMe 里的采访内容、整理好的 brief（一份自我介绍）、上传的图片、长期画像、头像，以及“和 TA 聊什么”的结果都会删除。</li>
       <li>你会退出所有墙。你发过的聊天消息会变成“该用户已注销”，别人看到的名字是“已注销用户”。</li>
-      <li>本地 Agent 立刻断开；AI 设置和你保存的模型 Key 一并删除。</li>
+      <li>你电脑上 AI 助手的授权立刻失效；AI 设置和你保存的模型 Key 一并删除。</li>
       <li>没用完的点数作废，不能退回，也不能转给别人。</li>
-      <li>所有设备上的登录马上失效。以后用同一个邮箱登录，会是一个全新的账号，找不回现在的内容，也不会再送注册点数。</li>
+      <li>所有设备上的登录马上失效。以后再用同一个邮箱登录，会是一个全新的账号，找不回现在的内容，也不会再送注册点数。</li>
       <li>如果有人举报过你、平台还没处理完，被举报的那部分内容会单独保留一份，只给平台处理举报用，处理完或最多 180 天后删除。</li>
     </ul>
     <h3 class="impact__keep-title">不受影响</h3>
     <ul class="impact impact--keep">
       <li>你电脑上的 brief.md、长期画像（~/.nowme/profile.md）和 page/ 目录——它们从来没有上传过，想清理请自己在本地删除。</li>
-      <li>别人在墙上发的内容和他们自己的聊天消息。</li>
+      <li>别人在墙上发的内容，以及他们自己的聊天消息。</li>
     </ul>
     <p>
       想留一份备份？先 <a href="/account/export">导出我的数据</a>（一个 zip 文件，里面有你的页面文件和资料）。
@@ -55,7 +55,7 @@ export const AccountDeleteView: FC<AccountDeleteViewProps> = ({ csrf, email, blo
       <section class="card confirm" aria-labelledby="account-delete-blocked">
         <h2 id="account-delete-blocked">先关闭你组织的墙</h2>
         {error ? <Notice tone="error">{error}</Notice> : null}
-        <p>你还是下面这些墙的组织者，墙上还有其他成员在用。注销前请先在组织者后台关闭它们（关闭后墙对所有人不可见，所有页面一并下墙）：</p>
+        <p>你还是下面这些墙的组织者，墙上可能还有人在用。先去组织者后台把它们关闭，才能注销账号（关闭后墙对所有人不可见，所有页面一并下墙）：</p>
         <ul class="impact">
           {blocking.map((wall) => (
             <li>
@@ -77,7 +77,7 @@ export const AccountDeleteView: FC<AccountDeleteViewProps> = ({ csrf, email, blo
         {stage === 'intro' ? (
           <form method="post" action="/account/delete/code" class="confirm__form">
             <CsrfField token={csrf} />
-            <p class="muted">为了确认是你本人，我们会给 {email} 发一个确认码。</p>
+            <p class="muted">为了确认是你本人，我们会给 {email} 发一个确认码，10 分钟内有效。</p>
             <div class="actions">
               <button type="submit" class="btn btn--danger-solid">
                 给我的邮箱发确认码

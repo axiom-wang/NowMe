@@ -39,6 +39,9 @@ import { NewWallView, type SceneChoice } from '../views/wall-new.js';
 import { WallView, type WallNotice } from '../views/wall.js';
 import { sceneLabels } from './home.js';
 
+/** 邀请码格式不对、不存在、墙已关闭都显示这一句，不暴露是哪一种。 */
+const INVITE_NOT_FOUND_TEXT = '这个邀请链接打不开：可能少复制了几个字，或者这面墙已经关闭。可以向组织者再要一个链接。';
+
 const WALL_NOTICES: ReadonlySet<string> = new Set<WallNotice>(['joined', 'rejoined', 'blocked']);
 
 export function wallPath(wallId: string): string {
@@ -116,11 +119,11 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
   app.get('/join/:inviteCode', user, (c) => {
     const auth = authOf(c);
     const wall = invitedWall(c.req.param('inviteCode'));
-    if (!wall) return renderNotFound(c);
+    if (!wall) return renderNotFound(c, { message: INVITE_NOT_FOUND_TEXT });
     const state = joinState(deps, wall, auth.user.id);
     if (state.kind === 'member') return c.redirect(wallPath(wall.id), 303);
     if (state.kind === 'removed') {
-      return renderPage(c, { title: '暂时不能加入', status: 403, body: <RemovedFromWallView wall={wall} /> });
+      return renderPage(c, { title: '现在不能加入这面墙', status: 403, body: <RemovedFromWallView wall={wall} /> });
     }
     return renderPage(c, {
       title: `加入「${wall.name}」`,
@@ -131,13 +134,13 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
   app.post('/join/:inviteCode', form, (c) => {
     const auth = authOf(c);
     const wall = invitedWall(c.req.param('inviteCode'));
-    if (!wall) return renderNotFound(c);
+    if (!wall) return renderNotFound(c, { message: INVITE_NOT_FOUND_TEXT });
     const result = joinWall(deps, wall, auth.user.id);
     switch (result.kind) {
       case 'closed':
-        return renderNotFound(c);
+        return renderNotFound(c, { message: INVITE_NOT_FOUND_TEXT });
       case 'removed':
-        return renderPage(c, { title: '暂时不能加入', status: 403, body: <RemovedFromWallView wall={wall} /> });
+        return renderPage(c, { title: '现在不能加入这面墙', status: 403, body: <RemovedFromWallView wall={wall} /> });
       case 'already':
         return c.redirect(wallPath(wall.id), 303);
       case 'joined':

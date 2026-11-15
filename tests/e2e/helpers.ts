@@ -48,7 +48,7 @@ export async function login(page: Page, email: string, nickname: string): Promis
   await page.waitForURL((url) => url.pathname !== '/login/verify' && url.pathname !== '/login');
   if (new URL(page.url()).pathname === '/welcome') {
     await page.getByLabel('昵称').fill(nickname);
-    await page.getByRole('button', { name: '开始' }).click();
+    await page.getByRole('button', { name: '进入 NOWMe' }).click();
   }
   await page.waitForURL((url) => url.pathname !== '/welcome');
 }
@@ -66,7 +66,7 @@ export async function createWall(page: Page, name: string): Promise<{ wallId: st
   await page.getByLabel('墙的名称').fill(name);
   await page.getByLabel('简介').fill('e2e 测试墙');
   await page.getByRole('radio', { name: /黑客松/ }).check();
-  await page.getByRole('button', { name: '建好了，生成邀请' }).click();
+  await page.getByRole('button', { name: '建好了，去拿邀请链接' }).click();
   await page.waitForURL(/\/w\/wal_[^/]+\/admin/);
   const wallId = /\/w\/(wal_[^/]+)\//.exec(page.url())?.[1] ?? '';
   const inviteUrl = (await page.locator('#nm-invite-link').textContent())?.trim() ?? '';

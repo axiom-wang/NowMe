@@ -17,8 +17,8 @@ export type SafetyNotice = 'reported' | 'report-updated' | 'blocked';
 
 export const SAFETY_NOTICE_TEXT: Record<SafetyNotice, string> = {
   reported: '收到了，谢谢你告诉我们。组织者和对方都不会知道是你举报的。',
-  'report-updated': '已更新你的举报。同一个人对同一处只算一次。',
-  blocked: '已拉黑。你们互相看不到对方的页面，也不能再私信；TA 不会收到通知。可以在“我的资料”里解除。',
+  'report-updated': '已更新你的举报。同一处只会记一次，不会重复计数。',
+  blocked: '已拉黑。你们互相看不到对方的页面，也不能再私信；TA 不会收到通知。想反悔的话，可以在“我的资料”里解除。',
 };
 
 export function isSafetyNotice(value: string | undefined): value is SafetyNotice {
@@ -39,7 +39,7 @@ const ReportFields: FC<{ idPrefix: string; error?: string | null }> = ({ idPrefi
     </fieldset>
     <label class="field" for={`${idPrefix}-note`}>
       <span class="field__label">补充说明（可以不写）</span>
-      <textarea id={`${idPrefix}-note`} name="note" rows={3} maxlength={REPORT_NOTE_MAX_LENGTH} placeholder="发生了什么、哪里不对……"></textarea>
+      <textarea id={`${idPrefix}-note`} name="note" rows={3} maxlength={REPORT_NOTE_MAX_LENGTH} placeholder="发生了什么、哪里让你不舒服……"></textarea>
       <span class="field__hint">最多 {REPORT_NOTE_MAX_LENGTH} 字。补充说明只有平台运营能看到，组织者看不到。</span>
     </label>
   </>
@@ -56,7 +56,7 @@ export const PageSafety: FC<{ base: string; csrf: string; name: string; reported
         <p class="muted">举报会交给这面墙的组织者和平台处理。组织者只看到被举报的页面和原因，不知道是谁举报的；{name}也不会知道。</p>
         <ReportFields idPrefix="page-report" error={error} />
         <div>
-          <button type="submit" class="btn btn--danger btn--small">{reported ? '更新举报' : '提交举报'}</button>
+          <button type="submit" class="btn btn--danger btn--small">{reported ? '更新举报' : '发送举报'}</button>
         </div>
       </form>
       <div class="safety__block">
@@ -80,7 +80,7 @@ export const ConversationSafety: FC<{ conversationId: string; csrf: string; name
 }) => (
   <div class="safety safety--chat" id="safety">
     {notice ? <Notice tone="success">{SAFETY_NOTICE_TEXT[notice]}</Notice> : null}
-    {closed ? <Notice tone="info">{blockedByMe ? `你已拉黑${name}，这段对话不能再发消息。可以在“我的资料”里解除。` : '现在没法在这段对话里发消息了。'}</Notice> : null}
+    {closed ? <Notice tone="info">{blockedByMe ? `你已拉黑${name}，这段对话不能再发消息。想恢复的话，可以在“我的资料”里解除。` : '现在没法在这段对话里发消息了。'}</Notice> : null}
     <details class="safety__details" open={!!error}>
       <summary>{reported ? '你已经举报过这段对话（可以更新）' : '举报这段对话或拉黑'}</summary>
       <form method="post" action={`/messages/${conversationId}/report`} class="stack safety__form">
@@ -88,7 +88,7 @@ export const ConversationSafety: FC<{ conversationId: string; csrf: string; name
         <p class="muted">私信举报只交给平台运营查看，组织者永远看不到你们的私信；{name}不会知道是你举报的。</p>
         <ReportFields idPrefix="chat-report" error={error} />
         <div>
-          <button type="submit" class="btn btn--danger btn--small">{reported ? '更新举报' : '提交举报'}</button>
+          <button type="submit" class="btn btn--danger btn--small">{reported ? '更新举报' : '发送举报'}</button>
         </div>
       </form>
       {blockedByMe ? null : (
@@ -106,7 +106,7 @@ export const OrganizerReports: FC<{ wallId: string; csrf: string; reports: Organ
   <section class="card reports" id="reports" aria-labelledby="reports-heading">
     <h2 id="reports-heading">待处理举报{reports.length > 0 ? `（${reports.length}）` : ''}</h2>
     {reports.length === 0 ? (
-      <p class="muted">现在没有待处理的举报。</p>
+      <p class="muted">现在没有待处理的举报。成员遇到问题时，可以在别人页面的底部举报；你会在这里看到被举报的页面和原因（看不到是谁举报的）。</p>
     ) : (
       <>
         <p class="muted">这里只显示被举报的页面、原因和次数，不显示是谁举报的。私信里的举报由平台处理，不会出现在这里。</p>
@@ -146,8 +146,8 @@ export const BlockedList: FC<{ csrf: string; blocked: BlockedUserRow[] }> = ({ c
     <h2 id="blocks-heading">拉黑名单（{blocked.length} 人）</h2>
     {blocked.length === 0 ? (
       <div class="profile-empty">
-        <p>没有拉黑任何人</p>
-        <span>在别人的页面或私聊里可以拉黑；拉黑后你们互相看不到页面，也不能私信。</span>
+        <p>你还没有拉黑任何人</p>
+        <span>在别人的页面或私信里都可以拉黑。拉黑后你们互相看不到页面，也不能私信，对方不会收到通知。</span>
       </div>
     ) : (
       <ul class="profile-brief-list">

@@ -181,11 +181,11 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
   app.use(hostCheck(config));
   const formLimit = bodyLimit({
     maxSize: FORM_BODY_MAX_BYTES,
-    onError: (c) => renderError(c, { status: 413, title: '提交的内容太多', message: '表单内容超过了上限，请精简后再试。' }),
+    onError: (c) => renderError(c, { status: 413, title: '内容太长了', message: '这次填的内容超过了上限。删掉一些再试一次。' }),
   });
   const uploadLimit = bodyLimit({
     maxSize: HOSTED_UPLOAD_REQUEST_MAX_BYTES,
-    onError: (c) => renderError(c, { status: 413, title: '上传的内容太多', message: '图片和文字加起来超过了上限（单张图片 2 MB 以内、最多 6 张），请减少后再试。' }),
+    onError: (c) => renderError(c, { status: 413, title: '上传的内容太大了', message: '图片和文字加起来超过了上限（单张图片 2 MB 以内，最多 6 张）。少传几张或压缩一下再试。' }),
   });
   const avatarLimit = bodyLimit({
     maxSize: AVATAR_REQUEST_MAX_BYTES,
@@ -211,7 +211,7 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
     if (error instanceof HTTPException) return error.getResponse();
     log(`[web] 未处理的错误 ${c.req.method} ${c.req.path}：${error instanceof Error ? (error.stack ?? error.message) : String(error)}`);
     if (isApiPath(c.req.path)) return apiError(c, 'INTERNAL_ERROR', '服务器处理请求时出错了，请稍后重试');
-    return renderError(c, { status: 500, title: '出错了', message: '服务器处理请求时出错了，请稍后重试。' });
+    return renderError(c, { status: 500, title: '我们这边出了点问题', message: '不是你的操作有误。过一两分钟再试一次；一直不行的话，请告诉我们。' });
   });
 
   return {

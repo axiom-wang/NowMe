@@ -316,7 +316,7 @@ describe('成员页上的流程', () => {
     const blocked = await askIcebreaker(t, wall, viewer, target);
     expect(blocked.location).toBe(`${memberPath(wall, target)}?ice=target-daily#talk`);
     expect(t.fake.calls.length).toBe(calls);
-    expect(await memberHtml(t, wall, viewer, target, '?ice=target-daily')).toContain('今天已经为这一页换过');
+    expect(await memberHtml(t, wall, viewer, target, '?ice=target-daily')).toContain('这一页今天已经帮你换过');
     t.clock.advance(24 * HOUR + 1000);
     expect((await askIcebreaker(t, wall, viewer, target)).location).toBe(`${memberPath(wall, target)}#talk`);
   });
@@ -331,7 +331,7 @@ describe('成员页上的流程', () => {
     expect(storedIcebreaker(t, viewer, target)).toBeNull();
     const events = t.repos.events.listForPage(target.member.page.id).filter((event) => event.type === 'icebreaker_generate');
     expect(events.map((event) => event.props.ok)).toEqual([false]);
-    expect(await memberHtml(t, wall, viewer, target, '?ice=failed')).toContain('没有给出可用的建议');
+    expect(await memberHtml(t, wall, viewer, target, '?ice=failed')).toContain('没想出合适的话题');
   });
 
   it('错误码不在名单里时不显示任何提示（不回显查询参数）', async () => {

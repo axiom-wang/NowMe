@@ -20,7 +20,7 @@ import { AccountDeletedView, AccountDeleteView, type AccountDeleteViewProps } fr
 import { renderNotFound } from '../views/errors.js';
 import { renderPage } from '../views/layout.js';
 
-const BLOCKED_ERROR = '你还有组织中的墙没有关闭，先关闭它们再注销。';
+const BLOCKED_ERROR = '你还是一些墙的组织者。先把这些墙关闭，才能注销账号。';
 
 export function registerAccountRoutes(app: AppHono, deps: AppDeps): void {
   if (deps.demo) return;
@@ -46,8 +46,10 @@ export function registerAccountRoutes(app: AppHono, deps: AppDeps): void {
         status: 429,
         body: (
           <section class="card container container--narrow">
-            <h1>导出得太频繁了</h1>
-            <p>一小时内最多导出 {RATE_RULES.accountExport.max} 次，请过一会儿再来。</p>
+            <h1>导出得有点频繁</h1>
+            <p>
+              一小时内最多导出 {RATE_RULES.accountExport.max} 次，这一小时的次数用完了。大约 {Math.max(1, Math.ceil(limit.retryAfterSeconds / 60))} 分钟后可以再导出。
+            </p>
             <p>
               <a href="/account/data">回到我的资料</a>
             </p>
@@ -68,14 +70,14 @@ export function registerAccountRoutes(app: AppHono, deps: AppDeps): void {
 
   app.post('/account/delete/code', form, async (c) => {
     const result = await requestDeletionCode(deps, authOf(c).user.id);
-    if (result.ok) return render(c, { stage: 'code', notice: '确认码已发出，10 分钟内有效。' });
+    if (result.ok) return render(c, { stage: 'code', notice: '确认码已经发到你的邮箱，10 分钟内有效。' });
     switch (result.reason) {
       case 'organizer':
         return render(c, { stage: 'intro', error: BLOCKED_ERROR }, 409);
       case 'rate_limited':
-        return render(c, { stage: 'code', error: '确认码发得太频繁了：同一个邮箱 10 分钟内最多发 5 次（登录验证码也算在内）。请用最近收到的那个，或稍后再试。' }, 429);
+        return render(c, { stage: 'code', error: '确认码发得有点多：同一个邮箱 10 分钟内最多发 5 次（登录验证码也算在内）。先用最近收到的那个，或者过几分钟再来。' }, 429);
       case 'send_failed':
-        return render(c, { stage: 'intro', error: '确认码邮件暂时发不出去，请稍等一会儿再试。' }, 503);
+        return render(c, { stage: 'intro', error: '确认码邮件暂时发不出去。过几分钟再试一次。' }, 503);
       case 'gone':
         return renderNotFound(c);
     }
@@ -93,9 +95,9 @@ export function registerAccountRoutes(app: AppHono, deps: AppDeps): void {
         case 'mismatch':
           return render(c, { stage: 'code', error: `确认码不对，还可以再试 ${result.remaining} 次。` }, 400);
         case 'locked':
-          return render(c, { stage: 'intro', error: '确认码错误次数太多，已经失效。请重新发一个。' }, 400);
+          return render(c, { stage: 'intro', error: '确认码错得太多次，已经失效了。重新发一个吧。' }, 400);
         case 'no_code':
-          return render(c, { stage: 'intro', error: '确认码已过期或已失效，请重新发一个。' }, 400);
+          return render(c, { stage: 'intro', error: '确认码已经过期或失效了。重新发一个吧。' }, 400);
         case 'gone':
           return renderNotFound(c);
       }

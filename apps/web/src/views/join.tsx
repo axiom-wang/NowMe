@@ -27,9 +27,9 @@ export const JoinView: FC<JoinViewProps> = ({ wall, sceneLabel, csrf, rejoin }) 
       {wall.description ? <p class="join__desc">{wall.description}</p> : null}
       {wall.organizerNote ? <OrganizerNote text={wall.organizerNote} /> : null}
       {rejoin ? (
-        <p class="notice notice--warning">你之前退出过这面墙。重新加入后，你原来的页面不会自动回到墙上，需要时在创作工作区重新发布。</p>
+        <p class="notice notice--warning">你之前退出过这面墙。重新加入后，你原来的页面不会自动挂回墙上；想让大家看到，需要你自己重新发布。</p>
       ) : (
-        <p class="muted">加入后就能浏览墙上已发布的成员，不需要先做好自己的页面。</p>
+        <p class="muted">加入后就能逛墙上的人，不用先做好自己的页面。</p>
       )}
       <form method="post" action={`/join/${wall.inviteCode}`} class="stack">
         <CsrfField token={csrf} />
@@ -47,8 +47,8 @@ export const RemovedFromWallView: FC<{ wall: Wall }> = ({ wall }) => (
       <p class="status-card__mark" aria-hidden="true">
         ✕
       </p>
-      <h1 class="display">暂时不能加入</h1>
-      <p>你已被组织者移出「{wall.name}」，不能再通过邀请链接加入。如果是误操作，请直接联系组织者。</p>
+      <h1 class="display">现在不能加入这面墙</h1>
+      <p>组织者把你移出了「{wall.name}」，所以这个邀请链接现在对你不管用。如果觉得是误会，可以直接找组织者说一声。</p>
       <p>
         <a class="btn btn--primary" href="/">
           回到“我的”

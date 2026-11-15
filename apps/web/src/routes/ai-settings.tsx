@@ -26,8 +26,8 @@ const EndpointFields: FC<{ role: ModelRole; value: UserModelSummary | null }> = 
     <label class="field" for={`${role}-key`}>API Key{value?.hasKey ? '（已加密保存，留空沿用）' : ''}
       <input id={`${role}-key`} type="password" name={`${role}_apiKey`} autocomplete="new-password" maxlength={4096} spellcheck={false} />
     </label>
-    <p class="muted">更换服务或地址时请重新填写 Key。平台不会显示已保存的完整 Key。</p>
-    <label><input type="checkbox" name={`${role}_vision`} value="1" checked={item.vision} /> 该模型支持图片，可将上传照片和预览截图发送给它</label>
+    <p class="muted">换服务或地址时，Key 要重新填。已保存的 Key 不会再显示出来。</p>
+    <label><input type="checkbox" name={`${role}_vision`} value="1" checked={item.vision} /> 这个模型能看图片（会把你上传的照片和页面预览截图发给它）</label>
   </fieldset>;
 };
 
@@ -46,21 +46,21 @@ export function registerAiSettingsRoutes(app: AppHono, deps: AppDeps): void {
           不填也能用：没有自己的 Key 时，NOWMe 的 AI 会帮你做页面（生成与修改消耗<a href="/account/credits">点数</a>）。填了自己的 Key 之后，就改用你的 Key，不再消耗点数。
         </Notice>
       ) : null}
-      <p>采访、生成和修改由平台服务器使用你的 API Key 请求你选择的模型服务，模型费用由该服务商向你收取。失败的请求也可能产生费用。</p>
-      <p class="muted">Key 加密保存在你的账号下，其他设备登录后可继续使用；只有你能管理。{deps.platformModel.available ? '用自己的 Key 时，平台不会替你支付模型费用。' : '平台不提供公共 Key，也不会替你支付模型费用。'}</p>
-      {!deps.userModels.available ? <Notice tone="error">平台尚未配置凭证加密功能，暂时无法保存或使用 API Key。请联系维护者；你仍可使用本地 Agent 创作。</Notice> : null}
+      <p>填了自己的 Key 之后，采访、做页面和改页面都会用它去请求你选的模型服务。费用由服务商直接向你收取，失败的请求也可能计费。</p>
+      <p class="muted">Key 会加密保存在你的账号里，换设备登录也能用，只有你能查看和删除。{deps.platformModel.available ? '用自己的 Key 时，NOWMe 不会替你付模型费用。' : 'NOWMe 不提供公共 Key，也不会替你付模型费用。'}</p>
+      {!deps.userModels.available ? <Notice tone="error">这里暂时不能保存 API Key（服务器还没有开启加密保存）。你仍然可以在自己电脑上用 AI 助手做页面。</Notice> : null}
       {error ? <Notice tone="error">{error}</Notice> : null}
-      {c.req.query('saved') === '1' ? <Notice tone="info">配置已保存。你可以返回创作工作区继续；保存配置不会调用模型。</Notice> : null}
-      {c.req.query('deleted') === '1' ? <Notice tone="info">AI 配置与加密 Key 已删除。排队及进行中的任务将停止后续模型请求；已发送的请求可能仍会完成或计费。已有页面和资料保留。</Notice> : null}
+      {c.req.query('saved') === '1' ? <Notice tone="info">已保存。保存时不会调用模型，回到你的页面继续做就行。</Notice> : null}
+      {c.req.query('deleted') === '1' ? <Notice tone="info">已删除你的 AI 设置和 Key。排队中和正在做的任务不会再发出新请求（已经发出的那一次可能仍会完成并计费）。你的页面和资料都还在。</Notice> : null}
       <form method="post" action="/account/ai" class="stack" data-ai-settings="1">
         <CsrfField token={auth.session.csrfToken} />
         <EndpointFields role="interview" value={interview} />
-        <label><input type="checkbox" name="shared" value="1" checked={!generate} /> 生成沿用采访的服务、地址、Key 和图片能力（仍可单独填写下方生成模型）</label>
+        <label><input type="checkbox" name="shared" value="1" checked={!generate} /> 做页面时用和采访同一套设置（想分开设置，就取消勾选，在下面单独填）</label>
         <EndpointFields role="generate" value={generate} />
-        <p class="muted">需要支持工具调用的模型。自定义服务须使用公网 HTTPS 地址。开发模式允许的本机地址指向平台服务器所在电脑，并非访问者自己的电脑。</p>
+        <p class="muted">做页面的模型需要支持工具调用。自定义服务的地址必须是公网 HTTPS。</p>
         <button class="btn btn--primary" type="submit" disabled={!deps.userModels.available}>保存 AI 配置</button>
       </form>
-      {interview || generate ? <PostButton action="/account/ai/delete" csrf={auth.session.csrfToken} label="删除 AI 配置与 Key" confirm="删除后将停止后续模型请求，已有资料和页面保留。继续吗？" /> : null}
+      {interview || generate ? <PostButton action="/account/ai/delete" csrf={auth.session.csrfToken} label="删除 AI 配置与 Key" confirm="删除后，排队中的任务不会再发出请求；你的页面和资料都保留。确定删除吗？" /> : null}
       <a href="/">返回我的墙</a>
     </div> });
   };
@@ -69,7 +69,7 @@ export function registerAiSettingsRoutes(app: AppHono, deps: AppDeps): void {
     const fields = c.get('form');
     const read = (role: ModelRole) => ({ provider: fields[`${role}_provider`] ?? '', baseUrl: fields[`${role}_baseUrl`] ?? '', model: fields[`${role}_model`] ?? '', apiKey: fields[`${role}_apiKey`] ?? '', vision: fields[`${role}_vision`] === '1' });
     try { deps.userModels.save(authOf(c).user.id, { interview: read('interview'), generate: read('generate') }, fields.shared === '1'); }
-    catch { return render(c, '保存失败：请检查服务、模型、Key 与公网 HTTPS 地址；更换服务或地址需要重新填写 Key。', 422); }
+    catch { return render(c, '没能保存。请检查：服务和模型名称选对了吗、Key 填了吗、地址是不是公网 HTTPS。换了服务或地址的话，Key 也要重新填。', 422); }
     return c.redirect('/account/ai?saved=1', 303);
   });
   app.post('/account/ai/delete', form, (c) => {

@@ -109,7 +109,7 @@ describe('建墙（W02）', () => {
     const html = await response.text();
     expect(html).toContain('请填写墙的名称');
     expect(html).toContain('简介最多 200 个字');
-    expect(html).toContain('请点选一种场景类型');
+    expect(html).toContain('请选一种场景');
     expect(html).toContain('组织者的话只能是一行文字');
     expect(html).toContain('x'.repeat(201));
     expect(t.db.prepare('SELECT COUNT(*) AS n FROM walls').get()).toEqual({ n: 0 });
@@ -166,7 +166,7 @@ describe('邀请与加入（W04）', () => {
 
     const welcome = await get(t, `/w/${wall.id}?notice=joined`, { cookie: member.cookie });
     expect(welcome.status).toBe(200);
-    expect(await welcome.text()).toContain('欢迎加入');
+    expect(await welcome.text()).toContain('加入成功');
   });
 
   it('已是成员：打开邀请直接进墙；再次提交不重复创建', async () => {
@@ -216,7 +216,7 @@ describe('邀请与加入（W04）', () => {
     const page = await get(t, `/join/${wall.inviteCode}`, { cookie: member.cookie });
     expect(page.status).toBe(403);
     const html = await page.text();
-    expect(html).toContain('暂时不能加入');
+    expect(html).toContain('现在不能加入这面墙');
     expect(html).not.toContain(`action="/join/`);
     const post = await postForm(t, `/join/${wall.inviteCode}`, { _csrf: member.csrf }, { cookie: member.cookie });
     expect(post.status).toBe(403);

@@ -29,11 +29,11 @@ const REASON_TEXT: Record<CreditReason, string> = {
   grant: '平台发放',
   signup: '注册赠送',
   adjust: '平台调整',
-  sponsor_out: '转给墙的额度',
+  sponsor_out: '充给墙的额度',
   sponsor_in: '组织者充入',
-  sponsor_return: '墙关闭，额度退回',
-  job: '生成 / 修改页面',
-  job_refund: '没做出新版本，退回',
+  sponsor_return: '墙关闭，没用完的额度退回',
+  job: '用 AI 做页面',
+  job_refund: '这次没做成，点数退回',
   account_deleted: '注销账号，余额作废',
 };
 
@@ -60,10 +60,10 @@ export const CreditsView: FC<CreditsViewProps> = ({ csrf, balance, entries, pric
         <span>点</span>
       </p>
       <p class="muted">
-        用 NOWMe 的 AI 做页面时消耗：生成一版页面 {prices.generate} 点，修改一次 {prices.edit} 点。采访、“和 TA 聊什么”不收点数；没做出新版本的那次也不收。
+        用 NOWMe 的 AI 做页面会扣点数：生成一版 {prices.generate} 点，修改一次 {prices.edit} 点。采访和“和 TA 聊什么”不收点数；这次没做出新页面的话，点数会退回来。
       </p>
-      {ownModel ? <Notice tone="info">你在 AI 设置里填了自己的模型 Key：现在用的是你自己的 Key，不消耗点数。</Notice> : null}
-      {!platformAvailable && !ownModel ? <Notice tone="warning">平台的 AI 暂时没有开放，点数现在用不上。你可以先在 AI 设置里填自己的模型 Key。</Notice> : null}
+      {ownModel ? <Notice tone="info">你在 AI 设置里填了自己的模型 Key，做页面时用它，不扣点数。</Notice> : null}
+      {!platformAvailable && !ownModel ? <Notice tone="warning">NOWMe 的 AI 暂时没有开放，点数现在用不上。想马上做页面的话，可以先在 AI 设置里填你自己的模型 Key。</Notice> : null}
     </section>
 
     <section class="card stack" aria-labelledby="redeem-heading">
@@ -80,14 +80,14 @@ export const CreditsView: FC<CreditsViewProps> = ({ csrf, balance, entries, pric
         </button>
       </form>
       <p class="muted">
-        还有两种不花自己点数的办法：请组织者给这面墙充额度（成员做页面时先用墙的），或者在 <a href="/account/ai">AI 设置</a> 里填自己的模型 Key。
+        还有两种不花自己点数的办法：请组织者给这面墙充额度（成员做页面时先用墙的），或者在 <a href="/account/ai">AI 设置</a> 里填你自己的模型 Key。
       </p>
     </section>
 
     <section class="card" aria-labelledby="history-heading">
       <h2 id="history-heading">最近的记录</h2>
       {entries.length === 0 ? (
-        <p class="muted">还没有记录。</p>
+        <p class="muted">还没有记录。兑换点数、用 AI 做页面、没做成时退回的点数，都会记在这里。有兑换码的话，在上面兑换就行。</p>
       ) : (
         <ol class="credits-history">
           {entries.map((entry) => (

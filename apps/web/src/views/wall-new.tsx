@@ -34,8 +34,8 @@ export const NewWallView: FC<NewWallViewProps> = ({ csrf, scenes, values, errors
     <section class="card card--form">
       <p class="eyebrow">组织者 · 三分钟</p>
       <h1 class="display form-title">建一面墙</h1>
-      <p class="muted">填好名称和简介，点选一种场景，就能拿到邀请链接和二维码。不需要配置模板或字段。</p>
-      {hasErrors ? <Notice tone="error">有几处需要改一下，见下面的提示。</Notice> : null}
+      <p class="muted">起个名字，写句简介，选一种场景，就能拿到邀请链接和二维码，发给圈子里的人。不用设置别的。</p>
+      {hasErrors ? <Notice tone="error">有几项需要改一下，已经在对应的位置标出来了。</Notice> : null}
       <form method="post" action="/walls" class="stack">
         <CsrfField token={csrf} />
         <label class="field">
@@ -68,7 +68,7 @@ export const NewWallView: FC<NewWallViewProps> = ({ csrf, scenes, values, errors
         </label>
         <fieldset class="field scene-picker" aria-describedby={errors.sceneType ? 'scene-error' : undefined}>
           <legend class="field__label">场景类型</legend>
-          <p class="field__hint muted">决定大家的页面默认侧重哪一面，例如黑客松突出能力与项目，兴趣社群突出爱好。</p>
+          <p class="field__hint muted">会影响 AI 帮大家做页面时问什么、突出什么：比如黑客松更看重能力和项目，兴趣社群更看重爱好。</p>
           <div class="scene-picker__options">
             {scenes.map((scene) => (
               <label class={`scene-option scene--${scene.type}`}>
@@ -93,11 +93,11 @@ export const NewWallView: FC<NewWallViewProps> = ({ csrf, scenes, values, errors
             aria-invalid={errors.organizerNote ? 'true' : undefined}
             aria-describedby={errors.organizerNote ? 'note-error' : undefined}
           />
-          <span class="field__hint muted">会显示在墙的顶部，成员的 Agent 生成页面时也会参考。</span>
+          <span class="field__hint muted">会放在墙的顶部，成员的 AI 帮他们做页面时也会参考。</span>
           <FieldError id="note-error" message={errors.organizerNote} />
         </label>
         <button type="submit" class="btn btn--primary btn--block btn--lg">
-          建好了，生成邀请
+          建好了，去拿邀请链接
         </button>
       </form>
     </section>

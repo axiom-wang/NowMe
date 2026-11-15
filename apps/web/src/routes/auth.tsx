@@ -34,6 +34,11 @@ import { CONSENT_REQUIRED_TEXT, ConsentView, LoginView, VerifyView, WelcomeView 
 import { renderPage } from '../views/layout.js';
 import { renderNotFound } from '../views/errors.js';
 
+/** 限流提示里的“大约几分钟”：向上取整，至少 1 分钟。 */
+function waitMinutes(seconds: number): number {
+  return Math.max(1, Math.ceil(seconds / 60));
+}
+
 export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
   const { config } = deps;
   const originForm = requireOriginForm(deps);
@@ -73,21 +78,21 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
       return renderPage(c, {
         title: '登录',
         status: 400,
-        body: <LoginView next={next} email={form.email} demoAccounts={demoAccounts} error="邮箱格式不对，请检查后再试。" />,
+        body: <LoginView next={next} email={form.email} demoAccounts={demoAccounts} error="这个邮箱格式不对，检查一下有没有写错。" />,
       });
     }
     // 按来源地址：挡住换着邮箱批量让平台发信（按邮箱的限流在 requestLoginCode 里）
     const fromAddress = deps.rateLimiter.hit('login-request', clientAddress(c, config.trustProxyHops), RATE_RULES.loginRequest);
     if (!fromAddress.ok) {
       c.header('Retry-After', String(fromAddress.retryAfterSeconds));
-      return renderPage(c, { title: '登录', status: 429, body: <LoginView next={next} email={email} demoAccounts={demoAccounts} error="这个网络发验证码太频繁了，请过几分钟再试。" /> });
+      return renderPage(c, { title: '登录', status: 429, body: <LoginView next={next} email={email} demoAccounts={demoAccounts} error={`这个网络发验证码发得太频繁了，大约 ${waitMinutes(fromAddress.retryAfterSeconds)} 分钟后再试。`} /> });
     }
     const result = await requestLoginCode(deps, email);
     if (!result.ok && result.reason === 'send_failed') {
       return renderPage(c, {
         title: '登录',
         status: 503,
-        body: <LoginView next={next} email={email} demoAccounts={demoAccounts} error="验证码邮件暂时发不出去。请稍等一会儿再试；一直不行的话，换一个邮箱试试。" />,
+        body: <LoginView next={next} email={email} demoAccounts={demoAccounts} error="验证码邮件暂时发不出去。过几分钟再试一次；一直不行的话，换个邮箱试试。" />,
       });
     }
     if (!result.ok) {
@@ -99,7 +104,7 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
             email={email}
             next={next}
             devOutbox={devOutbox}
-            error="验证码发送得太频繁了：同一个邮箱 10 分钟内最多发 5 次。请用最近收到的验证码，或稍后再试。"
+            error="这个邮箱发得有点多了（10 分钟内最多 5 次）。先用最近收到的那个验证码，或者过几分钟再试。"
           />
         ),
       });
@@ -116,7 +121,7 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
     const fromAddress = deps.rateLimiter.hit('login-verify', clientAddress(c, config.trustProxyHops), RATE_RULES.loginVerify);
     if (!fromAddress.ok) {
       c.header('Retry-After', String(fromAddress.retryAfterSeconds));
-      return renderPage(c, { title: '输入验证码', status: 429, body: <VerifyView email={email} next={next} devOutbox={devOutbox} error="这个网络尝试得太频繁了，请过几分钟再试。" /> });
+      return renderPage(c, { title: '输入验证码', status: 429, body: <VerifyView email={email} next={next} devOutbox={devOutbox} error={`这个网络试得太频繁了，大约 ${waitMinutes(fromAddress.retryAfterSeconds)} 分钟后再试。`} /> });
     }
     const result = verifyLoginCode(deps, email, form.code);
     if (!result.ok) {
@@ -124,10 +129,10 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
         result.reason === 'mismatch'
           ? `验证码不对，还可以再试 ${result.remaining} 次。`
           : result.reason === 'locked'
-            ? '验证码错误次数太多，已经失效。请重新获取一个验证码。'
+            ? '验证码错得太多次，已经失效了。重新获取一个吧。'
             : result.reason === 'suspended'
-              ? '这个账号已被平台停用，暂时不能登录。'
-              : '验证码已过期或已失效，请重新获取。';
+              ? '这个账号已被停用，暂时不能登录。'
+              : '验证码已经过期或失效了，重新获取一个吧。';
       return renderPage(c, {
         title: '输入验证码',
         status: 400,

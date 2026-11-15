@@ -151,13 +151,13 @@ const TalkPanel: FC<{ base: string; name: string; csrf: string; panel: Icebreake
         </>
       ) : (
         <>
-          <p class="talk__lead">让 AI 读一读你们俩的页面，找出共同点，再替你起个头。这个功能需要先配置可用的 AI。</p>
+          <p class="talk__lead">让 AI 读一读你们俩的页面，找出共同点，再替你起个头。要用这个功能，需要先有一个能用的 AI。</p>
           {aiSettings ? (
             <a class="btn btn--accent talk__go" href="/account/ai">
               去 AI 设置
             </a>
           ) : (
-            <p class="talk__hint">体验账号暂时没有可用的 AI 配置。</p>
+            <p class="talk__hint">体验账号暂时用不了这个功能。</p>
           )}
         </>
       )}
@@ -218,11 +218,15 @@ export const MemberPageView: FC<{ model: MemberPageModel; csrf: string; icebreak
                 </li>
               ))}
             </ol>
-          ) : null}
-          {own ? (
-            <p class="muted topics__note">这是你自己的页面。别人点“想聊这个”时，会进入站内私聊，并带入你确认的开场白。</p>
           ) : (
-            <p class="muted topics__note">点“想聊这个”，把话题带入站内私聊。开场白可以修改后再发送。</p>
+            <p class="muted topics__empty">
+              {own ? '你的页面还没有留话题。回到“我的页面”，让 AI 帮你加几个别人容易开口的话题。' : 'TA 还没有留话题。可以直接发私信，或者让 AI 帮你找个开头。'}
+            </p>
+          )}
+          {own ? (
+            <p class="muted topics__note">这是你自己的页面。别人点“想聊这个”，会带着你确认过的开场白，在站内私信里找你。</p>
+          ) : (
+            <p class="muted topics__note">点“想聊这个”，会把话题带到站内私信里。开场白可以改成你自己的话再发。</p>
           )}
           {!own && contact && card.hooks[0] ? <form method="post" action={`${base}/contact`}><CsrfField token={csrf} /><input type="hidden" name="contactHookId" value={card.hooks[0].id} /><button type="submit" class="btn btn--ghost btn--small">查看公开联系方式</button></form> : null}
         </section>
@@ -245,7 +249,7 @@ export const ChatView: FC<{ model: ChatModel }> = ({ model }) => (
       <h1 class="chat__title">
         想和 {model.displayName} 聊「{model.hook.text}」
       </h1>
-      <p class="muted">这是 TA 主动公开的联系方式。也可以回到成员页，使用站内私聊。</p>
+      <p class="muted">这是 TA 自己公开的联系方式。也可以回到 TA 的页面，在站内私信里聊。</p>
       <div class="chat__steps">
         <div class="chat__block">
           <h2 class="chat__label">
@@ -276,7 +280,7 @@ export const ChatView: FC<{ model: ChatModel }> = ({ model }) => (
           </button>
         </div>
       </div>
-      <p class="muted chat__tip">开场白由 TA 的 Agent 起草、TA 自己确认过；可以改成你的语气再发。</p>
+      <p class="muted chat__tip">这句开场白是 TA 自己确认过的；你可以改成自己的语气再发。</p>
       <p class="chat__back">
         <a href={`/w/${model.wall.id}`}>回到墙上继续逛 →</a>
       </p>

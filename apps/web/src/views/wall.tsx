@@ -20,15 +20,15 @@ export type WallNotice = 'joined' | 'rejoined' | 'blocked';
 const WALL_SEARCH_MIN_CARDS = 4;
 
 const NOTICE_TEXT: Record<WallNotice, string> = {
-  joined: '欢迎加入！先逛逛墙上的人；准备好了，再去创作工作区做你自己的一页。',
-  rejoined: '欢迎回来！你原来的页面没有自动回到墙上，需要时在创作工作区重新发布。',
-  blocked: '已拉黑。你们互相看不到对方的页面，也不能再私信；TA 不会收到通知。可以在“我的资料”里解除。',
+  joined: '加入成功。先逛逛墙上的人；想好了，再去做你自己的一页，不用着急。',
+  rejoined: '欢迎回来。你原来的页面没有自动挂回墙上；想让大家再看到，需要你自己重新发布一下。',
+  blocked: '已拉黑。你们互相看不到对方的页面，也不能再私信；TA 不会收到通知。想反悔的话，可以在“我的资料”里解除。',
 };
 
 const MY_PAGE_TEXT: Record<PageDisplayState, string> = {
-  unpublished: '你的页面还没发布，墙上的人还看不到你。去创作工作区，和 AI 聊几句就能做出来。',
-  withdrawn: '你的页面已从墙上撤下。需要时可以在创作工作区重新发布。',
-  published: '你的页面已经挂在墙上了。',
+  unpublished: '你的页面还没挂上墙，墙上的人暂时看不到你。和 AI 聊几句，就能做出来。',
+  withdrawn: '你的页面已经从墙上撤下。想让大家再看到，随时可以重新发布。',
+  published: '你的页面已经挂在墙上了，墙上的人都能看到。',
 };
 
 /** 卡片的检索文字（名字、一行介绍、全部接话点），给墙上的搜索用。 */
@@ -132,7 +132,7 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
         </div>
         <div class="actions my-page__actions">
           <a class={`btn ${published ? 'btn--on-dark' : 'btn--accent'}`} href={`/w/${wall.id}/me`}>
-            {published ? '去工作区更新' : '去创作工作区'}
+            {published ? '去修改我的页面' : '去做我的页面'}
           </a>
           {myPage.href ? (
             <a class="btn btn--on-dark" href={myPage.href}>
@@ -153,7 +153,7 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
                 {cards.length}
               </span>
               <span class="section-head__note">
-                位已上墙{model.memberCount > cards.length ? ` · 共 ${model.memberCount} 位成员` : ''} · 每次进入随机排序
+                位已上墙{model.memberCount > cards.length ? ` · 共 ${model.memberCount} 位成员` : ''} · 每次进来顺序都不一样
               </span>
             </>
           ) : null}
@@ -189,7 +189,25 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
               <span class="sticker sticker--lime">墙</span>
             </div>
             <h3 class="display">墙上还没有人</h3>
-            <p class="muted">还没有成员发布页面。做好你的一页，第一个挂上墙吧！</p>
+            <p class="muted">
+              {model.role === 'organizer'
+                ? '还没有成员把页面挂上来。你可以先做好自己的一页，再把邀请链接发给圈子里的人。'
+                : '还没有人把页面挂上来。你可以做第一个：和 AI 聊几句，就能做出自己的一页。'}
+            </p>
+            <p class="actions empty-state__actions">
+              <a class="btn btn--accent" href={`/w/${wall.id}/me`}>
+                {myPage.state === 'withdrawn' ? '把我的页面挂回来' : '去做我的页面'}
+              </a>
+              {model.role === 'organizer' ? (
+                <a class="btn btn--ghost" href={`/w/${wall.id}/admin`}>
+                  去拿邀请链接
+                </a>
+              ) : (
+                <a class="btn btn--ghost" href={`/messages/wall/${wall.id}`}>
+                  去全员群打个招呼
+                </a>
+              )}
+            </p>
           </div>
         )}
       </section>
