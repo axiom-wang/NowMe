@@ -39,9 +39,10 @@ export function currentRequestId(): string | undefined {
 }
 
 const EMAIL_PATTERN = /[A-Za-z0-9._%+-]+@([A-Za-z0-9-]+(?:\.[A-Za-z0-9-]+)+)/g;
-const TOKEN_PATTERN = /\b(nmt|nmc|nms)_[A-Za-z0-9_-]{8,}/g;
+// 一次性 token、页面凭证、会话，以及能直接打开墙 / 页面的邀请码与公开链接令牌（contracts 3 的令牌格式表）
+const TOKEN_PATTERN = /\b(nmt|nmc|nms|inv|pub)_[A-Za-z0-9_-]{8,}/g;
 
-/** 打码日志文字里的邮箱与一次性 token / 凭证。 */
+/** 打码日志文字里的邮箱与令牌（一次性 token、凭证、会话、邀请码、公开链接）。 */
 export function redactText(text: string): string {
   return text.replace(EMAIL_PATTERN, '***@$1').replace(TOKEN_PATTERN, '$1_***');
 }
@@ -69,8 +70,10 @@ export function createLogger(options: LoggerOptions): Logger {
     }
     const msg = redactText(message);
     const reqId = currentRequestId();
+    // 业务字段里的字符串同样打码（例如访问日志的 route：没有命中路由时取自请求路径）
+    const safeFields = fields ? Object.fromEntries(Object.entries(fields).map(([key, value]) => [key, typeof value === 'string' ? redactText(value) : value])) : undefined;
     // 固定字段放最后，业务字段不能覆盖 time / level / msg
-    write(level, JSON.stringify({ ...fields, time: now().toISOString(), level, service: options.service, msg, ...(reqId ? { reqId } : {}) }));
+    write(level, JSON.stringify({ ...safeFields, time: now().toISOString(), level, service: options.service, msg, ...(reqId ? { reqId } : {}) }));
   }
   const logger = ((message: string) => emit(inferLevel(message), message)) as Logger;
   for (const level of ['debug', 'info', 'warn', 'error'] as const) logger[level] = (message, fields) => emit(level, message, fields);

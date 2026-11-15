@@ -98,3 +98,34 @@ describe('访问日志', () => {
     expect(lines.join('\n')).not.toContain('wal_aaaaaaaaaaaaaaaaaaaaaaaaaa/unknown/deeper');
   });
 });
+
+describe('JSON 日志里的令牌（T8.11 回归）', () => {
+  const invite = `inv_${'a'.repeat(26)}`;
+  const publicToken = `pub_${'B'.repeat(32)}`;
+
+  it('邀请码与公开链接令牌在文字里打码', () => {
+    expect(redactText(`/join/${invite} /s/${publicToken}`)).toBe('/join/inv_*** /s/pub_***');
+  });
+
+  it('没有命中路由时，访问日志的 route 字段与文字都不含邀请码 / 公开链接令牌', async () => {
+    const out: string[] = [];
+    const logger = createLogger({ service: 'web', json: true, write: (_l, line) => out.push(line) });
+    const t = createTestWeb({ log: logger, accessLogEnabled: true });
+    instances.push(t);
+    await t.request(`/join/${invite}/extra`);
+    await t.request(`/s/${publicToken}/extra`);
+    const entries = out.map((line) => JSON.parse(line) as { route?: string });
+    expect(entries.some((entry) => entry.route === '/join/inv_***/…')).toBe(true);
+    const text = out.join('\n');
+    expect(text).not.toContain(invite);
+    expect(text).not.toContain(publicToken);
+  });
+
+  it('业务字段里的字符串也打码', () => {
+    const out: string[] = [];
+    const log = createLogger({ service: 'web', json: true, write: (_l, line) => out.push(line) });
+    log.info('x', { route: `/s/${publicToken}`, email: 'alice@example.com', status: 404 });
+    const entry = JSON.parse(out[0]!);
+    expect(entry).toMatchObject({ route: '/s/pub_***', email: '***@example.com', status: 404 });
+  });
+});

@@ -10,7 +10,7 @@
  * 恢复只写到空目录，并对恢复出的数据库做 `PRAGMA integrity_check`。
  */
 import { spawnSync } from 'node:child_process';
-import { existsSync, mkdirSync, mkdtempSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
+import { chmodSync, closeSync, existsSync, mkdirSync, mkdtempSync, openSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { DatabaseSync } from 'node:sqlite';
 import { DATA_DB_FILE, DATA_REVISIONS_DIR } from '@nowme/contracts';
@@ -78,9 +78,14 @@ export function createBackup(options: BackupOptions): BackupResult {
       source.close();
     }
     const partial = `${finalPath}.partial`;
+    // 归档里有整个数据库（邮箱、采访、加密的 Key……）：只给运行备份的账号读写。备份目录可能是事先建好的
+    // （例如 docker 挂载的宿主机目录，权限 0755），不能依赖目录权限，归档文件本身先以 0600 建好再交给 tar 写入。
+    closeSync(openSync(partial, 'w', 0o600));
+    chmodSync(partial, 0o600);
     const args = ['-czf', partial, '-C', staging, DATA_DB_FILE];
     if (existsSync(join(dataDir, DATA_REVISIONS_DIR))) args.push('-C', dataDir, DATA_REVISIONS_DIR);
     runTar(args);
+    chmodSync(partial, 0o600);
     renameSync(partial, finalPath); // 先写 .partial 再改名：备份目录里不会出现写了一半的归档
   } finally {
     rmSync(staging, { recursive: true, force: true });

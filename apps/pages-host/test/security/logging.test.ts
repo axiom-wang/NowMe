@@ -1,7 +1,7 @@
 /** 页面托管的请求 ID 与访问日志：票据在路径里，日志中必须打码（contracts 17）。 */
 import { describe, expect, it } from 'vitest';
 import { createPagesApp } from '../../src/app.js';
-import { createLogger, pagesRouteLabel } from '../../src/logging.js';
+import { createLogger, pagesRouteLabel, redactText } from '../../src/logging.js';
 import { REV_A, makeConfig, makeFixture } from '../helpers.js';
 
 function setup(options: { trustRequestId?: boolean } = {}) {
@@ -52,5 +52,13 @@ describe('页面托管访问日志', () => {
     expect(pagesRouteLabel('/v/abc.def.ghi/%41')).toBe('/v/:ticket/:invalid');
     expect(pagesRouteLabel('/_nowme/kit/v1/kit.css')).toBe('/_nowme/kit/:file');
     expect(pagesRouteLabel('/whatever/abc.def.ghi')).toBe('(other)');
+  });
+
+  it('邀请码、公开链接令牌与字段里的字符串同样打码（T8.11 回归）', () => {
+    expect(redactText(`inv_${'a'.repeat(26)} pub_${'B'.repeat(32)}`)).toBe('inv_*** pub_***');
+    const out: string[] = [];
+    const log = createLogger({ service: 'pages', json: true, write: (_l, line) => out.push(line) });
+    log.info('x', { note: `nmc_${'c'.repeat(43)}` });
+    expect(JSON.parse(out[0]!).note).toBe('nmc_***');
   });
 });

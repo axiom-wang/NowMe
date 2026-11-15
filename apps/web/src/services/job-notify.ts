@@ -70,7 +70,8 @@ export function createJobNotifier(deps: NotifyDeps, hub: Pick<ProgressHub, 'pres
     const user = repos.users.findById(job.ownerId);
     const page = repos.pages.findById(job.pageId);
     const own = page ? findOwnPage(repos, job.ownerId, page.wallId) : null;
-    if (!user || user.deletedAt || !own || own.page.id !== job.pageId || (job.errorCode && SILENT_ERRORS.has(job.errorCode))) {
+    // 停用的账号不发（contracts 18.3）：任务可能在停用之前刚刚结束
+    if (!user || user.deletedAt || repos.moderation.isSuspended(user.id) || !own || own.page.id !== job.pageId || (job.errorCode && SILENT_ERRORS.has(job.errorCode))) {
       repos.notify.resolve(job.id, 'skipped');
       return false;
     }

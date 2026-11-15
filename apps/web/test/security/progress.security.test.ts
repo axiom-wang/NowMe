@@ -152,4 +152,20 @@ describe('完成提醒邮件的开关与内容', () => {
       expect(text).toContain(`${t.config.webOrigin}/w/${wall.id}/me`);
     }
   });
+
+  it('任务结束后账号被停用：不发完成提醒（T8.11 回归）', async () => {
+    hosted = createHostedTestWeb();
+    const t = hosted;
+    const organizer = await login(t, 'org@example.com', '组织者');
+    const { wall } = seedWall(t, organizer.userId, '周末黑客松');
+    const owner = await joinAs(t, wall, 'owner@example.com', '阿柚');
+    await completeInterview(t, wall, owner);
+    const generated = await generate(t, wall, owner);
+    expect(generated.job?.status).toBe('succeeded');
+    // 停用只写停用记录（成员关系仍有效）：提醒必须因为停用本身而跳过
+    t.repos.moderation.suspend(owner.session.userId, null, new Date().toISOString());
+    expect(await t.web.notifier.tick()).toBe(0);
+    expect(t.repos.notify.outcomeOf(generated.job?.id ?? '')).toBe('skipped');
+    expect(t.outbox.messages.filter((message) => message.to === 'owner@example.com' && !/验证码/.test(message.subject))).toEqual([]);
+  });
 });
