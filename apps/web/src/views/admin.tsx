@@ -160,7 +160,7 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError,
             <figure class="invite__qr">
               <img src={model.inviteQr} alt={`「${wall.name}」的邀请二维码`} width="200" height="200" />
               <figcaption>
-                <a href={model.inviteQr} download="nowme-invite-qr.svg">
+                <a class="link-block" href={model.inviteQr} download="nowme-invite-qr.svg">
                   下载二维码
                 </a>
               </figcaption>
@@ -194,11 +194,11 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError,
             <h2 id="wall-cover-heading">墙封面</h2>
             <p class="muted">给这面墙选一张有个性的封面，成员在首页的墙卡片上会看到它。</p>
             <img class="wall-cover-settings__preview" src={model.coverUrl ?? `/static/home-wall-${defaultWallCover(wall)}.svg`} alt={`「${wall.name}」的${model.coverUrl ? '当前封面' : '默认封面'}`} width="400" height="400" />
-            {coverError ? <Notice tone="error">{coverError}</Notice> : null}
+            {coverError ? <Notice tone="error" id="wall-cover-error">{coverError}</Notice> : null}
             <form method="post" action={`/w/${wall.id}/admin/cover`} enctype="multipart/form-data" class="stack">
               <CsrfField token={csrf} />
               <label for="wall-cover-file">{model.coverUrl ? '更换封面图' : '上传封面图'}</label>
-              <input id="wall-cover-file" name="cover" type="file" accept="image/jpeg,image/png,image/webp" aria-describedby="wall-cover-help" required />
+              <input id="wall-cover-file" name="cover" type="file" accept="image/jpeg,image/png,image/webp" aria-invalid={coverError ? 'true' : undefined} aria-describedby={coverError ? 'wall-cover-error wall-cover-help' : 'wall-cover-help'} required />
               <p id="wall-cover-help" class="field-help">JPG、PNG 或 WebP，5 MB 以内。建议使用 1:1 正方形图片，其他比例将居中裁切。</p>
               <button type="submit" class="btn btn--primary">保存封面</button>
             </form>
@@ -220,16 +220,16 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError,
                   <dd>{model.credits.wall.spent}</dd>
                 </div>
               </dl>
-              {model.credits.error ? <Notice tone="error">{CREDITS_ERROR_TEXT[model.credits.error]}</Notice> : null}
+              {model.credits.error ? <Notice tone="error" id="wall-credits-error">{CREDITS_ERROR_TEXT[model.credits.error]}</Notice> : null}
               <form method="post" action={`/w/${wall.id}/admin/credits`} class="stack">
                 <CsrfField token={csrf} />
                 <label class="field" for="wall-credits-amount">
                   从我的点数里充入（我有 {model.credits.balance} 点）
-                  <input id="wall-credits-amount" type="number" name="credits" min="0" max="100000" step="1" inputmode="numeric" placeholder="0" />
+                  <input id="wall-credits-amount" type="number" name="credits" min="0" max="100000" step="1" inputmode="numeric" placeholder="0" aria-invalid={model.credits.error === 'bad-amount' || model.credits.error === 'insufficient' ? 'true' : undefined} aria-describedby={model.credits.error === 'bad-amount' || model.credits.error === 'insufficient' ? 'wall-credits-error' : undefined} />
                 </label>
                 <label class="field" for="wall-credits-cap">
                   每位成员最多用多少点
-                  <input id="wall-credits-cap" type="number" name="memberCap" min="0" max="10000" step="1" inputmode="numeric" value={String(model.credits.wall.memberCap)} aria-describedby="wall-credits-cap-help" />
+                  <input id="wall-credits-cap" type="number" name="memberCap" min="0" max="10000" step="1" inputmode="numeric" value={String(model.credits.wall.memberCap)} aria-invalid={model.credits.error === 'bad-cap' ? 'true' : undefined} aria-describedby={model.credits.error === 'bad-cap' ? 'wall-credits-error wall-credits-cap-help' : 'wall-credits-cap-help'} />
                 </label>
                 <p id="wall-credits-cap-help" class="field-help">
                   0 表示不限。比如填 {model.credits.prices.generate + 2 * model.credits.prices.edit}，够每人生成一版、再改两次。
@@ -262,7 +262,7 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError,
             <p>
               关闭后，所有人（包括你）都看不到这面墙，所有页面下墙，邀请链接失效，而且没法重新打开。
             </p>
-            {closeError ? <Notice tone="error">请先勾选确认，再关闭墙。</Notice> : null}
+            {closeError ? <Notice tone="error" id="close-error">请先勾选确认，再关闭墙。</Notice> : null}
             <form
               method="post"
               action={`/w/${wall.id}/admin/close`}
@@ -271,7 +271,7 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError,
             >
               <CsrfField token={csrf} />
               <label class="check">
-                <input type="checkbox" name="confirm" value="1" required />
+                <input type="checkbox" name="confirm" value="1" required aria-invalid={closeError ? 'true' : undefined} aria-describedby={closeError ? 'close-error' : undefined} />
                 <span>我确认关闭这面墙</span>
               </label>
               <div>

@@ -36,12 +36,12 @@ interface LoginProps { next: string; email?: string; error?: string; demoAccount
 const EmailLogin: FC<Pick<LoginProps, 'next' | 'email' | 'error'>> = ({ next, email, error }) => (
   <>
     <p class="muted">用邮箱登录，我们会发一个 {LOGIN_CODE_DIGITS} 位验证码给你。第一次登录会自动创建账号。</p>
-    {error ? <Notice tone="error">{error}</Notice> : null}
+    {error ? <Notice tone="error" id="login-error">{error}</Notice> : null}
     <form method="post" action="/login" class="stack">
       <input type="hidden" name="next" value={next} />
       <label class="field">
         <span class="field__label">邮箱</span>
-        <input type="email" name="email" value={email ?? ''} required autocomplete="email" maxlength={EMAIL_MAX_LENGTH} placeholder="you@example.com" />
+        <input type="email" name="email" value={email ?? ''} required autocomplete="email" inputmode="email" autocapitalize="none" spellcheck={false} maxlength={EMAIL_MAX_LENGTH} placeholder="you@example.com" aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'login-error' : undefined} />
       </label>
       <button type="submit" class="btn btn--primary btn--block">发送验证码</button>
     </form>
@@ -92,7 +92,7 @@ export const VerifyView: FC<VerifyViewProps> = ({ email, next, error, expired, d
         本地开发不会发真实邮件：到 <a href="/dev/outbox">开发发件箱</a> 查看验证码。
       </Notice>
     ) : null}
-    {error ? <Notice tone="error">{error}</Notice> : null}
+    {error ? <Notice tone="error" id="verify-error">{error}</Notice> : null}
     {expired ? null : (
       <form method="post" action="/login/verify" class="stack">
         <input type="hidden" name="email" value={email} />
@@ -108,6 +108,8 @@ export const VerifyView: FC<VerifyViewProps> = ({ email, next, error, expired, d
             pattern={`\\d{${LOGIN_CODE_DIGITS}}`}
             maxlength={LOGIN_CODE_DIGITS}
             class="input--code"
+            aria-invalid={error ? 'true' : undefined}
+            aria-describedby={error ? 'verify-error' : undefined}
           />
         </label>
         <button type="submit" class="btn btn--primary btn--block">
@@ -123,7 +125,7 @@ export const VerifyView: FC<VerifyViewProps> = ({ email, next, error, expired, d
       </button>
     </form>
     <p class="auth__alt">
-      <a href={next === '/' ? '/login' : `/login?next=${encodeURIComponent(next)}`}>换一个邮箱</a>
+      <a class="link-block" href={next === '/' ? '/login' : `/login?next=${encodeURIComponent(next)}`}>换一个邮箱</a>
     </p>
   </AuthShell>
 );
@@ -131,14 +133,14 @@ export const VerifyView: FC<VerifyViewProps> = ({ email, next, error, expired, d
 export const CONSENT_REQUIRED_TEXT = `请先勾选“我已年满 ${MIN_USER_AGE} 岁，并同意《用户协议》和《隐私政策》”，才能继续。`;
 
 /** 年龄与协议勾选框（欢迎页与重新确认页共用）：必选，条款在新标签页打开。 */
-const ConsentCheck: FC<{ checked?: boolean }> = ({ checked }) => (
+const ConsentCheck: FC<{ checked?: boolean; invalid?: boolean; describedBy?: string }> = ({ checked, invalid, describedBy }) => (
   <label class="check check--strong">
-    <input type="checkbox" name={CONSENT_FIELD_NAME} value="1" required checked={checked} />
+    <input type="checkbox" name={CONSENT_FIELD_NAME} value="1" required checked={checked} aria-invalid={invalid ? 'true' : undefined} aria-describedby={invalid ? describedBy : undefined} />
     <span>
       我已年满 {MIN_USER_AGE} 岁，并同意
-      <a href="/terms" target="_blank" rel="noopener">《用户协议》</a>
+      <a href="/terms" target="_blank" rel="noopener">《用户协议》<span class="visually-hidden">（在新标签页打开）</span></a>
       和
-      <a href="/privacy" target="_blank" rel="noopener">《隐私政策》</a>
+      <a href="/privacy" target="_blank" rel="noopener">《隐私政策》<span class="visually-hidden">（在新标签页打开）</span></a>
     </span>
   </label>
 );
@@ -147,15 +149,15 @@ export const WelcomeView: FC<{ next: string; csrf: string; nickname?: string; ag
   <AuthShell step="最后一步 · 昵称">
     <h1>欢迎来到 NOWMe</h1>
     <p class="muted">先起一个昵称。组织者和墙上的其他成员会看到它。</p>
-    {error ? <Notice tone="error">{error}</Notice> : null}
+    {error ? <Notice tone="error" id="welcome-error">{error}</Notice> : null}
     <form method="post" action="/welcome" class="stack">
       <CsrfField token={csrf} />
       <input type="hidden" name="next" value={next} />
       <label class="field">
         <span class="field__label">昵称</span>
-        <input type="text" name="nickname" value={nickname ?? ''} required maxlength={NICKNAME_LIMITS.max * 2} autocomplete="nickname" />
+        <input type="text" name="nickname" value={nickname ?? ''} required maxlength={NICKNAME_LIMITS.max * 2} autocomplete="nickname" aria-invalid={error && error !== CONSENT_REQUIRED_TEXT ? 'true' : undefined} aria-describedby={error && error !== CONSENT_REQUIRED_TEXT ? 'welcome-error' : undefined} />
       </label>
-      <ConsentCheck checked={agreed} />
+      <ConsentCheck checked={agreed} invalid={error === CONSENT_REQUIRED_TEXT} describedBy="welcome-error" />
       <button type="submit" class="btn btn--primary btn--block">
         进入 NOWMe
       </button>
@@ -171,11 +173,11 @@ export const ConsentView: FC<{ next: string; csrf: string; previousVersion: stri
       {previousVersion ? `《用户协议》和《隐私政策》更新到了 ${LEGAL_VERSION} 版。` : `使用 NOWMe 前，需要你确认《用户协议》和《隐私政策》（${LEGAL_VERSION} 版）。`}
       确认之后就能继续使用，你的页面和资料不受影响。
     </p>
-    {error ? <Notice tone="error">{error}</Notice> : null}
+    {error ? <Notice tone="error" id="consent-error">{error}</Notice> : null}
     <form method="post" action="/consent" class="stack">
       <CsrfField token={csrf} />
       <input type="hidden" name="next" value={next} />
-      <ConsentCheck />
+      <ConsentCheck invalid={!!error} describedBy="consent-error" />
       <button type="submit" class="btn btn--primary btn--block">
         确认并继续
       </button>

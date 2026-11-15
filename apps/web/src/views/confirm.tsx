@@ -13,11 +13,11 @@ function workspaceHref(wall: Wall): string {
 
 const Breadcrumb: FC<{ wall: Wall; title: string }> = ({ wall, title }) => (
   <section class="page-intro">
-    <p class="crumbs">
+    <nav class="crumbs" aria-label="当前位置">
       <a href="/">我的</a>
       <span aria-hidden="true">/</span>
       <a href={workspaceHref(wall)}>{wall.name}</a>
-    </p>
+    </nav>
     <h1 class="hero__title">{title}</h1>
   </section>
 );
@@ -59,11 +59,11 @@ export const DeleteConfirmView: FC<{ wall: Wall; csrf: string; impact: DeletionI
         <li>你仍是「{wall.name}」的成员，可以继续逛这面墙，也可以重新开始做一页。</li>
         <LocalFilesNote />
       </ul>
-      {error ? <Notice tone="error">{error}</Notice> : null}
+      {error ? <Notice tone="error" id="delete-error">{error}</Notice> : null}
       <form method="post" action={`${workspaceHref(wall)}/delete`} class="confirm__form">
         <CsrfField token={csrf} />
         <label class="check check--strong">
-          <input type="checkbox" name="confirm" value="1" required />
+          <input type="checkbox" name="confirm" value="1" required aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'delete-error' : undefined} />
           <span>我明白删除后无法恢复</span>
         </label>
         <div class="actions">

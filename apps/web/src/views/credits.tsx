@@ -68,12 +68,12 @@ export const CreditsView: FC<CreditsViewProps> = ({ csrf, balance, entries, pric
 
     <section class="card stack" aria-labelledby="redeem-heading">
       <h2 id="redeem-heading">用兑换码补充</h2>
-      {error ? <Notice tone="error">{error}</Notice> : null}
+      {error ? <Notice tone="error" id="redeem-error">{error}</Notice> : null}
       <form method="post" action="/account/credits/redeem" class="stack">
         <CsrfField token={csrf} />
         <label class="field" for="redeem-code">
           兑换码
-          <input id="redeem-code" type="text" name="code" value={code} required maxlength={40} autocomplete="off" autocapitalize="characters" spellcheck={false} placeholder="NM-XXXX-XXXX-XXXX-XXXX" class="credits-code" />
+          <input id="redeem-code" type="text" name="code" value={code} required maxlength={40} autocomplete="off" autocapitalize="characters" spellcheck={false} placeholder="NM-XXXX-XXXX-XXXX-XXXX" class="credits-code" aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'redeem-error' : undefined} />
         </label>
         <button type="submit" class="btn btn--primary">
           兑换
@@ -106,7 +106,7 @@ export const CreditsView: FC<CreditsViewProps> = ({ csrf, balance, entries, pric
       )}
     </section>
     <p>
-      <a href="/">返回我的墙</a>
+      <a class="link-block" href="/">返回我的墙</a>
     </p>
   </div>
 );

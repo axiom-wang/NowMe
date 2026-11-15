@@ -2,7 +2,9 @@
  * 主站的少量客户端脚本（主站 CSP 不允许内联脚本，所以都放在这里）：
  * - [data-copy="<元素 id>"]：复制该元素的文字（Agent 指令）；
  * - form[data-confirm="<提示>"]：提交前确认（断开、删除等危险操作）；
- * - form[data-busy-label="<说明>"]：提交后显示等待状态（“和 TA 聊什么”）。
+ * - form[data-busy-label="<说明>"]：提交后显示等待状态（“和 TA 聊什么”）；
+ * - details[data-dismissable]：弹出菜单（账号菜单、发起聊天、画像管理）。Esc 关闭并把焦点还给标题，
+ *   点到外面或键盘焦点移到外面时也关闭；没有脚本时它们就是普通的折叠。
  */
 (function () {
   'use strict';
@@ -51,6 +53,29 @@
         button.textContent = '请手动复制';
       },
     );
+  });
+
+  document.addEventListener('keydown', function (event) {
+    if (event.key !== 'Escape') return;
+    var open = document.querySelectorAll('details[data-dismissable][open]');
+    for (var i = 0; i < open.length; i += 1) {
+      var details = open[i];
+      var inside = details.contains(document.activeElement);
+      details.open = false;
+      var summary = details.querySelector('summary');
+      if (inside && summary) summary.focus();
+    }
+  });
+  function closeOutside(target) {
+    document.querySelectorAll('details[data-dismissable][open]').forEach(function (details) {
+      if (!(target instanceof Node) || !details.contains(target)) details.open = false;
+    });
+  }
+  document.addEventListener('click', function (event) {
+    closeOutside(event.target);
+  });
+  document.addEventListener('focusin', function (event) {
+    closeOutside(event.target);
   });
 
   document.addEventListener('submit', function (event) {

@@ -61,7 +61,7 @@ export function registerAiSettingsRoutes(app: AppHono, deps: AppDeps): void {
         <button class="btn btn--primary" type="submit" disabled={!deps.userModels.available}>保存 AI 配置</button>
       </form>
       {interview || generate ? <PostButton action="/account/ai/delete" csrf={auth.session.csrfToken} label="删除 AI 配置与 Key" confirm="删除后，排队中的任务不会再发出请求；你的页面和资料都保留。确定删除吗？" /> : null}
-      <a href="/">返回我的墙</a>
+      <a class="link-block" href="/">返回我的墙</a>
     </div> });
   };
   app.get('/account/ai', user, (c) => render(c));

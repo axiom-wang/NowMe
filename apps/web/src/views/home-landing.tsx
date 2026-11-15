@@ -24,6 +24,9 @@ const SAMPLE_NOTES: readonly SampleNote[] = [
   { name: '陈默', line: '吉他手，乐队还差个鼓手', hooks: ['后摇', '周三晚排练'], tone: 'blue' },
 ];
 
+/** 示意便签的颜色：用 app.css 的共享便签（.note）。 */
+const NOTE_CLASS = { paper: 'note', lime: 'note note--lime', orange: 'note note--orange', ink: 'note note--ink', blue: 'note note--blue' } as const;
+
 const WallPreview: FC = () => (
   <figure class="landing-board" aria-label="墙的样子：每个人一张自己做的页面，AI 帮你找到能聊的点">
     <div class="landing-board__bar" aria-hidden="true">
@@ -32,7 +35,7 @@ const WallPreview: FC = () => (
     </div>
     <ul class="landing-board__notes" aria-hidden="true">
       {SAMPLE_NOTES.map((note) => (
-        <li class={`landing-note landing-note--${note.tone}`}>
+        <li class={`${NOTE_CLASS[note.tone]} landing-note landing-note--${note.tone}`}>
           <span class="landing-note__avatar">{[...note.name][0]}</span>
           <strong class="landing-note__name">{note.name}</strong>
           <span class="landing-note__line">{note.line}</span>

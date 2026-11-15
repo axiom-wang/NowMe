@@ -32,7 +32,7 @@ describe.each([false, true])('账号顶栏（演示模式：%s）', (demo) => {
       const header = html.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0] ?? '';
       expect(header).toContain('class="site-header"');
       expect(html).toMatch(/href="\/static\/app\.[0-9a-f]{10}\.css"/);
-      expect(html).toMatch(/src="\/static\/home\.[0-9a-f]{10}\.js" defer/);
+      expect(html).toMatch(/src="\/static\/app\.[0-9a-f]{10}\.js" defer/); // 账号菜单的 Esc / 点外面关闭在 app.js（details[data-dismissable]）
       expect(header).toContain('href="/account/data"');
       const menu = header.split('<div class="popover account-menu__panel">')[1] ?? '';
       if (demo) {

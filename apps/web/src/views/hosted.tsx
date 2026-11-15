@@ -277,7 +277,7 @@ const FollowupForm: FC<{ model: CreateViewModel }> = ({ model }) => {
                 <span>跳过</span>
               </label>
             </div>
-            <input type="text" name={`f_${question.id}_text`} maxlength={200} placeholder="具体说说（可选）" class="hosted-writein" />
+            <input type="text" name={`f_${question.id}_text`} maxlength={200} placeholder="具体说说（可选）" aria-label={`${question.question}：具体说说（可选）`} class="hosted-writein" />
           </fieldset>
         ))}
       </section>
@@ -543,11 +543,11 @@ export const JobView: FC<{
   const running = job.status === 'queued' || job.status === 'running';
   return (
     <div class="container container--form job-page">
-      <p class="crumbs">
+      <nav class="crumbs" aria-label="当前位置">
         <a href={`/w/${wall.id}`}>{wall.name}</a>
         <span aria-hidden="true">/</span>
         <a href={base(wall)}>我的页面</a>
-      </p>
+      </nav>
       <h1 class="display form-title job-page__title">{label}</h1>
       <section class="card job-card stack">
         {running ? (
@@ -589,7 +589,7 @@ export const JobView: FC<{
         {job.kind === 'edit' && job.requestText ? <p class="muted">你的修改要求：{job.requestText}</p> : null}
       </section>
       <p class="job-page__back">
-        <a href={base(wall)}>← 回到我的页面</a>
+        <a class="link-block" href={base(wall)}>← 回到我的页面</a>
       </p>
     </div>
   );
@@ -634,11 +634,11 @@ export const EditForm: FC<{ wallId: string; csrf: string; revisionId: string; bl
 
 export const BriefPageView: FC<{ wall: Wall; csrf: string; briefMd: string; briefId: string }> = ({ wall, csrf, briefMd, briefId }) => (
   <div class="container container--form">
-    <p class="crumbs">
+    <nav class="crumbs" aria-label="当前位置">
       <a href={base(wall)}>我的页面</a>
       <span aria-hidden="true">/</span>
       <a href={`${base(wall)}/create`}>采访</a>
-    </p>
+    </nav>
     <h1 class="display form-title">这一页的资料</h1>
     <p class="muted">这是 AI 根据采访整理、你确认过的资料，做页面时只用这些。只有你自己能看到。删除后，这一页的采访内容和上传的图片都会清除（已做好的版本不受影响）。</p>
     <pre class="code code--wrap card">{displayBriefMd(briefMd)}</pre>
@@ -660,7 +660,7 @@ const ProfileRow: FC<{ entry: ProfileEntry; csrf: string }> = ({ entry, csrf }) 
   <li class="profile-row">
     <span class="profile-category">{CATEGORY_LABEL[entry.category]}</span>
     <p>{entry.text}</p>
-    <details class="profile-menu">
+    <details class="profile-menu" data-dismissable>
       <summary aria-label={`管理画像：${entry.text}`}><span aria-hidden="true">···</span></summary>
       <div class="popover profile-menu__panel">
         <p class="muted">{entry.confirmation === 'owner-stated' ? '你明确说过' : '你确认过'}<br />{formatDateTime(entry.updatedAt)}</p>
@@ -687,8 +687,8 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
         <summary class="btn btn--ghost btn--small"><HomeIcon name="pencil" />编辑资料</summary>
         <form method="post" action="/account/profile" enctype="multipart/form-data" class="stack profile-edit-form">
           <CsrfField token={csrf} />
-          {error ? <Notice tone="error">{error}</Notice> : null}
-          <label>昵称<input type="text" name="nickname" value={nicknameDraft ?? nickname} required autocomplete="nickname" aria-describedby="nickname-help" /></label>
+          {error ? <Notice tone="error" id="profile-error">{error}</Notice> : null}
+          <label>昵称<input type="text" name="nickname" value={nicknameDraft ?? nickname} required autocomplete="nickname" aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'profile-error nickname-help' : 'nickname-help'} /></label>
           <p id="nickname-help" class="muted">1–24 个字。昵称和头像会显示在账号导航和同墙聊天中。</p>
           <label>头像<input type="file" name="avatar" accept="image/png,image/jpeg,image/webp" aria-describedby="avatar-help" /></label>
           <p id="avatar-help" class="muted">支持 PNG、JPEG、WebP，2 MB 以内；保存时自动居中裁成正方形。</p>
@@ -700,7 +700,7 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
     <section class="card profile-card profile-entries" aria-labelledby="profile-heading">
       <div class="profile-section-heading">
         <h2 id="profile-heading">长期画像（{profile.length} 条）</h2>
-        <details class="profile-help">
+        <details class="profile-help" data-dismissable>
           <summary><HomeIcon name="plus" />如何添加</summary>
           <div class="popover profile-help__panel">在墙里完成一次采访，确认资料时勾选“记住这些”，就能保存新的画像。<a href="/">前往我的墙 <span aria-hidden="true">→</span></a></div>
         </details>

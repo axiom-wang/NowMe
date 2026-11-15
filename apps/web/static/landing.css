@@ -67,7 +67,7 @@
 .landing-hero__fine {
   margin: 14px 0 0;
   color: var(--muted);
-  font-size: 0.86rem;
+  font-size: 0.875rem;
 }
 
 /* 墙面示意：一块软木色的板子 */
@@ -109,7 +109,7 @@
 
 .landing-board__count {
   font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   color: var(--muted);
 }
 
@@ -122,64 +122,40 @@
   gap: 14px 12px;
 }
 
+/* 便签外形、胶带、颜色来自 app.css 的 .note / .note--*；这里只管示意墙里的排版与每张的歪斜角度 */
 .landing-note {
-  --tilt: -1.6deg;
-  --tape: color-mix(in srgb, var(--lime) 90%, transparent);
-  --tape-left: 50%;
-  --note-bg: var(--surface);
-  --note-ink: var(--ink);
-  position: relative;
   display: flex;
   flex-direction: column;
   gap: 4px;
   min-width: 0;
   padding: 18px 12px 12px;
   border-radius: 12px;
-  background: var(--note-bg);
-  color: var(--note-ink);
-  box-shadow: 0 10px 18px -12px color-mix(in srgb, var(--ink) 50%, transparent), 0 1px 2px color-mix(in srgb, var(--ink) 12%, transparent);
-  transform: rotate(var(--tilt));
+  --note-tilt: -1.6deg;
 }
 
-/* 胶带 */
 .landing-note::before {
-  content: '';
-  position: absolute;
   top: -8px;
-  left: var(--tape-left);
   width: 54px;
   height: 16px;
   margin-left: -27px;
   border-radius: 2px;
-  background: var(--tape);
-  transform: rotate(-5deg);
 }
 
 .landing-note--paper {
-  --tilt: -1.8deg;
+  --note-tilt: -1.8deg;
 }
 
 .landing-note--lime {
-  --tilt: 1.4deg;
-  --tape: color-mix(in srgb, var(--orange) 82%, transparent);
-  --tape-left: 40%;
-  --note-bg: var(--lime);
+  --note-tilt: 1.4deg;
   margin-top: 10px;
 }
 
 .landing-note--orange {
-  --tilt: 1deg;
-  --tape: color-mix(in srgb, var(--ink) 78%, transparent);
-  --tape-left: 60%;
-  --note-bg: var(--orange);
-  --note-ink: var(--ink); /* 橙色底上白字对比度不够（3.1:1） */
+  --note-tilt: 1deg;
 }
 
 .landing-note--blue {
-  --tilt: -1.2deg;
-  --tape: color-mix(in srgb, var(--note) 95%, transparent);
-  --note-bg: var(--blue);
-  --note-ink: var(--white);
+  --note-tilt: -1.2deg;
   margin-top: 8px;
 }
 
@@ -203,7 +179,7 @@
 }
 
 .landing-note__line {
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   line-height: 1.45;
   opacity: 0.85;
 }
@@ -219,7 +195,7 @@
   padding: 1px 8px 2px;
   border: 1px solid currentColor;
   border-radius: 999px;
-  font-size: 0.72rem;
+  font-size: 0.75rem;
   line-height: 1.5;
 }
 
@@ -242,7 +218,7 @@
   margin-bottom: 2px;
   font-family: var(--font-head);
   font-weight: 700;
-  font-size: 0.74rem;
+  font-size: 0.75rem;
   letter-spacing: 0.08em;
 }
 
@@ -295,7 +271,7 @@
   background: var(--lime);
   border: 1.5px solid var(--ink);
   font-family: var(--font-mono);
-  font-size: 0.82rem;
+  font-size: 0.875rem;
   transform: rotate(-4deg);
 }
 
@@ -536,7 +512,7 @@
   }
 
   .landing-note__line {
-    font-size: 0.86rem;
+    font-size: 0.875rem;
   }
 
   .landing-final {

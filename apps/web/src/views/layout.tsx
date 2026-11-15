@@ -3,7 +3,7 @@
  * 主站 CSP 不允许内联脚本与内联样式：样式和脚本都是 `/static/` 下的外部文件，元素上不要写 `style=` 或 `on*=`。
  *
  * - `page-frame.js` 放在 `<head>` 里同步加载：它要在 iframe 第一次 `load` 之前注册监听（contracts 5.2）。
- * - `app.js` defer：复制按钮（`data-copy`）与危险操作确认（`form[data-confirm]`）。
+ * - `app.js` defer：复制按钮（`data-copy`）、危险操作确认（`form[data-confirm]`）、弹出菜单（`details[data-dismissable]`：Esc / 点外面 / 焦点移走即关闭）。
  * - 样式按页加载：每页都有 `app.css`（设计令牌、字体、顶栏 / 页脚、按钮 / 表单 / 卡片 / 便签 / 标签 / 提示 / 步骤 / 空状态 / 弹层），
  *   再加这一页所属的功能包（见 `STYLE_BUNDLES` 与 `styleBundlesFor()`：按路径归类，路由不用逐个声明）。
  * - 所有静态资源都用 `assetUrl()` 生成带内容哈希的 URL（routes/static.ts：带哈希的响应可以长期缓存）。
@@ -100,7 +100,7 @@ export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; active?:
     <div class="site-header__inner">
       <Brand />
       {auth?.user.nickname ? <>
-        <nav class="site-nav" aria-label="账号">
+        <nav class="site-nav" aria-label="主导航">
           <a class={`site-nav__link${active === 'home' ? ' is-active' : ''}`} href="/" aria-current={active === 'home' ? 'page' : undefined}>我的</a>
           <a class={`site-nav__link${active === 'messages' ? ' is-active' : ''}`} href="/messages" aria-current={active === 'messages' ? 'page' : undefined}>消息 <span class="message-badge" data-message-unread hidden aria-label="未读消息"></span></a>
           <a class={`site-nav__link${active === 'data' ? ' is-active' : ''}`} href="/account/data" aria-current={active === 'data' ? 'page' : undefined}>我的资料</a>
@@ -141,11 +141,11 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
           {bodyClass === 'page--create' ? <script src={assetUrl('hosted.js')} defer></script> : null}
           {progress ? <script src={assetUrl('progress.js')} defer></script> : null}
           {bodyClass === 'page--wall' ? <script src={assetUrl('wall.js')} defer></script> : null}
-          {signedIn ? <script src={assetUrl('home.js')} defer></script> : null}
         </head>
         <body class={bodyClass ? `site ${bodyClass}` : 'site'}>
+          <a class="skip-link" href="#main">跳到主要内容</a>
           <SiteHeader auth={auth} demo={demo} path={path} active={bodyClass === 'page--data' ? 'data' : bodyClass === 'page--messages' ? 'messages' : bodyClass === 'page--home' ? 'home' : undefined} />
-          <main class="site-main">{children}</main>
+          <main id="main" class="site-main" tabindex={-1}>{children}</main>
           <Footer />
         </body>
       </html>

@@ -161,7 +161,7 @@ const TalkPanel: FC<{ base: string; name: string; csrf: string; panel: Icebreake
           )}
         </>
       )}
-      <p class="talk__busy" aria-live="polite" hidden data-busy-status></p>
+      <p class="talk__busy" role="status" data-busy-status></p>
     </section>
   );
 };

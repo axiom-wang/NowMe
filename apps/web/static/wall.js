@@ -15,6 +15,8 @@
   var cards = Array.prototype.slice.call(board.querySelectorAll('[data-wall-card]'));
   var count = board.querySelector('[data-wall-count]');
   var none = board.querySelector('[data-wall-none]');
+  var statusEl = board.querySelector('[data-wall-status]');
+  var statusTimer = null;
 
   /** 选中的筛选：题目位置 → 选项编号的集合。 */
   function selectedFilters() {
@@ -54,6 +56,13 @@
     if (count) count.textContent = String(shown);
     if (none) none.hidden = shown > 0;
     if (clear) clear.hidden = questions.length === 0;
+    // 给读屏的结果播报：停下来 0.4 秒后再说，避免每敲一个字都播报
+    if (statusEl) {
+      clearTimeout(statusTimer);
+      statusTimer = setTimeout(function () {
+        statusEl.textContent = filtering ? (shown > 0 ? '找到 ' + shown + ' 位' : '没有找到相关的人') : '';
+      }, 400);
+    }
   }
 
   if (input) input.addEventListener('input', apply);

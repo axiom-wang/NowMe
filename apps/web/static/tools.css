@@ -110,7 +110,7 @@
 }
 
 .wall-filters__prompt {
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   color: var(--muted);
   margin-right: 4px;
 }
@@ -123,7 +123,7 @@
   background: var(--surface);
   color: var(--ink);
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   cursor: pointer;
 }
 
@@ -160,7 +160,7 @@
 }
 
 .portrait__meta {
-  font-size: 0.8rem;
+  font-size: 0.875rem;
 }
 
 .portrait__summary {
@@ -170,7 +170,7 @@
 }
 
 .portrait__label {
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   color: var(--muted);
   margin: 0 0 6px;
 }
@@ -204,7 +204,7 @@
 
 .portrait-theme__detail {
   grid-column: 1 / -1;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   color: var(--ink-2);
 }
 
@@ -213,7 +213,7 @@
   grid-template-columns: minmax(5em, 9em) 1fr auto;
   align-items: center;
   gap: 8px;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
 }
 
 .portrait-bar__meter,
@@ -228,7 +228,7 @@
 }
 
 .portrait__note {
-  font-size: 0.8rem;
+  font-size: 0.875rem;
   margin: 0;
 }
 
@@ -237,7 +237,7 @@
   white-space: pre-wrap;
   word-break: break-word;
   font: inherit;
-  font-size: 0.85rem;
+  font-size: 0.875rem;
   padding: 12px;
   border-radius: var(--radius-sm);
   background: var(--paper);

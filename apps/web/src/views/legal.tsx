@@ -127,14 +127,14 @@ export const PrivacyView: FC<LegalProps> = ({ contactEmail, moderation }) => (
     </p>
 
     <h2>1. 我们存什么</h2>
-    <div class="legal__table-wrap">
+    <div class="legal__table-wrap" role="region" aria-label="我们存什么（表格较宽时可左右滚动）" tabindex={0}>
       <table class="legal__table">
         <thead>
           <tr>
-            <th>信息</th>
-            <th>为什么需要</th>
-            <th>谁能看到</th>
-            <th>存多久</th>
+            <th scope="col">信息</th>
+            <th scope="col">为什么需要</th>
+            <th scope="col">谁能看到</th>
+            <th scope="col">存多久</th>
           </tr>
         </thead>
         <tbody>

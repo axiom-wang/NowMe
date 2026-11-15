@@ -4,7 +4,7 @@
  */
 .messages-page, .conversation-page { min-width: 0; }
 .messages-heading { margin: 0 14px 32px; }
-.messages-heading .eyebrow { color: var(--ink-2); font-family: var(--font-body); font-size: 13px; font-weight: 500; letter-spacing: 0; margin-bottom: 8px; }
+.messages-heading .eyebrow { color: var(--ink-2); font-family: var(--font-body); font-size: 14px; font-weight: 500; letter-spacing: 0; margin-bottom: 8px; }
 .messages-heading h1 { font-family: var(--font-display); font-weight: 400; font-size: var(--text-2xl); line-height: 1.2; margin: 0 0 12px; }
 .messages-heading > .muted { font-size: 14px; line-height: 1.8; margin: 0; }
 .messages-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 16px; margin: 0 8px 24px; }
@@ -20,7 +20,7 @@
 .start-chat__menu h2 { margin-bottom: 8px; font-size: 17px; }
 .start-chat__menu > p { font-size: 12px; margin-bottom: 14px; }
 .start-chat__menu ul { list-style: none; padding: 0; margin: 0; max-height: 280px; overflow-y: auto; }
-.start-chat__menu a { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 12px; border-top: 1px solid var(--line); font-size: 13px; text-decoration: none; overflow-wrap: anywhere; }
+.start-chat__menu a { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-block: 12px; border-top: 1px solid var(--line); font-size: 14px; text-decoration: none; overflow-wrap: anywhere; }
 .start-chat__menu a:hover { color: var(--lime-ink); }
 .start-chat__menu .home-icon { width: 17px; height: 17px; }
 .inbox-layout { display: grid; gap: 16px; grid-template-columns: minmax(0, 1fr) minmax(200px, .42fr); align-items: start; }
@@ -35,7 +35,7 @@
 .conversation-copy { display: grid; gap: 5px; min-width: 0; flex: 1; }
 .conversation-copy strong { padding-right: 62px; font-size: 16px; line-height: 1.4; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .conversation-copy .muted { font-size: 12px; line-height: 1.5; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.conversation-preview { padding-right: 30px; font-size: 13px; line-height: 1.6; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--ink-2); }
+.conversation-preview { padding-right: 30px; font-size: 14px; line-height: 1.6; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; color: var(--ink-2); }
 .conversation-icon { width: 42px; height: 42px; margin-top: 2px; border-radius: 50%; display: grid; place-items: center; background: var(--cork); color: var(--ink); flex-shrink: 0; font-size: 17px; font-weight: 650; }
 .conversation-icon--group { background: var(--cork); }
 .conversation-time { position: absolute; top: 24px; right: 0; color: var(--muted); font: 400 12px/1.5 var(--font-head); }
@@ -44,12 +44,12 @@
 .inbox-walls a { display: flex; align-items: baseline; gap: 10px; justify-content: space-between; padding: 14px 0; font-size: 14px; font-weight: 500; line-height: 1.7; text-decoration: none; overflow-wrap: anywhere; }
 .inbox-walls a:hover span { text-decoration: underline; text-underline-offset: 4px; }
 .inbox-walls .home-icon { width: 17px; height: 17px; align-self: center; }
-.inbox-walls > .muted { font-size: 13px; margin-top: 18px; }
+.inbox-walls > .muted { font-size: 14px; margin-top: 18px; }
 .inbox-empty { padding: 60px 10px; text-align: center; }
 .inbox-empty__icon { display: grid; place-items: center; margin: 0 auto 20px; width: 64px; height: 64px; border-radius: 50%; background: var(--paper-2); color: var(--muted); }
 .inbox-empty__icon svg { width: 32px; height: 32px; }
 .inbox-empty h3 { font-size: 18px; margin-bottom: 10px; }
-.inbox-empty p { max-width: 27em; margin: 0 auto; font-size: 13px; line-height: 1.8; }
+.inbox-empty p { max-width: 27em; margin: 0 auto; font-size: 14px; line-height: 1.8; }
 .conversation-page > .back-link { display: flex; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
 .conversation-panel.card { padding: 0; overflow: hidden; }
 .conversation-heading { padding: 22px 28px; border-bottom: 1px solid var(--line); }
@@ -63,11 +63,11 @@
 .chat-empty { text-align: center; padding: 55px 0; }
 .message { display: flex; flex-direction: column; align-items: flex-start; margin: 0 0 20px; }
 .message--mine { align-items: flex-end; }
-.message-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: .72rem; margin: 0 0 6px; color: var(--muted); }
+.message-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: .75rem; margin: 0 0 6px; color: var(--muted); }
 .message-text { margin: 0; padding: 11px 15px; max-width: 85%; white-space: pre-wrap; overflow-wrap: anywhere; border-radius: 4px 16px 16px; background: var(--paper-2); color: var(--ink); line-height: 1.65; }
 .message--mine .message-text { background: var(--lime-soft); border-radius: 16px 4px 16px 16px; }
 .chat-compose { padding: 18px 28px; border-top: 1px solid var(--line); background: var(--surface); }
-.chat-compose label { display: block; font-size: .8rem; font-weight: 600; margin-bottom: 7px; }
+.chat-compose label { display: block; font-size: .875rem; font-weight: 600; margin-bottom: 7px; }
 .chat-compose textarea { display: block; width: 100%; min-height: 80px; max-height: 200px; resize: vertical; font: inherit; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 12px; background: var(--surface); color: var(--ink); }
 .chat-compose-actions { margin-top: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .chat-compose-actions .muted { font-size: .75rem; }
@@ -84,21 +84,21 @@
 @media (max-width: 760px) {
   .messages-heading { margin: 0 14px 28px; }
   .messages-heading h1 { font-size: 36px; margin-bottom: 8px; }
-  .messages-heading > .muted { font-size: 13px; }
+  .messages-heading > .muted { font-size: 14px; }
   .messages-toolbar { margin-bottom: 22px; gap: 12px; }
-  .inbox-filter { min-height: 36px; padding: 6px 16px; font-size: 12px; }
-  .start-chat > summary { min-height: 36px; padding-inline: 14px; font-size: 12px; gap: 6px; }
+  .inbox-filter { min-height: 44px; padding: 6px 16px; font-size: 14px; }
+  .start-chat > summary { min-height: 44px; padding-inline: 14px; font-size: 14px; gap: 6px; }
   .inbox-layout { grid-template-columns: minmax(0, 1fr) minmax(155px, .47fr); gap: 10px; }
   .inbox.card { padding-inline: 18px; border-radius: 20px; }
   .inbox-walls.card { padding: 22px 18px 12px; border-radius: 20px; }
   .inbox-walls h2 { font-size: 17px; margin-bottom: 6px; }
-  .inbox-walls a { font-size: 13px; padding-block: 12px; gap: 5px; }
+  .inbox-walls a { font-size: 14px; padding-block: 12px; gap: 5px; }
   .inbox-walls .home-icon { width: 14px; height: 14px; }
   .conversation-link { gap: 12px; padding-block: 18px; }
   .conversation-icon { width: 38px; height: 38px; font-size: 16px; }
   .conversation-copy { gap: 3px; }
   .conversation-copy strong { font-size: 14px; line-height: 1.3; }
-  .conversation-copy .muted { font-size: 11px; line-height: 1.4; }
+  .conversation-copy .muted { font-size: 12px; line-height: 1.4; }
   .conversation-preview { font-size: 12px; line-height: 1.5; }
   .conversation-time { top: 18px; }
   .conversation-link > .message-badge { bottom: 18px; }
@@ -108,12 +108,12 @@
   .messages-toolbar { margin-inline: 0; gap: 14px; }
   .start-chat { order: -1; }
   .inbox-filters { order: 1; width: 100%; }
-  .inbox-filter { flex: 1; min-height: 40px; padding-inline: 10px; font-size: 13px; }
+  .inbox-filter { flex: 1; min-height: 44px; padding-inline: 10px; font-size: 14px; }
   .inbox-layout { grid-template-columns: minmax(0, 1fr); gap: 20px; }
   .conversation-link { padding-block: 21px; gap: 14px; }
   .conversation-copy strong { font-size: 15px; }
   .conversation-copy .muted { font-size: 12px; }
-  .conversation-preview { font-size: 13px; }
+  .conversation-preview { font-size: 14px; }
   .conversation-icon { width: 40px; height: 40px; }
   .inbox-walls.card { padding: 22px; }
 }

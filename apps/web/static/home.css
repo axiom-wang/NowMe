@@ -431,7 +431,14 @@
 
   .home-filter {
     flex: 1;
+    min-height: 44px;
     padding-inline: var(--space-2);
+  }
+
+  .home-wall__admin {
+    display: inline-flex;
+    align-items: center;
+    min-height: 44px;
   }
 
   .home-groups {

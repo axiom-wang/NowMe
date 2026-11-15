@@ -100,7 +100,7 @@ export const SkillPage: FC<SkillPageProps> = ({ webOrigin, skillPackage, market,
           <h2 id="skill-github">或者：用安装命令</h2>
           <p>在终端运行，按提示选择你的 Agent：</p>
           <CopyBlock id="nm-skill-github" text={SKILL_INSTALL_COMMAND} label="复制安装命令" />
-          <p><a href={SKILL_GITHUB_URL}>查看 GitHub 仓库与更新说明</a></p>
+          <p><a class="link-block" href={SKILL_GITHUB_URL}>查看 GitHub 仓库与更新说明</a></p>
         </section>
 
         {market ? (

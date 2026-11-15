@@ -113,7 +113,7 @@
   border-radius: 12px;
   background: var(--paper);
   border: 1.5px dashed var(--paper-3);
-  font-size: 0.84rem;
+  font-size: 0.875rem;
   word-break: break-all;
   user-select: all;
 }
@@ -140,7 +140,7 @@
 }
 
 .invite__qr figcaption {
-  font-size: 0.86rem;
+  font-size: 0.875rem;
   font-weight: 650;
 }
 
@@ -164,7 +164,7 @@
 }
 
 .stat-tile dt {
-  font-size: 0.84rem;
+  font-size: 0.875rem;
   color: var(--ink-2);
 }
 
@@ -218,7 +218,7 @@
 
 .member-row__meta {
   grid-column: 2;
-  font-size: 0.82rem;
+  font-size: 0.875rem;
 }
 
 .member-row__action {
@@ -243,7 +243,7 @@
 
 /* 组织者上传的墙封面（与成员页面封面独立）。 */
 .wall-cover-settings__preview { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 14px; margin: 16px 0; background: var(--paper-2); }
-.wall-cover-settings input[type='file'] { max-width: 100%; width: 100%; font-size: 13px; }
+.wall-cover-settings input[type='file'] { max-width: 100%; width: 100%; font-size: 14px; }
 .wall-cover-settings__delete { margin-top: 12px; }
 .reports__list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .reports__item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }

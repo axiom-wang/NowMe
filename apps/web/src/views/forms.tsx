@@ -31,8 +31,9 @@ export const PostButton: FC<PostButtonProps> = ({ action, csrf, label, variant =
   </form>
 );
 
-export const Notice: FC<PropsWithChildren<{ tone?: 'info' | 'success' | 'warning' | 'error' }>> = ({ tone = 'info', children }) => (
-  <p class={`notice notice--${tone}`} role={tone === 'error' ? 'alert' : 'status'}>
+/** 提示条。`id` 用于让出错的控件通过 `aria-describedby` 指向它（配合控件上的 `aria-invalid`）。 */
+export const Notice: FC<PropsWithChildren<{ tone?: 'info' | 'success' | 'warning' | 'error'; id?: string }>> = ({ tone = 'info', id, children }) => (
+  <p class={`notice notice--${tone}`} id={id} role={tone === 'error' ? 'alert' : 'status'}>
     {children}
   </p>
 );

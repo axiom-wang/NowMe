@@ -230,14 +230,6 @@
     window.addEventListener('hashchange', filterInbox);
     filterInbox();
   }
-  var startChat = document.querySelector('.start-chat');
-  if (startChat) {
-    document.addEventListener('click', function (event) { if (!startChat.contains(event.target)) startChat.open = false; });
-    startChat.addEventListener('keydown', function (event) {
-      if (event.key === 'Escape') { startChat.open = false; startChat.querySelector('summary').focus(); }
-    });
-  }
-
   if (root) {
     history.scrollTop = history.scrollHeight;
     history.addEventListener('scroll', function () { if (atBottom()) jump.hidden = true; void markRead(); });

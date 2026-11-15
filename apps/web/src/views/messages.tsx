@@ -60,7 +60,7 @@ export const MessagesView: FC<{
         <button type="button" class="inbox-filter" aria-pressed="false" data-inbox-filter="unread">未读消息 <span class="message-badge" data-inbox-unread hidden={!conversations.some((item) => item.unread > 0)}>{conversations.reduce((total, item) => total + item.unread, 0)}</span></button>
         <button type="button" class="inbox-filter" aria-pressed="false" data-inbox-filter="group">墙内群聊</button>
       </div>
-      <details class="start-chat">
+      <details class="start-chat" data-dismissable>
         <summary class="btn btn--primary"><HomeIcon name="plus" />发起聊天</summary>
         <div class="start-chat__menu">
           <h2>从共同的墙开始</h2>

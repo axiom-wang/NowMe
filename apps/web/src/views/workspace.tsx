@@ -710,11 +710,11 @@ export const WorkspaceView: FC<{ model: WorkspaceModel; ownerName: string }> = (
   return (
     <div class="container container--wide">
       <section class="ws-hero">
-        <p class="crumbs">
+        <nav class="crumbs" aria-label="当前位置">
           <a href="/">我的</a>
           <span aria-hidden="true">/</span>
           <a href={`/w/${model.wall.id}`}>{model.wall.name}</a>
-        </p>
+        </nav>
         <h1 class="hero__title">
           <span class="display">我的页面</span>
           <span class="ws-hero__sub">{model.wall.name}</span>

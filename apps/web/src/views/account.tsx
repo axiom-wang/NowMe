@@ -6,9 +6,9 @@ import { CsrfField, Notice } from './forms.js';
 
 const Intro: FC<{ title: string }> = ({ title }) => (
   <section class="page-intro">
-    <p class="crumbs">
+    <nav class="crumbs" aria-label="当前位置">
       <a href="/account/data">我的资料</a>
-    </p>
+    </nav>
     <h1 class="hero__title">{title}</h1>
   </section>
 );
@@ -73,7 +73,7 @@ export const AccountDeleteView: FC<AccountDeleteViewProps> = ({ csrf, email, blo
       <section class="card confirm confirm--danger" aria-labelledby="account-delete-heading">
         <Consequences />
         {notice ? <Notice tone="success">{notice}</Notice> : null}
-        {error ? <Notice tone="error">{error}</Notice> : null}
+        {error ? <Notice tone="error" id="delete-error">{error}</Notice> : null}
         {stage === 'intro' ? (
           <form method="post" action="/account/delete/code" class="confirm__form">
             <CsrfField token={csrf} />
@@ -93,7 +93,7 @@ export const AccountDeleteView: FC<AccountDeleteViewProps> = ({ csrf, email, blo
               <CsrfField token={csrf} />
               <label>
                 邮箱里收到的 6 位确认码
-                <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength={6} pattern="[0-9]{6}" required />
+                <input type="text" name="code" inputmode="numeric" autocomplete="one-time-code" maxlength={6} pattern="[0-9]{6}" required aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'delete-error' : undefined} />
               </label>
               <label class="check check--strong">
                 <input type="checkbox" name="confirm" value="1" required />

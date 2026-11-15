@@ -189,6 +189,7 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
             ))}
           </ul>
         ) : null}
+        {cards.length > 0 ? <p class="visually-hidden" role="status" data-wall-status></p> : null}
         {cards.length > 0 ? (
           <p class="wall-board__none" hidden data-wall-none>
             墙上没有找到相关的人。换个词试试，或者去全员群里问一句。
