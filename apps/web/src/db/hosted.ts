@@ -351,6 +351,7 @@ export function createGenerationJobsRepo(db: Database) {
   );
   const markRunning = db.prepare("UPDATE generation_jobs SET status = 'running', started_at = ? WHERE id = ? AND status = 'queued'");
   const activeForOwner = db.prepare("SELECT id FROM generation_jobs WHERE owner_id = ? AND status IN ('queued', 'running') ORDER BY created_at");
+  const activeIdsForPage = db.prepare("SELECT id FROM generation_jobs WHERE page_id = ? AND status IN ('queued', 'running') ORDER BY created_at");
   const cancelOne = db.prepare(
     "UPDATE generation_jobs SET status = 'failed', error_code = ?, charged = 0, finished_at = ?, lease_owner = NULL, lease_expires_at = NULL WHERE id = ? AND status IN ('queued', 'running')",
   );
@@ -422,6 +423,10 @@ export function createGenerationJobsRepo(db: Database) {
     /** 主人的排队中 / 执行中的任务 ID（停用账号、注销时用）。 */
     listActiveIdsForOwner(ownerId: string): string[] {
       return (activeForOwner.all(ownerId) as { id: string }[]).map((row) => row.id);
+    },
+    /** 这一页排队中 / 执行中的任务 ID（删除页面、退出、被移出、关闭墙时用）。 */
+    listActiveIdsForPage(pageId: string): string[] {
+      return (activeIdsForPage.all(pageId) as { id: string }[]).map((row) => row.id);
     },
     /**
      * 中止一个排队中 / 执行中的任务（停用账号、注销）：标记失败并清掉租约。执行它的 worker 下一次续约或下一轮调用模型前

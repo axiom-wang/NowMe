@@ -24,6 +24,7 @@ import type { OwnPage } from './access.js';
 import { disconnectAgent } from './agent.js';
 import { removeAllRevisionFiles } from './revision-storage.js';
 import { eraseHostedPageData } from '../hosted/data.js';
+import { cancelActiveJobsForPage } from '../hosted/job-cancel.js';
 
 /** 删除后版本报告的 `validatorVersion`：标记这是墓碑（报告里没有任何内容）。 */
 export const DELETED_REVISION_MARKER = 'deleted';
@@ -112,6 +113,8 @@ export function erasePageRecords(
   const publicLinkClosed = page?.publicToken != null;
   repos.pages.clearContactAndPublicLink(pageId, nowIso);
   const revokedCredentials = disconnectAgent(deps, pageId);
+  // 进行中的网页内生成 / 修改：立即中止并退点，worker 不再发出后续模型请求（contracts 13.4）
+  cancelActiveJobsForPage(deps, pageId);
   if (ended) {
     repos.events.record({ type: 'withdraw', wallId: own.wall.id, pageId, actorId, props: { pageDeleted: true }, createdAt: nowIso });
   }
@@ -156,6 +159,7 @@ export function leaveWall(deps: LifecycleDeps, own: OwnPage, actorId: string): L
     const publicLinkClosed = page?.publicToken != null;
     if (publicLinkClosed) repos.pages.setPublicToken(own.page.id, null, nowIso);
     disconnectAgent(deps, own.page.id);
+    cancelActiveJobsForPage(deps, own.page.id);
     repos.icebreakers.deleteForViewerWall(own.membership.userId, own.wall.id);
     repos.events.record({
       type: 'leave',

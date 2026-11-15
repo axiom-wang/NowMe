@@ -28,6 +28,7 @@ import { wallQueries } from '../db/wall-queries.js';
 import type { Wall } from '../db/walls.js';
 import { disconnectAgent } from './agent.js';
 import { returnWallCredits } from './billing.js';
+import { cancelActiveJobsForPage } from '../hosted/job-cancel.js';
 
 type WallDeps = Pick<AppDeps, 'db' | 'repos' | 'now'>;
 
@@ -254,6 +255,8 @@ export function removeMember(deps: WallDeps, wall: Wall, organizerId: string, me
     if (page) {
       wallQueries(deps.db).endActivePublication(page.id, 'removed', nowIso);
       disconnectAgent(deps, page.id);
+      // 进行中的网页内生成 / 修改：立即中止并退点（contracts 13.4）
+      cancelActiveJobsForPage(deps, page.id);
     }
     deps.repos.icebreakers.deleteForViewerWall(membership.userId, wall.id);
     recordEvent(deps, 'member_removed', { wallId: wall.id, pageId: page?.id ?? null, actorId: organizerId });
@@ -279,7 +282,11 @@ export function closeWall(deps: WallDeps, wall: Wall, organizerId: string): Clos
     const queries = wallQueries(deps.db);
     const endedPublications = queries.endActivePublicationsForWall(wall.id, 'closed', nowIso);
     let revokedCredentials = 0;
-    for (const pageId of queries.pageIdsForWall(wall.id)) revokedCredentials += disconnectAgent(deps, pageId);
+    for (const pageId of queries.pageIdsForWall(wall.id)) {
+      revokedCredentials += disconnectAgent(deps, pageId);
+      // 墙已关闭：点数退给组织者的个人余额（settleJob 对关闭的墙改退到组织者）
+      cancelActiveJobsForPage(deps, pageId);
+    }
     deps.repos.icebreakers.deleteForWall(wall.id);
     deps.repos.portraits.deleteForWall(wall.id);
     // 墙的剩余额度退回组织者的个人余额（contracts 12）

@@ -170,6 +170,11 @@ export interface HostedStoreInput {
   files: PageFiles;
   /** 平台附加的信息性警告（例如修改任务的 HOSTED_BLOCKS_CHANGED），不影响 ok。 */
   extraWarnings?: ValidationIssue[];
+  /**
+   * 写入版本行之后、在同一个事务里调用（托管任务在这里结算点数并结束任务）。抛错时整个事务回滚、版本文件删除，
+   * 所以“版本存下了”与“任务按成功结算”总是同时成立或同时不成立。
+   */
+  onStored?: (revisionId: string) => void;
 }
 
 /** 处理器 + 写文件 + 写库的共用部分。`insertRow` 在事务里执行，返回 null 表示放弃（文件会被删除）。 */
@@ -368,6 +373,7 @@ export function createSubmissionStore(options: SubmissionStoreOptions): Submissi
             createdAt,
           });
           repos.pages.touch(input.pageId, createdAt);
+          input.onStored?.(id);
           return { kind: 'stored', revisionId: id, number, report };
         },
       });

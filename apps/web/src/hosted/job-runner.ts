@@ -4,6 +4,9 @@
  * - 任务由主站入队（`generation_jobs.status = queued`，已扣点）；worker 领取后带租约执行，执行中写进度事件；
  * - 每个任务一个独立临时目录，结束必删；结果经平台的提交管线重新校验，通过才存版本；
  * - 结束（成功 / 失败 / 需要补充说明）与结算点数在同一个事务里，且必须仍持有租约：租约被回收后旧 worker 的结果作废；
+ *   成功时“写版本 + 结算 + 结束任务”是同一个事务：存下了新版本就一定保留扣点，没存下才全额退回，
+ *   不会出现“版本存下了、点数也退了”（停用、注销、租约回收与它们互斥）；
+ * - 每轮调用模型前确认仍持有租约、页面与成员关系仍有效（被移出、退出、墙关闭时立即停止，按 PAGE_GONE 退点）；
  * - 不重试：被打断（租约过期、优雅退出超时）的任务标记 INTERRUPTED 并全额退点，避免重复计费。
  */
 import { cp, mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
@@ -39,6 +42,11 @@ export interface GenerationExecutorOptions {
   store: Pick<SubmissionStore, 'storeHosted'>;
   /** 任务临时目录的父目录，默认 `os.tmpdir()`（测试用来断言任务结束后目录被删除）。 */
   tempRoot?: string;
+}
+
+/** 每轮调用模型前发现任务不该再继续（租约已不在，或页面 / 成员关系已无效）。 */
+class JobStopped extends Error {
+  override name = 'JobStopped';
 }
 
 export interface GenerationExecutor {
@@ -113,13 +121,15 @@ export function createGenerationExecutor(deps: GenerationDeps, options: Generati
     let turns = 0;
     let dir: string | null = null;
 
-    const finish = (status: 'succeeded' | 'failed' | 'needs_input', input: { revisionId?: string; errorCode?: string; message?: string; httpStatus?: number | null }) => {
-      const ok = status === 'succeeded';
+    type FinishInput = { revisionId?: string; errorCode?: string; message?: string; httpStatus?: number | null };
+    type FinishStatus = 'succeeded' | 'failed' | 'needs_input';
+
+    /** 结算与结束同一个事务，且必须仍持有租约：成功才保留扣点；失败、需要补充说明都全额退回。可以嵌套在写版本的事务里。 */
+    const settleAndFinish = (status: FinishStatus, input: FinishInput): boolean => {
       const jobUsage: JobUsage = { turns, ...usage };
-      // 结算与结束同一个事务，且必须仍持有租约：成功才保留扣点；失败、需要补充说明都全额退回
-      const finished = transaction(db, () => {
+      return transaction(db, () => {
         if (!repos.queue.holdsGeneration(jobId, ctx.workerId)) return false;
-        const charged = settleJob(deps, jobId, ok);
+        const charged = settleJob(deps, jobId, status === 'succeeded');
         return repos.jobs.finishLeased(jobId, ctx.workerId, {
           status,
           revisionId: input.revisionId ?? null,
@@ -130,10 +140,11 @@ export function createGenerationExecutor(deps: GenerationDeps, options: Generati
           finishedAt: deps.now().toISOString(),
         });
       });
-      if (!finished) {
-        deps.log(`[web] 托管任务 ${jobId}（${job.kind}）的租约已被回收，本次结果作废`);
-        return;
-      }
+    };
+
+    /** 任务已经结束之后：进度事件、统计事件与日志。 */
+    const announce = (status: FinishStatus, input: FinishInput) => {
+      const ok = status === 'succeeded';
       ctx.progress(status, turns > 0 ? { turn: turns } : undefined);
       if (page) {
         repos.events.record({
@@ -155,6 +166,14 @@ export function createGenerationExecutor(deps: GenerationDeps, options: Generati
       deps.log(`[web] 托管任务 ${jobId}（${job.kind}）：${status}${input.errorCode ? ` ${input.errorCode}` : ''}${input.httpStatus ? `（HTTP ${input.httpStatus}）` : ''}，${turns} 轮`);
     };
 
+    const finish = (status: FinishStatus, input: FinishInput) => {
+      if (!settleAndFinish(status, input)) {
+        deps.log(`[web] 托管任务 ${jobId}（${job.kind}）的租约已被回收，本次结果作废`);
+        return;
+      }
+      announce(status, input);
+    };
+
     if (!own || !page) {
       finish('failed', { errorCode: 'PAGE_GONE' });
       return;
@@ -164,6 +183,7 @@ export function createGenerationExecutor(deps: GenerationDeps, options: Generati
       finish('failed', { errorCode: 'INTERRUPTED' });
       return;
     }
+    const valid = stillValid(page.id, job.ownerId, page.wallId);
     const timeout = new AbortController();
     const timer = setTimeout(() => timeout.abort(), HOSTED_JOB_TIMEOUT_MS);
     const signal = AbortSignal.any([timeout.signal, ctx.signal]);
@@ -188,8 +208,9 @@ export function createGenerationExecutor(deps: GenerationDeps, options: Generati
         firstMessage: firstMessage(own, job, confirmed?.record.briefMd ?? null, confirmed?.assets ?? [], prepared.baseNumber, notes),
         signal,
         onTurn: (turn) => {
-          // 每轮调用模型前确认仍持有租约：任务被中止（停用账号、注销）或被回收后，不再发出后续模型请求
-          if (!repos.queue.holdsGeneration(jobId, ctx.workerId)) throw new Error('任务已被中止或租约已被回收');
+          // 每轮调用模型前确认仍持有租约、页面与成员关系仍有效：任务被中止（停用账号、注销、删除页面、退出、被移出、
+          // 关闭墙）或被回收后，不再发出后续模型请求
+          if (!repos.queue.holdsGeneration(jobId, ctx.workerId) || !valid()) throw new JobStopped('任务已被中止、租约已被回收或页面已不可用');
           currentTurn = turn;
           // 还没写过文件时模型在读参考、构思版式（设计）；写过之后是生成与修改
           ctx.progress(wrote ? 'generating' : 'designing', { turn, maxTurns: settings.maxTurns });
@@ -227,17 +248,21 @@ export function createGenerationExecutor(deps: GenerationDeps, options: Generati
         }
       }
       ctx.progress('rendering', { turn: turns });
-      const valid = stillValid(page.id, job.ownerId, page.wallId);
+      const message = result.finish.message;
       const stored = await options.store.storeHosted({
         pageId: page.id,
         // 写版本时仍须持有租约：租约被回收（任务已被标记失败并退点）后不能再存版本
         stillValid: () => repos.queue.holdsGeneration(jobId, ctx.workerId) && valid(),
         files,
         extraWarnings,
+        // 与写版本同一个事务：结算（保留扣点）并结束任务。上面的 stillValid 已在这个事务里确认持有租约
+        onStored: (revisionId) => {
+          if (!settleAndFinish('succeeded', { revisionId, message })) throw new Error('写版本时租约已不在');
+        },
       });
       switch (stored.kind) {
         case 'stored':
-          finish('succeeded', { revisionId: stored.revisionId, message: result.finish.message });
+          announce('succeeded', { revisionId: stored.revisionId, message });
           return;
         case 'rejected':
           finish('failed', { errorCode: 'REJECTED' });
@@ -250,7 +275,10 @@ export function createGenerationExecutor(deps: GenerationDeps, options: Generati
           return;
       }
     } catch (error) {
-      if (error instanceof RunError) {
+      if (error instanceof JobStopped) {
+        // 已被中止（停用 / 注销 / 删除页面等）时这里什么都不会写；只是页面或成员关系失效时按 PAGE_GONE 结束并退点
+        finish('failed', { errorCode: 'PAGE_GONE' });
+      } else if (error instanceof RunError) {
         usage = error.usage;
         turns = error.turns;
         finish('failed', { errorCode: interruptedCode(error.code), httpStatus: error.status });
