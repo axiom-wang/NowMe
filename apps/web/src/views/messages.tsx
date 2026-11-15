@@ -61,7 +61,7 @@ export const MessagesView: FC<{
         <button type="button" class="inbox-filter" aria-pressed="false" data-inbox-filter="group">墙内群聊</button>
       </div>
       <details class="start-chat">
-        <summary class="home-button home-button--dark"><HomeIcon name="plus" />发起聊天</summary>
+        <summary class="btn btn--primary"><HomeIcon name="plus" />发起聊天</summary>
         <div class="start-chat__menu">
           <h2>从共同的墙开始</h2>
           <p class="muted">先进某面墙的全员群；想私信谁，在群里点 TA 名字旁边的“私聊”。</p>

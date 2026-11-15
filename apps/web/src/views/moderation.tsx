@@ -142,7 +142,7 @@ export const OrganizerReports: FC<{ wallId: string; csrf: string; reports: Organ
 
 /** “我的资料”：我拉黑的人。 */
 export const BlockedList: FC<{ csrf: string; blocked: BlockedUserRow[] }> = ({ csrf, blocked }) => (
-  <section class="profile-card profile-blocks" id="blocks" aria-labelledby="blocks-heading">
+  <section class="card profile-card profile-blocks" id="blocks" aria-labelledby="blocks-heading">
     <h2 id="blocks-heading">拉黑名单（{blocked.length} 人）</h2>
     {blocked.length === 0 ? (
       <div class="profile-empty">

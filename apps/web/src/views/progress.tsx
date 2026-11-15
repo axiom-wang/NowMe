@@ -32,13 +32,15 @@ export const JobProgress: FC<{ wallId: string; jobId: string; kind: JobKind; vie
       <p class="job-progress__label" data-progress-label role="status" aria-live="polite">
         {view.label}
       </p>
-      <ol class="job-progress__steps" aria-label="进度">
+      <ol class="progress progress--live" aria-label="进度">
         {PROGRESS_STEPS.map((step, index) => {
           const state = index < current ? 'done' : index === current ? 'current' : 'todo';
           return (
-            <li class={`job-progress__step job-progress__step--${state}`} data-step={step} aria-current={state === 'current' ? 'step' : undefined}>
-              <span class="job-progress__dot" aria-hidden="true"></span>
-              <span class="job-progress__name">
+            <li class={`progress__step progress__step--${state}`} data-step={step} aria-current={state === 'current' ? 'step' : undefined}>
+              <span class="progress__num" aria-hidden="true">
+                {index + 1}
+              </span>
+              <span class="progress__label">
                 {PROGRESS_STEP_LABELS[step]}
                 {step === 'generating' ? (
                   <small class="job-progress__turn" data-progress-turn>

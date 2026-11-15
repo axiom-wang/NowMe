@@ -13,7 +13,7 @@ describe('资料页', () => {
     const html = await response.text();
     expect(response.status).toBe(200);
     expect(html).toContain('page--data');
-    expect(html).toContain('/static/profile.css');
+    expect(html).toMatch(/\/static\/account\.[0-9a-f]{10}\.css/);
     expect(html).toContain('href="/account/data" aria-current="page"');
     expect(html).toContain('<h2>小江</h2>');
     expect(html).toContain('还没有长期画像');

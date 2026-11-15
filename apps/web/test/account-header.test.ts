@@ -30,11 +30,11 @@ describe.each([false, true])('账号顶栏（演示模式：%s）', (demo) => {
       expect(response.status).toBe(path === '/missing-page' ? 404 : 200);
       const html = await response.text();
       const header = html.match(/<header\b[^>]*>[\s\S]*?<\/header>/)?.[0] ?? '';
-      expect(header).toContain('class="site-header home-header"');
-      expect(html).toContain('href="/static/home.css"');
-      expect(html).toContain('src="/static/home.js" defer');
+      expect(header).toContain('class="site-header"');
+      expect(html).toMatch(/href="\/static\/app\.[0-9a-f]{10}\.css"/);
+      expect(html).toMatch(/src="\/static\/home\.[0-9a-f]{10}\.js" defer/);
       expect(header).toContain('href="/account/data"');
-      const menu = header.split('<div class="home-account__menu">')[1] ?? '';
+      const menu = header.split('<div class="popover account-menu__panel">')[1] ?? '';
       if (demo) {
         expect(menu).not.toContain('演示模型');
         expect(menu).not.toContain('href="/account/ai"');
@@ -50,19 +50,19 @@ describe.each([false, true])('账号顶栏（演示模式：%s）', (demo) => {
         expect(html).toContain('以成员身份体验');
         expect(html).toContain('以组织者身份体验');
       }
-      headers.push(header.replaceAll(' home-nav__active', '').replaceAll(' aria-current="page"', ''));
+      headers.push(header.replaceAll(' is-active', '').replaceAll(' aria-current="page"', ''));
     }
     expect(new Set(headers).size).toBe(1);
     if (demo) {
       const failed = await postForm(t, '/login/demo', { identity: 'invalid' }, { cookie });
       expect(failed.status).toBe(400);
       const html = await failed.text();
-      expect(html).toContain('class="site-header home-header"');
+      expect(html).toContain('class="site-header"');
       expect(html).toContain('体验登录失败');
       const anonymous = await (await get(t, '/login')).text();
-      expect(anonymous).toContain('class="site-header home-header"');
-      expect(anonymous).not.toContain('class="home-nav"');
-      expect(anonymous).not.toContain('class="home-account"');
+      expect(anonymous).toContain('class="site-header"');
+      expect(anonymous).not.toContain('class="site-nav"');
+      expect(anonymous).not.toContain('class="account-menu"');
     }
   });
 });

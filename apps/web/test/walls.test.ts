@@ -351,7 +351,7 @@ describe('墙（W13）、成员页与想聊这个（W14）', () => {
     for (let index = 1; index < 4; index += 1) publishedMember(t, wall, { name: `成员${index}` });
     const many = await (await get(t, `/w/${wall.id}`, { cookie: viewer.cookie })).text();
     expect(many).toContain('data-wall-search');
-    expect(many).toContain('src="/static/wall.js"');
+    expect(many).toMatch(/src="\/static\/wall\.[0-9a-f]{10}\.js"/);
     expect(many).toContain('data-wall-none');
   });
 

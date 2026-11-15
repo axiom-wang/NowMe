@@ -94,7 +94,7 @@ const WallGhost: FC<{ href: string; withdrawn: boolean }> = ({ href, withdrawn }
 
 /** 组织者的话：一张贴在墙上的便签（墙上有人时是墙面的第一格）。 */
 export const OrganizerNote: FC<{ text: string }> = ({ text }) => (
-  <blockquote class="organizer-note">
+  <blockquote class="note note--yellow organizer-note">
     <p class="organizer-note__label">组织者的话</p>
     <p class="organizer-note__text">{text}</p>
   </blockquote>

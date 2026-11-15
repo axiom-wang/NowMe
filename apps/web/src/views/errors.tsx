@@ -7,6 +7,7 @@ export function renderNotFound(c: Context<AppEnv>, options: { message?: string }
   return renderPage(c, {
     title: '这里没有你要找的内容',
     status: 404,
+    styles: [],
     body: (
       <section class="status-page">
         <p class="status-page__code" aria-hidden="true">
@@ -31,6 +32,7 @@ export function renderError(
   return renderPage(c, {
     title: options.title,
     status: options.status,
+    styles: [],
     body: (
       <section class="status-page">
         <p class="status-page__code" aria-hidden="true">

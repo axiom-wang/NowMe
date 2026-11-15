@@ -548,8 +548,8 @@ export const JobView: FC<{
         <span aria-hidden="true">/</span>
         <a href={base(wall)}>我的页面</a>
       </p>
-      <h1 class="display form-title">{label}</h1>
-      <section class="card stack">
+      <h1 class="display form-title job-page__title">{label}</h1>
+      <section class="card job-card stack">
         {running ? (
           <JobProgress wallId={wall.id} jobId={job.id} kind={job.kind} view={progress ?? progressView(null)} pollMs={pollMs} emailOn={emailOn} />
         ) : (
@@ -662,7 +662,7 @@ const ProfileRow: FC<{ entry: ProfileEntry; csrf: string }> = ({ entry, csrf }) 
     <p>{entry.text}</p>
     <details class="profile-menu">
       <summary aria-label={`管理画像：${entry.text}`}><span aria-hidden="true">···</span></summary>
-      <div class="profile-menu__panel">
+      <div class="popover profile-menu__panel">
         <p class="muted">{entry.confirmation === 'owner-stated' ? '你明确说过' : '你确认过'}<br />{formatDateTime(entry.updatedAt)}</p>
         <PostButton action="/account/profile/delete" csrf={csrf} label="删除这条画像" variant="danger" fields={{ entryId: entry.id }} confirm="删除这条画像？无法恢复。" />
       </div>
@@ -677,14 +677,14 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
       <p>在 NOWMe 上采访时保存的长期画像与各面墙的采访资料都在这里。<br />只有你自己能看到；组织者和其他成员都看不到。</p>
     </header>
     {notice ? <Notice tone="success">{notice}</Notice> : null}
-    <section class="profile-card profile-identity" aria-label="个人资料">
+    <section class="card profile-card profile-identity" aria-label="个人资料">
       <span class="profile-avatar" aria-hidden="true">{avatarVersion ? <img src={`/account/avatar?v=${avatarVersion}`} alt="" /> : initialOf(nickname)}</span>
       <div class="profile-identity__copy">
         <h2>{nickname}</h2>
         <p>{profile.find((entry) => entry.category === 'fact')?.text ?? '从一次采访开始，让 AI 慢慢认识你。'}</p>
       </div>
       <details class="profile-editor" open={!!error}>
-        <summary class="profile-button"><HomeIcon name="pencil" />编辑资料</summary>
+        <summary class="btn btn--ghost btn--small"><HomeIcon name="pencil" />编辑资料</summary>
         <form method="post" action="/account/profile" enctype="multipart/form-data" class="stack profile-edit-form">
           <CsrfField token={csrf} />
           {error ? <Notice tone="error">{error}</Notice> : null}
@@ -693,16 +693,16 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
           <label>头像<input type="file" name="avatar" accept="image/png,image/jpeg,image/webp" aria-describedby="avatar-help" /></label>
           <p id="avatar-help" class="muted">支持 PNG、JPEG、WebP，2 MB 以内；保存时自动居中裁成正方形。</p>
           {avatarVersion ? <label class="profile-remove-avatar"><input type="checkbox" name="removeAvatar" value="1" />移除当前头像，恢复昵称首字</label> : null}
-          <div><button type="submit" class="profile-button profile-button--save">保存资料</button></div>
+          <div><button type="submit" class="btn btn--primary btn--small">保存资料</button></div>
         </form>
       </details>
     </section>
-    <section class="profile-card profile-entries" aria-labelledby="profile-heading">
+    <section class="card profile-card profile-entries" aria-labelledby="profile-heading">
       <div class="profile-section-heading">
         <h2 id="profile-heading">长期画像（{profile.length} 条）</h2>
         <details class="profile-help">
           <summary><HomeIcon name="plus" />如何添加</summary>
-          <div class="profile-help__panel">在墙里完成一次采访，确认资料时勾选“记住这些”，就能保存新的画像。<a href="/">前往我的墙 <span aria-hidden="true">→</span></a></div>
+          <div class="popover profile-help__panel">在墙里完成一次采访，确认资料时勾选“记住这些”，就能保存新的画像。<a href="/">前往我的墙 <span aria-hidden="true">→</span></a></div>
         </details>
       </div>
       {profile.length === 0 ? (
@@ -711,21 +711,21 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
         <>
           <ul class="profile-list">{profile.slice(0, 6).map((entry) => <ProfileRow entry={entry} csrf={csrf} />)}</ul>
           {profile.length > 6 ? <details class="profile-more">
-            <summary class="profile-button"><span class="profile-more__closed">展开全部 {profile.length} 条</span><span class="profile-more__open">收起画像</span><HomeIcon name="chevron" /></summary>
+            <summary class="btn btn--ghost btn--small"><span class="profile-more__closed">展开全部 {profile.length} 条</span><span class="profile-more__open">收起画像</span><HomeIcon name="chevron" /></summary>
             <ul class="profile-list">{profile.slice(6).map((entry) => <ProfileRow entry={entry} csrf={csrf} />)}</ul>
           </details> : null}
           <details class="profile-clear"><summary>管理全部画像</summary><PostButton action="/account/profile/delete" csrf={csrf} label="全部删除" variant="danger" fields={{ all: '1' }} confirm="删除全部长期画像？无法恢复。" /></details>
         </>
       )}
     </section>
-    <section class="profile-card profile-briefs" aria-labelledby="briefs-heading">
+    <section class="card profile-card profile-briefs" aria-labelledby="briefs-heading">
       <h2 id="briefs-heading">各面墙的采访资料（{briefs.length} 份）</h2>
       {briefs.length === 0 ? <div class="profile-empty"><p>还没有保存的采访资料</p><span>在墙里完成采访后，你的创作资料会出现在这里。</span></div> : (
         <ul class="profile-brief-list">{briefs.map((item) => (
           <li>
             <div><h3>{item.wallName}</h3><p class="muted">{BRIEF_STATUS_LABEL[item.status]} · {formatDateTime(item.updatedAt)}{item.wallClosed ? ' · 墙已关闭' : item.membershipStatus !== 'active' ? ' · 你已不在这面墙' : ''}</p></div>
             <div class="profile-brief-actions">
-              {!item.wallClosed && item.membershipStatus === 'active' ? <a class="profile-button" href={`/w/${item.wallId}/me/brief`}>查看</a> : null}
+              {!item.wallClosed && item.membershipStatus === 'active' ? <a class="btn btn--ghost btn--small" href={`/w/${item.wallId}/me/brief`}>查看</a> : null}
               <PostButton action="/account/briefs/delete" csrf={csrf} label="删除" fields={{ briefId: item.id }} confirm="删除这份资料和上传的图片？无法恢复。" />
             </div>
           </li>
@@ -733,7 +733,7 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
       )}
     </section>
     <BlockedList csrf={csrf} blocked={blocked} />
-    <section class="profile-card" id="notifications" aria-labelledby="notifications-heading">
+    <section class="card profile-card" id="notifications" aria-labelledby="notifications-heading">
       <h2 id="notifications-heading">提醒邮件</h2>
       <p class="muted">提醒都发到你的登录邮箱，只有一句话和链接，不含页面内容（组织者看不到你的邮箱）。</p>
       <form method="post" action="/account/notifications" class="stack">
@@ -748,16 +748,16 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
           <input type="checkbox" name="reminders" value="1" checked={remindersOn} />
           <span>接收组织者的提醒邮件（提醒还没发布页面、没答完必答题的人；同一面墙 48 小时内最多一封）</span>
         </label>
-        <div><button type="submit" class="profile-button">保存</button></div>
+        <div><button type="submit" class="btn btn--ghost btn--small">保存</button></div>
       </form>
     </section>
     {accountLinks ? (
-      <section class="profile-card" aria-labelledby="account-heading">
+      <section class="card profile-card" aria-labelledby="account-heading">
         <h2 id="account-heading">账号</h2>
         <p class="muted">把你在 NOWMe 的页面文件和资料下载成一个 zip；或者彻底注销账号。</p>
         <div class="profile-brief-actions">
-          <a class="profile-button" href="/account/export">导出我的数据</a>
-          <a class="profile-button" href="/account/delete">注销账号</a>
+          <a class="btn btn--ghost btn--small" href="/account/export">导出我的数据</a>
+          <a class="btn btn--ghost btn--small" href="/account/delete">注销账号</a>
         </div>
       </section>
     ) : null}

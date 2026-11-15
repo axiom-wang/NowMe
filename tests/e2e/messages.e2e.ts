@@ -45,7 +45,7 @@ test('顶栏在我的、消息和资料页之间保持位置与尺寸，未读�
       await route.fulfill({ json: { unread: 12 } });
     });
     const geometry = () => page.evaluate(() => {
-      const selectors = ['.home-header', '.site-header__inner', '.brand', '.home-nav', '.home-nav a', '.home-account', '.home-account .avatar'];
+      const selectors = ['.site-header', '.site-header__inner', '.brand', '.site-nav', '.site-nav a', '.account-menu', '.account-menu .avatar'];
       return selectors.flatMap((selector) => [...document.querySelectorAll(selector)].map((element) => {
         const { x, y, width, height } = element.getBoundingClientRect();
         return { selector, x, y, width, height, fontSize: getComputedStyle(element).fontSize };
@@ -95,7 +95,7 @@ test('消息页：筛选与轮询保持同步，发起聊天入口和窄屏布�
     await expect(a.page.locator('.message-text')).toHaveCount(1);
 
     await b.page.goto('/messages');
-    await expect(b.page.locator('.home-nav [aria-current="page"]')).toHaveText(/消息/);
+    await expect(b.page.locator('.site-nav [aria-current="page"]')).toHaveText(/消息/);
     await expect(b.page.locator('[data-inbox-unread]')).toHaveText('2');
     await expect(b.page.locator('.conversation-time')).toHaveCount(2);
     await expect(b.page.locator('.conversation-time').first()).toHaveText(/^\d{2}:\d{2}$/);

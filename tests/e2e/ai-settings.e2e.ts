@@ -5,7 +5,7 @@ test('账号保存自己的 AI API、跨设备管理、隔离与删除（桌面�
   const first = await browser.newContext();
   const owner = await newUser(first, 'byok-owner', '阿柚');
   const key = 'sk-e2e-user-secret-only';
-  await owner.page.locator('.home-account > summary').click();
+  await owner.page.locator('.account-menu > summary').click();
   await owner.page.getByRole('link', { name: 'AI 设置', exact: true }).click();
   await expect(owner.page.getByRole('heading', { name: '使用自己的 AI 服务' })).toBeVisible();
   await owner.page.locator('#interview-provider').selectOption('deepseek');

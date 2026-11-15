@@ -7,24 +7,24 @@ test('模型设置页与主页顶栏一致，账号菜单可关闭且没有重�
     await page.setViewportSize({ width, height: 900 });
     await page.goto('/');
     const homeHeader = await page.locator('.site-header').boundingBox();
-    await page.locator('.home-account > summary').click();
-    await expect(page.locator('.home-account__menu').getByRole('link', { name: '我的资料' })).toHaveCount(0);
+    await page.locator('.account-menu > summary').click();
+    await expect(page.locator('.account-menu__panel').getByRole('link', { name: '我的资料' })).toHaveCount(0);
     await page.getByRole('link', { name: 'AI 设置', exact: true }).click();
     await expect(page).toHaveURL(/\/account\/ai$/);
-    await expect(page.locator('.site-header')).toHaveClass('site-header home-header');
+    await expect(page.locator('.site-header')).toHaveClass('site-header');
     expect(await page.locator('.site-header').boundingBox()).toEqual(homeHeader);
-    await expect(page.locator('.home-nav').getByRole('link', { name: '我的资料' })).toBeVisible();
-    await expect(page.locator('.home-nav [aria-current]')).toHaveCount(0);
+    await expect(page.locator('.site-nav').getByRole('link', { name: '我的资料' })).toBeVisible();
+    await expect(page.locator('.site-nav [aria-current]')).toHaveCount(0);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-    await page.locator('.home-account > summary').click();
-    await expect(page.locator('.home-account__menu').getByRole('link', { name: '我的资料' })).toHaveCount(0);
+    await page.locator('.account-menu > summary').click();
+    await expect(page.locator('.account-menu__panel').getByRole('link', { name: '我的资料' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: '退出登录' })).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(page.locator('.home-account')).not.toHaveAttribute('open');
-    await page.locator('.home-account > summary').click();
+    await expect(page.locator('.account-menu')).not.toHaveAttribute('open');
+    await page.locator('.account-menu > summary').click();
     await page.locator('.site-main').click({ position: { x: 4, y: 4 } });
-    await expect(page.locator('.home-account')).not.toHaveAttribute('open');
-    await page.locator('.home-nav').getByRole('link', { name: '我的', exact: true }).click();
+    await expect(page.locator('.account-menu')).not.toHaveAttribute('open');
+    await page.locator('.site-nav').getByRole('link', { name: '我的', exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
   }
 });
@@ -55,10 +55,10 @@ test('首页筛选、账号菜单、封面上传更换与恢复默认，在桌�
   await page.getByRole('link', { name: '待完成 1', exact: true }).click();
   await expect(page.locator('.home-wall')).toHaveCount(1);
   await page.getByRole('link', { name: '全部 1', exact: true }).click();
-  await page.locator('.home-account > summary').click();
+  await page.locator('.account-menu > summary').click();
   await expect(page.getByRole('link', { name: 'AI 设置' })).toBeVisible();
   await page.keyboard.press('Escape');
-  await expect(page.locator('.home-account')).not.toHaveAttribute('open');
+  await expect(page.locator('.account-menu')).not.toHaveAttribute('open');
   for (const width of [1672, 1280, 1024, 768, 375, 320]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `不应在 ${width}px 横向溢出`).toBe(true);

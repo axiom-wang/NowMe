@@ -1,0 +1,287 @@
+/*
+ * 功能包 admin：组织者后台（邀请、成员、举报、封面、墙额度）与建墙。（views/layout.tsx 按页加载，在 app.css 之后）
+ */
+
+/* ------------------------------------------------------------------ */
+/* 建墙 */
+
+.scene-picker__options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.scene-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 10px;
+  min-height: 92px;
+  padding: 14px;
+  border: 1.5px solid var(--line);
+  border-radius: 16px;
+  background: var(--white);
+  cursor: pointer;
+  line-height: 1.35;
+  transition:
+    border-color 0.15s,
+    box-shadow 0.15s var(--ease),
+    transform 0.15s var(--ease);
+}
+
+.scene-option:hover {
+  border-color: var(--ink);
+}
+
+.scene-option input {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  margin: 0;
+  width: 18px;
+  height: 18px;
+}
+
+.scene-option__swatch {
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  border: 1.5px solid var(--ink);
+  background-color: var(--scene);
+  background-image: radial-gradient(color-mix(in srgb, var(--scene-ink) 40%, transparent) 1px, transparent 1.5px);
+  background-size: 6px 6px;
+}
+
+.scene-option:has(input:checked) {
+  border-color: var(--ink);
+  box-shadow: var(--shadow-hard);
+  transform: translate(-1px, -1px);
+}
+
+.scene-option:has(input:focus-visible) {
+  outline: 2.5px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.scene-option__label {
+  font-weight: 700;
+  font-size: 0.94rem;
+}
+
+/* ------------------------------------------------------------------ */
+/* 组织者后台 */
+
+.admin-hero .chip {
+  background: var(--scene, var(--ink));
+  color: var(--scene-ink, var(--white));
+}
+
+.admin-layout {
+  display: grid;
+  gap: 0 20px;
+}
+
+.admin-layout__main,
+.admin-layout__side {
+  min-width: 0;
+}
+
+.invite {
+  display: grid;
+  gap: 18px;
+}
+
+.invite__text {
+  min-width: 0;
+}
+
+.invite__link {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin: 12px 0 0;
+}
+
+.invite__url {
+  flex: 1 1 100%;
+  display: block;
+  min-width: 0;
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--paper);
+  border: 1.5px dashed var(--paper-3);
+  font-size: 0.84rem;
+  word-break: break-all;
+  user-select: all;
+}
+
+.invite__qr {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--white);
+  border: 1.5px solid var(--ink);
+  box-shadow: var(--shadow-hard);
+  justify-self: center;
+}
+
+.invite__qr img {
+  display: block;
+  width: 180px;
+  height: 180px;
+  image-rendering: pixelated;
+}
+
+.invite__qr figcaption {
+  font-size: 0.86rem;
+  font-weight: 650;
+}
+
+.stat-tiles {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.stat-tile {
+  padding: 14px 16px;
+  border-radius: 16px;
+  background: var(--paper);
+  border: 1px solid var(--line);
+}
+
+.stat-tile--accent {
+  background: var(--lime);
+  border-color: var(--ink);
+}
+
+.stat-tile dt {
+  font-size: 0.84rem;
+  color: var(--ink-2);
+}
+
+.stat-tile dd {
+  margin: 0;
+  font-family: var(--font-head);
+  font-size: 2.6rem;
+  font-weight: 700;
+  line-height: 1.1;
+  letter-spacing: -0.04em;
+}
+
+.member-list {
+  list-style: none;
+  margin: 8px 0 0;
+  padding: 0;
+}
+
+.member-row {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 2px 12px;
+  padding: 12px 0;
+  border-top: 1px solid var(--line);
+}
+
+.member-row:first-child {
+  border-top: 0;
+}
+
+.member-row .avatar {
+  grid-row: 1 / span 2;
+}
+
+.member-row__main {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.member-row__name {
+  font-weight: 650;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+.member-row__meta {
+  grid-column: 2;
+  font-size: 0.82rem;
+}
+
+.member-row__action {
+  grid-column: 3;
+  grid-row: 1 / span 2;
+  margin: 0;
+}
+
+.danger-zone {
+  border-color: var(--bad-line);
+  background: linear-gradient(180deg, var(--surface), var(--surface) 60%);
+}
+
+.danger-zone h2 {
+  color: var(--bad);
+}
+
+.danger-zone p {
+  font-size: 0.9rem;
+  color: var(--ink-2);
+}
+
+/* 组织者上传的墙封面（与成员页面封面独立）。 */
+.wall-cover-settings__preview { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 14px; margin: 16px 0; background: var(--paper-2); }
+.wall-cover-settings input[type='file'] { max-width: 100%; width: 100%; font-size: 13px; }
+.wall-cover-settings__delete { margin-top: 12px; }
+.reports__list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.reports__item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
+.reports__item h3 { margin: 0 0 4px; font-size: 1rem; }
+.reports__item p { margin: 0; }
+.reports__actions { display: flex; gap: 8px; }
+
+@media (min-width: 560px) {
+  .scene-picker__options {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .invite__url {
+    flex: 1 1 auto;
+    width: auto;
+  }
+}
+
+@media (min-width: 720px) {
+  .invite {
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+  }
+}
+
+@media (min-width: 1000px) {
+  .admin-layout {
+    grid-template-columns: minmax(0, 1fr) 340px;
+    align-items: start;
+  }
+
+  .admin-layout__side {
+    position: sticky;
+    top: calc(var(--header-h) + 20px);
+  }
+}
+
+/* 墙额度（contracts 12）：组织者为成员买单 */
+.wall-credits .stat-tiles {
+  margin: 12px 0 16px;
+}

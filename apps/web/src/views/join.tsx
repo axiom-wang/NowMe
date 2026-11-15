@@ -16,7 +16,7 @@ export interface JoinViewProps {
 }
 
 export const JoinView: FC<JoinViewProps> = ({ wall, sceneLabel, csrf, rejoin }) => (
-  <div class="container container--narrow">
+  <div class="container board join-board">
     <section class={`card join scene--${wall.sceneType}`}>
       <div class="join__band" aria-hidden="true"></div>
       <p class="eyebrow join__eyebrow">你收到了一面墙的邀请</p>

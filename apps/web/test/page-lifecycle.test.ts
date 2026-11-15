@@ -274,10 +274,10 @@ describe('公开链接页 GET /s/:publicToken（W15）', () => {
     expect(response.headers.get('x-robots-tag')).toBe('noindex');
     const html = await response.text();
     expect(html.startsWith('<!doctype html>')).toBe(true);
-    expect(html).toContain('class="site-header home-header"');
-    expect(html).toContain('href="/static/home.css"');
-    expect(html).not.toContain('class="home-nav"');
-    expect(html).not.toContain('class="home-account"');
+    expect(html).toContain('class="site-header"');
+    expect(html).toMatch(/href="\/static\/workspace\.[0-9a-f]{10}\.css"/);
+    expect(html).not.toContain('class="site-nav"');
+    expect(html).not.toContain('class="account-menu"');
     expect(html).toContain('<meta name="robots" content="noindex"/>');
     expect(html).toContain(s.card.displayName);
     expect(html).toContain(s.card.tagline);

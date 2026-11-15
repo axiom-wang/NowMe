@@ -14,4 +14,3 @@ export const HomeIcon: FC<{ name: HomeIconName }> = ({ name }) => (
     {name === 'chevron' ? <path d="m7 10 5 5 5-5" /> : null}
   </svg>
 );
-export const HomeSpark: FC = () => <svg class="home-spark" viewBox="0 0 40 40" fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" aria-hidden="true"><path d="M8 5v10M27 10l-8 10M35 28l-12 2" /></svg>;

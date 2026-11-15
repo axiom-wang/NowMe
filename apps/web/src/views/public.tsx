@@ -8,7 +8,7 @@
  */
 import { raw } from 'hono/html';
 import type { FC } from 'hono/jsx';
-import { STATIC_PATH_PREFIX } from '../constants.js';
+import { assetUrl } from '../routes/static.js';
 import type { IssuedTicket } from '../services/tickets.js';
 import { SiteHeader } from './layout.js';
 import { PageFrame } from './page-frame.js';
@@ -29,11 +29,10 @@ export const PublicPageDocument: FC<PublicPageProps> = ({ displayName, tagline, 
         <meta name="robots" content="noindex" />
         <meta name="referrer" content="same-origin" />
         <title>{`${displayName} · NOWMe`}</title>
-        <link rel="stylesheet" href={`${STATIC_PATH_PREFIX}app.css`} />
-        <link rel="stylesheet" href={`${STATIC_PATH_PREFIX}workspace.css`} />
-        <link rel="stylesheet" href={`${STATIC_PATH_PREFIX}home.css`} />
-        <script src={`${STATIC_PATH_PREFIX}page-frame.js`}></script>
-        <script src={`${STATIC_PATH_PREFIX}app.js`} defer></script>
+        <link rel="stylesheet" href={assetUrl('app.css')} />
+        <link rel="stylesheet" href={assetUrl('workspace.css')} />
+        <script src={assetUrl('page-frame.js')}></script>
+        <script src={assetUrl('app.js')} defer></script>
       </head>
       <body class="site site--public">
         <SiteHeader auth={null} />

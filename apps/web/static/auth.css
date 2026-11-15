@@ -1,0 +1,224 @@
+/*
+ * 功能包 auth：登录、验证码、昵称、协议确认、加入墙。（views/layout.tsx 按页加载，在 app.css 之后）
+ */
+
+/* ------------------------------------------------------------------ */
+/* 登录、验证码、昵称 */
+
+.auth {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  min-width: 0;
+  margin: 0 auto;
+}
+
+.auth__hero {
+  position: relative;
+  overflow: hidden;
+  padding: 24px 22px 26px;
+  border-radius: var(--radius-xl);
+  background: var(--ink);
+  color: var(--paper);
+  background-image:
+    radial-gradient(var(--on-ink-line) 1px, transparent 1.4px),
+    radial-gradient(120% 80% at 100% 100%, color-mix(in srgb, var(--lime) 16%, transparent), transparent 60%);
+  background-size:
+    22px 22px,
+    100% 100%;
+}
+
+.auth__slogan {
+  margin: 0 0 12px;
+  font-size: clamp(1.75rem, 1.2rem + 2.6vw, 3.3rem);
+  line-height: 1.16;
+  color: var(--paper);
+}
+
+.auth__slogan mark {
+  display: inline-block;
+  padding: 0 0.16em;
+  margin: 0 0.04em;
+  border-radius: 8px;
+  background: var(--lime);
+  color: var(--ink);
+  transform: rotate(-2deg);
+}
+
+.auth__lead {
+  max-width: 26em;
+  margin: 0;
+  color: var(--on-ink-muted);
+  font-size: 0.98rem;
+}
+
+.auth__stickers {
+  display: none;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.auth__card {
+  margin: 0;
+  padding: 26px 22px;
+  border: 1.5px solid var(--ink);
+  border-radius: 6px 6px 6px 24px;
+  box-shadow: var(--shadow-hard);
+}
+
+.auth__card h1 {
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: 2rem;
+  letter-spacing: 0;
+  margin-bottom: 8px;
+}
+
+.auth__step {
+  margin: 0 0 14px;
+  font-family: var(--font-mono);
+  font-size: 0.76rem;
+  color: var(--muted);
+  letter-spacing: 0.02em;
+}
+
+.auth__card .stack {
+  margin-top: 18px;
+}
+
+.auth__resend {
+  align-items: flex-start;
+  margin-top: 4px;
+}
+
+.auth__alt {
+  margin: 10px 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.demo-login > .muted { margin-bottom: 1.25rem; }
+.demo-login__description { font-size: .78rem; line-height: 1.6; margin: .4rem 0 0; }
+
+@media (min-width: 900px) {
+  .auth {
+    grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
+    gap: 24px;
+    align-items: stretch;
+    min-height: calc(100vh - var(--header-h) - 200px);
+  }
+
+  .auth__hero {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 56px 52px 150px;
+  }
+
+  .auth__slogan {
+    margin-bottom: 20px;
+  }
+
+  .auth__stickers {
+    display: block;
+    position: absolute;
+    right: 40px;
+    bottom: 40px;
+    left: 52px;
+    height: 96px;
+  }
+
+  .auth__stickers .sticker {
+    position: absolute;
+    font-size: 1.02rem;
+    box-shadow: 3px 3px 0 color-mix(in srgb, var(--ink) 60%, transparent);
+  }
+
+  .auth__stickers .sticker:nth-child(1) {
+    left: 0;
+    bottom: 34px;
+    transform: rotate(-5deg);
+  }
+
+  .auth__stickers .sticker:nth-child(2) {
+    left: 37%;
+    bottom: 0;
+    transform: rotate(3deg);
+  }
+
+  .auth__stickers .sticker:nth-child(3) {
+    right: 0;
+    bottom: 50px;
+    transform: rotate(-2deg);
+  }
+
+  .auth__card {
+    align-self: center;
+    padding: 40px 36px;
+  }
+}
+
+@media (max-width: 599px) {
+  .auth__lead {
+    display: none;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 加入：一张钉在软木板上的邀请卡，顶上一截场景色胶带 */
+
+.join-board {
+  padding: 36px 14px 28px;
+}
+
+.join {
+  margin: 0 auto;
+  max-width: 560px;
+  padding-top: 40px;
+  border: 1.5px solid var(--ink);
+  border-radius: 6px 6px 6px 24px;
+  box-shadow: var(--shadow-hard), var(--shadow-note);
+}
+
+.join__band {
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  width: 120px;
+  height: 26px;
+  margin-left: -60px;
+  background-color: var(--scene, var(--ink));
+  background-image: radial-gradient(color-mix(in srgb, var(--scene-ink, var(--lime)) 40%, transparent) 1px, transparent 1.5px);
+  background-size: 6px 6px;
+  border: 1.5px solid var(--ink);
+  transform: rotate(-3deg);
+}
+
+.join__title {
+  margin-bottom: 12px;
+}
+
+.join .chip {
+  background: var(--scene, var(--ink));
+  color: var(--scene-ink, var(--lime));
+}
+
+.join__desc {
+  white-space: pre-line;
+  color: var(--ink-2);
+}
+
+.join .organizer-note {
+  margin: 26px 0 22px;
+}
+
+.join .stack {
+  margin-top: 18px;
+}
+
+@media (min-width: 640px) {
+  .join-board {
+    padding: 48px 32px 40px;
+  }
+}

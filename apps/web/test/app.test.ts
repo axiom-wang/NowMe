@@ -29,7 +29,9 @@ describe('主站基础', () => {
     expect(html.startsWith('<!doctype html>')).toBe(true);
     expect(html).toContain('lang="zh-CN"');
     expect(html).toContain('<title>登录 · NOWMe</title>');
-    expect(html).toContain('href="/static/app.css"');
+    expect(html).toMatch(/href="\/static\/app\.[0-9a-f]{10}\.css"/);
+    expect(html).toMatch(/href="\/static\/auth\.[0-9a-f]{10}\.css"/);
+    expect(html).not.toMatch(/\/static\/(wall|workspace|admin|home)\./);
   });
 
   it('提供 static/ 下的样式与脚本，拒绝其他路径', async () => {

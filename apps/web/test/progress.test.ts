@@ -155,16 +155,16 @@ describe('SSE 与轮询', () => {
     for (const path of [`/w/${wall.id}/me/jobs/${jobId}`, `/w/${wall.id}/me`]) {
       const html = await (await get(t, path, { cookie: owner.cookie })).text();
       expect(html).not.toContain('http-equiv="refresh"');
-      expect(html).toContain('<script src="/static/progress.js"');
+      expect(html).toContain('<script src="/static/progress.');
       expect(html).toContain(`data-stream="/w/${wall.id}/me/jobs/${jobId}/progress"`);
       expect(html).toContain(`data-status="/w/${wall.id}/me/jobs/${jobId}/status"`);
       expect(html).toContain('正在生成页面（第 5 轮）');
-      expect(html).toMatch(/job-progress__step--current" data-step="generating"/);
+      expect(html).toMatch(/progress__step--current" data-step="generating"/);
       expect(html).toContain('做好后会发邮件告诉你');
     }
     // 结束后的任务页不再加载进度脚本
     finishJob(t, jobId, 'failed');
     const after = await (await get(t, `/w/${wall.id}/me/jobs/${jobId}`, { cookie: owner.cookie })).text();
-    expect(after).not.toContain('progress.js');
+    expect(after).not.toMatch(/\/static\/progress\./);
   });
 });

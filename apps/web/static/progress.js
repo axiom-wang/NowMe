@@ -27,8 +27,8 @@
     var current = order.indexOf(view.step);
     steps.forEach(function (el, index) {
       var state = index < current || (view.done && index <= current) ? 'done' : index === current ? 'current' : 'todo';
-      el.classList.remove('job-progress__step--done', 'job-progress__step--current', 'job-progress__step--todo');
-      el.classList.add('job-progress__step--' + state);
+      el.classList.remove('progress__step--done', 'progress__step--current', 'progress__step--todo');
+      el.classList.add('progress__step--' + state);
       if (state === 'current') el.setAttribute('aria-current', 'step');
       else el.removeAttribute('aria-current');
     });

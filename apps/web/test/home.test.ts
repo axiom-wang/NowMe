@@ -84,7 +84,7 @@ describe('未登录的正式首页', () => {
     const html = await response.text();
     expect(html).toContain('<title>给你的圈子建一面墙 · NOWMe</title>');
     expect(html).toContain('class="site page--landing"');
-    expect(html).toContain('href="/static/landing.css"');
+    expect(html).toMatch(/href="\/static\/landing\.[0-9a-f]{10}\.css"/);
     const organizer = html.indexOf('组织者只要做三件事');
     const invited = html.indexOf('收到邀请了？');
     expect(organizer).toBeGreaterThan(0);
@@ -98,8 +98,8 @@ describe('未登录的正式首页', () => {
     expect(html).not.toMatch(/评审|评委|演示|黑客松体验|华硕|Create Lab/);
     expect(html).not.toContain('action="/login/demo"');
     // 访客不加载登录后的脚本；主站 CSP 不允许内联样式与事件属性
-    expect(html).not.toContain('home.js');
-    expect(html).not.toContain('messages.js');
+    expect(html).not.toMatch(/\/static\/home\./);
+    expect(html).not.toMatch(/\/static\/messages\./);
     expect(elements(html).some((el) => 'style' in el.attrs || Object.keys(el.attrs).some((name) => name.startsWith('on')))).toBe(false);
   });
 

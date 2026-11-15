@@ -1,6 +1,6 @@
 /* 原生账号菜单：点击外部或按 Escape 关闭。筛选使用链接，无脚本也可用。 */
 (function () {
-  var menu = document.querySelector('.home-account');
+  var menu = document.querySelector('.account-menu');
   if (!menu) return;
   document.addEventListener('click', function (event) {
     if (!menu.contains(event.target)) menu.open = false;

@@ -28,17 +28,17 @@ test('各页面与顶栏共用内容边界，桌面限制最大宽度，手机�
         };
       });
       const label = `${width}px ${path}`;
-      await expect(page.locator('.site-header')).toHaveClass('site-header home-header');
+      await expect(page.locator('.site-header')).toHaveClass('site-header');
       await expect(page.locator('.site-header__nav')).toHaveCount(0);
       await page.evaluate(() => document.fonts.ready);
       const headerBox = await page.locator('.site-header').boundingBox();
       headerBaseline ??= headerBox!;
       expect(headerBox, label).toEqual(headerBaseline);
-      await page.locator('.home-account > summary').click();
-      await expect(page.locator('.home-account__menu').getByRole('link', { name: 'AI 设置', exact: true })).toBeVisible();
-      await expect(page.locator('.home-account__menu a[href="/account/data"]')).toHaveCount(0);
+      await page.locator('.account-menu > summary').click();
+      await expect(page.locator('.account-menu__panel').getByRole('link', { name: 'AI 设置', exact: true })).toBeVisible();
+      await expect(page.locator('.account-menu__panel a[href="/account/data"]')).toHaveCount(0);
       await page.keyboard.press('Escape');
-      await expect(page.locator('.home-account')).not.toHaveAttribute('open');
+      await expect(page.locator('.account-menu')).not.toHaveAttribute('open');
       expect(layout.x, label).toBeCloseTo(layout.expectedX, 1);
       expect(layout.width, label).toBeCloseTo(layout.expectedWidth, 1);
       expect(layout.width, label).toBeLessThanOrEqual(1240);
@@ -57,8 +57,8 @@ test('各页面与顶栏共用内容边界，桌面限制最大宽度，手机�
     for (const width of [1440, 375, 320]) {
       await loginPage.setViewportSize({ width, height: 1000 });
       await loginPage.goto('/login');
-      await expect(loginPage.locator('.site-header')).toHaveClass('site-header home-header');
-      await expect(loginPage.locator('.home-nav, .home-account')).toHaveCount(0);
+      await expect(loginPage.locator('.site-header')).toHaveClass('site-header');
+      await expect(loginPage.locator('.site-nav, .account-menu')).toHaveCount(0);
       const shell = await loginPage.locator('.site-main').boundingBox();
       expect(await loginPage.locator('.site-header__inner').boundingBox()).toMatchObject({ x: shell!.x, width: shell!.width });
       expect(await loginPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);

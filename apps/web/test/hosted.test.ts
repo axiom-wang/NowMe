@@ -278,7 +278,7 @@ describe('托管生成与修改', () => {
     t.repos.jobs.create({ id: 'gen_aaaaaaaaaaaaaaaaaaaaaaaaaa', pageId: owner.member.page.id, ownerId: owner.session.userId, kind: 'generate', baseRevisionId: null, targetBlock: null, requestText: null, createdAt: now });
     const page = await (await get(t, `/w/${wall.id}/me/jobs/gen_aaaaaaaaaaaaaaaaaaaaaaaaaa`, { cookie: owner.session.cookie })).text();
     expect(page).not.toContain('http-equiv="refresh"');
-    expect(page).toContain('/static/progress.js');
+    expect(page).toMatch(/\/static\/progress\.[0-9a-f]{10}\.js/);
     expect(page).toContain(`data-stream="/w/${wall.id}/me/jobs/gen_aaaaaaaaaaaaaaaaaaaaaaaaaa/progress"`);
     expect(t.repos.jobs.interruptAll(now)).toBe(1);
     expect(t.repos.jobs.findById('gen_aaaaaaaaaaaaaaaaaaaaaaaaaa')).toMatchObject({ status: 'failed', errorCode: 'INTERRUPTED', charged: false });
