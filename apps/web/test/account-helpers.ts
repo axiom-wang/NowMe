@@ -3,7 +3,7 @@
  */
 import { randomUUID } from 'node:crypto';
 import { inflateRawSync } from 'node:zlib';
-import { connectAgent, get, issueInstruction, login, seedWall, type TestSession } from './helpers.js';
+import { connectAgent, get, issueInstruction, login, seedWall, type TestSession, type TestWeb } from './helpers.js';
 import { completeInterview, createHostedTestWeb, joinAs, type HostedOwner, type HostedTestWeb } from './hosted-helpers.js';
 import { askIcebreaker, putOnWall } from './icebreaker-helpers.js';
 import { enablePublicLink, post } from './publish-helpers.js';
@@ -112,12 +112,12 @@ export async function accountWorld(): Promise<AccountWorld> {
 }
 
 /** 发注销确认码并取出（内存发件箱里最新一封“注销”邮件）。 */
-export async function requestDeletionCode(t: HostedTestWeb, session: TestSession): Promise<{ status: number; code: string | null }> {
+export async function requestDeletionCode(t: TestWeb, session: TestSession): Promise<{ status: number; code: string | null }> {
   const response = await post(t, session, '/account/delete/code');
   const mail = [...t.outbox.messages].reverse().find((item) => item.to === session.email && item.subject.includes('注销'));
   return { status: response.status, code: mail?.body.match(/\d{6}/)?.[0] ?? null };
 }
 
-export function confirmDeletion(t: HostedTestWeb, session: TestSession, code: string, fields: Record<string, string> = {}): Promise<Response> {
+export function confirmDeletion(t: TestWeb, session: TestSession, code: string, fields: Record<string, string> = {}): Promise<Response> {
   return post(t, session, '/account/delete', { code, confirm: '1', ...fields });
 }

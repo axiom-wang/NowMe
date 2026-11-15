@@ -2,7 +2,7 @@
  * 平台运营：举报与账号处理（contracts 15）：`pnpm --filter @nowme/web moderation <命令>`
  *
  *   list [--status open|dismissed|actioned|all] [--kind page|conversation] [--limit N]
- *   show --id rpt_...
+ *   show --id rpt_... [--evidence-png 文件]   被举报的人已注销时显示转存的证据，截图可写到文件
  *   resolve --id rpt_... --as dismissed|actioned [--note 备注]
  *   hide-page --page pg_... [--note 备注]
  *   suspend --email 邮箱 [--note 备注]

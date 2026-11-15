@@ -17,7 +17,12 @@
  *    拉黑关系（双向）删除；他提交过的举报保留给平台处理，但补充说明清空；针对他的举报与处理记录保留；
  * 7. 个人余额作废：记一笔 `account_deleted` 流水（流水只追加，不删除；之后流水只关联到这个墓碑账号 ID）；
  * 8. 用户行改为墓碑：邮箱改为 `deleted:<用户 ID>`、昵称“已注销用户”、头像与协议同意记录清空、`deleted_at` 置为当前时间。
- * 事务提交后删除版本目录与托管素材目录（失败只记日志：数据库里已是墓碑，不会再签发票据）。
+ * 事务提交后删除版本目录与托管素材目录（失败只记日志：数据库里已是墓碑，不会再签发票据；
+ * 残留的由 `sweepDeletedAccounts` 在启动时幂等清理）。
+ *
+ * 证据转存（contracts 14.7）：第 2 步之前，针对他的每一条待处理举报，把被举报的内容（页面那一版的缩略卡、页面文字、
+ * 整页截图；私信里他发的消息）存进 `deletion_evidence`，只给平台运营的 `moderation show` 看；举报处理完（触发器）
+ * 或 180 天后删除。同时记下邮箱的 HMAC（`deleted_emails`），同一邮箱重新注册不再赠送点数。
  */
 import { constantTimeEqual, generateId, LOGIN_CODE_DIGITS, LOGIN_CODE_MAX_ATTEMPTS, LOGIN_CODE_TTL_SECONDS, generateLoginCode } from '@nowme/contracts';
 import { LOGIN_CODE_RATE_MAX, LOGIN_CODE_RATE_WINDOW_SECONDS } from '../constants.js';
@@ -29,12 +34,55 @@ import { removeHostedPageFiles } from '../hosted/assets.js';
 import { codeHash } from './auth.js';
 import { settleJob, userAccount } from './billing.js';
 import { erasePageRecords } from './page-lifecycle.js';
-import { removeAllRevisionFiles } from './revision-storage.js';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { recordDeletedEmail } from './deleted-emails.js';
+import { REVISION_COVER_FILE, REVISION_FULL_SCREENSHOT, removeAllRevisionFiles, revisionDir } from './revision-storage.js';
 
 /** 注销后用户行的昵称（聊天、成员列表等处显示）。 */
 export const DELETED_USER_NICKNAME = '已注销用户';
 /** 注销后他发出的聊天消息的正文。 */
 export const DELETED_MESSAGE_TEXT = '该用户已注销';
+/** 举报证据转存后最多保留多久。 */
+export const DELETION_EVIDENCE_TTL_DAYS = 180;
+/** 私信证据最多转存他发的最近多少条。 */
+export const DELETION_EVIDENCE_MAX_MESSAGES = 200;
+
+/** 被举报那一版的整页截图（没有时用封面）。读不到返回 null。 */
+async function readScreenshot(dataDir: string, revisionId: string): Promise<Uint8Array | null> {
+  for (const file of [REVISION_FULL_SCREENSHOT, REVISION_COVER_FILE]) {
+    try {
+      return new Uint8Array(await readFile(join(revisionDir(dataDir, revisionId), ...file.split('/'))));
+    } catch {
+      // 换下一个
+    }
+  }
+  return null;
+}
+
+/** 删除到期的证据（举报处理完的由触发器删除）。返回删除条数。 */
+export function purgeExpiredEvidence(deps: Pick<AppDeps, 'db' | 'now'>): number {
+  return Number(deps.db.prepare('DELETE FROM deletion_evidence WHERE expires_at <= ?').run(deps.now().toISOString()).changes);
+}
+
+/**
+ * 启动时的幂等清理：到期的证据；已注销用户残留的版本目录与托管素材目录（注销时删文件失败、或进程在提交后崩溃）。
+ * 不存在的目录直接跳过，可以反复执行。
+ */
+export async function sweepDeletedAccounts(deps: Pick<AppDeps, 'db' | 'now' | 'config' | 'log'>): Promise<{ evidence: number; failed: number }> {
+  const evidence = purgeExpiredEvidence(deps);
+  const { revisionIds, pageIds } = accountDataQueries(deps.db).deletedAccountFiles();
+  const failed = await removeAllRevisionFiles(deps.config.dataDir, revisionIds);
+  for (const pageId of pageIds) {
+    try {
+      await removeHostedPageFiles(deps.config.dataDir, pageId);
+    } catch {
+      failed.push(pageId);
+    }
+  }
+  if (failed.length > 0) deps.log(`[web] 清理已注销账号的文件：${failed.length} 个目录没能删除（${failed.join('、')}）`);
+  return { evidence, failed: failed.length };
+}
 
 type DeletionDeps = Pick<AppDeps, 'db' | 'repos' | 'now' | 'config' | 'log' | 'outbox' | 'userModels'>;
 
@@ -102,6 +150,12 @@ export async function deleteAccount(deps: DeletionDeps, userId: string, rawCode:
   const queries = accountDataQueries(db);
   const input = (rawCode ?? '').replace(/\s+/g, '');
   const nowIso = deps.now().toISOString();
+  const expiresAt = new Date(deps.now().getTime() + DELETION_EVIDENCE_TTL_DAYS * 24 * 3600 * 1000).toISOString();
+  // 截图要读文件（异步），先在事务外读好；事务里再按当时的待处理举报取用
+  const screenshots = new Map<string, Uint8Array | null>();
+  for (const report of queries.openReportsAgainst(userId)) {
+    if (report.revisionId && !screenshots.has(report.revisionId)) screenshots.set(report.revisionId, await readScreenshot(deps.config.dataDir, report.revisionId));
+  }
 
   const outcome = transaction(db, (): DeleteAccountResult & { fileIds?: string[]; pageIds?: string[] } => {
     const user = repos.users.findById(userId);
@@ -125,6 +179,26 @@ export async function deleteAccount(deps: DeletionDeps, userId: string, rawCode:
       return { ok: false, reason: 'mismatch', remaining: LOGIN_CODE_MAX_ATTEMPTS - attempts };
     }
     if (!repos.loginCodes.markUsed(record.id, nowIso)) return { ok: false, reason: 'no_code' };
+
+    // 证据转存：必须在清除页面与消息之前
+    for (const report of queries.openReportsAgainst(userId)) {
+      if (report.kind === 'page') {
+        queries.insertEvidence({
+          reportId: report.id,
+          kind: 'page',
+          cardJson: report.cardJson,
+          renderedText: report.revisionId ? (repos.revisions.findById(report.revisionId)?.renderedText ?? null) : null,
+          screenshot: report.revisionId ? (screenshots.get(report.revisionId) ?? null) : null,
+          messagesJson: null,
+          createdAt: nowIso,
+          expiresAt,
+        });
+      } else if (report.conversationId) {
+        const messages = queries.sentMessagesUntil(report.conversationId, userId, report.lastSequence ?? 0, DELETION_EVIDENCE_MAX_MESSAGES);
+        queries.insertEvidence({ reportId: report.id, kind: 'conversation', cardJson: null, renderedText: null, screenshot: null, messagesJson: JSON.stringify(messages), createdAt: nowIso, expiresAt });
+      }
+    }
+    recordDeletedEmail(deps, user.email, nowIso);
 
     // 2. 每一页按“删除页面”处理（含已退出 / 被移除 / 墙已关闭的页面）
     const memberships = repos.memberships.listAllForUser(userId);

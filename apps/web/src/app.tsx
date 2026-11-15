@@ -47,6 +47,7 @@ import { createHostedService, type HostedService } from './hosted/service.js';
 import type { PagePreviewer } from './hosted/tools.js';
 import { renderError, renderNotFound } from './views/errors.js';
 import { asLogger, requestLogging } from './observability/logging.js';
+import { sweepDeletedAccounts } from './services/account-deletion.js';
 
 export type { AppDeps, AppEnv, WebConfig } from './context.js';
 export { openDatabase, type Database } from './db/index.js';
@@ -151,6 +152,8 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
   });
   const deps: AppDeps = { demo: options.demo ?? null, contentSafety, userModels, platformModel, config, db, repos, now, kitFonts, tickets, submissions, outbox, rateLimiter: createRateLimiter(now), hosted: null, skillPackage, remotePreview, log };
   deps.hosted = createHosted(deps, options);
+  // 已注销账号：清理到期的举报证据与残留文件（幂等，contracts 14.7）
+  const sweep = sweepDeletedAccounts(deps).catch((error: unknown) => log(`[web] 清理已注销账号失败：${error instanceof Error ? error.message : String(error)}`));
 
   const app: AppHono = new Hono<AppEnv>();
   app.use(requestLogging({ logger: asLogger(log), trustUpstreamRequestId: config.trustProxyHops > 0, accessLog: options.accessLog ?? config.isProduction }));
@@ -208,6 +211,7 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
     request: app.request,
     deps,
     async close() {
+      await sweep;
       await deps.hosted?.close();
       await submissions.close();
       await remotePreview.close();

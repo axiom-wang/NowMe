@@ -24,6 +24,7 @@ import type { AppDeps, SessionAuth } from '../context.js';
 import { transaction } from '../db/index.js';
 import type { User } from '../db/users.js';
 import { grantSignupCredits } from './billing.js';
+import { wasEmailDeleted } from './deleted-emails.js';
 
 const EMAIL_PATTERN = /^[^\s@<>"'`]+@[^\s@<>"'`]+\.[^\s@<>"'`.]+$/;
 const CONTROL_CHARS = /[\u0000-\u001f\u007f]/;
@@ -138,7 +139,8 @@ export function verifyLoginCode(
     if (existing && repos.moderation.isSuspended(existing.id)) return { ok: false, reason: 'suspended' };
     const user = existing ?? repos.users.create({ id: generateId('usr'), email, nickname: null, createdAt: nowIso });
     // 新用户的注册赠送点数（contracts 12；配置为 0 时不做任何事）
-    if (!existing) grantSignupCredits(deps, user.id);
+    // 同一邮箱注销后重新注册不再赠送（contracts 14.7）
+    if (!existing && !wasEmailDeleted(deps, email)) grantSignupCredits(deps, user.id);
     return { ok: true, user };
   });
 }

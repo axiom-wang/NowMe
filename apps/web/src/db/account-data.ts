@@ -155,6 +155,42 @@ export function accountDataQueries(db: Database) {
     },
 
     // ----- 注销 -----
+    /** 针对他的待处理举报（注销时转存证据）：页面举报带被举报那一版的版本 ID 与缩略卡。 */
+    openReportsAgainst(userId: string): { id: string; kind: 'page' | 'conversation'; conversationId: string | null; lastSequence: number | null; revisionId: string | null; cardJson: string | null }[] {
+      return all(
+        `SELECT r.id, r.target_kind AS kind, r.conversation_id AS conversationId, r.last_sequence AS lastSequence,
+                p.revision_id AS revisionId, p.card_json AS cardJson
+           FROM reports r LEFT JOIN publications p ON p.id = r.publication_id
+          WHERE r.reported_user_id = ? AND r.status = 'open'
+          ORDER BY r.created_at`,
+        userId,
+      );
+    },
+    /** 某段会话里他发的消息（到 `untilSequence` 为止，最近的 `limit` 条，按时间顺序）。 */
+    sentMessagesUntil(conversationId: string, userId: string, untilSequence: number, limit: number): { sequence: number; at: string; text: string }[] {
+      return all<{ sequence: number; at: string; text: string }>(
+        `SELECT sequence, created_at AS at, body AS text FROM chat_messages
+          WHERE conversation_id = ? AND sender_id = ? AND sequence <= ? ORDER BY sequence DESC LIMIT ?`,
+        conversationId,
+        userId,
+        untilSequence,
+        limit,
+      ).reverse();
+    },
+    insertEvidence(input: { reportId: string; kind: 'page' | 'conversation'; cardJson: string | null; renderedText: string | null; screenshot: Uint8Array | null; messagesJson: string | null; createdAt: string; expiresAt: string }): void {
+      db.prepare(
+        `INSERT INTO deletion_evidence (report_id, kind, card_json, rendered_text, screenshot, messages_json, created_at, expires_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?) ON CONFLICT (report_id) DO NOTHING`,
+      ).run(input.reportId, input.kind, input.cardJson, input.renderedText, input.screenshot, input.messagesJson, input.createdAt, input.expiresAt);
+    },
+    /** 已注销用户名下、通过校验的版本 ID 与页面 ID（启动时清理残留文件）。 */
+    deletedAccountFiles(): { revisionIds: string[]; pageIds: string[] } {
+      const pages = all<{ id: string }>('SELECT p.id FROM pages p JOIN users u ON u.id = p.owner_id WHERE u.deleted_at IS NOT NULL');
+      const revisions = all<{ id: string }>(
+        "SELECT r.id FROM revisions r JOIN pages p ON p.id = r.page_id JOIN users u ON u.id = p.owner_id WHERE u.deleted_at IS NOT NULL AND r.status = 'accepted'",
+      );
+      return { revisionIds: revisions.map((row) => row.id), pageIds: pages.map((row) => row.id) };
+    },
     /** 他是组织者、仍开放的墙（注销前必须先关闭）。 */
     openOrganizedWalls(userId: string): { id: string; name: string }[] {
       return all("SELECT id, name FROM walls WHERE organizer_id = ? AND status = 'open' ORDER BY created_at", userId);
