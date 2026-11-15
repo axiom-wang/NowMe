@@ -2,31 +2,24 @@
  * 平台托管路线的服务（contracts 9 / hosted-route.md）：应用内采访的状态机、长期画像写回、生成 / 修改任务。
  *
  * 授权：所有方法的 `own` 必须来自路由里的 `findOwnPage(repos, 当前用户, wallId)`；`userId` 是当前登录用户。
- * 数据只按主人自己的 ID 读写（S7）。任务执行见 `runJob`（S8：独立临时目录、结束必删、平台重新校验）。
+ * 数据只按主人自己的 ID 读写（S7）。生成 / 修改任务在这里只入队；执行见 `hosted/job-runner.ts`
+ * （在 worker 里运行，S8：独立临时目录、结束必删、平台重新校验；contracts 13）。
  */
-import { cp, mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
-import { tmpdir } from 'node:os';
-import { join } from 'node:path';
 import {
   BRIEF_ASSETS_MAX_COUNT,
   generateId,
-  HOSTED_JOB_TIMEOUT_MS,
   type HostedConfig,
   type SceneGuide,
-  type ValidationIssue,
 } from '@nowme/contracts';
 import { loadSceneGuide } from '@nowme/skill';
-import { validatePage } from '@nowme/validator';
 import type { AppDeps } from '../context.js';
 import { transaction } from '../db/index.js';
-import type { BriefAsset, BriefRecord, GenerationJob, JobKind, JobUsage, ProfileCategory } from '../db/hosted.js';
+import type { BriefAsset, BriefRecord, GenerationJob, JobKind, JobModelSource, ProfileCategory } from '../db/hosted.js';
 import type { EventProps } from '../db/events.js';
 import { InsufficientCredits } from '../db/credits.js';
-import { findOwnPage, type OwnPage } from '../services/access.js';
-import { aiStatus, chargeJob, planJob, refundUnsettledJobs, settleJob, type AiStatus } from '../services/billing.js';
-import { buildAgentContext } from '../services/agent.js';
-import { createSerialQueue } from '../services/queue.js';
-import { revisionDir, REVISION_ORIGINAL_DIR } from '../services/revision-storage.js';
+import type { OwnPage } from '../services/access.js';
+import { aiStatus, chargeJob, planJob, type AiStatus } from '../services/billing.js';
+import type { JobDispatch } from '../worker/dispatch.js';
 import { assetFileName, checkUpload, readAsset, writeAsset } from './assets.js';
 import { eraseBriefRecord } from './data.js';
 import {
@@ -40,12 +33,10 @@ import {
 } from './brief.js';
 import { modelFailureCode, type ModelAccessCode } from './model-errors.js';
 import type { ModelRole, ResolvedModel } from './user-models.js';
-import { untrusted, type UsageTotals } from './model-client.js';
+import type { UsageTotals } from './model-client.js';
 import { InterviewError, runComposeBrief, runFollowups } from './interview.js';
-import { RunError, runGeneration } from './runner.js';
-import { GenerationWorkspace, type PagePreviewer } from './tools.js';
 
-type HostedDeps = Pick<AppDeps, 'config' | 'db' | 'repos' | 'now' | 'kitFonts' | 'submissions' | 'log'>;
+type HostedDeps = Pick<AppDeps, 'config' | 'db' | 'repos' | 'now' | 'kitFonts' | 'log'>;
 
 export interface HostedServiceOptions {
   settings: HostedConfig;
@@ -60,11 +51,13 @@ export interface HostedServiceOptions {
   ownReady(userId: string): boolean;
   /** 平台 AI 是否可用。 */
   platformAvailable: boolean;
-  /** 生成 / 修改任务用的客户端：按计划里的来源取（`planJob`）。 */
-  resolveJob(userId: string, source: 'own' | 'platform'): ResolvedModel;
-  previewer: PagePreviewer;
-  /** 任务临时目录的父目录，默认 `os.tmpdir()`（测试用来断言任务结束后目录被删除）。 */
-  tempRoot?: string;
+  /**
+   * 入队时记下用户模型配置的版本号（只对 own 有意义，fake 模型时为 null）：worker 按它取模型，
+   * 排队期间主人删除或更换了配置时任务以 MODEL_CONFIG 失败（S8：删除或更换后旧任务停止后续请求）。
+   */
+  pinModel(userId: string, source: JobModelSource): string | null;
+  /** 任务队列（contracts 13）：入队后叫醒 worker；`idle` 等待同进程 worker 空闲。 */
+  dispatch: Pick<JobDispatch, 'kick' | 'idle'>;
 }
 
 export type StepError =
@@ -134,9 +127,8 @@ export interface HostedService {
   modelReady(userId: string): boolean;
   /** 取这个用户的模型客户端（只能用于他本人发起的请求）。没有可用配置时抛 ModelAccessError。 */
   resolveModel(userId: string, role: ModelRole): ResolvedModel;
-  /** 等待排队的任务全部结束（测试与关闭时用）。 */
+  /** 等待同进程 worker 把任务做完（测试用；separate 模式下立即返回）。 */
   idle(): Promise<void>;
-  close(): Promise<void>;
 }
 
 const DAY_MS = 24 * 3600 * 1000;
@@ -150,7 +142,20 @@ function parse<T>(json: string | null): T | null {
   }
 }
 
-function usageProps(usage: UsageTotals): EventProps {
+/** 主人自己的 brief 状态（只按主人 ID 读，S7）。 */
+export function loadBriefView(repos: AppDeps['repos'], own: OwnPage, userId: string): BriefView | null {
+  const record = repos.briefs.findForPage(own.page.id, userId);
+  if (!record) return null;
+  return {
+    record,
+    answers: parse<InterviewAnswers>(record.answersJson),
+    followups: parse<FollowupState>(record.followupsJson),
+    brief: parse<StructuredBrief>(record.briefJson),
+    assets: repos.briefAssets.listForBrief(record.id, userId),
+  };
+}
+
+export function usageProps(usage: UsageTotals): EventProps {
   return {
     inputTokens: usage.inputTokens,
     outputTokens: usage.outputTokens,
@@ -179,14 +184,8 @@ export const JOB_ERROR_TEXT: Record<string, string> = {
 
 export function createHostedService(deps: HostedDeps, options: HostedServiceOptions): HostedService {
   const { repos, db, config } = deps;
-  const { settings, previewer } = options;
-  const queue = createSerialQueue();
-
-  const interrupted = repos.jobs.interruptAll(deps.now().toISOString());
-  if (interrupted > 0) deps.log(`[web] ${interrupted} 个托管任务因服务重启被标记为失败`);
-  // 被打断的任务如果扣过点数，在这里退回（contracts 12：没有产出新版本就不收）
-  const refunded = refundUnsettledJobs(deps);
-  if (refunded > 0) deps.log(`[web] ${refunded} 个被打断的任务已退回点数`);
+  const { settings } = options;
+  // 任务执行在 worker 里（hosted/job-runner.ts）；被打断任务的退点由 worker 启动与回收租约时处理（contracts 13.4）
   const access = (userId: string) => ({ ownReady: options.ownReady(userId), platformAvailable: options.platformAvailable });
 
   const sinceDay = () => new Date(deps.now().getTime() - DAY_MS).toISOString();
@@ -197,17 +196,7 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
     repos.events.record({ type, wallId: ids.wallId, pageId: ids.pageId, actorId, props, createdAt: deps.now().toISOString() });
   };
 
-  const loadBrief = (own: OwnPage, userId: string): BriefView | null => {
-    const record = repos.briefs.findForPage(own.page.id, userId);
-    if (!record) return null;
-    return {
-      record,
-      answers: parse<InterviewAnswers>(record.answersJson),
-      followups: parse<FollowupState>(record.followupsJson),
-      brief: parse<StructuredBrief>(record.briefJson),
-      assets: repos.briefAssets.listForBrief(record.id, userId),
-    };
-  };
+  const loadBrief = (own: OwnPage, userId: string): BriefView | null => loadBriefView(repos, own, userId);
 
   const scene = (own: OwnPage): SceneGuide => loadSceneGuide(own.wall.sceneType);
 
@@ -263,171 +252,6 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
   }
 
   const eraseBrief = (brief: BriefRecord) => eraseBriefRecord(deps, brief);
-
-  // -------------------------------------------------------------------------
-  // 任务
-  // -------------------------------------------------------------------------
-
-  const stillValid = (pageId: string, ownerId: string, wallId: string) => () => {
-    const own = findOwnPage(repos, ownerId, wallId);
-    return own !== null && own.page.id === pageId;
-  };
-
-  function firstMessage(own: OwnPage, job: GenerationJob, briefMd: string | null, assets: BriefAsset[], baseNumber: number | null, imageNotes: Map<string, string>): string {
-    const context = buildAgentContext({ repos, config, kitFonts: deps.kitFonts }, own.wall, own.page);
-    const parts = [
-      job.kind === 'generate' ? '任务：按 brief 生成主人的页面（Skill 第 4–5 步），完成后调用 finish。' : '任务：按主人的修改要求修改页面（Skill 第 6 步），完成后调用 finish。',
-      untrusted('wall_context', JSON.stringify({ wall: context.wall, kit: { version: context.kit.version, basePath: context.kit.basePath, fonts: context.kit.fonts.map(({ id, family, cjk, weights }) => ({ id, family, cjk, weights })) }, limits: context.limits }, null, 2)),
-      untrusted('scene_guide', JSON.stringify(scene(own), null, 2)),
-      briefMd ? untrusted('owner_brief', briefMd) : '（这一页没有应用内采访的 brief；修改时只用页面里已有的内容和修改要求里主人新说的话。）',
-      assets.length > 0
-        ? `page/assets/ 里已有主人上传的图片：\n${assets.map((asset) => `- assets/${asset.fileName}${imageNotes.get(asset.fileName) ? `：${imageNotes.get(asset.fileName)}` : ''}`).join('\n')}`
-        : 'page/assets/ 里没有主人上传的图片；装饰请用内联 SVG / CSS。',
-    ];
-    if (job.kind === 'edit') {
-      parts.push(`基础版本：第 ${baseNumber ?? '?'} 版，文件已经在 page/ 里（先用 read_page_file 读）。`);
-      parts.push(`目标区块：${job.targetBlock ? `data-nm-id="${job.targetBlock}"（只改这个区块）` : '主人没有指定；从修改要求判断，范围不清时用 finish 的 clarify 提问'}`);
-      parts.push(untrusted('owner_edit_request', job.requestText ?? ''));
-    }
-    return parts.join('\n\n');
-  }
-
-  async function prepareDir(own: OwnPage, job: GenerationJob, view: BriefView | null): Promise<{ dir: string; baseBlocks: string[] | null; baseNumber: number | null }> {
-    const dir = await mkdtemp(join(options.tempRoot ?? tmpdir(), 'nowme-gen-'));
-    const pageDir = join(dir, 'page');
-    await mkdir(join(pageDir, 'assets'), { recursive: true });
-    let baseBlocks: string[] | null = null;
-    let baseNumber: number | null = null;
-    if (job.kind === 'edit' && job.baseRevisionId) {
-      const base = repos.revisions.findById(job.baseRevisionId);
-      if (!base || base.pageId !== own.page.id) throw new Error('基础版本不存在');
-      baseBlocks = base.report.stats.blocks;
-      baseNumber = base.number;
-      await cp(join(revisionDir(config.dataDir, base.id), REVISION_ORIGINAL_DIR), pageDir, { recursive: true, force: true });
-      // 封面会由平台重新生成，避免修改后封面不更新
-      await rm(join(pageDir, 'cover.png'), { force: true });
-    }
-    if (view) {
-      const present = new Set(await readdir(join(pageDir, 'assets')));
-      for (const asset of view.assets) {
-        if (present.has(asset.fileName)) continue;
-        await writeFile(join(pageDir, 'assets', asset.fileName), await readAsset(config.dataDir, own.page.id, asset.fileName));
-      }
-      if (view.record.briefMd) await writeFile(join(dir, 'brief.md'), view.record.briefMd, 'utf8');
-    }
-    const context = buildAgentContext({ repos, config, kitFonts: deps.kitFonts }, own.wall, own.page);
-    await writeFile(join(dir, 'context.json'), JSON.stringify(context, null, 2), 'utf8');
-    return { dir, baseBlocks, baseNumber };
-  }
-
-  async function runJob(jobId: string, model: ResolvedModel): Promise<void> {
-    const job = repos.jobs.findById(jobId);
-    if (!job || !repos.jobs.markRunning(jobId, deps.now().toISOString())) return;
-    const page = repos.pages.findById(job.pageId);
-    const own = page ? findOwnPage(repos, job.ownerId, page.wallId) : null;
-    const started = Date.now();
-    let usage: UsageTotals = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 };
-    let turns = 0;
-    let dir: string | null = null;
-
-    const finish = (status: 'succeeded' | 'failed' | 'needs_input', input: { revisionId?: string; errorCode?: string; message?: string; httpStatus?: number | null }) => {
-      const ok = status === 'succeeded';
-      const jobUsage: JobUsage = { turns, ...usage };
-      // 结算点数：成功才保留扣点；失败、需要补充说明都全额退回
-      const charged = settleJob(deps, jobId, ok);
-      repos.jobs.finish(jobId, {
-        status,
-        revisionId: input.revisionId ?? null,
-        errorCode: input.errorCode ?? null,
-        resultMessage: input.message ?? null,
-        charged,
-        usage: jobUsage,
-        finishedAt: deps.now().toISOString(),
-      });
-      if (page) {
-        record(job.kind === 'generate' ? 'hosted_generate' : 'hosted_edit', { wallId: page.wallId, pageId: page.id }, job.ownerId, {
-          ok,
-          clarify: status === 'needs_input',
-          turns,
-          durationMs: Date.now() - started,
-          ...usageProps(usage),
-          ...(job.kind === 'edit' ? { targeted: job.targetBlock !== null } : {}),
-        });
-      }
-      deps.log(`[web] 托管任务 ${jobId}（${job.kind}）：${status}${input.errorCode ? ` ${input.errorCode}` : ''}${input.httpStatus ? `（HTTP ${input.httpStatus}）` : ''}，${turns} 轮`);
-    };
-
-    if (!own || !page) {
-      finish('failed', { errorCode: 'PAGE_GONE' });
-      return;
-    }
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), HOSTED_JOB_TIMEOUT_MS);
-    try {
-      const view = loadBrief(own, job.ownerId);
-      const briefMd = view?.record.status === 'confirmed' ? view.record.briefMd : null;
-      const prepared = await prepareDir(own, job, view?.record.status === 'confirmed' ? view : null);
-      dir = prepared.dir;
-      const notes = new Map((view?.brief?.images ?? []).map((image) => [image.file, image.description]));
-      const workspace = new GenerationWorkspace(dir, deps.kitFonts, previewer);
-      const result = await runGeneration({
-        client: model.client,
-        model: model.endpoint.model!,
-        maxTurns: settings.maxTurns,
-        workspace,
-        firstMessage: firstMessage(own, job, briefMd, view?.record.status === 'confirmed' ? view.assets : [], prepared.baseNumber, notes),
-        signal: controller.signal,
-      });
-      usage = result.usage;
-      turns = result.turns;
-      if (result.finish.outcome === 'clarify') {
-        finish('needs_input', { message: result.finish.message || '需要你说得再具体一点：想改哪一块？' });
-        return;
-      }
-      const files = await workspace.readFiles();
-      const extraWarnings: ValidationIssue[] = [];
-      if (job.kind === 'edit' && job.targetBlock && prepared.baseBlocks) {
-        const after = validatePage(files, { kitFonts: deps.kitFonts }).stats.blocks;
-        const same = after.length === prepared.baseBlocks.length && after.every((block) => prepared.baseBlocks?.includes(block));
-        if (!same) {
-          extraWarnings.push({
-            code: 'HOSTED_BLOCKS_CHANGED',
-            severity: 'warning',
-            file: 'index.html',
-            message: `这次只要求修改区块 ${job.targetBlock}，但页面的区块从 ${prepared.baseBlocks.join('、')} 变成了 ${after.join('、')}`,
-            hint: '预览时留意其他区块是否被改动；不满意可以继续修改，或发布之前的版本。',
-          });
-        }
-      }
-      const stored = await deps.submissions.storeHosted({ pageId: page.id, stillValid: stillValid(page.id, job.ownerId, page.wallId), files, extraWarnings });
-      switch (stored.kind) {
-        case 'stored':
-          finish('succeeded', { revisionId: stored.revisionId, message: result.finish.message });
-          return;
-        case 'rejected':
-          finish('failed', { errorCode: 'REJECTED' });
-          return;
-        case 'rate_limited':
-          finish('failed', { errorCode: 'RATE_LIMITED' });
-          return;
-        case 'page_invalid':
-          finish('failed', { errorCode: 'PAGE_GONE' });
-          return;
-      }
-    } catch (error) {
-      if (error instanceof RunError) {
-        usage = error.usage;
-        turns = error.turns;
-        finish('failed', { errorCode: error.code, httpStatus: error.status });
-      } else {
-        deps.log(`[web] 托管任务 ${jobId} 出错`);
-        finish('failed', { errorCode: modelFailureCode(error) ?? 'INTERNAL' });
-      }
-    } finally {
-      clearTimeout(timer);
-      if (dir) await rm(dir, { recursive: true, force: true });
-    }
-  }
 
   return {
     settings,
@@ -621,7 +445,8 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
       // 用谁的模型、收多少点、谁付（contracts 12）。这里只是计划；扣点在下面创建任务的事务里，届时再检查一次余额
       const plan = planJob(deps, userId, own.wall.id, request.kind, access(userId));
       if (!plan.ok) return { ok: false, error: plan.error };
-      const model = options.resolveJob(userId, plan.source);
+      // 模型来源与配置版本在入队时记下：worker 按它取模型，排队期间配置变了就不再用（S8）
+      const modelVersion = options.pinModel(userId, plan.source);
       const nowIso = deps.now().toISOString();
       const start = (): JobStartResult => transaction(db, (): JobStartResult => {
         if (repos.jobs.findActive(own.page.id)) return { ok: false, error: 'busy' };
@@ -648,8 +473,9 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
           requestText = text;
         }
         const id = generateId('gen');
-        repos.jobs.create({ id, pageId: own.page.id, ownerId: userId, kind: request.kind, baseRevisionId, targetBlock, requestText, createdAt: nowIso });
+        repos.jobs.create({ id, pageId: own.page.id, ownerId: userId, kind: request.kind, baseRevisionId, targetBlock, requestText, createdAt: nowIso, modelSource: plan.source, modelVersion });
         chargeJob(deps, id, plan, userId);
+        repos.jobEvents.append(id, 'queued', nowIso);
         return { ok: true, job: repos.jobs.findById(id) as GenerationJob };
       });
       let result: JobStartResult;
@@ -660,10 +486,8 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
         if (!(error instanceof InsufficientCredits)) throw error;
         result = { ok: false, error: 'credits' };
       }
-      if (result.ok) {
-        const jobId = result.job.id;
-        void queue.run(() => runJob(jobId, model)).catch((error: unknown) => deps.log(`[web] 托管任务 ${jobId} 未捕获的错误`));
-      }
+      // 只入队：执行在 worker（inline 模式下是本进程里的 worker 循环）
+      if (result.ok) options.dispatch.kick();
       return result;
     },
 
@@ -671,11 +495,7 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
       return repos.jobs.findForOwner(jobId, own.page.id, userId);
     },
 
-    idle: () => queue.idle(),
-    async close() {
-      await queue.idle();
-      await previewer.close();
-    },
+    idle: () => options.dispatch.idle(),
   };
 }
 

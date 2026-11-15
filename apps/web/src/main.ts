@@ -33,16 +33,23 @@ const server = serve({ fetch: web.fetch, port: config.web.port, hostname: config
     const hosted = web.deps.hosted.settings;
     logger.info(`[web] 平台托管路线已开启（${describeHostedModels(hosted)}，用户自带 API）`);
   }
+  logger.info(
+    config.worker.mode === 'separate'
+      ? '[web] 后台任务交给独立的 worker 进程（NOWME_WORKER_MODE=separate）：主站只入队，请同时运行 pnpm --filter @nowme/web start:worker'
+      : '[web] 后台任务在本进程内执行（NOWME_WORKER_MODE=inline）',
+  );
 });
 
 let closing = false;
 function shutdown(): void {
   if (closing) return;
   closing = true;
-  setTimeout(() => process.exit(0), 5000).unref();
+  // inline 模式下要等进行中的任务（contracts 13.4）；separate 模式下主站没有任务要等
+  const graceMs = config.worker.mode === 'inline' ? config.worker.shutdownGraceMs : 0;
+  setTimeout(() => process.exit(0), graceMs + 15_000).unref();
   server.close();
   web
-    .close()
+    .close({ graceMs })
     .catch((error: unknown) => logger.error(`[web] 关闭渲染器失败：${error instanceof Error ? error.message : String(error)}`))
     .finally(() => {
       db.close();

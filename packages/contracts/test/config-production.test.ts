@@ -17,6 +17,7 @@ const PROD = {
   NOWME_MAIL_TRANSPORT: 'smtp',
   NOWME_SMTP_URL: 'smtps://user:secret-pass@smtp.example.com:465',
   NOWME_MAIL_FROM: 'NOWMe <no-reply@nowme.example>',
+  NOWME_WORKER_MODE: 'separate',
 };
 
 describe('监听地址（NOWME_*_LISTEN）', () => {
@@ -178,5 +179,34 @@ describe('点数与平台 AI 的配置（contracts 12）', () => {
     expect(errors[0]).toContain('NOWME_PLATFORM_API_KEY');
     const withKey = { ...env, NOWME_PLATFORM_API_KEY: 'sk-platform-secret' };
     expect(checkProductionConfig(loadConfig(withKey), withKey, 'web').errors).toEqual([]);
+  });
+});
+
+describe('后台任务进程（contracts 13.5）', () => {
+  it('默认 inline、并发 2、宽限 30 秒；可以设为 separate', () => {
+    expect(loadConfig({}).worker).toEqual({ mode: 'inline', aiConcurrency: 2, shutdownGraceMs: 30_000 });
+    expect(loadConfig({ NOWME_WORKER_MODE: 'separate', NOWME_WORKER_AI_CONCURRENCY: '4', NOWME_WORKER_SHUTDOWN_GRACE_SECONDS: '0' }).worker).toEqual({
+      mode: 'separate',
+      aiConcurrency: 4,
+      shutdownGraceMs: 0,
+    });
+    expect(loadConfig({ NOWME_WORKER_MODE: ' ' }).worker.mode).toBe('inline');
+  });
+
+  it('取值不对：启动失败并说明', () => {
+    expect(() => loadConfig({ NOWME_WORKER_MODE: 'both' })).toThrow(/NOWME_WORKER_MODE 只能是 inline 或 separate/);
+    expect(() => loadConfig({ NOWME_WORKER_AI_CONCURRENCY: '0' })).toThrow(/NOWME_WORKER_AI_CONCURRENCY 应为 1–16/);
+    expect(() => loadConfig({ NOWME_WORKER_AI_CONCURRENCY: '2.5' })).toThrow(ConfigError);
+    expect(() => loadConfig({ NOWME_WORKER_SHUTDOWN_GRACE_SECONDS: '-1' })).toThrow(ConfigError);
+  });
+
+  it('生产环境的主站用 inline：只提醒，不拒绝启动；worker 进程不需要邮件配置', () => {
+    const env = { ...PROD, NOWME_WORKER_MODE: 'inline' };
+    const warnings = assertProductionConfig(loadConfig(env), env, 'web');
+    expect(warnings.some((line) => line.includes('NOWME_WORKER_MODE=inline'))).toBe(true);
+    const worker = { ...PROD, NOWME_MAIL_TRANSPORT: 'file' };
+    expect(checkProductionConfig(loadConfig(worker), worker, 'worker')).toEqual({ errors: [], warnings: [] });
+    const noKey = { ...PROD, NOWME_AI_ENCRYPTION_KEY: '' };
+    expect(checkProductionConfig(loadConfig(noKey), noKey, 'worker').errors.join('\n')).toContain('NOWME_AI_ENCRYPTION_KEY');
   });
 });

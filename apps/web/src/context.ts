@@ -25,7 +25,7 @@ import type { SubmissionService } from './services/submissions.js';
 import type { TicketIssuer } from './services/tickets.js';
 
 /** 主站运行配置（contracts 0.1、4.3、4.4）。`ticketSecret` 已解析（`resolveTicketSecret`）。 */
-export type WebConfig = Pick<NowmeConfig, 'webOrigin' | 'pagesOrigin' | 'dataDir' | 'agentTokenTtlHours' | 'isProduction' | 'hosted' | 'skillMarket' | 'mail' | 'trustProxyHops' | 'billing' | 'moderation' | 'contactEmail'> & {
+export type WebConfig = Pick<NowmeConfig, 'webOrigin' | 'pagesOrigin' | 'dataDir' | 'agentTokenTtlHours' | 'isProduction' | 'hosted' | 'skillMarket' | 'mail' | 'trustProxyHops' | 'billing' | 'moderation' | 'contactEmail' | 'worker'> & {
   ticketSecret: string;
 };
 

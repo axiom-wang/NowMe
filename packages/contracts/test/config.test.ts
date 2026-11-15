@@ -72,6 +72,7 @@ describe('loadConfig', () => {
         interviewDailyCalls: 20,
       },
       skillMarket: null,
+      worker: { mode: 'inline', aiConcurrency: 2, shutdownGraceMs: 30_000 },
     });
   });
 

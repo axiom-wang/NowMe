@@ -36,13 +36,16 @@ import { loadSkillPackage, type SkillPackage } from './services/skill-package.js
 import { SKILL_PACKAGE_DIR } from '@nowme/skill';
 import { type ModelClient } from './hosted/model-client.js';
 import { ModelAccessError } from './hosted/model-errors.js';
-import { createPlatformModel } from './hosted/platform-model.js';
-import { createUserModels, type ModelRole, type ResolvedModel } from './hosted/user-models.js';
+import { createJobModelResolver, createModelServices, fakeResolved, type ModelServices } from './hosted/models.js';
+import type { ModelRole, ResolvedModel } from './hosted/user-models.js';
 import type { ModelLookup } from './security/model-network.js';
 import { resolve } from 'node:path';
 import type { DemoAccess } from './demo-access.js';
-import { createFakeModel } from './hosted/fake-model.js';
 import { createRenderPreviewer } from './hosted/previewer.js';
+import { createWorkerRuntime } from './worker/compose.js';
+import { createJobDispatch, type JobDispatch } from './worker/dispatch.js';
+import type { BackgroundWorker } from './worker/runtime.js';
+import { createJobSignals } from './worker/signals.js';
 import { createHostedService, type HostedService } from './hosted/service.js';
 import type { PagePreviewer } from './hosted/tools.js';
 import { renderError, renderNotFound } from './views/errors.js';
@@ -97,8 +100,10 @@ export interface WebApp {
   fetch: AppHono['fetch'];
   request: AppHono['request'];
   deps: AppDeps;
-  /** 等待排队的提交处理完并关闭渲染器（不关闭数据库）。 */
-  close(): Promise<void>;
+  /** inline 模式下本进程内的 worker（separate 模式为 null）。 */
+  worker: BackgroundWorker | null;
+  /** 停止领取任务、等待进行中的任务（`graceMs` 默认无限）并关闭渲染器（不关闭数据库）。 */
+  close(options?: { graceMs?: number }): Promise<void>;
 }
 
 /** 带图片上传的托管采访表单（multipart，上限 HOSTED_UPLOAD_REQUEST_MAX_BYTES）。 */
@@ -122,26 +127,10 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
     (config.mail.transport === 'smtp'
       ? createSmtpOutbox({ url: options.secretEnv?.NOWME_SMTP_URL, from: config.mail.from, isProduction: config.isProduction, log })
       : createFileOutbox(dataPaths(config.dataDir).outbox, log));
-  const processor = options.processor ?? createRenderProcessor();
-  const submissions = createSubmissionService({ config, db, repos, now, kitFonts, processor, log });
   const tickets = createTicketIssuer({ secret: config.ticketSecret, pagesOrigin: config.pagesOrigin, now });
-  const remotePreview = createRemotePreviewService({ repos, now, kitFonts, renderer: options.remoteRenderer ?? createRealRemoteRenderer() });
   const skillPackage = loadHostedSkillPackage(options.skillPackageDir === undefined ? SKILL_PACKAGE_DIR : options.skillPackageDir, log);
-  const userModels = createUserModels(db, {
-    encryptionKey: options.secretEnv?.NOWME_AI_ENCRYPTION_KEY,
-    allowLocal: !config.isProduction && options.secretEnv?.NOWME_AI_ALLOW_LOCAL === '1',
-    fetch: options.modelFetch, lookup: options.modelLookup, now,
-  });
-  // 平台 AI（contracts 12）：没有配置时不可用，只有自带 Key 的用户能用 AI
-  const platformModel = createPlatformModel({
-    config: config.billing.platform,
-    apiKey: options.secretEnv?.NOWME_PLATFORM_API_KEY,
-    allowLocal: !config.isProduction && options.secretEnv?.NOWME_AI_ALLOW_LOCAL === '1',
-    fetch: options.modelFetch,
-    lookup: options.modelLookup,
-    client: config.isProduction ? undefined : options.platformModel,
-    log,
-  });
+  const models = createModelServices({ config, db, now, log, secretEnv: options.secretEnv, model: options.model, platformModel: options.platformModel, modelFetch: options.modelFetch, modelLookup: options.modelLookup });
+  const { userModels, platformModel } = models;
   const contentSafety = createContentSafety({
     moderation: config.moderation,
     apiKey: options.secretEnv?.NOWME_MODERATION_API_KEY,
@@ -150,8 +139,28 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
     transport: options.moderationFetch,
     log,
   });
+
+  // 后台任务（contracts 13）：inline 时 worker 循环在本进程内运行；separate 时主站只入队，
+  // 不创建处理器 / 渲染器 / 预览器（不启动浏览器、不跑 Agent 循环），由独立的 worker 进程执行。
+  const signals = createJobSignals();
+  const runtime =
+    config.worker.mode === 'inline'
+      ? createWorkerRuntime({
+          config, db, repos, now, kitFonts, log, signals,
+          processor: options.processor ?? createRenderProcessor(),
+          remoteRenderer: options.remoteRenderer ?? createRealRemoteRenderer(),
+          previewer: options.previewer ?? createRenderPreviewer(),
+          resolveJob: createJobModelResolver(models, config.hosted),
+          tempRoot: options.hostedTempRoot,
+        })
+      : null;
+  const dispatch = createJobDispatch({ repos, signals, worker: () => runtime?.worker ?? null });
+  const submissions = createSubmissionService({ config, db, repos, now, dispatch });
+  const remotePreview = createRemotePreviewService({ dataDir: config.dataDir, db, repos, now, dispatch });
+
   const deps: AppDeps = { demo: options.demo ?? null, contentSafety, userModels, platformModel, config, db, repos, now, kitFonts, tickets, submissions, outbox, rateLimiter: createRateLimiter(now), hosted: null, skillPackage, remotePreview, log };
-  deps.hosted = createHosted(deps, options);
+  deps.hosted = createHosted(deps, models, dispatch);
+  runtime?.worker.start();
   // 已注销账号：清理到期的举报证据与残留文件（幂等，contracts 14.7）
   const sweep = sweepDeletedAccounts(deps).catch((error: unknown) => log(`[web] 清理已注销账号失败：${error instanceof Error ? error.message : String(error)}`));
 
@@ -210,11 +219,10 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
     fetch: app.fetch,
     request: app.request,
     deps,
-    async close() {
+    worker: runtime?.worker ?? null,
+    async close(closeOptions) {
       await sweep;
-      await deps.hosted?.close();
-      await submissions.close();
-      await remotePreview.close();
+      await runtime?.close(closeOptions);
       await outbox.close?.();
     },
   };
@@ -228,13 +236,12 @@ function loadHostedSkillPackage(dir: string | null, log: (message: string) => vo
   return null;
 }
 
-function createHosted(deps: AppDeps, options: CreateWebAppOptions): HostedService | null {
+function createHosted(deps: AppDeps, models: ModelServices, dispatch: JobDispatch): HostedService | null {
   const settings = deps.config.hosted;
   if (!settings.enabled) return null;
-  if (deps.config.isProduction && (settings.fake || options.model)) throw new Error('生产环境不能注入测试模型');
-  const fake = settings.fake ? options.model ?? createFakeModel() : null;
+  const { fake } = models;
   const platform = deps.platformModel;
-  const fakeModel = (role: ModelRole): ResolvedModel => ({ client: fake!, endpoint: { ...settings[role], ready: true } });
+  const fakeModel = (role: ModelRole): ResolvedModel => fakeResolved(fake!, settings, role);
   const ownReady = (userId: string) => !!fake || deps.userModels.ready(userId);
   // 平台 AI 的免费调用（采访、和 TA 聊什么）有全站每日上限：防止批量注册消耗平台的模型费用
   const platformFree = (role: ModelRole): ResolvedModel => {
@@ -250,7 +257,7 @@ function createHosted(deps: AppDeps, options: CreateWebAppOptions): HostedServic
     ownReady,
     platformAvailable: platform.available,
     resolve: (userId, role) => (fake ? fakeModel(role) : deps.userModels.ready(userId) ? deps.userModels.resolve(userId, role) : platformFree(role)),
-    resolveJob: (userId, source) => (fake ? fakeModel('generate') : source === 'own' ? deps.userModels.resolve(userId, 'generate') : platform.resolve('generate')),
-    previewer: options.previewer ?? createRenderPreviewer(), tempRoot: options.hostedTempRoot,
+    pinModel: (userId, source) => (!fake && source === 'own' ? deps.userModels.version(userId, 'generate') : null),
+    dispatch,
   });
 }

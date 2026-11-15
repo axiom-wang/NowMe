@@ -288,7 +288,14 @@ export interface GenerationJob {
   createdAt: string;
   startedAt: string | null;
   finishedAt: string | null;
+  /** 入队时确定的模型来源（迁移 010 之前的任务为 null）。 */
+  modelSource: JobModelSource | null;
+  /** 用户模型配置的版本号（只对 own 有意义）：排队期间配置被删除或更换时任务失败。 */
+  modelVersion: string | null;
+  attempts: number;
 }
+
+export type JobModelSource = 'own' | 'platform';
 
 function toJob(row: Record<string, unknown> | undefined): GenerationJob | null {
   if (!row) return null;
@@ -309,6 +316,9 @@ function toJob(row: Record<string, unknown> | undefined): GenerationJob | null {
     createdAt: row.created_at as string,
     startedAt: row.started_at as string | null,
     finishedAt: row.finished_at as string | null,
+    modelSource: (row.model_source as JobModelSource | null) ?? null,
+    modelVersion: (row.model_version as string | null) ?? null,
+    attempts: Number(row.attempts ?? 0),
   };
 }
 
@@ -324,15 +334,23 @@ export interface FinishJobInput {
 
 export function createGenerationJobsRepo(db: Database) {
   const insert = db.prepare(
-    `INSERT INTO generation_jobs (id, page_id, owner_id, kind, status, base_revision_id, target_block, request_text, created_at)
-     VALUES (?, ?, ?, ?, 'queued', ?, ?, ?, ?)`,
+    `INSERT INTO generation_jobs (id, page_id, owner_id, kind, status, base_revision_id, target_block, request_text, created_at, model_source, model_version)
+     VALUES (?, ?, ?, ?, 'queued', ?, ?, ?, ?, ?, ?)`,
   );
   const byId = db.prepare('SELECT * FROM generation_jobs WHERE id = ?');
   const byIdForOwner = db.prepare('SELECT * FROM generation_jobs WHERE id = ? AND page_id = ? AND owner_id = ?');
-  const markRunning = db.prepare("UPDATE generation_jobs SET status = 'running', started_at = ? WHERE id = ? AND status = 'queued'");
   const finish = db.prepare(
     `UPDATE generation_jobs SET status = ?, revision_id = ?, error_code = ?, result_message = ?, charged = ?, usage_json = ?, finished_at = ?
       WHERE id = ? AND status IN ('queued', 'running')`,
+  );
+  // worker 结束任务：必须仍持有租约（租约被回收后，旧 worker 的结果作废）
+  const finishLeased = db.prepare(
+    `UPDATE generation_jobs SET status = ?, revision_id = ?, error_code = ?, result_message = ?, charged = ?, usage_json = ?, finished_at = ?,
+        lease_owner = NULL, lease_expires_at = NULL
+      WHERE id = ? AND status = 'running' AND lease_owner = ?`,
+  );
+  const interruptOne = db.prepare(
+    "UPDATE generation_jobs SET status = 'failed', error_code = 'INTERRUPTED', charged = 0, finished_at = ?, lease_owner = NULL, lease_expires_at = NULL WHERE id = ? AND status IN ('queued', 'running')",
   );
   const active = db.prepare(
     "SELECT * FROM generation_jobs WHERE page_id = ? AND status IN ('queued', 'running') ORDER BY created_at DESC LIMIT 1",
@@ -345,8 +363,11 @@ export function createGenerationJobsRepo(db: Database) {
   const eraseForPage = db.prepare('UPDATE generation_jobs SET request_text = NULL, result_message = NULL, target_block = NULL WHERE page_id = ?');
 
   return {
-    create(job: Pick<GenerationJob, 'id' | 'pageId' | 'ownerId' | 'kind' | 'baseRevisionId' | 'targetBlock' | 'requestText' | 'createdAt'>): void {
-      insert.run(job.id, job.pageId, job.ownerId, job.kind, job.baseRevisionId, job.targetBlock, job.requestText, job.createdAt);
+    create(
+      job: Pick<GenerationJob, 'id' | 'pageId' | 'ownerId' | 'kind' | 'baseRevisionId' | 'targetBlock' | 'requestText' | 'createdAt'> &
+        Partial<Pick<GenerationJob, 'modelSource' | 'modelVersion'>>,
+    ): void {
+      insert.run(job.id, job.pageId, job.ownerId, job.kind, job.baseRevisionId, job.targetBlock, job.requestText, job.createdAt, job.modelSource ?? null, job.modelVersion ?? null);
     },
     /** 内部使用（任务执行器）；路由请用 `findForOwner`。 */
     findById(id: string): GenerationJob | null {
@@ -354,9 +375,6 @@ export function createGenerationJobsRepo(db: Database) {
     },
     findForOwner(id: string, pageId: string, ownerId: string): GenerationJob | null {
       return toJob(byIdForOwner.get(id, pageId, ownerId) as Record<string, unknown> | undefined);
-    },
-    markRunning(id: string, now: string): boolean {
-      return Number(markRunning.run(now, id).changes) === 1;
     },
     finish(id: string, input: FinishJobInput): boolean {
       return (
@@ -374,6 +392,28 @@ export function createGenerationJobsRepo(db: Database) {
         ) === 1
       );
     },
+    /** worker 结束任务（必须仍持有租约 `owner`）。 */
+    finishLeased(id: string, owner: string, input: FinishJobInput): boolean {
+      return (
+        Number(
+          finishLeased.run(
+            input.status,
+            input.revisionId,
+            input.errorCode,
+            input.resultMessage,
+            input.charged ? 1 : 0,
+            JSON.stringify(input.usage),
+            input.finishedAt,
+            id,
+            owner,
+          ).changes,
+        ) === 1
+      );
+    },
+    /** 被打断的任务（租约过期、优雅退出）：标记 INTERRUPTED。不重试。 */
+    interrupt(id: string, now: string): boolean {
+      return Number(interruptOne.run(now, id).changes) === 1;
+    },
     findActive(pageId: string): GenerationJob | null {
       return toJob(active.get(pageId) as Record<string, unknown> | undefined);
     },
@@ -383,7 +423,7 @@ export function createGenerationJobsRepo(db: Database) {
     listRecent(pageId: string, ownerId: string, limit = 5): GenerationJob[] {
       return (recent.all(pageId, ownerId, limit) as Record<string, unknown>[]).map((row) => toJob(row) as GenerationJob);
     },
-    /** 进程启动时：遗留的排队 / 运行中任务一律失败。 */
+    /** 遗留的排队 / 运行中任务一律失败（运维与测试用；worker 启动时按租约逐个回收，不再整体打断）。 */
     interruptAll(now: string): number {
       return Number(interrupt.run(now).changes);
     },

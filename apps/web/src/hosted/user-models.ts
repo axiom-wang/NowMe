@@ -90,10 +90,14 @@ export function createUserModels(db: Database, options: UserModelsOptions) {
       });
     },
     delete(userId: string) { db.prepare('DELETE FROM user_model_settings WHERE user_id = ?').run(userId); },
-    resolve(userId: string, role: ModelRole): ResolvedModel {
+    /** 当前配置的版本号（随机 UUID，不是 Key）；没有配置时为 null。任务入队时记下，worker 用它确认配置没有被更换。 */
+    version(userId: string, role: ModelRole): string | null { return rowFor(userId, role)?.version ?? null; },
+    /** `pinnedVersion`：只接受这个版本的配置（排队期间被删除或更换时抛 MODEL_CONFIG）。 */
+    resolve(userId: string, role: ModelRole, pinnedVersion?: string | null): ResolvedModel {
       const row = rowFor(userId, role);
       const metadata = summary(userId, role);
       if (!key || !row || !metadata?.endpoint.ready) throw new ModelAccessError('MODEL_CONFIG');
+      if (pinnedVersion && row.version !== pinnedVersion) throw new ModelAccessError('MODEL_CONFIG');
       const authorize = () => {
         if (rowFor(userId, role)?.version !== row.version) throw new ModelAccessError('MODEL_CONFIG');
       };

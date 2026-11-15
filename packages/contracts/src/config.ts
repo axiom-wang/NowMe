@@ -23,6 +23,7 @@ import {
   HOSTED_DAILY_RANGE,
   HOSTED_MAX_TURNS_RANGE,
 } from './constants.js';
+import { z } from 'zod';
 import { normalizeOrigin } from './csp.js';
 import { MODEL_PROVIDER_PRESETS, type ModelProtocol, type ModelProvider } from './model-providers.js';
 
@@ -80,6 +81,70 @@ export interface NowmeConfig {
    * 安装页与 install.md 多显示一种安装方式；都不设为 null。
    */
   skillMarket: SkillMarketConfig | null;
+  /** 后台任务进程（contracts 13）：渲染与 AI 任务在主站进程内跑（inline）还是交给独立的 worker（separate）。 */
+  worker: WorkerConfig;
+}
+
+/** `NOWME_WORKER_MODE`：inline（默认，开发与测试）或 separate（生产推荐，主站只入队）。 */
+export const workerModeSchema = z.enum(['inline', 'separate']);
+export type WorkerMode = z.infer<typeof workerModeSchema>;
+
+export const WORKER_AI_CONCURRENCY_RANGE = { min: 1, max: 16 } as const;
+export const DEFAULT_WORKER_AI_CONCURRENCY = 2;
+export const WORKER_SHUTDOWN_GRACE_SECONDS_RANGE = { min: 0, max: 3600 } as const;
+export const DEFAULT_WORKER_SHUTDOWN_GRACE_SECONDS = 30;
+
+/** 后台任务进程配置（contracts 13.5）。 */
+export interface WorkerConfig {
+  mode: WorkerMode;
+  /** 同时执行的 AI 生成 / 修改任务数（`NOWME_WORKER_AI_CONCURRENCY`，1–16，默认 2）。渲染始终串行。 */
+  aiConcurrency: number;
+  /** 收到 SIGTERM 后等待进行中任务的时间（`NOWME_WORKER_SHUTDOWN_GRACE_SECONDS`，默认 30 秒）。 */
+  shutdownGraceMs: number;
+}
+
+const intFromEnv = (name: string, range: { min: number; max: number }, fallback: number) =>
+  z
+    .string()
+    .trim()
+    .optional()
+    .transform((value, ctx) => {
+      if (value === undefined || value === '') return fallback;
+      if (!/^\d+$/.test(value) || Number(value) < range.min || Number(value) > range.max) {
+        ctx.addIssue({ code: 'custom', message: `${name} 应为 ${range.min}–${range.max} 的整数：${value}` });
+        return z.NEVER;
+      }
+      return Number(value);
+    });
+
+const workerEnvSchema = z.object({
+  NOWME_WORKER_MODE: z
+    .string()
+    .trim()
+    .optional()
+    .transform((value) => (value === undefined || value === '' ? 'inline' : value))
+    .pipe(workerModeSchema),
+  NOWME_WORKER_AI_CONCURRENCY: intFromEnv('NOWME_WORKER_AI_CONCURRENCY', WORKER_AI_CONCURRENCY_RANGE, DEFAULT_WORKER_AI_CONCURRENCY),
+  NOWME_WORKER_SHUTDOWN_GRACE_SECONDS: intFromEnv('NOWME_WORKER_SHUTDOWN_GRACE_SECONDS', WORKER_SHUTDOWN_GRACE_SECONDS_RANGE, DEFAULT_WORKER_SHUTDOWN_GRACE_SECONDS),
+});
+
+/** 后台任务进程配置（zod 校验）。 */
+export function loadWorkerConfig(env: Env): WorkerConfig {
+  const parsed = workerEnvSchema.safeParse({
+    NOWME_WORKER_MODE: env.NOWME_WORKER_MODE,
+    NOWME_WORKER_AI_CONCURRENCY: env.NOWME_WORKER_AI_CONCURRENCY,
+    NOWME_WORKER_SHUTDOWN_GRACE_SECONDS: env.NOWME_WORKER_SHUTDOWN_GRACE_SECONDS,
+  });
+  if (!parsed.success) {
+    const issue = parsed.error.issues[0];
+    const name = String(issue?.path[0] ?? 'NOWME_WORKER_MODE');
+    throw new ConfigError(name === 'NOWME_WORKER_MODE' ? 'NOWME_WORKER_MODE 只能是 inline 或 separate' : (issue?.message ?? `${name} 不合法`));
+  }
+  return {
+    mode: parsed.data.NOWME_WORKER_MODE,
+    aiConcurrency: parsed.data.NOWME_WORKER_AI_CONCURRENCY,
+    shutdownGraceMs: parsed.data.NOWME_WORKER_SHUTDOWN_GRACE_SECONDS * 1000,
+  };
 }
 
 /** 内容安全检查的可选部分：外部词表文件与外部审核接口。两者都不配置时只用内置规则。 */
@@ -422,6 +487,7 @@ export function loadConfig(env: Env = process.env): NowmeConfig {
     isProduction: env.NODE_ENV === 'production',
     hosted: loadHostedConfig(env, env.NODE_ENV === 'production'),
     skillMarket: loadSkillMarketConfig(env),
+    worker: loadWorkerConfig(env),
   };
 }
 
@@ -449,9 +515,9 @@ export interface ProductionCheck {
 
 /**
  * 生产环境启动前的配置检查（contracts 10.1）。只在 `NODE_ENV=production` 时由进程入口调用；
- * `role` 区分主站与页面托管（凭证库密钥与邮件只有主站需要）。不读写文件，不把任何密钥写进返回的文字。
+ * `role` 区分主站、后台任务进程与页面托管（凭证库密钥主站与 worker 需要，邮件只有主站需要）。不读写文件，不把任何密钥写进返回的文字。
  */
-export function checkProductionConfig(config: NowmeConfig, env: Env, role: 'web' | 'pages'): ProductionCheck {
+export function checkProductionConfig(config: NowmeConfig, env: Env, role: 'web' | 'pages' | 'worker'): ProductionCheck {
   const errors: string[] = [];
   const warnings: string[] = [];
   for (const [name, origin] of [['NOWME_WEB_ORIGIN', config.webOrigin], ['NOWME_PAGES_ORIGIN', config.pagesOrigin]] as const) {
@@ -471,22 +537,30 @@ export function checkProductionConfig(config: NowmeConfig, env: Env, role: 'web'
   if (config.trustProxyHops === 0) {
     warnings.push('NOWME_TRUST_PROXY=0：如果进程在反向代理或负载均衡之后，所有请求会被当成同一个来源地址，按地址的限流会误伤正常用户');
   }
-  if (role === 'web') {
+  if (role === 'web' || role === 'worker') {
     if (!/^[0-9a-fA-F]{64}$/.test(nonEmpty(env.NOWME_AI_ENCRYPTION_KEY) ?? '')) {
       errors.push('NOWME_AI_ENCRYPTION_KEY 必须是 64 位十六进制（openssl rand -hex 32）：没有它用户无法保存模型 Key，网页创作不可用');
     }
     if (config.billing.platform && nonEmpty(env.NOWME_PLATFORM_API_KEY) === undefined) {
       errors.push('设置了 NOWME_PLATFORM_PROVIDER 但没有 NOWME_PLATFORM_API_KEY：平台 AI 无法调用模型');
     }
+  }
+  if (role === 'web') {
     if (config.mail.transport === 'file') {
       errors.push('NOWME_MAIL_TRANSPORT=file 只把验证码写进本地文件，真实用户收不到：生产环境请配置 smtp');
+    }
+    if (config.worker.mode === 'inline') {
+      warnings.push(
+        'NOWME_WORKER_MODE=inline：渲染与 AI 任务在主站进程内执行，渲染占用内存会拖慢网页请求；' +
+          '生产环境建议设为 separate，并单独运行 worker 进程（pnpm --filter @nowme/web start:worker）',
+      );
     }
   }
   return { errors, warnings };
 }
 
 /** 生产环境配置有错误时抛出 ConfigError（列出全部问题）；返回提醒列表。非生产环境直接返回空。 */
-export function assertProductionConfig(config: NowmeConfig, env: Env, role: 'web' | 'pages'): string[] {
+export function assertProductionConfig(config: NowmeConfig, env: Env, role: 'web' | 'pages' | 'worker'): string[] {
   if (!config.isProduction) return [];
   const { errors, warnings } = checkProductionConfig(config, env, role);
   if (errors.length > 0) throw new ConfigError(`生产环境配置不完整：\n${errors.map((line) => `- ${line}`).join('\n')}`);

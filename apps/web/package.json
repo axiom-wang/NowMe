@@ -24,6 +24,8 @@
     "dev": "pnpm --filter @nowme/skill pack:skill && tsx watch --conditions=source --disable-warning=ExperimentalWarning src/main.ts",
     "dev:local": "pnpm --filter @nowme/skill pack:skill && tsx watch --conditions=source --disable-warning=ExperimentalWarning scripts/dev.ts",
     "start": "node --disable-warning=ExperimentalWarning dist/main.js",
+    "worker": "tsx --conditions=source --disable-warning=ExperimentalWarning src/worker.ts",
+    "start:worker": "node --disable-warning=ExperimentalWarning dist/worker.js",
     "start:source": "pnpm --filter @nowme/skill pack:skill && tsx --conditions=source --disable-warning=ExperimentalWarning src/main.ts",
     "seed": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/seed.ts",
     "demo": "tsx --conditions=source --disable-warning=ExperimentalWarning scripts/demo.ts",

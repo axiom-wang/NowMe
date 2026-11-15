@@ -41,6 +41,9 @@ export function apiError(c: Context<AppEnv>, code: ApiErrorCode, message: string
 
 const CREDENTIAL_INVALID_MESSAGE =
   '页面凭证无效或已失效：可能已在工作区断开本地 Agent、重新生成过指令，或者墙已关闭、你已不是成员。请在工作区重新生成指令后运行 nowme fetch。';
+/** 渲染排队太久（contracts 13）。 */
+const BUSY_MESSAGE = '渲染服务现在太忙，这次请求没有处理，请稍后重试';
+const RENDER_FAILED_MESSAGE = '服务器处理请求时出错了，请稍后重试';
 
 /** 页面凭证认证。通过后在 `c.var.agent`。 */
 export function requireCredential(deps: Pick<AppDeps, 'repos'>): MiddlewareHandler<AppEnv> {
@@ -157,6 +160,8 @@ export function registerAgentApiRoutes(app: AppHono, deps: AppDeps): void {
     if (outcome.kind === 'credential_invalid') {
       return apiError(c, 'CREDENTIAL_INVALID', CREDENTIAL_INVALID_MESSAGE, { 'WWW-Authenticate': 'Bearer' });
     }
+    if (outcome.kind === 'unavailable') return apiError(c, 'INTERNAL_ERROR', BUSY_MESSAGE);
+    if (outcome.kind === 'failed') return apiError(c, 'INTERNAL_ERROR', RENDER_FAILED_MESSAGE);
     const response: RevisionResponse = { revision: outcome.summary };
     return c.json(response, outcome.summary.status === 'accepted' ? 201 : 422);
   });
@@ -174,6 +179,8 @@ export function registerAgentApiRoutes(app: AppHono, deps: AppDeps): void {
     if (outcome.kind === 'credential_invalid') {
       return apiError(c, 'CREDENTIAL_INVALID', CREDENTIAL_INVALID_MESSAGE, { 'WWW-Authenticate': 'Bearer' });
     }
+    if (outcome.kind === 'unavailable') return apiError(c, 'INTERNAL_ERROR', BUSY_MESSAGE);
+    if (outcome.kind === 'failed') return apiError(c, 'INTERNAL_ERROR', RENDER_FAILED_MESSAGE);
     const response: RemotePreviewResponse = outcome.response;
     return c.json(response, 200);
   });

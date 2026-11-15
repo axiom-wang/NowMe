@@ -38,6 +38,10 @@ export interface RunOptions {
   firstMessage: string;
   signal?: AbortSignal;
   maxTokens?: number;
+  /** 每一轮调用模型之前（进度事件用，只给轮次）。 */
+  onTurn?: (turn: number) => void;
+  /** 每次执行工具之前（进度事件用，只给工具名）。 */
+  onTool?: (name: string) => void;
 }
 
 /**
@@ -61,6 +65,7 @@ export async function runGeneration(options: RunOptions): Promise<RunResult> {
 
   for (let turn = 1; turn <= options.maxTurns; turn += 1) {
     if (options.signal?.aborted) throw new RunError('TIMEOUT', turn - 1, usage);
+    options.onTurn?.(turn);
     let response;
     try {
       response = await client.createMessage(
@@ -91,6 +96,7 @@ export async function runGeneration(options: RunOptions): Promise<RunResult> {
         results.push({ type: 'tool_result', tool_use_id: call.id, content: '任务已结束', is_error: true });
         continue;
       }
+      options.onTool?.(call.name);
       const result = await workspace.call(call.name, call.input);
       results.push({ type: 'tool_result', tool_use_id: call.id, content: result.content, ...(result.isError ? { is_error: true } : {}) });
       if (result.finish) finish = result.finish;
