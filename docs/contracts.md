@@ -782,6 +782,7 @@ interface IcebreakerResult {
 | 优雅退出（SIGTERM） | 停止领取，等进行中的任务最多 `NOWME_WORKER_SHUTDOWN_GRACE_SECONDS` 秒；到时取消，按 `INTERRUPTED` 结束并退点 | 同样等待；到时交还租约（回到队列，这次不计入尝试次数），由下一个 worker 重做 |
 | 处理器抛错 | — | 不重试：`failed / INTERNAL`，返回 500 |
 | 迁移 010 之前入队、没有 `model_source` 的任务 | 按 `INTERRUPTED` 结束并退点 | — |
+| 停用账号（第 15 节）/ 注销账号（第 14 节） | `cancelActiveJobsForUser`：排队中 / 执行中的任务立即标记失败（`SUSPENDED` / `PAGE_GONE`）、清掉租约、全额退点；执行它的 worker 在下一轮调用模型前或下一次续约时发现租约已不在，停止后续模型请求，结果作废 | 凭证随之失效：worker 写版本前重新确认凭证，返回 `credential_invalid` |
 
 主站重启不再打断任何任务（旧版本在启动时把所有排队 / 执行中的任务标记为失败）。崩溃时用户最多等一个租期（60 秒）才看到任务失败。
 

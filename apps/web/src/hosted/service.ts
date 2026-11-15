@@ -179,6 +179,7 @@ export const JOB_ERROR_TEXT: Record<string, string> = {
   RATE_LIMITED: '这一页今天的版本数已达上限，明天再试。',
   PAGE_GONE: '这一页已经不可用（可能已退出墙或页面已删除），结果没有保存。',
   INTERRUPTED: '服务重启打断了这次生成。可以再试一次。',
+  SUSPENDED: '账号已被停用，这次生成已停止，点数已全额退回。',
   INTERNAL: '服务器处理时出错了。可以再试一次。',
 };
 

@@ -30,6 +30,7 @@ import {
 } from './helpers.js';
 import { completeInterview, createFakePreviewer, generate, joinAs } from './hosted-helpers.js';
 import { post } from './publish-helpers.js';
+import { suspendUser } from '../src/services/moderation.js';
 
 const cleanups: (() => Promise<void>)[] = [];
 afterEach(async () => {
@@ -338,6 +339,43 @@ describe('重启语义', () => {
     expect(() => models.resolve(userId, 'generate', pinned)).toThrow(ModelAccessError);
     models.delete(userId);
     expect(models.version(userId, 'generate')).toBeNull();
+  });
+});
+
+describe('停用账号中止托管任务', () => {
+  it('排队中的任务：标记 SUSPENDED、全额退点；之后的 worker 不再执行', async () => {
+    const model = hangingGenerationModel();
+    const t = platformWeb(model, SEPARATE);
+    const { wall, owner } = await platformOwner(t);
+    const response = await post(t, owner.session, `/w/${wall.id}/me/generate`);
+    const jobId = /\/jobs\/(gen_[a-z2-7]+)/.exec(response.headers.get('location') ?? '')?.[1] ?? '';
+    expect(balanceOf(t, owner.session.userId)).toBe(10);
+    expect(suspendUser(t.web.deps, owner.session.userId, null).cancelledJobs).toBe(1);
+    expect(t.repos.jobs.findById(jobId)).toMatchObject({ status: 'failed', errorCode: 'SUSPENDED', charged: false });
+    expect(balanceOf(t, owner.session.userId)).toBe(20);
+    const runtime = startWorker(t, { model });
+    await sleep(50);
+    await runtime.worker.idle();
+    expect(model.generationCalls).toBe(0);
+    expect(t.repos.jobEvents.latest(jobId)?.stage).toBe('failed');
+  });
+
+  it('执行中的任务：立即失败并退点；worker 发现租约已不在，停止后续模型请求，不存版本、不改结果', async () => {
+    const model = hangingGenerationModel();
+    const t = platformWeb(model, SEPARATE);
+    const { wall, owner } = await platformOwner(t);
+    const response = await post(t, owner.session, `/w/${wall.id}/me/generate`);
+    const jobId = /\/jobs\/(gen_[a-z2-7]+)/.exec(response.headers.get('location') ?? '')?.[1] ?? '';
+    const runtime = startWorker(t, { model, leaseMs: 300 });
+    await until(() => model.generationCalls > 0);
+    expect(suspendUser(t.web.deps, owner.session.userId, null).cancelledJobs).toBe(1);
+    expect(balanceOf(t, owner.session.userId)).toBe(20);
+    // 续约失败（每 100 毫秒一次）→ 取消正在进行的模型调用
+    await until(() => runtime.worker.activeCount === 0);
+    expect(model.generationCalls).toBe(1);
+    expect(t.repos.jobs.findById(jobId)).toMatchObject({ status: 'failed', errorCode: 'SUSPENDED', revisionId: null });
+    expect(t.repos.revisions.listForPage(owner.member.page.id)).toEqual([]);
+    expect(t.repos.credits.findJobEntry('job_refund', jobId)?.delta).toBe(10);
   });
 });
 

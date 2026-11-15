@@ -25,6 +25,8 @@ services:
     environment:
       NODE_ENV: production
       NOWME_DATA_DIR: /data
+      # 主站只入队，渲染与 AI 任务交给 worker（contracts 13.5）
+      NOWME_WORKER_MODE: separate
       # 容器里要监听所有网卡；对外的源（NOWME_WEB_ORIGIN）仍然是 .env 里的 https 域名
       NOWME_WEB_LISTEN: 0.0.0.0:3000
     ports:
@@ -60,8 +62,9 @@ services:
 
   worker:
     <<: *nowme
-    # start:worker 脚本由后台任务进程（T8.1）提供
     command: ["pnpm", "--filter", "@nowme/web", "start:worker"]
+    # 收到 SIGTERM 后最多等进行中的任务 NOWME_WORKER_SHUTDOWN_GRACE_SECONDS（默认 30）秒，停止超时要比它长
+    stop_grace_period: 60s
     environment:
       NODE_ENV: production
       NOWME_DATA_DIR: /data

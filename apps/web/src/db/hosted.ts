@@ -349,6 +349,11 @@ export function createGenerationJobsRepo(db: Database) {
         lease_owner = NULL, lease_expires_at = NULL
       WHERE id = ? AND status = 'running' AND lease_owner = ?`,
   );
+  const markRunning = db.prepare("UPDATE generation_jobs SET status = 'running', started_at = ? WHERE id = ? AND status = 'queued'");
+  const activeForOwner = db.prepare("SELECT id FROM generation_jobs WHERE owner_id = ? AND status IN ('queued', 'running') ORDER BY created_at");
+  const cancelOne = db.prepare(
+    "UPDATE generation_jobs SET status = 'failed', error_code = ?, charged = 0, finished_at = ?, lease_owner = NULL, lease_expires_at = NULL WHERE id = ? AND status IN ('queued', 'running')",
+  );
   const interruptOne = db.prepare(
     "UPDATE generation_jobs SET status = 'failed', error_code = 'INTERRUPTED', charged = 0, finished_at = ?, lease_owner = NULL, lease_expires_at = NULL WHERE id = ? AND status IN ('queued', 'running')",
   );
@@ -409,6 +414,21 @@ export function createGenerationJobsRepo(db: Database) {
           ).changes,
         ) === 1
       );
+    },
+    /** 测试用：不经 worker 直接标记执行中（没有租约，worker 会把它当作租约已过期回收）。 */
+    markRunning(id: string, now: string): boolean {
+      return Number(markRunning.run(now, id).changes) === 1;
+    },
+    /** 主人的排队中 / 执行中的任务 ID（停用账号、注销时用）。 */
+    listActiveIdsForOwner(ownerId: string): string[] {
+      return (activeForOwner.all(ownerId) as { id: string }[]).map((row) => row.id);
+    },
+    /**
+     * 中止一个排队中 / 执行中的任务（停用账号、注销）：标记失败并清掉租约。执行它的 worker 下一次续约或下一轮调用模型前
+     * 发现租约已不在，停止后续请求，结果作废（contracts 13.4）。退点由调用方在同一个事务里做（`settleJob`）。
+     */
+    cancel(id: string, errorCode: string, now: string): boolean {
+      return Number(cancelOne.run(errorCode, now, id).changes) === 1;
     },
     /** 被打断的任务（租约过期、优雅退出）：标记 INTERRUPTED。不重试。 */
     interrupt(id: string, now: string): boolean {

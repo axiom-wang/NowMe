@@ -188,6 +188,8 @@ export function createGenerationExecutor(deps: GenerationDeps, options: Generati
         firstMessage: firstMessage(own, job, confirmed?.record.briefMd ?? null, confirmed?.assets ?? [], prepared.baseNumber, notes),
         signal,
         onTurn: (turn) => {
+          // 每轮调用模型前确认仍持有租约：任务被中止（停用账号、注销）或被回收后，不再发出后续模型请求
+          if (!repos.queue.holdsGeneration(jobId, ctx.workerId)) throw new Error('任务已被中止或租约已被回收');
           currentTurn = turn;
           // 还没写过文件时模型在读参考、构思版式（设计）；写过之后是生成与修改
           ctx.progress(wrote ? 'generating' : 'designing', { turn, maxTurns: settings.maxTurns });

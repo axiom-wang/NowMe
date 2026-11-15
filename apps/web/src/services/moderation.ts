@@ -19,6 +19,7 @@ import { wallQueries } from '../db/wall-queries.js';
 import type { Wall } from '../db/walls.js';
 import type { PublishedMemberPage } from './access.js';
 import { disconnectAgent } from './agent.js';
+import { cancelActiveJobsForUser } from '../hosted/job-cancel.js';
 import { parsePublishedCard } from './wall-view.js';
 
 type ModerationDeps = Pick<AppDeps, 'db' | 'repos' | 'now'>;
@@ -269,9 +270,11 @@ export interface SuspendResult {
   endedPublications: number;
   /** 之前已经是停用状态。 */
   already: boolean;
+  /** 中止的托管生成 / 修改任务数（已退点）。 */
+  cancelledJobs: number;
 }
 
-/** 停用账号：删除全部会话、全部页面下墙、断开本地 Agent；之后不能登录（services/auth.ts）。 */
+/** 停用账号：删除全部会话、全部页面下墙、断开本地 Agent、中止托管任务；之后不能登录（services/auth.ts）。 */
 export function suspendUser(deps: ModerationDeps, userId: string, note: string | null): SuspendResult {
   return transaction(deps.db, () => {
     const nowIso = deps.now().toISOString();
@@ -283,8 +286,10 @@ export function suspendUser(deps: ModerationDeps, userId: string, note: string |
       endedPublications += wallQueries(deps.db).endActivePublication(item.pageId, 'withdrawn', nowIso);
       disconnectAgent(deps, item.pageId);
     }
+    // 排队中 / 执行中的网页内生成与修改：中止并按规则全额退点（contracts 13.4）
+    const cancelledJobs = cancelActiveJobsForUser(deps, userId, 'SUSPENDED');
     deps.repos.moderation.recordAction({ actor: 'platform', actorUserId: null, action: 'suspend', userId, note, createdAt: nowIso });
-    return { endedPublications, already };
+    return { endedPublications, already, cancelledJobs };
   });
 }
 

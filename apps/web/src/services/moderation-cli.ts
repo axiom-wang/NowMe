@@ -190,7 +190,7 @@ export function runModerationCommand(deps: CliDeps, argv: readonly string[]): st
     case 'suspend': {
       const user = userByEmail(deps, args.email);
       const result = suspendUser(deps, user.id, note(args.note));
-      return [`${result.already ? '账号之前已停用，已再次清理' : '账号已停用'}：会话全部失效，${result.endedPublications} 个页面下墙`];
+      return [`${result.already ? '账号之前已停用，已再次清理' : '账号已停用'}：会话全部失效，${result.endedPublications} 个页面下墙，中止 ${result.cancelledJobs} 个网页内生成任务（已退点）`];
     }
     case 'unsuspend': {
       const user = userByEmail(deps, args.email);

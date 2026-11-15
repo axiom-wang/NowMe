@@ -30,9 +30,10 @@ import type { AppDeps } from '../context.js';
 import { accountDataQueries } from '../db/account-data.js';
 import { transaction } from '../db/index.js';
 import { eraseHostedPageRecords } from '../hosted/data.js';
+import { cancelActiveJobsForUser } from '../hosted/job-cancel.js';
 import { removeHostedPageFiles } from '../hosted/assets.js';
 import { codeHash } from './auth.js';
-import { settleJob, userAccount } from './billing.js';
+import { userAccount } from './billing.js';
 import { erasePageRecords } from './page-lifecycle.js';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -212,19 +213,8 @@ export async function deleteAccount(deps: DeletionDeps, userId: string, rawCode:
       pageIds.push(page.id);
     }
 
-    // 3. 进行中的任务：直接结束并退点（任务执行器之后写结果会因为状态不再是排队 / 运行而作罢）
-    for (const jobId of queries.activeJobIds(userId)) {
-      settleJob(deps, jobId, false);
-      repos.jobs.finish(jobId, {
-        status: 'failed',
-        revisionId: null,
-        errorCode: 'PAGE_GONE',
-        resultMessage: null,
-        charged: false,
-        usage: { turns: 0, inputTokens: 0, outputTokens: 0, cacheReadTokens: 0, cacheWriteTokens: 0 },
-        finishedAt: nowIso,
-      });
-    }
+    // 3. 进行中的任务：直接结束并退点；worker 发现租约已不在就停止后续模型请求，结果作废（contracts 13.4）
+    cancelActiveJobsForUser(deps, userId, 'PAGE_GONE');
 
     // 4. 成员关系结束（与退出墙相同的 left）
     const ended = new Set(queries.endActiveMemberships(userId, nowIso));
