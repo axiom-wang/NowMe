@@ -212,7 +212,7 @@ test('群聊与私聊：多人收发、未读、断网重试去重、历史、�
     const row = owner.page.locator('.member-row', { hasText: '聊天乙' });
     owner.page.on('dialog', (dialog) => void dialog.accept());
     await row.getByRole('button', { name: '移出', exact: true }).click();
-    await expect(b.page.locator('[data-chat-status]')).toContainText('失去', { timeout: 8000 });
+    await expect(b.page.locator('[data-chat-status]')).toContainText('打不开', { timeout: 8000 });
     await expect(b.page.locator('.message')).toHaveCount(0);
     await expect(b.page.getByRole('button', { name: '发送', exact: true })).toBeDisabled();
     expect((await b.page.request.get(groupPath + '/items')).status()).toBe(404);

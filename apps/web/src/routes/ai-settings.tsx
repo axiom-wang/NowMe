@@ -47,7 +47,7 @@ export function registerAiSettingsRoutes(app: AppHono, deps: AppDeps): void {
         </Notice>
       ) : null}
       <p>填了自己的 Key 之后，采访、做页面和改页面都会用它去请求你选的模型服务。费用由服务商直接向你收取，失败的请求也可能计费。</p>
-      <p class="muted">Key 会加密保存在你的账号里，换设备登录也能用，只有你能查看和删除。{deps.platformModel.available ? '用自己的 Key 时，NOWMe 不会替你付模型费用。' : 'NOWMe 不提供公共 Key，也不会替你付模型费用。'}</p>
+      <p class="muted">Key 会加密保存在你的账号里，换设备登录也能用，只有你能查看和删除。{deps.platformModel.available ? '用自己的 Key 时，NOWMe 不会替你付模型费用。' : '这是可选的：用自己的 Key 不扣点数；不填的话，也可以用 NOWMe 提供的 AI（按点数计，个人点数或圈子的额度都可以）。'}</p>
       {!deps.userModels.available ? <Notice tone="error">这里暂时不能保存 API Key（服务器还没有开启加密保存）。你仍然可以在自己电脑上用 AI 助手做页面。</Notice> : null}
       {error ? <Notice tone="error">{error}</Notice> : null}
       {c.req.query('saved') === '1' ? <Notice tone="info">已保存。保存时不会调用模型，回到你的页面继续做就行。</Notice> : null}

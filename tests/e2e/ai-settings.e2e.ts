@@ -14,7 +14,7 @@ test('账号保存自己的 AI API、跨设备管理、隔离与删除（桌面�
   await expect(owner.page.locator('#generate-key')).toBeDisabled();
   await owner.page.locator('#interview-key').fill(key);
   await owner.page.getByRole('button', { name: '保存 AI 配置' }).click();
-  await expect(owner.page.getByText('配置已保存。')).toBeVisible();
+  await expect(owner.page.getByText('已保存。', { exact: false })).toBeVisible();
   await expect(owner.page.locator('#interview-key')).toHaveValue('');
   await expect(owner.page.locator('#generate-key')).toHaveValue('');
   expect(await owner.page.content()).not.toContain(key);
@@ -35,7 +35,7 @@ test('账号保存自己的 AI API、跨设备管理、隔离与删除（桌面�
   await expect(stranger.page.getByText('已加密保存')).toHaveCount(0);
   phone.once('dialog', (dialog) => dialog.accept());
   await phone.getByRole('button', { name: '删除 AI 配置与 Key' }).click();
-  await expect(phone.getByText('AI 配置与加密 Key 已删除。')).toBeVisible();
+  await expect(phone.getByText('已删除你的 AI 设置和 Key。', { exact: false })).toBeVisible();
   await owner.page.reload();
   await expect(owner.page.getByText('已加密保存')).toHaveCount(0);
   await Promise.all([first.close(), mobile.close(), strangerContext.close()]);
