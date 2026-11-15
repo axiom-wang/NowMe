@@ -152,6 +152,9 @@ test('群聊与私聊：多人收发、未读、断网重试去重、历史、�
     const { wallId, inviteUrl } = await createWall(owner.page, '一起聊的墙');
     await joinWall(a.page, inviteUrl);
     await joinWall(b.page, inviteUrl);
+    // 加入后先进入引导；回到墙再进群聊
+    await a.page.goto(`/w/${wallId}`);
+    await b.page.goto(`/w/${wallId}`);
     await a.page.getByRole('link', { name: '全员群聊', exact: true }).click();
     await b.page.getByRole('link', { name: '全员群聊', exact: true }).click();
     const groupPath = new URL(a.page.url()).pathname;
@@ -227,8 +230,9 @@ test('历史消息分页与阅读位置：收到新消息不打断阅读，隐�
   try {
     const a = await newUser(aContext, 'history-a', '历史甲');
     const b = await newUser(bContext, 'history-b', '历史乙');
-    const { inviteUrl } = await createWall(a.page, '历史分页的墙');
+    const { wallId, inviteUrl } = await createWall(a.page, '历史分页的墙');
     await joinWall(b.page, inviteUrl);
+    await b.page.goto(`/w/${wallId}`);
     await b.page.getByRole('link', { name: '全员群聊', exact: true }).click();
     const path = new URL(b.page.url()).pathname;
     await a.page.goto(path);
