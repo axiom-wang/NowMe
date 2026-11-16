@@ -20,6 +20,12 @@ test('账号保存自己的 AI API、跨设备管理、隔离与删除（桌面�
   await expect(owner.page.locator('#interview-key')).toHaveValue('');
   await expect(owner.page.locator('#generate-key')).toHaveValue('');
   expect(await owner.page.content()).not.toContain(key);
+  await expect(owner.page.locator('.ai-settings__aside')).toBeVisible();
+  expect(await owner.page.evaluate(() => {
+    const form = document.querySelector('.ai-settings-form')?.getBoundingClientRect();
+    const aside = document.querySelector('.ai-settings__aside')?.getBoundingClientRect();
+    return !!form && !!aside && aside.left >= form.right && document.documentElement.scrollWidth <= window.innerWidth;
+  })).toBe(true);
   await owner.page.screenshot({ path: testInfo.outputPath('ai-settings-desktop.png'), fullPage: true });
 
   const mobile = await browser.newContext({ viewport: { width: 375, height: 812 } });
@@ -27,7 +33,7 @@ test('账号保存自己的 AI API、跨设备管理、隔离与删除（桌面�
   await login(phone, owner.email, '阿柚');
   await phone.goto('/account/ai');
   await expect(phone.locator('#generate-model')).toHaveValue('deepseek-chat');
-  await expect(phone.getByText('API Key（已加密保存，留空沿用）')).toHaveCount(2);
+  await expect(phone.locator('.ai-endpoint__saved')).toHaveCount(2);
   expect(await phone.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await phone.screenshot({ path: testInfo.outputPath('ai-settings-mobile.png'), fullPage: true });
 
