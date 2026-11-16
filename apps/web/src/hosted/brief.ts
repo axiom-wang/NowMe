@@ -409,7 +409,12 @@ export function renderBriefMarkdown(brief: StructuredBrief, wall: Pick<Wall, 'na
 
 /** 场景指南里“默认勾选”的选项（contracts 8：暂时写在选项文字里）。 */
 export function isDefaultChecked(option: string): boolean {
-  return option.includes('（默认勾选）');
+  return /（默认勾选[^）]*）/.test(option);
+}
+
+/** 去掉场景配置里的默认勾选标注，展示与提交使用同一份文字。 */
+export function choiceLabel(option: string): string {
+  return option.replace(/（默认勾选[^）]*）/g, '');
 }
 
 /** 选项是“直接写”类（选中后需要填文本）。 */

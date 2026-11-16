@@ -3,11 +3,28 @@
  * - [data-copy="<元素 id>"]：复制该元素的文字（Agent 指令）；
  * - form[data-confirm="<提示>"]：提交前确认（断开、删除等危险操作）；
  * - form[data-busy-label="<说明>"]：提交后显示等待状态（“和 TA 聊什么”）；
+ * - [data-file-picker]：用统一的外观显示图片选择按钮和文件名；
  * - details[data-dismissable]：弹出菜单（账号菜单、发起聊天、画像管理）。Esc 关闭并把焦点还给标题，
  *   点到外面或键盘焦点移到外面时也关闭；没有脚本时它们就是普通的折叠。
  */
 (function () {
   'use strict';
+
+  document.querySelectorAll('[data-file-picker]').forEach(function (picker) {
+    var input = picker.querySelector('input[type="file"]');
+    var button = picker.querySelector('.file-picker__button');
+    var status = picker.querySelector('.file-picker__name');
+    var empty = status.textContent;
+    function showFile() {
+      status.textContent = input.files.length ? input.files[0].name : empty;
+    }
+    input.addEventListener('change', showFile);
+    window.addEventListener('pageshow', showFile);
+    showFile();
+    input.classList.add('visually-hidden');
+    button.hidden = false;
+    status.hidden = false;
+  });
 
   function copyText(text) {
     if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
@@ -28,21 +45,28 @@
     });
   }
 
+  var copyStates = new WeakMap();
   document.addEventListener('click', function (event) {
     var target = event.target;
     var button = target instanceof Element ? target.closest('[data-copy]') : null;
     if (!button) return;
     var source = document.getElementById(button.getAttribute('data-copy') || '');
     if (!source) return;
-    var label = button.textContent;
+    var state = copyStates.get(button);
+    if (!state) { state = { label: button.textContent, timer: null, sequence: 0 }; copyStates.set(button, state); }
+    clearTimeout(state.timer);
+    var sequence = ++state.sequence;
+    function feedback(text) {
+      if (sequence !== state.sequence) return;
+      button.textContent = text;
+      state.timer = setTimeout(function () { button.textContent = state.label; }, 1500);
+    }
     copyText(source.textContent || '').then(
       function () {
-        button.textContent = '已复制';
-        setTimeout(function () {
-          button.textContent = label;
-        }, 1500);
+        feedback('已复制');
       },
       function () {
+        if (sequence !== state.sequence) return;
         var range = document.createRange();
         range.selectNodeContents(source);
         var selection = window.getSelection();
@@ -50,7 +74,7 @@
           selection.removeAllRanges();
           selection.addRange(range);
         }
-        button.textContent = '请手动复制';
+        feedback('请手动复制');
       },
     );
   });

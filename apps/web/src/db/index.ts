@@ -23,6 +23,7 @@ import { createChatRepo } from './chat.js';
 import { createCreditsRepo } from './credits.js';
 import { createIcebreakersRepo } from './icebreakers.js';
 import { createIntrosRepo } from './intros.js';
+import { createAsksRepo } from './asks.js';
 import { createModerationRepo } from './moderation.js';
 import { createJobEventsRepo, createJobQueueRepo } from './job-queue.js';
 import { createPortraitsRepo, createQuestionsRepo, createRemindersRepo } from './organizer-tools.js';
@@ -50,6 +51,7 @@ export function createRepos(db: Database) {
     jobs: createGenerationJobsRepo(db),
     icebreakers: createIcebreakersRepo(db),
     intros: createIntrosRepo(db),
+    asks: createAsksRepo(db),
     credits: createCreditsRepo(db),
     moderation: createModerationRepo(db),
     queue: createJobQueueRepo(db),

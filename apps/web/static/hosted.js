@@ -32,7 +32,7 @@
     releasePreviews();
     photoList.replaceChildren();
     var files = Array.from(photos.files || []);
-    var error = files.length > 6 ? '图片最多 6 张，请重新选择。' : files.some(function (file) { return file.size > 2 * 1024 * 1024; }) ? '单张图片不能超过 2 MB，请重新选择。' : '';
+    var error = files.length > 6 ? '图片最多 6 张，请重新选择。' : files.some(function (file) { return file.size > 2 * 1024 * 1024; }) ? '单张图片不能超过 2 MB，请重新选择。' : files.some(function (file) { return !['image/png', 'image/jpeg', 'image/webp', 'image/gif'].includes(file.type); }) ? '只支持 PNG、JPEG、WebP、GIF 图片，请重新选择。' : '';
     photos.setCustomValidity(error);
     photoStatus.textContent = error || (files.length ? '已选择 ' + files.length + ' 张图片，下次提交时上传。' : savedPhotoStatus);
     photoStatus.classList.toggle('field__error', !!error);

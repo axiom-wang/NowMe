@@ -39,6 +39,8 @@ describe('阶段判定（纯函数）', () => {
   it('步骤条与真实状态一致：还没采访时“采访”是当前步骤，不会显示“已完成”', () => {
     const states = (input: StageInput) => workspaceSteps(input, true).map((step) => step.state);
     expect(workspaceSteps(EMPTY, true).map((step) => step.label)).toEqual(['采访', '确认资料', '生成页面', '发布到墙上']);
+    expect(workspaceStage({ ...EMPTY, hasLive: true })).toBe('start');
+    expect(states({ ...EMPTY, hasLive: true })).toEqual(['current', 'todo', 'todo', 'todo']);
     expect(states(EMPTY)).toEqual(['current', 'todo', 'todo', 'todo']);
     expect(states({ ...EMPTY, briefStatus: 'followups' })).toEqual(['current', 'todo', 'todo', 'todo']);
     expect(states({ ...EMPTY, briefStatus: 'review' })).toEqual(['done', 'current', 'todo', 'todo']);

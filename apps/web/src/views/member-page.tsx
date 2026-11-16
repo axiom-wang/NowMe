@@ -25,7 +25,7 @@ export interface PageSafetyModel {
 const BackLink: FC<{ href: string; label: string }> = ({ href, label }) => (
   <nav class="back-link" aria-label="返回">
     <a href={href}>
-      <span aria-hidden="true">←</span> {label}
+      <span aria-hidden="true">←</span><span class="back-link__label" title={label}>{label}</span>
     </a>
   </nav>
 );
@@ -197,7 +197,7 @@ export const MemberPageView: FC<{ model: MemberPageModel; csrf: string; icebreak
   return (
     <div class="container container--wide">
       <BackLink href={`/w/${wall.id}`} label={`回到墙：${wall.name}`} />
-      <div class={`member-layout${icebreaker ? ' member-layout--talk' : ''}`}>
+      <div class="member-layout">
         <header class="member-head">
           <p class="eyebrow">{wall.name}</p>
           <h1 class="hero__title">
@@ -210,44 +210,46 @@ export const MemberPageView: FC<{ model: MemberPageModel; csrf: string; icebreak
         <div class="member-layout__frame">
           <PageFrame ticket={model.ticket} title={`${card.displayName}的页面`} />
         </div>
-        {icebreaker ? <TalkPanel base={base} name={card.displayName} csrf={csrf} panel={icebreaker} error={icebreakerError} aiSettings={aiSettings} intro={intro} /> : null}
-        <section class="card topics" aria-labelledby="hooks-heading">
-          <h2 id="hooks-heading" class="topics__title">
-            {own ? '我的接话点' : 'TA 自己想聊的'}
-          </h2>
-          {card.hooks.length > 0 ? (
-            <ol class="topic-list">
-              {card.hooks.map((hook, index) => (
-                <li class="topic">
-                  <span class="topic__index" aria-hidden="true">
-                    {ordinal(index)}
-                  </span>
-                  <p class="topic__text">{hook.text}</p>
-                  {canChat ? (
-                    <form method="post" action={`${base}/chat`} class="topic__action">
-                      <CsrfField token={csrf} />
-                      <input type="hidden" name="hookId" value={hook.id} />
-                      <button type="submit" class="btn btn--accent btn--small">
-                        想聊这个
-                      </button>
-                    </form>
-                  ) : null}
-                </li>
-              ))}
-            </ol>
-          ) : (
-            <p class="muted topics__empty">
-              {own ? '你的页面还没有留话题。回到“我的页面”，让 AI 帮你加几个别人容易开口的话题。' : 'TA 还没有留话题。可以直接发私信，或者让 AI 帮你找个开头。'}
-            </p>
-          )}
-          {own ? (
-            <p class="muted topics__note">这是你自己的页面。别人点“想聊这个”，会带着你确认过的开场白，在站内私信里找你。</p>
-          ) : (
-            <p class="muted topics__note">点“想聊这个”，会把话题带到站内私信里。开场白可以改成你自己的话再发。</p>
-          )}
-          {!own && contact && card.hooks[0] ? <form method="post" action={`${base}/contact`}><CsrfField token={csrf} /><input type="hidden" name="contactHookId" value={card.hooks[0].id} /><button type="submit" class="btn btn--ghost btn--small">查看公开联系方式</button></form> : null}
-        </section>
-        {!own && safety ? <PageSafety base={base} csrf={csrf} name={card.displayName} reported={safety.reported} notice={safety.notice} error={safety.error} /> : null}
+        <div class="member-layout__details">
+          {icebreaker ? <TalkPanel base={base} name={card.displayName} csrf={csrf} panel={icebreaker} error={icebreakerError} aiSettings={aiSettings} intro={intro} /> : null}
+          <section class="card topics" aria-labelledby="hooks-heading">
+            <h2 id="hooks-heading" class="topics__title">
+              {own ? '我的接话点' : 'TA 自己想聊的'}
+            </h2>
+            {card.hooks.length > 0 ? (
+              <ol class="topic-list">
+                {card.hooks.map((hook, index) => (
+                  <li class="topic">
+                    <span class="topic__index" aria-hidden="true">
+                      {ordinal(index)}
+                    </span>
+                    <p class="topic__text">{hook.text}</p>
+                    {canChat ? (
+                      <form method="post" action={`${base}/chat`} class="topic__action">
+                        <CsrfField token={csrf} />
+                        <input type="hidden" name="hookId" value={hook.id} />
+                        <button type="submit" class="btn btn--accent btn--small">
+                          想聊这个
+                        </button>
+                      </form>
+                    ) : null}
+                  </li>
+                ))}
+              </ol>
+            ) : (
+              <p class="muted topics__empty">
+                {own ? '你的页面还没有留话题。回到“我的页面”，让 AI 帮你加几个别人容易开口的话题。' : 'TA 还没有留话题。可以直接发私信，或者让 AI 帮你找个开头。'}
+              </p>
+            )}
+            {own ? (
+              <p class="muted topics__note">这是你自己的页面。别人点“想聊这个”，会带着你确认过的开场白，在站内私信里找你。</p>
+            ) : (
+              <p class="muted topics__note">点“想聊这个”，会把话题带到站内私信里。开场白可以改成你自己的话再发。</p>
+            )}
+            {!own && contact && card.hooks[0] ? <form method="post" action={`${base}/contact`}><CsrfField token={csrf} /><input type="hidden" name="contactHookId" value={card.hooks[0].id} /><button type="submit" class="btn btn--ghost btn--small">查看公开联系方式</button></form> : null}
+          </section>
+          {!own && safety ? <PageSafety base={base} csrf={csrf} name={card.displayName} reported={safety.reported} notice={safety.notice} error={safety.error} /> : null}
+        </div>
       </div>
     </div>
   );

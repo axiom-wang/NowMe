@@ -61,13 +61,13 @@ export interface WorkspaceStep {
 /**
  * 步骤条：采访 → 确认资料 → 生成页面 → 发布到墙上（网页内创作）。每一步“完成”都对应真实数据：
  * 采访完成 = 资料已整理出来（待确认 / 已确认）；确认资料 = 已确认；生成页面 = 有做好的版本；发布 = 墙上有这一页。
- * 已经有版本（例如用自己电脑上的 AI 助手做的）时，前两步视为完成。
+ * 已经有做好的版本（例如用自己电脑上的 AI 助手做的）时，前两步视为完成。
  */
 export function workspaceSteps(input: StageInput, hosted: boolean): WorkspaceStep[] {
   const done = hosted
     ? [
-        input.hasLive || input.briefStatus === 'review' || input.briefStatus === 'confirmed',
-        input.hasLive || input.briefStatus === 'confirmed',
+        input.hasUsable || input.briefStatus === 'review' || input.briefStatus === 'confirmed',
+        input.hasUsable || input.briefStatus === 'confirmed',
         input.hasUsable,
         input.published,
       ]

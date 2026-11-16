@@ -30,19 +30,21 @@ test('群头像与墙封面一致，首屏、轮询、更换和恢复默认均�
   } finally { await Promise.all([ownerContext.close(), memberContext.close()]); }
 });
 
-test('顶栏在我的、消息和资料页之间保持位置与尺寸，未读数加载时不跳动', async ({ browser }, testInfo) => {
+test('顶栏没有未读徽标空位，有新消息时才显示未读数', async ({ browser }, testInfo) => {
   const context = await browser.newContext();
   try {
     const { page } = await newUser(context, 'header-layout', '江予安');
     await page.emulateMedia({ reducedMotion: 'reduce' });
+    await page.clock.install();
     let holdUnread = false;
+    let unread = 12;
     let releaseUnread: (() => void) | undefined;
     await page.route('**/messages/unread', async (route) => {
       if (holdUnread) {
         holdUnread = false;
         await new Promise<void>((resolve) => { releaseUnread = resolve; });
       }
-      await route.fulfill({ json: { unread: 12 } });
+      await route.fulfill({ json: { unread } });
     });
     const geometry = () => page.evaluate(() => {
       const selectors = ['.site-header', '.site-header__inner', '.brand', '.site-nav', '.site-nav a', '.account-menu', '.account-menu .avatar'];
@@ -51,26 +53,41 @@ test('顶栏在我的、消息和资料页之间保持位置与尺寸，未读�
         return { selector, x, y, width, height, fontSize: getComputedStyle(element).fontSize };
       }));
     });
-    for (const width of [1440, 1024, 768, 760, 700, 562, 440, 375]) {
+    const badge = page.locator('[data-message-unread]');
+    for (const width of [1440, 1024, 768, 760, 700, 562, 440, 375, 320]) {
       await page.setViewportSize({ width, height: 941 });
-      let reference: Awaited<ReturnType<typeof geometry>> | undefined;
+      let beforeReference: Awaited<ReturnType<typeof geometry>> | undefined;
+      let afterReference: Awaited<ReturnType<typeof geometry>> | undefined;
       for (const path of ['/', '/messages', '/account/data', '/messages']) {
         holdUnread = true;
         releaseUnread = undefined;
         await page.goto(path);
         await page.evaluate(() => document.fonts.ready);
         await expect.poll(() => !!releaseUnread).toBe(true);
+        await expect(badge).toHaveCSS('display', 'none');
         const beforeUnread = await geometry();
+        const [home, messages, data] = beforeUnread.filter(({ selector }) => selector === '.site-nav a');
+        expect(messages!.width).toBeCloseTo(home!.width, 1);
+        expect(data!.x - messages!.x - messages!.width).toBeCloseTo(messages!.x - home!.x - home!.width, 1);
+        beforeReference ??= beforeUnread;
+        expect(beforeUnread, `${width}px ${path} 无徽标时与首页`).toEqual(beforeReference);
         releaseUnread!();
-        await expect(page.locator('[data-message-unread]')).toHaveText('12');
+        await expect(badge).toBeVisible();
+        await expect(badge).toHaveText('12');
         const afterUnread = await geometry();
-        expect(afterUnread, `${width}px ${path} 未读数加载前后`).toEqual(beforeUnread);
-        if (reference) expect(afterUnread, `${width}px ${path} 与首页`).toEqual(reference);
-        else reference = afterUnread;
+        expect(afterUnread.filter(({ selector }) => !selector.startsWith('.site-nav'))).toEqual(beforeUnread.filter(({ selector }) => !selector.startsWith('.site-nav')));
+        const messageWidthWithBadge = afterUnread.filter(({ selector }) => selector === '.site-nav a')[1]!.width;
+        if (width > 760) expect(messageWidthWithBadge).toBeGreaterThan(messages!.width);
+        else expect(messageWidthWithBadge).toBe(messages!.width);
+        afterReference ??= afterUnread;
+        expect(afterUnread, `${width}px ${path} 有徽标时与首页`).toEqual(afterReference);
         expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       }
       if ([1440, 562, 375].includes(width)) await page.screenshot({ path: testInfo.outputPath(`header-${width}.png`) });
     }
+    unread = 0;
+    await page.clock.fastForward(31_000);
+    await expect(badge).toHaveCSS('display', 'none');
   } finally { await context.close(); }
 });
 
@@ -144,7 +161,7 @@ test('消息页：筛选与轮询保持同步，发起聊天入口和窄屏布�
 test('群聊与私聊：多人收发、未读、断网重试去重、历史、手机布局与权限撤销', async ({ browser }, testInfo) => {
   const ownerContext = await browser.newContext();
   const aContext = await browser.newContext();
-  const bContext = await browser.newContext({ viewport: { width: 375, height: 812 } });
+  const bContext = await browser.newContext({ viewport: { width: 375, height: 667 } });
   try {
     const owner = await newUser(ownerContext, 'chat-owner', '聊天组织者');
     const a = await newUser(aContext, 'chat-a', '聊天甲');
@@ -157,6 +174,10 @@ test('群聊与私聊：多人收发、未读、断网重试去重、历史、�
     await b.page.goto(`/w/${wallId}`);
     await a.page.getByRole('link', { name: '全员群聊', exact: true }).click();
     await b.page.getByRole('link', { name: '全员群聊', exact: true }).click();
+    await expect(b.page.locator('.conversation-heading .eyebrow')).toHaveText('全员群聊');
+    await expect(b.page.getByRole('heading', { level: 1 })).toHaveText('一起聊的墙');
+    await expect(b.page.getByLabel('消息内容')).toBeInViewport({ ratio: 1 });
+    await expect(b.page.getByRole('button', { name: '发送', exact: true })).toBeInViewport({ ratio: 1 });
     const groupPath = new URL(a.page.url()).pathname;
     expect(new URL(b.page.url()).pathname).toBe(groupPath);
     await a.page.getByLabel('消息内容').fill('甲在全员群打招呼');
@@ -192,6 +213,7 @@ test('群聊与私聊：多人收发、未读、断网重试去重、历史、�
     await privateItem.getByRole('link').click();
     await b.page.bringToFront();
     await expect(b.page.locator('.message-text')).toHaveText(['只给乙的私聊消息']);
+    await expect(b.page.getByLabel('消息内容')).toBeInViewport({ ratio: 1 });
     await expect.poll(async () => {
       const data = await (await b.page.request.get('/messages/list')).json();
       return data.conversations.find((c: { id: string }) => directPath.endsWith(c.id)).unread;
@@ -226,7 +248,7 @@ test('群聊与私聊：多人收发、未读、断网重试去重、历史、�
 
 test('历史消息分页与阅读位置：收到新消息不打断阅读，隐藏页面恢复后补齐', async ({ browser }) => {
   const aContext = await browser.newContext();
-  const bContext = await browser.newContext();
+  const bContext = await browser.newContext({ viewport: { width: 320, height: 667 } });
   try {
     const a = await newUser(aContext, 'history-a', '历史甲');
     const b = await newUser(bContext, 'history-b', '历史乙');
@@ -249,6 +271,12 @@ test('历史消息分页与阅读位置：收到新消息不打断阅读，隐�
     await b.page.evaluate(fill(33, 65), { url: path, start: 33, end: 65 });
     await b.page.reload();
     await expect(b.page.locator('.message')).toHaveCount(50);
+    await expect(b.page.getByLabel('消息内容')).toBeInViewport({ ratio: 1 });
+    expect(await b.page.evaluate(() => document.documentElement.scrollHeight)).toBe(667);
+    const shortHistory = (await b.page.locator('[data-chat-history]').boundingBox())!.height;
+    await b.page.setViewportSize({ width: 320, height: 812 });
+    expect((await b.page.locator('[data-chat-history]').boundingBox())!.height - shortHistory).toBeCloseTo(145);
+    await b.page.setViewportSize({ width: 320, height: 667 });
     await b.page.locator('[data-chat-history]').evaluate((el) => { el.scrollTop = 0; });
     await b.page.getByRole('button', { name: '加载更早消息' }).click();
     await expect(b.page.locator('.message')).toHaveCount(65);

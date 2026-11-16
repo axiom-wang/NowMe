@@ -8,6 +8,7 @@ import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { renderBriefMarkdown, toStructuredBrief, briefOutputSchema } from '../src/hosted/brief.js';
 import { withRollingCache } from '../src/hosted/runner.js';
+import { createPlatformTestWeb } from './billing-helpers.js';
 import { createTestWeb, createUser, get, login, seedWall, type TestWeb } from './helpers.js';
 import {
   completeInterview,
@@ -52,11 +53,20 @@ describe('用户尚未配置 API', () => {
     expect(html).toMatch(/<details class="card more-ways" id="more-ways" open/);
     const response = await get(web, `/w/${wall.id}/me/create`, { cookie: owner.session.cookie });
     expect(response.status).toBe(200);
-    expect(await response.text()).toContain('请先配置你自己的 AI API');
+    expect(await response.text()).toContain('填写自己的模型 Key');
     const start = await postMultipart(web, `/w/${wall.id}/me/create/start`, interviewFields(owner.session), [], { cookie: owner.session.cookie });
     expect(start.status).toBe(422);
     expect(web.repos.briefs.findForPage(owner.member.page.id, owner.session.userId)).toBeNull();
     expect((await get(web, '/account/data', { cookie: owner.session.cookie })).status).toBe(200);
+  });
+
+  it('平台 AI 开放时，设置页说明可以不填自己的 Key', async () => {
+    const web = createPlatformTestWeb();
+    t = web;
+    const owner = await login(web, 'a@example.com', '阿柚');
+    const html = await (await get(web, '/account/ai', { cookie: owner.cookie })).text();
+    expect(html).toContain('不填自己的 Key 也可以用 NOWMe 的 AI');
+    expect(html).not.toContain('NOWMe 的 AI 暂未开放');
   });
 });
 
@@ -126,7 +136,9 @@ describe('应用内采访', () => {
   it('接话点至少保留 2 个、AI 眼中的你至少一句；重新整理会带上修正意见', async () => {
     const { t, wall } = setup();
     const owner = await joinAs(t, wall, 'a@example.com', '阿柚');
-    await postMultipart(t, `/w/${wall.id}/me/create/start`, interviewFields(owner.session), [], { cookie: owner.session.cookie });
+    await postMultipart(t, `/w/${wall.id}/me/create/start`, { ...interviewFields(owner.session), q_role: 'skip' }, [], { cookie: owner.session.cookie });
+    const answers = JSON.parse(t.repos.briefs.findForPage(owner.member.page.id, owner.session.userId)?.answersJson ?? '{}');
+    expect(answers.choices.role.selected).toEqual([]);
     await post(t, owner.session, `/w/${wall.id}/me/create/followups`, { f_f1: 'skip' });
     const bad = await post(t, owner.session, `/w/${wall.id}/me/create/confirm`, { ai_0: 'x', hook_0_drop: '1', hook_1_drop: '1' });
     expect(bad.status).toBe(422);
@@ -265,10 +277,10 @@ describe('托管生成与修改', () => {
     await completeInterview(t, wall, owner);
     const ok = await generate(t, wall, owner);
     const revisionId = ok.job?.revisionId ?? '';
-    expect((await post(t, owner.session, `/w/${wall.id}/me/edit`, { revisionId, block: 'nope', request: '改' })).headers.get('location')).toContain('hosted=bad-block');
-    expect((await post(t, owner.session, `/w/${wall.id}/me/edit`, { revisionId, request: '' })).headers.get('location')).toContain('hosted=bad-request');
-    expect((await post(t, owner.session, `/w/${wall.id}/me/edit`, { revisionId, request: '长'.repeat(501) })).headers.get('location')).toContain('hosted=bad-request');
-    expect((await post(t, owner.session, `/w/${wall.id}/me/edit`, { revisionId: 'rev_aaaaaaaaaaaaaaaaaaaaaaaaaa', request: '改' })).headers.get('location')).toContain('hosted=no-revision');
+    expect(await (await post(t, owner.session, `/w/${wall.id}/me/edit`, { revisionId, block: 'nope', request: '改' })).text()).toContain('选的那一块不在这一版里。');
+    expect(await (await post(t, owner.session, `/w/${wall.id}/me/edit`, { revisionId, request: '' })).text()).toContain('修改要求要写');
+    expect(await (await post(t, owner.session, `/w/${wall.id}/me/edit`, { revisionId, request: '长'.repeat(501) })).text()).toContain('修改要求要写');
+    expect(await (await post(t, owner.session, `/w/${wall.id}/me/edit`, { revisionId: 'rev_aaaaaaaaaaaaaaaaaaaaaaaaaa', request: '改' })).text()).toContain('这一版不能修改');
   });
 
   it('任务进行中页面显示实时进度（不用 meta refresh）；进程重启时遗留任务置为失败', async () => {

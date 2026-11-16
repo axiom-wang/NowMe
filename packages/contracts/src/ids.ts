@@ -78,6 +78,8 @@ export const ID_PREFIXES = {
   icebreaker: 'ice',
   // AI 介绍值得认识的人（contracts 20）
   intro: 'itr',
+  // 问墙（contracts 21）
+  wallAsk: 'ask',
   // 点数（contracts 12）
   creditEntry: 'cre',
   redeemCode: 'rdc',
@@ -122,6 +124,7 @@ export const BRIEF_ASSET_ID_PATTERN = idPattern(ID_PREFIXES.briefAsset);
 export const GENERATION_JOB_ID_PATTERN = idPattern(ID_PREFIXES.generationJob);
 export const ICEBREAKER_ID_PATTERN = idPattern(ID_PREFIXES.icebreaker);
 export const INTRO_ID_PATTERN = idPattern(ID_PREFIXES.intro);
+export const WALL_ASK_ID_PATTERN = idPattern(ID_PREFIXES.wallAsk);
 export const REPORT_ID_PATTERN = idPattern(ID_PREFIXES.report);
 export const RENDER_JOB_ID_PATTERN = idPattern(ID_PREFIXES.renderJob);
 export const WALL_QUESTION_ID_PATTERN = idPattern(ID_PREFIXES.wallQuestion);

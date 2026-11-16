@@ -260,6 +260,17 @@
   }
 }
 
+/* 胶带保留角度，卡片正文和栏目名在普通屏幕上保持水平。 */
+@media (resolution < 2dppx) {
+  .home-wall,
+  .home-wall:hover,
+  .home-reminder,
+  .home-group__heading h3,
+  .home-group--published .home-group__heading h3 {
+    transform: none;
+  }
+}
+
 .home-wall__cover {
   display: block;
   overflow: hidden;

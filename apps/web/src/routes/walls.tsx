@@ -15,6 +15,8 @@
  * | POST /w/:wallId/p/:pageId/icebreaker/clear | 同上；清除查看者自己的结果 |
  * | POST /w/:wallId/intros | 墙内有效成员 → 请 AI 介绍值得认识的人（contracts 20）；`fragment=1` 时直接返回区块 HTML（墙页上原地替换） |
  * | POST /w/:wallId/intros/clear | 同上；清除查看者自己在这面墙的结果 |
+ * | POST /w/:wallId/ask | 墙内有效成员 → 问墙：用一句话找人（contracts 21） |
+ * | POST /w/:wallId/ask/clear | 同上；清除查看者自己在这面墙的提问与结果 |
  * | GET /w/:wallId/covers/:pageId.png | 墙内有效成员（墙上可见页面的当前发布版本封面） |
  *
  * GET 用 `requireUser`（未登录 → /login?next=）；POST 用 `requireForm`（会话 + CSRF + Origin，忽略 Authorization）。
@@ -36,8 +38,10 @@ import { portraitShareText } from '../services/portrait.js';
 import { openDirect } from '../services/chat.js';
 import { clearIcebreaker, generateIcebreaker, ICEBREAKER_ERROR_TEXT, icebreakerOpener, loadIcebreakerPanel, type IcebreakerFailure } from '../services/icebreaker.js';
 import { clearIntro, generateIntro, INTRO_ERROR_TEXT, introForPage, loadIntroPanel, type IntroFailure } from '../services/intro.js';
+import { ASK_ERROR_TEXT, askWall, clearAsk, loadAskPanel, type AskFailure } from '../services/ask.js';
 import { demoModelError } from '../demo-access.js';
 import { renderNotFound } from '../views/errors.js';
+import { AskPanelView } from '../views/ask.js';
 import { IntroPanelView } from '../views/intros.js';
 import { pageSafetyModel } from './moderation.js';
 import { JoinView, RemovedFromWallView } from '../views/join.js';
@@ -70,6 +74,12 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
   function introError(code: string | undefined): string | null {
     if (!code || !Object.hasOwn(INTRO_ERROR_TEXT, code)) return null;
     return (deps.demo ? demoModelError(code) : null) ?? INTRO_ERROR_TEXT[code as IntroFailure];
+  }
+
+  /** 问墙的失败文案：同上，只认名单里的错误码。 */
+  function askError(code: string | undefined): string | null {
+    if (!code || !Object.hasOwn(ASK_ERROR_TEXT, code)) return null;
+    return (deps.demo ? demoModelError(code) : null) ?? ASK_ERROR_TEXT[code as AskFailure];
   }
 
   // 头像仅向同墙的有效成员提供，移除或关墙后立即失效。
@@ -211,6 +221,7 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
     const intros = (
       <IntroPanelView wallId={member.wall.id} panel={loadIntroPanel(deps, member)} csrf={auth.session.csrfToken} error={introError(c.req.query('intro'))} aiSettings={!deps.demo} />
     );
+    const ask = <AskPanelView wallId={member.wall.id} panel={loadAskPanel(deps, member)} csrf={auth.session.csrfToken} error={askError(c.req.query('ask'))} aiSettings={!deps.demo} />;
     return renderPage(c, {
       title: member.wall.name,
       bodyClass: 'page--wall',
@@ -222,6 +233,7 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
           csrf={auth.session.csrfToken}
           portraitShare={model.portrait.kind === 'ready' ? portraitShareText(member.wall, model.portrait.view, `${deps.config.webOrigin}${wallPath(member.wall.id)}`) : null}
           intros={intros}
+          ask={ask}
         />
       ),
     });
@@ -252,6 +264,28 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
     if (!member) return renderNotFound(c);
     clearIntro(deps, member);
     return c.redirect(`${wallPath(member.wall.id)}#intros`, 303);
+  });
+
+  // -------------------------------------------------------------------------
+  // 问墙：用一句话找人（contracts 21）
+  // -------------------------------------------------------------------------
+
+  app.post('/w/:wallId/ask', form, async (c) => {
+    const auth = authOf(c);
+    const member = findMemberWall(deps.repos, auth.user.id, c.req.param('wallId'));
+    if (!member) return renderNotFound(c);
+    const fields = c.get('form');
+    // 点示例问题时用示例的文字，否则用输入框里的
+    const result = await askWall(deps, member, fields.suggest || fields.question);
+    return c.redirect(result.ok ? `${wallPath(member.wall.id)}#ask` : `${wallPath(member.wall.id)}?ask=${result.error}#ask`, 303);
+  });
+
+  app.post('/w/:wallId/ask/clear', form, (c) => {
+    const auth = authOf(c);
+    const member = findMemberWall(deps.repos, auth.user.id, c.req.param('wallId'));
+    if (!member) return renderNotFound(c);
+    clearAsk(deps, member);
+    return c.redirect(`${wallPath(member.wall.id)}#ask`, 303);
   });
 
   app.get('/w/:wallId/covers/:file', user, async (c) => {

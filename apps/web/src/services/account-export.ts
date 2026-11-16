@@ -25,6 +25,7 @@ import { readAsset } from '../hosted/assets.js';
 import { findPublishedMemberPage } from './access.js';
 import { userAccount } from './billing.js';
 import { loadIcebreaker } from './icebreaker.js';
+import { exportAsks } from './ask.js';
 import { exportIntros } from './intro.js';
 import { isRevisionDeleted } from './page-lifecycle.js';
 import { REVISION_ORIGINAL_DIR, revisionDir } from './revision-storage.js';
@@ -258,6 +259,8 @@ export async function buildAccountExport(deps: ExportDeps, userId: string): Prom
     icebreakers,
     // AI 介绍给他的人（contracts 20）
     intros: exportIntros(deps, userId),
+    // 问墙：最近一次提问与找到的人（contracts 21）
+    asks: exportAsks(deps, userId),
     // 必答题的回答（contracts 19.1）
     wallAnswers: repos.questions.allAnswersOfUser(userId).map((answer) => ({ ...answer, wallName: wallNames.get(answer.wallId) ?? null })),
     receivesReminderEmails: repos.reminders.acceptsReminders(userId),

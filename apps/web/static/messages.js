@@ -18,6 +18,9 @@
   var base = root && '/messages/' + root.getAttribute('data-chat');
   var stopped = false;
   var polling = false;
+  var lastUnreadAt = 0;
+  var unreadInterval = 30000;
+  var pollTimer = null;
   var sending = false;
   var loadingOlder = false;
   var readSequence = 0;
@@ -62,6 +65,10 @@
   }
 
   function showError(error) {
+    if ([401, 403, 404].includes(error.status)) {
+      stopped = true;
+      clearInterval(pollTimer);
+    }
     if (!status) return;
     status.textContent = error.message || '网络好像断了，恢复后会自动重试。';
     if ([401, 403, 404].includes(error.status)) {
@@ -208,8 +215,10 @@
     polling = true;
     try {
       if (root) await syncMessages();
+      if (stopped) return;
       if (inbox) renderInbox(await request('/messages/list'));
-      if (badge) {
+      if (badge && !stopped && Date.now() - lastUnreadAt >= unreadInterval) {
+        lastUnreadAt = Date.now();
         var data = await request('/messages/unread');
         badge.textContent = String(data.unread); badge.hidden = data.unread === 0;
         badge.setAttribute('aria-label', data.unread + ' 条未读消息');
@@ -259,26 +268,37 @@
       if (!text.trim()) { status.textContent = '先写点什么再发送。'; return; }
       if (Array.from(text.trim()).length > Number(input.getAttribute('data-max-length'))) { status.textContent = '每条消息最多 ' + input.getAttribute('data-max-length') + ' 个字，删减一些再发。'; return; }
       if (!pending || pending.text !== text) pending = { text: text, clientId: form.elements.clientId.value };
-      sending = true; button.disabled = true; input.disabled = true; button.textContent = '发送中…'; status.textContent = '正在发送…';
+      // 保持输入框可编辑和焦点，移动端不因禁用而收起键盘；响应只清空本次发出的文字。
+      var submitted = pending;
+      sending = true; button.disabled = true; input.focus({ preventScroll: true }); button.textContent = '发送中…'; status.textContent = '正在发送…';
       try {
-        await request(base + '/send', { _csrf: form.elements._csrf.value, clientId: pending.clientId, text: pending.text });
-        input.value = ''; pending = null; form.elements.clientId.value = crypto.randomUUID();
+        await request(base + '/send', { _csrf: form.elements._csrf.value, clientId: submitted.clientId, text: submitted.text });
+        if (input.value === submitted.text) input.value = '';
+        pending = null; form.elements.clientId.value = crypto.randomUUID();
         status.textContent = '已发送';
       } catch (error) {
         status.textContent = '没发出去，内容还在输入框里，点“重试发送”再试一次。';
         if (error.status) showError(error);
       } finally {
-        sending = false; input.disabled = false; button.disabled = stopped; button.textContent = pending ? '重试发送' : '发送';
+        if (pending && input.value !== pending.text) { pending = null; form.elements.clientId.value = crypto.randomUUID(); }
+        sending = false; button.disabled = stopped; button.textContent = pending ? '重试发送' : '发送';
       }
       if (!pending) void poll();
     });
+    input.addEventListener('keydown', function (event) {
+      if (event.key === 'Enter' && (event.ctrlKey || event.metaKey) && !event.isComposing && event.keyCode !== 229) {
+        event.preventDefault();
+        form.requestSubmit();
+      }
+    });
     input.addEventListener('input', function () {
+      if (sending) return;
       if (pending && input.value !== pending.text) { pending = null; form.elements.clientId.value = crypto.randomUUID(); button.textContent = '发送'; }
     });
     window.addEventListener('focus', function () { void markRead(); void poll(); });
   }
   document.addEventListener('visibilitychange', function () { if (!document.hidden) void poll(); });
   window.addEventListener('online', function () { void poll(); });
-  setInterval(function () { void poll(); }, 2500);
+  pollTimer = setInterval(function () { void poll(); }, root || inbox ? 2500 : unreadInterval);
   void poll();
 })();

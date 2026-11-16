@@ -25,14 +25,14 @@ describe('演示模型预置与管理保护', () => {
   });
   afterEach(async () => { await t.close(); });
 
-  it('复用save原子加密两个角色，只写成员账号，不发请求、不泄漏Key', async () => {
+  it('复用save原子加密两个角色，写入两个体验账号，不发请求、不泄漏Key', async () => {
     const save = vi.spyOn(t.web.deps.userModels, 'save');
     expect(provisionDemoModels(t.web, ENV)).toBe(true);
-    expect(save).toHaveBeenCalledOnce();
+    expect(save).toHaveBeenCalledTimes(2);
     expect(t.web.deps.userModels.ready(memberId)).toBe(true);
-    expect(t.web.deps.userModels.ready(organizerId)).toBe(false);
+    expect(t.web.deps.userModels.ready(organizerId)).toBe(true);
     const rows = t.db.prepare('SELECT * FROM user_model_settings').all();
-    expect(rows).toHaveLength(2);
+    expect(rows).toHaveLength(4);
     expect(JSON.stringify(rows)).not.toContain(KEY);
     expect(JSON.stringify(rows)).not.toContain(ENCRYPTION.NOWME_AI_ENCRYPTION_KEY);
     const firstCiphertext = (rows[0] as { encrypted_key: string }).encrypted_key;
@@ -96,6 +96,7 @@ describe('演示模型预置与管理保护', () => {
     expect(html).not.toContain('演示模型已配置');
     expect(() => provisionDemoModels(t.web, { ...ENV, NOWME_DEMO_BASE_URL: 'http://127.0.0.1:11434' })).toThrow('演示模型预置失败');
     expect(t.web.deps.userModels.ready(memberId)).toBe(false);
+    expect(t.web.deps.userModels.ready(organizerId)).toBe(false);
   });
 
   it('模型拒绝凭证时显示维护者重试指引，保留素材且不回退假结果', async () => {

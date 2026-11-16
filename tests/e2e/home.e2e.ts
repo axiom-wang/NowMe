@@ -38,7 +38,13 @@ test('首页筛选、账号菜单、封面上传更换与恢复默认，在桌�
   const { wallId } = await createWall(page, '周末共创实验室');
   const coverSettings = page.getByRole('region', { name: '墙封面', exact: true });
   const png = await page.screenshot({ clip: { x: 0, y: 0, width: 100, height: 75 } });
-  await page.getByLabel('上传封面图', { exact: true }).setInputFiles({ name: 'cover.png', mimeType: 'image/png', buffer: png });
+  await expect(coverSettings.getByText('未选择图片')).toBeVisible();
+  const [coverChooser] = await Promise.all([
+    page.waitForEvent('filechooser'),
+    coverSettings.getByText('选择图片', { exact: true }).click(),
+  ]);
+  await coverChooser.setFiles({ name: 'cover.png', mimeType: 'image/png', buffer: png });
+  await expect(coverSettings.getByText('cover.png', { exact: true })).toBeVisible();
   await coverSettings.getByRole('button', { name: '保存封面' }).click();
   await expect(page.getByText('墙封面已更新，成员会在首页看到新封面。')).toBeVisible();
   const firstCover = await coverSettings.locator('img').getAttribute('src');
@@ -68,6 +74,8 @@ test('首页筛选、账号菜单、封面上传更换与恢复默认，在桌�
   }
   await page.locator('.home-wall').getByRole('link', { name: '继续创作' }).click();
   await expect(page).toHaveURL(new RegExp(`/w/${wallId}/me$`));
+  await expect(page.getByRole('heading', { level: 1, name: '我的页面', exact: true })).toBeVisible();
+  await expect(page.locator('.ws-hero').getByText('周末共创实验室', { exact: true })).toHaveCount(1);
   await page.goto(`/w/${wallId}/admin`);
   await page.getByLabel('更换封面图', { exact: true }).setInputFiles({ name: 'new-cover.png', mimeType: 'image/png', buffer: png });
   await coverSettings.getByRole('button', { name: '保存封面' }).click();
@@ -78,5 +86,20 @@ test('首页筛选、账号菜单、封面上传更换与恢复默认，在桌�
   await expect(page.locator('.home-wall__cover img')).toHaveAttribute('src', '/static/home-wall-laptop.svg');
   const defaultImage = await page.locator('.home-wall__cover img').boundingBox();
   expect(defaultImage!.width / defaultImage!.height).toBeCloseTo(1, 2);
+
+  await page.goto('/account/data');
+  await page.getByText('编辑资料', { exact: true }).click();
+  const avatar = page.getByLabel('头像', { exact: true });
+  await page.getByLabel('昵称', { exact: true }).focus();
+  await page.keyboard.press('Tab');
+  await expect(avatar).toBeFocused();
+  const [avatarChooser] = await Promise.all([page.waitForEvent('filechooser'), page.keyboard.press('Space')]);
+  const name = `${'我的新头像'.repeat(16)}.png`;
+  await avatarChooser.setFiles({ name, mimeType: 'image/png', buffer: png });
+  await expect(page.getByRole('status').filter({ hasText: name })).toBeVisible();
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  await page.getByRole('button', { name: '保存资料' }).click();
+  await expect(page.getByText('个人资料已保存。')).toBeVisible();
+  await expect(page.locator('.profile-avatar img')).toBeVisible();
   expect(errors).toEqual([]);
 });

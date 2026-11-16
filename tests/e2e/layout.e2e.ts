@@ -3,7 +3,8 @@ import { createWall, login, uniqueEmail } from './helpers.js';
 
 test('各页面与顶栏共用内容边界，桌面限制最大宽度，手机无横向溢出', async ({ page, browser }, testInfo) => {
   await login(page, uniqueEmail('layout'), '布局测试');
-  const { wallId } = await createWall(page, '布局检查墙');
+  const wallName = '布局检查墙'.repeat(8);
+  const { wallId } = await createWall(page, wallName);
   const paths = ['/', '/messages', '/account/data', '/account/ai', '/walls/new', '/skill', `/w/${wallId}`, `/w/${wallId}/me`, `/w/${wallId}/me/create`, `/w/${wallId}/admin`, `/messages/wall/${wallId}`];
   for (const width of [1920, 1440, 1024, 768, 375, 320]) {
     await page.setViewportSize({ width, height: 1000 });
@@ -45,6 +46,14 @@ test('各页面与顶栏共用内容边界，桌面限制最大宽度，手机�
       expect(layout.overflow, label).toBe(false);
       baseline ??= { x: layout.x, width: layout.width };
       expect({ x: layout.x, width: layout.width }, label).toEqual(baseline);
+      if (width <= 375 && path.endsWith('/me/create')) {
+        expect(headerBox!.height).toBeLessThanOrEqual(60);
+        const crumbs = page.getByRole('navigation', { name: '当前位置' });
+        const wallCrumb = crumbs.getByRole('link', { name: wallName });
+        expect((await crumbs.boundingBox())!.height).toBe(44);
+        await expect(wallCrumb).toHaveCSS('text-overflow', 'ellipsis');
+        expect(await wallCrumb.evaluate((link) => link.scrollWidth > link.clientWidth)).toBe(true);
+      }
       if ([1440, 375].includes(width) && ['/', '/messages', '/account/data', '/account/ai'].includes(path)) {
         await page.screenshot({ path: testInfo.outputPath(`${path.replaceAll('/', '-') || 'home'}-${width}.png`), fullPage: true });
       }

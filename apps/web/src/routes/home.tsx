@@ -25,7 +25,7 @@ export function registerHomeRoutes(app: AppHono, deps: AppDeps): void {
 
   app.get('/', async (c, next) => {
     if (!c.get('auth')) {
-      if (deps.demo) return renderPage(c, { title: '黑客松评审体验', body: <LoginView next="/" demoAccounts={DEMO_ACCOUNTS} /> });
+      if (deps.demo) return renderPage(c, { title: '黑客松评审体验', styles: ['auth'], body: <LoginView next="/" demoAccounts={DEMO_ACCOUNTS} /> });
       return renderPage(c, { title: '给你的圈子建一面墙', bodyClass: 'page--landing', body: <LandingView /> });
     }
     return requireUser(deps)(c, next);

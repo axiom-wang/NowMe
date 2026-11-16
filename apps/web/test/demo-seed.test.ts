@@ -148,6 +148,17 @@ describe('demo 种子', () => {
     expect(ai).toContain('AI 还不认识这面墙上的你');
   });
 
+  it('问墙（contracts 21）：体验成员在人够多的墙上看到区块（不需要先有自己的页面）；没有演示模型时如实说明', async () => {
+    const response = await postForm(t, '/login/demo', { identity: 'member' });
+    const cookie = `nowme_session=${sessionTokenFrom(response)}`;
+    for (const wallId of [seed.club.wall.id, seed.extraWalls[0]!.wall.id]) {
+      const html = await (await t.request(`/w/${wallId}`, { headers: { cookie } })).text();
+      expect(html).toContain('id="ask"');
+      expect(html).toContain('要问墙，需要先有一个能用的 AI');
+      expect(html).not.toContain('href="/account/ai"');
+    }
+  });
+
   it('模拟聊天有双向消息、正确归属和已读/未读；未参与的私聊不出现在主测试账号中', () => {
     expect(seed.chat).toEqual({ groups: 4, directs: 15, messages: 92 });
     const list = t.repos.chat.list(seed.tester.userId).conversations;

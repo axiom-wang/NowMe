@@ -197,7 +197,7 @@ export const WallFilters: FC<{ questions: QuestionStats[] }> = ({ questions }) =
 export const PortraitPanel: FC<{ wall: Wall; state: PortraitState; shareText: string | null; organizer: boolean; csrf: string; error?: string | null }> = ({ wall, state, shareText, organizer, csrf, error }) => {
   if (state.kind !== 'ready' && !organizer) return null;
   return (
-    <section class="card portrait" id="portrait" aria-labelledby="portrait-heading">
+    <section class="card portrait" id="portrait" data-busy-scope aria-labelledby="portrait-heading">
       <div class="portrait__head">
         <h2 id="portrait-heading">墙的群像</h2>
         {state.kind === 'ready' ? (
@@ -271,6 +271,7 @@ export const PortraitPanel: FC<{ wall: Wall; state: PortraitState; shareText: st
           <button type="submit" class="btn btn--ghost btn--small">
             {state.kind === 'ready' ? '重新生成群像' : '生成群像'}
           </button>
+          <p data-busy-status role="status" hidden></p>
         </form>
       ) : null}
     </section>

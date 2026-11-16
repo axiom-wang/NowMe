@@ -111,7 +111,9 @@ export const ConversationView: FC<{
   <div class="container conversation-page" data-chat={summary.id} data-user-id={userId}>
     <nav class="back-link" aria-label="返回"><a href="/messages">← 消息列表</a><a href={`/w/${summary.wallId}`}>回到墙上</a></nav>
     <section class="card conversation-panel">
-      <header class="conversation-heading"><p class="eyebrow">{summary.wallName} · {summary.kind === 'group' ? '全员群聊' : '私信'}</p><h1>{summary.title}</h1>
+      <header class="conversation-heading">
+        <p class="eyebrow">{summary.kind === 'group' ? '全员群聊' : <><span title={summary.wallName}>{summary.wallName}</span> · 私信</>}</p>
+        <h1 title={summary.kind === 'group' ? summary.wallName : summary.title}>{summary.kind === 'group' ? summary.wallName : summary.title}</h1>
         {summary.kind === 'group' ? <details class="chat-members"><summary>墙内成员 · {members.length} 人</summary><ul>{members.map((member) => <li><span>{member.avatarUrl ? <img class="chat-avatar" src={member.avatarUrl} alt="" loading="lazy" /> : null}{member.nickname}{member.userId === userId ? '（我）' : ''}</span>{member.userId !== userId ? <form method="post" action="/messages/direct"><CsrfField token={csrf} /><input type="hidden" name="wallId" value={summary.wallId} /><input type="hidden" name="userId" value={member.userId} /><button class="btn btn--ghost btn--small" type="submit" aria-label={`和${member.nickname}私聊`}>私聊</button></form> : null}</li>)}</ul></details> : null}
       </header>
       <div class="chat-history" data-chat-history tabindex={0} aria-label="聊天记录">
@@ -125,8 +127,9 @@ export const ConversationView: FC<{
       <form class="chat-compose" method="post" action={`/messages/${summary.id}/send`} data-chat-form hidden={!!safety?.closed}>
         <CsrfField token={csrf} /><input type="hidden" name="clientId" value={clientId} />
         <label for="message-text">消息内容</label>
-        <textarea id="message-text" name="text" rows={3} required data-max-length={CHAT_TEXT_MAX_LENGTH} placeholder="说点什么吧……">{draft ?? ''}</textarea>
-        <div class="chat-compose-actions"><span class="muted">最多 {CHAT_TEXT_MAX_LENGTH} 字 · 纯文字</span><button type="submit" class="btn btn--accent">发送</button></div>
+        <textarea id="message-text" name="text" rows={3} required data-max-length={CHAT_TEXT_MAX_LENGTH} placeholder="说点什么吧……" aria-describedby="chat-hint">{draft ?? ''}</textarea>
+        <span id="chat-hint" class="muted chat-hint">最多 {CHAT_TEXT_MAX_LENGTH} 字 <span class="chat-shortcut">· Ctrl / ⌘ + Enter 发送</span></span>
+        <button type="submit" class="btn btn--accent">发送</button>
         <p class="chat-status" role="status" aria-live="polite" data-chat-status>{error ?? (draft ? '开场白已经填好了，改成你自己的话再发送。' : '')}</p>
         <a href="/login" data-chat-login hidden>重新登录</a><a href="/messages" data-chat-back hidden>返回消息列表</a>
       </form>

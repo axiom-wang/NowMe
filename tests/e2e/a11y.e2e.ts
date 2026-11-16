@@ -112,7 +112,7 @@ test('创作工作区各阶段：采访、追问、确认、生成进度、预�
       await page.getByRole('button', { name: '整理“AI 眼中的你”' }).click();
       await expect(page.getByRole('heading', { name: '这是 AI 眼中的你' })).toBeVisible();
       await check(page, { label: '采访·确认 AI 眼中的你' }, viewport, 42);
-      await page.locator('input[name="ai_0"]').fill('你是阿柚，一个做小程序的前端。');
+      await page.getByRole('textbox', { name: '第 1 句', exact: true }).fill('你是阿柚，一个做小程序的前端。');
       await page.getByRole('button', { name: '确认，就是我' }).click();
       await expect(page.getByRole('heading', { name: '资料确认好了' })).toBeVisible();
       await check(page, { label: '采访·资料确认好了' }, viewport, 43);

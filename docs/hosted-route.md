@@ -157,12 +157,12 @@ ID 前缀新增：`pfe_`（画像条目）、`brf_`（brief）、`bas_`（brief 
 | `POST /w/:wallId/me/create/restart` | 清空这页的采访（brief 与素材）重新开始 |
 | `GET /w/:wallId/me/create/assets/:assetId` | 主人自己的上传图片（缩略图显示用），`Content-Type` 取魔数判断结果，`nosniff`，`Cache-Control: private, no-store` |
 | `POST /w/:wallId/me/generate` | 需要 brief 已确认 → 建生成任务 |
-| `POST /w/:wallId/me/edit` | `revisionId`、`block`（可空）、`request` → 建修改任务 |
+| `POST /w/:wallId/me/edit` | `revisionId`、`block`（可空）、`request` → 建修改任务；失败返回 422 并回显修改要求、版本及有效目标区块 |
 | `GET /w/:wallId/me/jobs/:jobId` | 任务状态页（进行中自动刷新；完成后链接到新版本预览） |
 | `GET /w/:wallId/me/brief` | 查看本页 `brief.md` |
 | `POST /w/:wallId/me/brief/delete` | 删除本页 brief 与素材 |
 | `GET /account/ai` | 当前用户模型配置与 Key 是否保存（不返回 Key） |
-| `POST /account/ai` | 原子保存两个角色配置与加密 Key |
+| `POST /account/ai` | 原子保存两个角色配置与加密 Key；失败返回 422，回显非敏感设置，不回显 Key 或 URL 凭证 |
 | `POST /account/ai/delete` | 删除当前用户配置，后续模型请求停止 |
 | `GET /account/data` | “我的资料”：全部画像条目、我在各面墙的 brief（含已退出 / 被移除 / 已关闭的墙，只显示墙名），可查看、删除 |
 | `POST /account/profile/delete` | `entryId` 删一条，或 `all=1` 全部删除 |

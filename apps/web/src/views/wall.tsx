@@ -49,14 +49,16 @@ const WallCardItem: FC<{ item: WallCard }> = ({ item }) => {
     <li class="wall-card" data-wall-card data-search={searchText(item)} data-answers={answerKeys(item.answers)}>
       <a class="wall-card__link" href={item.href}>
         <span class="wall-card__poster">
-          <span class="wall-card__cover">
-            {item.coverSrc ? (
-              <img src={item.coverSrc} alt="" width={String(COVER_CSS_WIDTH)} height={String(COVER_CSS_HEIGHT)} loading="lazy" decoding="async" />
-            ) : (
-              <span class="wall-card__placeholder" aria-hidden="true">
-                {initialOf(item.card.displayName)}
-              </span>
-            )}
+          <span class="wall-card__print">
+            <span class="wall-card__cover">
+              {item.coverSrc ? (
+                <img src={item.coverSrc} alt="" width={String(COVER_CSS_WIDTH)} height={String(COVER_CSS_HEIGHT)} loading="lazy" decoding="async" />
+              ) : (
+                <span class="wall-card__placeholder" aria-hidden="true">
+                  {initialOf(item.card.displayName)}
+                </span>
+              )}
+            </span>
           </span>
           {item.own ? <span class="sticker sticker--orange wall-card__me">我</span> : null}
           {item.hasTalk ? <span class="wall-card__talk">✦ 有话题了</span> : item.introduced ? <span class="wall-card__talk wall-card__talk--intro">✦ AI 介绍</span> : null}
@@ -100,7 +102,15 @@ export const OrganizerNote: FC<{ text: string }> = ({ text }) => (
   </blockquote>
 );
 
-export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNotice | null; csrf: string; portraitShare: string | null; intros?: Child }> = ({ model, sceneLabel, notice, csrf, portraitShare, intros = null }) => {
+export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNotice | null; csrf: string; portraitShare: string | null; intros?: Child; ask?: Child }> = ({
+  model,
+  sceneLabel,
+  notice,
+  csrf,
+  portraitShare,
+  intros = null,
+  ask = null,
+}) => {
   const { wall, myPage, cards } = model;
   const published = myPage.state === 'published';
   return (
@@ -155,6 +165,8 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
 
       <PortraitPanel wall={wall} state={model.portrait} shareText={portraitShare} organizer={model.role === 'organizer'} csrf={csrf} />
 
+      {ask}
+
       <section class="wall-members wall-board" aria-labelledby="members-heading" data-wall-board>
         <div class="section-head wall-board__head">
           <h2 id="members-heading" class="section-title display">
@@ -165,7 +177,7 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
               <span class="section-head__count" data-wall-count>
                 {cards.length}
               </span>
-              <span class="section-head__note">
+              <span class="section-head__note" data-wall-count-note>
                 位已上墙{model.memberCount > cards.length ? ` · 共 ${model.memberCount} 位成员` : ''} · 每次进来顺序都不一样
               </span>
             </>
@@ -194,7 +206,7 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
         {cards.length > 0 ? <p class="visually-hidden" role="status" data-wall-status></p> : null}
         {cards.length > 0 ? (
           <p class="wall-board__none" hidden data-wall-none>
-            墙上没有找到相关的人。换个词试试，或者去全员群里问一句。
+            没有找到符合条件的人。可以调整搜索或筛选条件，或者去全员群里问一句。
           </p>
         ) : (
           <div class="empty-state">

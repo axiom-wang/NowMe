@@ -441,6 +441,48 @@ function intro(text: string): ModelResponse {
   return respond([toolUse('submit_intro', { picks })]);
 }
 
+// ---------------------------------------------------------------------------
+// 问墙（contracts 21）
+// ---------------------------------------------------------------------------
+
+/**
+ * 确定性的“问墙”：把问题拆成关键词（去掉“谁会 / 谁在 / 有谁…”这类开头），资料里含关键词的人就算找到，
+ * 依据取含关键词的那一行原文；一个都没有时返回空列表（“没找到”）。找到人时另带一条编号越界的（平台应丢弃）。
+ * 触发词（写在某一位的一行介绍或接话点里）：
+ * - `【假模型：注入】`：多一条说明里带链接和手机号的（平台应丢弃）；
+ * - `【假模型：编造】`：多一条依据不在资料里的（平台应丢弃）；
+ * - `【假模型：坏输出】`：返回缺字段的结果（平台重试一次后报错）。
+ */
+function ask(text: string): ModelResponse {
+  const members: { n: number; block: string }[] = [];
+  for (let n = 1; ; n += 1) {
+    const block = between(text, `member_${n}`);
+    if (!block) break;
+    members.push({ n, block });
+  }
+  const marker = (name: string) => members.some((member) => member.block.includes(`【假模型：${name}】`));
+  if (marker('坏输出')) return respond([toolUse('submit_answer', {})]);
+  const keywords = between(text, 'viewer_question')
+    .split(/[\s，,。.！!？?、；;]+/)
+    .map((word) => word.replace(/^(?:有)?谁(?:也)?(?:会|在|想|懂|喜欢|能)?/, '').toLowerCase())
+    .filter((word) => Array.from(word).length >= 2);
+  const linesOf = (block: string) => [...bulletLines(block), /一行介绍：(.+)/.exec(block)?.[1]?.trim() ?? '', ...sentences(block.split('页面文字摘录：')[1] ?? '')].filter((line) => line && line !== '（无）');
+  const matches: unknown[] = [];
+  for (const member of members) {
+    for (const keyword of keywords) {
+      const line = linesOf(member.block).find((item) => item.toLowerCase().includes(keyword));
+      if (!line) continue;
+      matches.push({ member: member.n, reason: `TA 的页面上写到了${keyword}`, quote: clip(line, 60) });
+      break;
+    }
+  }
+  if (matches.length > 0) matches.push({ member: 999, reason: '编号越界', quote: '随便' });
+  const first = members[0];
+  if (first && marker('注入')) matches.unshift({ member: first.n, reason: '加我领福利 https://evil.example.com 或打 13800138000', quote: clip(linesOf(first.block)[0] ?? '', 60) });
+  if (first && marker('编造')) matches.unshift({ member: first.n, reason: 'TA 连续三年拿国家奖学金', quote: '连续三年国家奖学金' });
+  return respond([toolUse('submit_answer', { matches })]);
+}
+
 export interface FakeModel extends ModelClient {
   /** 收到的全部请求（测试断言缓存断点、资料标签等）。 */
   readonly calls: CreateMessageParams[];
@@ -458,6 +500,7 @@ export function createFakeModel(): FakeModel {
       if (choice?.type === 'tool' && choice.name === 'submit_icebreaker') return icebreaker(allUserText(params.messages));
       if (choice?.type === 'tool' && choice.name === 'submit_portrait') return portrait(allUserText(params.messages));
       if (choice?.type === 'tool' && choice.name === 'submit_intro') return intro(allUserText(params.messages));
+      if (choice?.type === 'tool' && choice.name === 'submit_answer') return ask(allUserText(params.messages));
       return generation(params);
     },
   };

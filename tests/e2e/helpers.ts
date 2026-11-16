@@ -20,7 +20,7 @@ export function uniqueEmail(prefix: string): string {
   return `${prefix}-${randomBytes(4).toString('hex')}@e2e.test`;
 }
 
-async function latestCode(email: string): Promise<string> {
+export async function latestCode(email: string): Promise<string> {
   for (let attempt = 0; attempt < 50; attempt += 1) {
     try {
       const messages = readFileSync(OUTBOX_FILE, 'utf8')

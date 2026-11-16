@@ -297,6 +297,11 @@
 .wall-card__poster {
   position: relative;
   display: block;
+}
+
+.wall-card__print {
+  position: relative;
+  display: block;
   padding: 5px;
   background: var(--surface);
   border-radius: 14px;
@@ -308,7 +313,7 @@
 }
 
 /* 胶带（两端剪成小缺口） */
-.wall-card__poster::before {
+.wall-card__print::before {
   content: '';
   position: absolute;
   z-index: 2;
@@ -324,7 +329,7 @@
 }
 
 /* 每四张里有一张用图钉 */
-.wall-card:nth-child(4n + 3) .wall-card__poster::before {
+.wall-card:nth-child(4n + 3) .wall-card__print::before {
   top: -7px;
   width: 16px;
   height: 16px;
@@ -436,6 +441,10 @@
   min-width: 0;
 }
 
+.wall-card__body > .ai-badge {
+  align-self: flex-start;
+}
+
 .wall-card__name {
   font-family: var(--font-head);
   font-weight: 700;
@@ -479,7 +488,7 @@
     transform: translateY(calc(var(--drop) - 6px)) rotate(0deg) scale(1.025);
   }
 
-  .wall-card__link:hover .wall-card__poster {
+  .wall-card__link:hover .wall-card__print {
     box-shadow:
       0 0 0 1.5px var(--ink),
       0 26px 30px -18px color-mix(in srgb, var(--ink) 70%, transparent),
@@ -584,9 +593,43 @@
   color: var(--ink-2);
 }
 
+/* 普通屏幕上只让相纸和胶带倾斜，避免整块文字经过旋转或缩放。 */
+@media (resolution < 2dppx) {
+  .wall-card__link,
+  .wall-card__link:hover {
+    top: var(--drop);
+    transform: none;
+  }
+
+  .wall-card__print {
+    transform: rotate(var(--tilt));
+    transform-origin: 50% 0;
+  }
+
+  .wall-card__link,
+  .wall-note .organizer-note {
+    animation-name: wall-fade;
+  }
+
+  .wall-card__link .wall-card__say,
+  .wall-card__link:hover .wall-card__say,
+  .wall-card__talk,
+  .wall-card__me,
+  .wall-ghost__link,
+  .wall-ghost__link:is(:hover, :focus-visible),
+  .wall-board .organizer-note {
+    transform: none;
+  }
+}
+
+@keyframes wall-fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .wall-card__link,
-  .wall-card__poster,
+  .wall-card__print,
   .wall-card__say,
   .wall-ghost__link,
   .wall-note .organizer-note {
@@ -605,15 +648,7 @@
   grid-template-areas:
     'head'
     'frame'
-    'topics';
-}
-
-.member-layout--talk {
-  grid-template-areas:
-    'head'
-    'frame'
-    'talk'
-    'topics';
+    'details';
 }
 
 .member-head {
@@ -655,8 +690,15 @@
   min-width: 0;
 }
 
-.topics {
-  grid-area: topics;
+.member-layout__details {
+  grid-area: details;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: inherit;
+  min-width: 0;
+}
+
+.member-layout__details > :is(.topics, .safety) {
   margin: 0;
 }
 
@@ -721,7 +763,6 @@
 /* 和 TA 聊什么（contracts 11）：成员页上最显眼的一块，墨色底 + 荧光绿 */
 
 .talk {
-  grid-area: talk;
   position: relative;
   min-width: 0;
   padding: 20px 18px 18px;
@@ -1472,6 +1513,144 @@
 }
 
 /* ------------------------------------------------------------------ */
+/* 问墙（contracts 21）：在“墙上的人”上面，用一句话找人。外框、卡片与工具行沿用 .intros / .intro-card，这里只写不同的部分 */
+
+.ask {
+  background-image: radial-gradient(120% 80% at 100% 0%, color-mix(in srgb, var(--blue) 16%, transparent), transparent 55%);
+}
+
+.ask__form {
+  margin: 0;
+}
+
+.ask__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.ask__input {
+  flex: 1 1 160px;
+  min-width: 0;
+  min-height: 48px;
+  padding: 10px 16px;
+  font: inherit;
+  font-size: 1rem;
+  color: var(--ink);
+  background: var(--white);
+  border: 1.5px solid var(--ink);
+  border-radius: var(--radius);
+  box-shadow: 2px 2px 0 var(--ink);
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.ask__input::placeholder {
+  color: var(--muted);
+}
+
+.ask__input:focus-visible {
+  outline: 2.5px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.ask__go {
+  flex: 0 0 auto;
+  min-height: 48px;
+  padding-inline: 24px;
+}
+
+.ask__suggest {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+  margin: 10px 0 0;
+}
+
+.ask__suggest-label {
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.ask__chip {
+  min-height: 44px;
+  padding: 0 14px;
+  font: inherit;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--blue-ink);
+  background: var(--blue-soft);
+  border: 1px solid color-mix(in srgb, var(--blue) 30%, transparent);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+}
+
+.ask__chip:hover {
+  border-color: var(--blue-ink);
+}
+
+.ask__hint {
+  margin: 8px 0 0;
+  font-size: 0.875rem;
+  color: var(--muted);
+}
+
+.ask__blocked {
+  margin: 0;
+}
+
+.ask__answer {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--line-strong);
+}
+
+.ask__asked {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+  margin: 0 0 8px;
+}
+
+.ask__asked-label {
+  padding: 1px 8px 2px;
+  font-family: var(--font-head);
+  font-weight: 700;
+  font-size: 0.75rem;
+  line-height: 1.6;
+  color: var(--paper);
+  background: var(--ink);
+  border-radius: 5px;
+}
+
+.ask__asked-text {
+  font-weight: 700;
+  font-size: 1.08rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.ask__lead {
+  margin: 0 0 12px;
+  max-width: 46em;
+  color: var(--ink-2);
+  line-height: 1.6;
+}
+
+.ask-card {
+  border-left-color: var(--blue);
+}
+
+.ask.is-busy .ask__form,
+.ask.is-busy .ask__answer,
+.ask.is-busy .ask__blocked {
+  opacity: 0.35;
+  pointer-events: none;
+}
+
+/* ------------------------------------------------------------------ */
 /* 想聊这个 */
 
 .chat__title {
@@ -1622,17 +1801,9 @@
     grid-template-rows: auto 1fr;
     grid-template-areas:
       'frame head'
-      'frame topics';
+      'frame details';
     gap: 24px 48px;
     align-items: start;
-  }
-
-  .member-layout--talk {
-    grid-template-rows: auto auto 1fr;
-    grid-template-areas:
-      'frame head'
-      'frame talk'
-      'frame topics';
   }
 
   .talk {

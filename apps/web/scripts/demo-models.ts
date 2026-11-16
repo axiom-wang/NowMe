@@ -1,4 +1,4 @@
-/** 演示启动专用：将维护者的配置写入体验成员账号，普通启动不读取这些变量。 */
+/** 演示启动专用：将维护者的配置写入两个体验账号（成员做页面、组织者生成群像都要用），普通启动不读取这些变量。 */
 import { defaultModelEndpoint, isModelProvider } from '@nowme/contracts';
 import type { WebApp } from '../src/app.js';
 import { DEMO_ACCOUNTS } from '../src/demo-access.js';
@@ -25,9 +25,11 @@ export function provisionDemoModels(web: WebApp, env: Readonly<Record<string, st
     return { provider, baseUrl: value('BASE_URL') ?? '', model, apiKey, vision: vision === undefined ? defaultModelEndpoint(provider, role).vision : vision === '1' };
   };
   try {
-    const user = web.deps.repos.users.findByEmail(DEMO_ACCOUNTS[0].email);
-    if (!user) throw new Error();
-    web.deps.userModels.save(user.id, { interview: read('interview'), generate: read('generate') });
-    return web.deps.userModels.ready(user.id);
+    // 先读全两个角色再写，配置不完整时两个账号都不写入。
+    const models = { interview: read('interview'), generate: read('generate') };
+    const users = DEMO_ACCOUNTS.map((account) => web.deps.repos.users.findByEmail(account.email));
+    if (users.some((user) => !user)) throw new Error();
+    for (const user of users) web.deps.userModels.save(user!.id, models);
+    return users.every((user) => web.deps.userModels.ready(user!.id));
   } catch { throw new Error('演示模型预置失败，请维护者检查服务商、模型、Key 和公网 HTTPS 地址；配置内容不会输出。'); }
 }

@@ -1,6 +1,6 @@
 /**
  * 托管生成的 Agent 循环（hosted-route 3.1 第 3 步、3.2）：Messages API + 受限工具，最多 `maxTurns` 轮。
- * 结束条件：模型调用 `finish`；没有调用工具就停下视为失败（NO_FINISH）；超过轮数（MAX_TURNS）；被取消（TIMEOUT）。
+ * 结束条件：模型调用 `finish`；只回文字、没有调用工具时提醒一次，再不调用视为失败（NO_FINISH）；超过轮数（MAX_TURNS）；被取消（TIMEOUT）。
  * 循环里的校验结果不被信任：调用方在结束后用平台的提交管线重新校验（3.1 第 4 步）。
  */
 import { addUsage, emptyUsage, type ModelClient, type ModelMessage, type ToolResultBlock, type UsageTotals } from './model-client.js';
@@ -57,11 +57,15 @@ export function withRollingCache(messages: ModelMessage[]): ModelMessage[] {
   return [...messages.slice(0, -1), { role: 'user', content }];
 }
 
+/** 模型只回文字、没调用工具时补发的提醒（每次任务只发一次；部分模型会直接用文字反问或汇报）。 */
+export const NO_TOOL_NUDGE = '你刚才只回复了文字，没有调用工具，任务还没有结束。请继续用工具完成；做完了调用 finish（outcome: "done"）。如果是修改任务且需要主人先确认范围，调用 finish（outcome: "clarify"），把一个简短的问题写在 message 里，不要用纯文字回复。';
+
 export async function runGeneration(options: RunOptions): Promise<RunResult> {
   const { client, workspace } = options;
   const usage = emptyUsage();
   const messages: ModelMessage[] = [{ role: 'user', content: [{ type: 'text', text: options.firstMessage }] }];
   const system = generationSystem();
+  let nudged = false;
 
   for (let turn = 1; turn <= options.maxTurns; turn += 1) {
     if (options.signal?.aborted) throw new RunError('TIMEOUT', turn - 1, usage);
@@ -87,7 +91,12 @@ export async function runGeneration(options: RunOptions): Promise<RunResult> {
     messages.push({ role: 'assistant', content: response.content });
 
     const calls = response.content.filter((block) => block.type === 'tool_use');
-    if (calls.length === 0) throw new RunError('NO_FINISH', turn, usage);
+    if (calls.length === 0) {
+      if (nudged) throw new RunError('NO_FINISH', turn, usage);
+      nudged = true;
+      messages.push({ role: 'user', content: [{ type: 'text', text: NO_TOOL_NUDGE }] });
+      continue;
+    }
 
     const results: ToolResultBlock[] = [];
     let finish: FinishSignal | undefined;

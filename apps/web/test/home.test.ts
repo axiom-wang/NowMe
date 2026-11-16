@@ -129,5 +129,7 @@ describe('未登录的正式首页', () => {
     const html = await (await get(t, '/')).text();
     expect(html).toContain('action="/login/demo"');
     expect(html).not.toContain('组织者只要做三件事');
+    // 登录视图的样式包按路径判断，“/”不在其中，必须显式带上，否则首页没有样式。
+    expect(html).toMatch(/<link rel="stylesheet" href="\/static\/auth\.[^"]*css"/);
   });
 });

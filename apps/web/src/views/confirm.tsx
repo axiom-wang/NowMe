@@ -16,7 +16,7 @@ const Breadcrumb: FC<{ wall: Wall; title: string }> = ({ wall, title }) => (
     <nav class="crumbs" aria-label="当前位置">
       <a href="/">我的</a>
       <span aria-hidden="true">/</span>
-      <a href={workspaceHref(wall)}>{wall.name}</a>
+      <a class="crumbs__wall" href={workspaceHref(wall)} title={wall.name}>{wall.name}</a>
     </nav>
     <h1 class="hero__title">{title}</h1>
   </section>

@@ -228,6 +228,7 @@ export async function deleteAccount(deps: DeletionDeps, userId: string, rawCode:
     queries.deleteChatReads(userId);
     queries.deleteIcebreakersOfViewer(userId);
     queries.deleteIntrosOfViewer(userId);
+    queries.deleteAsksOfViewer(userId);
     // 必答题的回答、提醒记录、他生成的群像（contracts 19）
     repos.questions.deleteAnswersOfUser(userId);
     repos.reminders.deleteForUser(userId);

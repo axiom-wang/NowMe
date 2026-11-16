@@ -13,11 +13,11 @@ import type { FC } from 'hono/jsx';
 import type { GenerationJob, OwnBriefListItem, ProfileEntry } from '../db/hosted.js';
 import type { Wall } from '../db/walls.js';
 import { formatDateTime } from '../format.js';
-import { isDefaultChecked, isWriteInOption, type StructuredBrief } from '../hosted/brief.js';
+import { choiceLabel, type InterviewAnswers, isDefaultChecked, isWriteInOption, type StructuredBrief } from '../hosted/brief.js';
 import { JOB_ERROR_TEXT, type HostedOverview, type JobStartError, type StepError } from '../hosted/service.js';
 import type { AiStatus } from '../services/billing.js';
 import { creationRoute, creditGap, type CreationRoute } from '../services/workspace-stage.js';
-import { CsrfField, Notice, PostButton } from './forms.js';
+import { CsrfField, ImagePicker, Notice, PostButton } from './forms.js';
 import { initialOf } from './layout.js';
 import { HomeIcon } from './home-icons.js';
 import { BlockedList } from './moderation.js';
@@ -91,6 +91,7 @@ export interface CreateViewModel {
   scene: SceneGuide;
   examples: ExampleEntry[];
   overview: HostedOverview;
+  submittedAnswers?: InterviewAnswers | undefined;
   error: string | null;
   /** 隐私说明里“发给哪家模型服务”。 */
   providers: string;
@@ -102,8 +103,8 @@ function base(wall: Wall): string {
   return `/w/${wall.id}/me`;
 }
 
-const ModelNotice: FC<{ overview: HostedOverview; demo?: boolean }> = ({ overview, demo }) => {
-  if (!demo && overview.ai.mode === 'platform') {
+const ModelNotice: FC<{ overview: HostedOverview }> = ({ overview }) => {
+  if (overview.ai.mode === 'platform') {
     return (
       <p class="muted">
         使用 NOWMe 的 AI：采访不收点数；{priceText(overview.ai.prices)}。{allowanceText(overview.ai)}。 <a href="/account/credits">点数</a>
@@ -111,7 +112,7 @@ const ModelNotice: FC<{ overview: HostedOverview; demo?: boolean }> = ({ overvie
     );
   }
   return (
-    <p class="muted">{demo ? DEMO_MODEL_MISSING : overview.modelReady ? '使用你的 AI API，模型费用由服务商向你收取；失败请求也可能计费。' : '请先配置你自己的 AI API，已有资料与页面不受影响。'} {!demo ? <a href="/account/ai">AI 设置</a> : null}</p>
+    <p class="muted">使用你的 AI API，模型费用由服务商向你收取；失败请求也可能计费。 <a href="/account/ai">AI 设置</a></p>
   );
 };
 
@@ -143,9 +144,9 @@ const SectionHeading: FC<{ number: string; title: string; hint: string; optional
   </header>
 );
 
-const InterviewForm: FC<{ model: CreateViewModel }> = ({ model }) => {
+const InterviewForm: FC<{ model: CreateViewModel; route: CreationRoute }> = ({ model, route }) => {
   const { scene } = model;
-  const saved = model.overview.brief?.answers;
+  const saved = model.submittedAnswers ?? model.overview.brief?.answers;
   return (
     <form method="post" action={`${base(model.wall)}/create/start`} enctype="multipart/form-data" class="stack hosted-form create-interview" data-interview>
       <CsrfField token={model.csrf} />
@@ -171,26 +172,34 @@ const InterviewForm: FC<{ model: CreateViewModel }> = ({ model }) => {
         <SectionHeading number="02" title="点选几下，认识你多一点" hint="凭直觉选就好。除了标记必答的问题，其他都可以跳过。" />
         <div class="create-questions">
           {scene.choiceQuestions.map((question) => {
-            const prompt = question.question.replace(/【(?:先选这个|必答)】/g, '');
+            const prompt = question.question.replace(/^【(?:先选这个|必答|重要)】/, '');
             const parts = /^(.*?)（([^）]+)）$/.exec(prompt);
+            const selected = saved?.choices[question.id]?.selected ?? [];
             return (
               <fieldset class="field hosted-question">
                 <legend class="field__label">{parts?.[1] ?? prompt}{question.required ? <span class="create-required">必答</span> : <span class="create-question-type">{question.multi ? '可多选' : '可跳过'}</span>}</legend>
                 {parts ? <p class="field__hint">{parts[2]}</p> : null}
                 <div class="chips">
-                  {question.options.map((option, index) =>
-                    question.multi ? (
+                  {question.options.map((option, index) => {
+                    if (!question.multi && !question.required && option === '跳过') return null;
+                    return question.multi ? (
                       <label class="check chip-check">
-                        <input type="checkbox" name={`q_${question.id}_${index}`} value="1" data-write-in={isWriteInOption(option) ? '' : undefined} checked={saved ? saved.choices[question.id]?.selected.includes(option.replace('（默认勾选）', '')) : isDefaultChecked(option)} />
-                        <span>{option.replace('（默认勾选）', '')}</span>
+                        <input type="checkbox" name={`q_${question.id}_${index}`} value="1" data-write-in={isWriteInOption(option) ? '' : undefined} checked={saved ? saved.choices[question.id]?.selected.includes(choiceLabel(option)) : isDefaultChecked(option)} />
+                        <span>{choiceLabel(option)}</span>
                       </label>
                     ) : (
                       <label class="check chip-check">
-                        <input type="radio" name={`q_${question.id}`} value={String(index)} data-write-in={isWriteInOption(option) || /只写|^其他/.test(option) ? '' : undefined} checked={saved?.choices[question.id]?.selected.includes(option)} required={question.required} />
+                        <input type="radio" name={`q_${question.id}`} value={String(index)} data-write-in={isWriteInOption(option) || /只写|^其他/.test(option) ? '' : undefined} checked={selected.includes(option)} required={question.required} />
                         <span>{option}</span>
                       </label>
-                    ),
-                  )}
+                    );
+                  })}
+                  {!question.multi && !question.required ? (
+                    <label class="check chip-check">
+                      <input type="radio" name={`q_${question.id}`} value="skip" checked={selected.length === 0 || selected.includes('跳过')} />
+                      <span>跳过</span>
+                    </label>
+                  ) : null}
                 </div>
                 {question.options.some(isWriteInOption) || !question.multi ? (
                   <details class="create-writein" open={!!saved?.choices[question.id]?.text}>
@@ -236,6 +245,7 @@ const InterviewForm: FC<{ model: CreateViewModel }> = ({ model }) => {
         </fieldset>
       </section>
       <div class="create-submit">
+        <CreateRouteNotice model={model} route={route} />
         <div class="create-submit__privacy"><HomeIcon name="eye" /><p class="muted hosted-privacy">{privacyNote(model.providers, model.demo, model.overview.ai.mode === 'platform')}</p></div>
         <div class="create-submit__action"><p>接下来，AI 会和你聊两句。<small>确认资料后，才开始生成页面。</small></p><button type="submit" class="btn btn--primary btn--lg">下一步<HomeIcon name="arrow" /></button></div>
       </div>
@@ -249,18 +259,8 @@ const FollowupForm: FC<{ model: CreateViewModel }> = ({ model }) => {
   return (
     <form method="post" action={`${base(model.wall)}/create/followups`} class="stack hosted-form">
       <CsrfField token={model.csrf} />
-      {followups.facts.length > 0 ? (
-        <section class="card card--quiet">
-          <h2>我先记下了这些</h2>
-          <ul class="hosted-facts">
-            {followups.facts.map((fact) => (
-              <li>{fact}</li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
       <section class="card">
-        <h2>3. 再问 {followups.questions.length} 个小问题</h2>
+        <h2>再问 {followups.questions.length} 个小问题</h2>
         <p class="muted">都可以跳过；回答越具体，页面越像你。</p>
         {followups.questions.map((question) => (
           <fieldset class="field hosted-question">
@@ -281,6 +281,12 @@ const FollowupForm: FC<{ model: CreateViewModel }> = ({ model }) => {
           </fieldset>
         ))}
       </section>
+      {followups.facts.length > 0 ? (
+        <details class="card card--quiet">
+          <summary>看看 AI 已经记下了什么</summary>
+          <ul class="hosted-facts">{followups.facts.map((fact) => <li>{fact}</li>)}</ul>
+        </details>
+      ) : null}
       <button type="submit" class="btn btn--primary btn--lg btn--block">
         整理“AI 眼中的你”
       </button>
@@ -293,7 +299,7 @@ const ReviewForm: FC<{ model: CreateViewModel; brief: StructuredBrief; briefMd: 
     <form method="post" action={`${base(model.wall)}/create/confirm`} class="stack hosted-form">
       <CsrfField token={model.csrf} />
       <section class="card">
-        <h2>4. 这是 AI 眼中的你</h2>
+        <h2>这是 AI 眼中的你</h2>
         <p class="muted">每一句都可以改写或划掉。确认之后才会开始做页面，页面上的每一句话都能在这里找到出处。</p>
         {brief.mustHaveMissing.length > 0 ? (
           <Notice tone="warning">
@@ -303,7 +309,7 @@ const ReviewForm: FC<{ model: CreateViewModel; brief: StructuredBrief; briefMd: 
         <ol class="hosted-aiview">
           {brief.aiView.map((sentence, index) => (
             <li>
-              <input type="text" name={`ai_${index}`} value={sentence} maxlength={120} aria-label={`第 ${index + 1} 句`} />
+              <textarea class="hosted-review-text" name={`ai_${index}`} rows={12} maxlength={120} aria-label={`第 ${index + 1} 句`}>{sentence}</textarea>
               <label class="check">
                 <input type="checkbox" name={`ai_${index}_drop`} value="1" />
                 <span>划掉</span>
@@ -320,11 +326,11 @@ const ReviewForm: FC<{ model: CreateViewModel; brief: StructuredBrief; briefMd: 
             <li class="stack stack--tight">
               <label class="field">
                 <span class="field__label">接话点 {index + 1}</span>
-                <input type="text" name={`hook_${index}_text`} value={hook.text} maxlength={32} />
+                <textarea class="hosted-review-text" name={`hook_${index}_text`} rows={3} maxlength={32}>{hook.text}</textarea>
               </label>
               <label class="field">
                 <span class="field__label">开场白</span>
-                <input type="text" name={`hook_${index}_opener`} value={hook.opener} maxlength={80} />
+                <textarea class="hosted-review-text" name={`hook_${index}_opener`} rows={10} maxlength={80}>{hook.opener}</textarea>
               </label>
               <label class="check">
                 <input type="checkbox" name={`hook_${index}_drop`} value="1" />
@@ -407,6 +413,7 @@ const ConfirmedPanel: FC<{ model: CreateViewModel; route: CreationRoute }> = ({ 
         </blockquote>
       ) : null}
       <p class="muted">AI 会按你确认的资料做一页你自己，一般要几分钟。做好后先给你预览，你确认了才会发布到墙上；平台不会替你发布。</p>
+      {canRun && !model.demo ? <ModelNotice overview={model.overview} /> : null}
       {canRun ? null : route === 'credits' ? (
         <Notice tone="warning">
           点数不够：生成一版要 {creditGap(model.overview.ai, 'generate').price} 点，你现在能用 {creditGap(model.overview.ai, 'generate').available} 点。可以用兑换码补充点数，或者请组织者给这面墙充一点额度；也可以在“我的页面”的“更多方式”里改用自己的模型 Key。
@@ -465,10 +472,10 @@ export const CreateView: FC<{ model: CreateViewModel }> = ({ model }) => {
   const step = status === 'collecting' ? 0 : status === 'followups' ? 1 : status === 'review' ? 2 : 3;
   const route = creationRoute(model.overview.ai, 'generate');
   return (
-    <div class="container create-page">
+    <div class="container create-page" data-step={status}>
       <nav class="crumbs create-crumbs" aria-label="当前位置">
         <a href="/">我的</a><span aria-hidden="true">/</span>
-        <a href={`/w/${model.wall.id}`}>{model.wall.name}</a><span aria-hidden="true">/</span>
+        <a class="crumbs__wall" href={`/w/${model.wall.id}`} title={model.wall.name}>{model.wall.name}</a><span aria-hidden="true">/</span>
         <a href={base(model.wall)}>我的页面</a>
       </nav>
       {model.welcome ? (
@@ -484,24 +491,23 @@ export const CreateView: FC<{ model: CreateViewModel }> = ({ model }) => {
         <aside class="create-journey" aria-label="创作流程">
           <p class="create-journey__title">你的创作旅程<span>0{step + 1} / 04</span></p>
           <Steps current={step} />
-          {model.demo && model.overview.modelReady ? null : <div class={`create-model${model.overview.modelReady ? ' create-model--ready' : ''}`}>
-            <p class="create-model__title"><span aria-hidden="true"></span>{model.overview.ai.mode === 'platform' ? 'AI 已就绪' : model.overview.modelReady ? '你的 AI 已就绪' : '还没有可用的 AI'}</p>
-            <ModelNotice overview={model.overview} demo={model.demo} />
-          </div>}
+          {status === 'collecting' && !model.demo && model.overview.modelReady ? <div class="create-model">
+            <p class="create-model__title"><span aria-hidden="true"></span>{model.overview.ai.mode === 'platform' ? 'AI 已就绪' : '你的 AI 已就绪'}</p>
+            <ModelNotice overview={model.overview} />
+          </div> : null}
           <p class="create-journey__note"><HomeIcon name="eye" /><span>资料先留给自己。<br />页面由你预览、确认发布。</span></p>
           <a class="create-back" href={base(model.wall)}>← 回到我的页面</a>
         </aside>
-        <div class="create-content">
+        <section class="create-content" id="create-step" tabindex={-1} aria-label={STEP_LABELS[step]!.label}>
           {model.error ? <Notice tone="error">{model.error}</Notice> : null}
           <ActiveJobNotice model={model} />
-          {status !== 'confirmed' ? <CreateRouteNotice model={model} route={route} /> : null}
           {!model.overview.modelReady && status === 'collecting' ? <SetupPanel model={model} /> : null}
-          {model.overview.modelReady && status === 'collecting' ? <InterviewForm model={model} /> : null}
+          {model.overview.modelReady && status === 'collecting' ? <InterviewForm model={model} route={route} /> : null}
           {status === 'followups' ? <FollowupForm model={model} /> : null}
           {status === 'review' && view?.brief ? <ReviewForm model={model} brief={view.brief} briefMd={view.record.briefMd} /> : null}
           {status === 'confirmed' ? <ConfirmedPanel model={model} route={route} /> : null}
           {status !== 'collecting' && status !== 'confirmed' ? <div class="hosted-restart"><PostButton action={`${base(model.wall)}/create/restart`} csrf={model.csrf} label="从头再来" confirm="会删除这次采访已填写的内容和图片。继续吗？" /></div> : null}
-        </div>
+        </section>
       </div>
     </div>
   );
@@ -544,7 +550,7 @@ export const JobView: FC<{
   return (
     <div class="container container--form job-page">
       <nav class="crumbs" aria-label="当前位置">
-        <a href={`/w/${wall.id}`}>{wall.name}</a>
+        <a class="crumbs__wall" href={`/w/${wall.id}`} title={wall.name}>{wall.name}</a>
         <span aria-hidden="true">/</span>
         <a href={base(wall)}>我的页面</a>
       </nav>
@@ -596,12 +602,13 @@ export const JobView: FC<{
 };
 
 /** 修改这一版（W08）：可选目标区块 + 日常语言的修改要求。 */
-export const EditForm: FC<{ wallId: string; csrf: string; revisionId: string; blocks: string[]; request?: string; revisionNumber?: number }> = ({
+export const EditForm: FC<{ wallId: string; csrf: string; revisionId: string; blocks: string[]; request?: string; targetBlock?: string; revisionNumber?: number }> = ({
   wallId,
   csrf,
   revisionId,
   blocks,
   request,
+  targetBlock,
   revisionNumber,
 }) => (
   <form method="post" action={`/w/${wallId}/me/edit`} class="stack hosted-edit">
@@ -612,7 +619,7 @@ export const EditForm: FC<{ wallId: string; csrf: string; revisionId: string; bl
       <select name="block">
         <option value="">让 AI 判断</option>
         {blocks.map((block) => (
-          <option value={block}>{block}</option>
+          <option value={block} selected={block === targetBlock}>{block}</option>
         ))}
       </select>
     </label>
@@ -690,7 +697,7 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
           {error ? <Notice tone="error" id="profile-error">{error}</Notice> : null}
           <label>昵称<input type="text" name="nickname" value={nicknameDraft ?? nickname} required autocomplete="nickname" aria-invalid={error ? 'true' : undefined} aria-describedby={error ? 'profile-error nickname-help' : 'nickname-help'} /></label>
           <p id="nickname-help" class="muted">1–24 个字。昵称和头像会显示在账号导航和同墙聊天中。</p>
-          <label>头像<input type="file" name="avatar" accept="image/png,image/jpeg,image/webp" aria-describedby="avatar-help" /></label>
+          <ImagePicker id="profile-avatar-file" name="avatar" label="头像" describedBy="avatar-help" />
           <p id="avatar-help" class="muted">支持 PNG、JPEG、WebP，2 MB 以内；保存时自动居中裁成正方形。</p>
           {avatarVersion ? <label class="profile-remove-avatar"><input type="checkbox" name="removeAvatar" value="1" />移除当前头像，恢复昵称首字</label> : null}
           <div><button type="submit" class="btn btn--primary btn--small">保存资料</button></div>

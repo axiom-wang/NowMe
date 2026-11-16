@@ -317,7 +317,7 @@ strong {
 }
 
 /* ------------------------------------------------------------------ */
-/* 顶栏（所有页面同一套几何：位置与尺寸在页面之间不变，未读数出现时不跳动） */
+/* 顶栏：各页面共用布局，导航只在有未读消息时显示计数。 */
 
 .site-header {
   position: sticky;
@@ -408,23 +408,13 @@ strong {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-width: 30px; /* 两位数也放得下：未读数出现前后导航不移动 */
+  min-width: 22px;
   height: 22px;
   padding: 0 6px;
   border-radius: var(--radius-pill);
   background: var(--ink);
   color: var(--lime);
   font: 700 var(--text-xs) / 1 var(--font-head);
-}
-
-.site-nav__link.is-active .message-badge {
-  background: var(--ink);
-}
-
-/* 未读数在轮询后才出现，预留位置以免导航移动。 */
-.site-nav [data-message-unread][hidden] {
-  display: inline-flex !important;
-  visibility: hidden;
 }
 
 .account-menu {
@@ -721,7 +711,6 @@ strong {
 
 .crumbs {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
   gap: 4px 8px;
   margin: 0 0 10px;
@@ -730,8 +719,17 @@ strong {
 }
 
 .crumbs a {
+  flex: none;
   color: var(--ink-2);
+  white-space: nowrap;
   text-decoration: none;
+}
+
+.crumbs .crumbs__wall {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .crumbs a:hover {
@@ -757,12 +755,16 @@ strong {
   color: var(--ink-2);
   font-weight: 600;
   text-decoration: none;
-  overflow: hidden;
   white-space: nowrap;
-  text-overflow: ellipsis;
   transition:
     border-color var(--dur-fast),
     color var(--dur-fast);
+}
+
+.back-link__label {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .back-link a:hover {
@@ -905,6 +907,45 @@ strong {
 
 .stack--tight {
   gap: var(--space-1);
+}
+
+.file-picker {
+  display: grid;
+  gap: var(--space-2);
+  min-width: 0;
+}
+
+.file-picker__label {
+  font-size: var(--text-sm);
+  font-weight: 650;
+}
+
+.file-picker__row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+}
+
+.file-picker__input {
+  max-width: 100%;
+  font: inherit;
+  font-size: var(--text-sm);
+}
+
+.file-picker__button {
+  flex: none;
+}
+
+.file-picker__input:focus-visible + .file-picker__button {
+  outline: 2.5px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.file-picker__name {
+  font-size: var(--text-sm);
+  color: var(--muted);
+  overflow-wrap: anywhere;
 }
 
 .field {
@@ -2129,39 +2170,45 @@ input[type='checkbox'] {
 /* 响应式 */
 
 @media (max-width: 760px) {
+  :root {
+    --header-h: 56px;
+  }
+
   .site-header__inner {
-    grid-template-columns: 1fr auto;
-    gap: 4px 12px;
-    height: auto;
-    min-height: var(--header-h);
-    padding-block: 12px 8px;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 4px;
   }
 
   .site-nav {
-    grid-row: 2;
-    grid-column: 1 / -1;
+    grid-column: 2;
     justify-content: center;
-    gap: var(--space-3);
-    margin-top: 9px;
+    gap: 2px;
   }
 
   .site-nav__link {
-    min-height: 36px;
+    justify-content: center;
+    min-width: 44px;
     font-size: var(--text-sm);
-    padding-inline: var(--space-5);
+    padding-inline: 6px;
+  }
+
+  .site-nav .message-badge {
+    position: absolute;
+    top: 0;
+    inset-inline-start: 65%;
+    min-width: 16px;
+    height: 16px;
+    padding-inline: 3px;
+    font-size: 10px;
+    pointer-events: none;
   }
 
   .account-menu {
-    grid-column: 2;
+    grid-column: 3;
     grid-row: 1;
   }
 
-  .site-header__login {
-    grid-column: 2;
-  }
-
   .user-chip {
-    min-height: 38px;
     gap: var(--space-2);
   }
 
@@ -2177,9 +2224,20 @@ input[type='checkbox'] {
   }
 }
 
-@media (max-width: 380px) {
-  .site-nav__link {
-    padding-inline: var(--space-3);
+@media (max-width: 539px) {
+  .brand {
+    font-size: 1.2rem;
+  }
+
+  .user-chip {
+    justify-content: center;
+    min-width: 44px;
+    padding-inline: 4px;
+  }
+
+  .user-chip__name,
+  .user-chip .home-icon {
+    display: none;
   }
 }
 
@@ -2218,6 +2276,12 @@ input[type='checkbox'] {
     justify-content: center;
     min-width: 44px;
     padding-inline: 4px;
+  }
+
+  .crumbs .crumbs__wall {
+    display: block;
+    line-height: 44px;
+    min-width: 44px;
   }
 
   .link-block {
@@ -2393,16 +2457,14 @@ input[type='checkbox'] {
   border-top: 1.5px dashed var(--line);
 }
 
-/* 手机上的成员页 / 工作区预览：去掉手机外框，页面贴边铺满（视口宽度放不下 375px 宽的 iframe + 外框 + 页边距时） */
+/* 视口放不下手机外框和页边距时，成员页、工作区预览和公开页共用无边框布局。 */
 @media (max-width: 439px) {
-  .member-layout .page-frame,
-  .ws-preview .page-frame {
-    margin-inline: -16px;
-    width: calc(100% + 32px);
+  :is(.member-layout, .ws-preview, .public-page) .page-frame {
+    margin-inline: calc(-1 * var(--page-gutter));
+    width: calc(100% + 2 * var(--page-gutter));
   }
 
-  .member-layout .page-frame__phone,
-  .ws-preview .page-frame__phone {
+  :is(.member-layout, .ws-preview, .public-page) .page-frame__phone {
     width: 100%;
     max-width: 100%;
     padding: 0;
@@ -2411,8 +2473,7 @@ input[type='checkbox'] {
     box-shadow: none;
   }
 
-  .member-layout .page-frame__screen,
-  .ws-preview .page-frame__screen {
+  :is(.member-layout, .ws-preview, .public-page) .page-frame__screen {
     width: 100%;
     max-width: 375px;
     margin: 0 auto;
@@ -2420,9 +2481,8 @@ input[type='checkbox'] {
     box-shadow: 0 0 0 1px var(--line);
   }
 
-  .member-layout .page-frame__caption,
-  .ws-preview .page-frame__caption {
-    padding-inline: 16px;
+  :is(.member-layout, .ws-preview, .public-page) .page-frame__caption {
+    padding-inline: var(--page-gutter);
   }
 }
 

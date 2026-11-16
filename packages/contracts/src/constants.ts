@@ -200,6 +200,8 @@ export const WEB_EVENT_TYPES = [
   'wall_portrait_generate',
   // AI 介绍值得认识的人（contracts 20）：一次模型调用（成功与失败都记，用于限流与“首次自动”判断；只记数字与布尔）
   'intro_generate',
+  // 问墙（contracts 21）：一次模型调用（成功与失败都记，用于限流；只记数字与布尔，不记问题原文）
+  'ask_generate',
 ] as const;
 
 export const EVENT_TYPES = [...STORED_AGENT_EVENT_TYPES, ...WEB_EVENT_TYPES] as const;
@@ -263,6 +265,25 @@ export const INTRO_CANDIDATE_TEXT_RANGE = { min: 160, max: 600 } as const;
  * 时不提供这个功能（人太少时直接逛墙就好）；超过 `maxCandidates` 时随机取样。
  */
 export const INTRO_LIMITS = { picks: 5, title: 18, reason: 60, evidence: 40, minCandidates: 3, maxCandidates: 80 } as const;
+
+// ---------------------------------------------------------------------------
+// 问墙：用一句话找人（contracts 21）
+// ---------------------------------------------------------------------------
+
+/** 每个查看者滚动 24 小时最多问几次（跨墙合计）。运行保护，不是付费额度。 */
+export const ASK_DAILY_PER_VIEWER = 30;
+/** 同一个查看者在同一面墙滚动 24 小时最多问几次。 */
+export const ASK_DAILY_PER_WALL = 12;
+/** 一次调用的总时限。 */
+export const ASK_TIMEOUT_MS = 60 * 1000;
+/** 全部候选页面的渲染文字摘录合计上限（码点），按人数均分，每页夹在 min–max 之间。 */
+export const ASK_CANDIDATE_TEXT_BUDGET = 24_000;
+export const ASK_CANDIDATE_TEXT_RANGE = { min: 160, max: 600 } as const;
+/**
+ * 输入与输出的限制：问题 `questionMin`–`question` 个码点；最多找出 `matches` 位；候选（墙上对查看者可见、不是自己的
+ * 已发布页面）少于 `minCandidates` 时不提供这个功能（人太少时直接逛墙就好）；超过 `maxCandidates` 时随机取样。
+ */
+export const ASK_LIMITS = { questionMin: 2, question: 80, matches: 6, reason: 40, quote: 60, minCandidates: 3, maxCandidates: 80 } as const;
 
 // ---------------------------------------------------------------------------
 // 点数（contracts 12）

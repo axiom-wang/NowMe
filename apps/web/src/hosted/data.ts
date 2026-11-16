@@ -42,6 +42,8 @@ export function eraseHostedPageRecords(deps: Pick<AppDeps, 'repos'>, pageId: str
   deps.repos.icebreakers.deleteForPage(pageId);
   // 页面被删除：别人得到的、引用了这一页文字的 AI 介绍，与主人自己在这面墙的 AI 介绍（依据是这一页）都删掉（contracts 20）
   deps.repos.intros.deleteForPage(pageId);
+  // 问墙（contracts 21）：别人的结果里引用了这一页原话的那一条删掉
+  deps.repos.asks.deleteMatchesForPage(pageId);
   const page = deps.repos.pages.findById(pageId);
   if (page) deps.repos.intros.deleteForViewerWall(page.ownerId, page.wallId);
 }

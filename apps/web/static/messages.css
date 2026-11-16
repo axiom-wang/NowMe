@@ -66,12 +66,12 @@
 .message-meta { display: flex; flex-wrap: wrap; gap: 8px; font-size: .75rem; margin: 0 0 6px; color: var(--muted); }
 .message-text { margin: 0; padding: 11px 15px; max-width: 85%; white-space: pre-wrap; overflow-wrap: anywhere; border-radius: 4px 16px 16px; background: var(--paper-2); color: var(--ink); line-height: 1.65; }
 .message--mine .message-text { background: var(--lime-soft); border-radius: 16px 4px 16px 16px; }
-.chat-compose { padding: 18px 28px; border-top: 1px solid var(--line); background: var(--surface); }
-.chat-compose label { display: block; font-size: .875rem; font-weight: 600; margin-bottom: 7px; }
-.chat-compose textarea { display: block; width: 100%; min-height: 80px; max-height: 200px; resize: vertical; font: inherit; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 12px; background: var(--surface); color: var(--ink); }
-.chat-compose-actions { margin-top: 10px; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
-.chat-compose-actions .muted { font-size: .75rem; }
-.chat-status { min-height: 1.4em; margin: 10px 0 0; font-size: .82rem; color: var(--muted); overflow-wrap: anywhere; }
+.chat-compose { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; padding: 18px 28px; border-top: 1px solid var(--line); background: var(--surface); }
+.chat-compose label { grid-column: 1 / -1; font-size: .875rem; font-weight: 600; margin-bottom: 7px; }
+.chat-compose textarea { grid-column: 1 / -1; display: block; width: 100%; min-height: 80px; max-height: 200px; margin-bottom: 10px; resize: vertical; font: inherit; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); padding: 12px; background: var(--surface); color: var(--ink); }
+.chat-hint { font-size: .75rem; }
+.chat-status { grid-column: 1 / -1; margin: 0; font-size: .82rem; color: var(--muted); overflow-wrap: anywhere; }
+.chat-status:not(:empty) { margin-top: 6px; }
 .chat-new { display: block; margin: 0 auto 10px; }
 .inbox > .btn { margin-top: 14px; }
 .inbox-page-note { margin: 16px 0 0; font-size: 12px; }
@@ -82,6 +82,33 @@
 }
 
 @media (max-width: 760px) {
+  .page--conversation { height: 100dvh; min-height: 0; }
+  .page--conversation .site-header { flex: none; }
+  .page--conversation .site-main,
+  .conversation-page,
+  .conversation-panel.card { display: flex; flex: 1 1 0; flex-direction: column; }
+  .page--conversation .site-main { padding-block: 8px max(8px, env(safe-area-inset-bottom)); }
+  .page--conversation .site-footer { display: none; }
+  .conversation-page > .back-link { margin-bottom: 8px; }
+  .conversation-panel.card { margin: 0; overflow: clip; }
+  .conversation-heading { padding-block: 10px; }
+  .conversation-heading .eyebrow { display: flex; gap: .35em; margin: 0; white-space: nowrap; }
+  .conversation-heading .eyebrow span,
+  .conversation-heading h1 { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .chat-members { margin-top: 2px; }
+  .chat-members ul { max-height: min(180px, 25dvh); }
+  /* 记录占满标题和输入栏之间的空间；展开举报等额外表单时，整页仍可滚动。 */
+  .chat-history { flex: 1 1 0; height: 0; min-height: 72px; padding-block: 12px; }
+  .chat-history:focus-visible { outline-offset: -3px; }
+  .chat-empty { padding: 20px 0; }
+  .conversation-panel .safety--chat { margin-block: 0; }
+  .chat-compose { column-gap: 8px; padding-block: 8px; }
+  .chat-compose label { margin-bottom: 4px; }
+  .chat-compose textarea { grid-column: 1; grid-row: 2; height: 50px; min-height: 50px; margin: 0; padding: 8px 10px; font-size: 16px; resize: none; }
+  .chat-compose button[type="submit"] { grid-column: 2; grid-row: 2; padding-inline: 13px; }
+  .chat-hint { grid-column: 1 / -1; margin-top: 4px; }
+  .chat-shortcut { display: none; }
+
   .messages-heading { margin: 0 14px 28px; }
   .messages-heading h1 { font-size: 36px; margin-bottom: 8px; }
   .messages-heading > .muted { font-size: 14px; }

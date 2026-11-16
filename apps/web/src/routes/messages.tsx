@@ -91,7 +91,7 @@ export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
       const opener = /^[0-2]$/.test(c.req.query('o') ?? '') ? icebreakerOpener(deps, source, auth.user.id, c.req.query('ice') ?? '', Number(c.req.query('o'))) : null;
       if (opener) draft = opener;
     }
-    return renderPage(c, { title: summary.title, body: <ConversationView summary={summary} history={deps.repos.chat.history(summary.id)} userId={auth.user.id} csrf={auth.session.csrfToken} clientId={randomUUID()} draft={draft} members={summary.kind === 'group' ? deps.repos.chat.members(summary.wallId) : []} safety={conversationSafetyModel(deps, summary, auth.user.id, c.req.query('safety'))} /> });
+    return renderPage(c, { title: summary.title, bodyClass: 'page--conversation', body: <ConversationView summary={summary} history={deps.repos.chat.history(summary.id)} userId={auth.user.id} csrf={auth.session.csrfToken} clientId={randomUUID()} draft={draft} members={summary.kind === 'group' ? deps.repos.chat.members(summary.wallId) : []} safety={conversationSafetyModel(deps, summary, auth.user.id, c.req.query('safety'))} /> });
   });
   app.get('/messages/:id/items', jsonUser, (c) => {
     const id = c.req.param('id');
@@ -123,7 +123,7 @@ export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
     if (result.ok) return c.redirect(`/messages/${id}`, 303);
     if (result.status === 404) return renderNotFound(c);
     const summary = deps.repos.chat.summary(id, auth.user.id)!;
-    return renderPage(c, { title: summary.title, status: result.status, body: <ConversationView summary={summary} history={deps.repos.chat.history(id)} userId={auth.user.id} csrf={auth.session.csrfToken} clientId={fields.clientId ?? randomUUID()} draft={fields.text} error={result.error} members={summary.kind === 'group' ? deps.repos.chat.members(summary.wallId) : []} safety={conversationSafetyModel(deps, summary, auth.user.id, undefined)} /> });
+    return renderPage(c, { title: summary.title, bodyClass: 'page--conversation', status: result.status, body: <ConversationView summary={summary} history={deps.repos.chat.history(id)} userId={auth.user.id} csrf={auth.session.csrfToken} clientId={fields.clientId ?? randomUUID()} draft={fields.text} error={result.error} members={summary.kind === 'group' ? deps.repos.chat.members(summary.wallId) : []} safety={conversationSafetyModel(deps, summary, auth.user.id, undefined)} /> });
   });
   app.post('/messages/:id/read', form, (c) => {
     const id = c.req.param('id');

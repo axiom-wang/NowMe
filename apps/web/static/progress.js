@@ -48,20 +48,38 @@
     }, 600);
   }
 
+  function unavailable(status) {
+    finished = true;
+    if (source) source.close();
+    if (timer) clearTimeout(timer);
+    root.classList.add('job-progress--done');
+    if (label) label.textContent = status === 401 ? '登录已经过期，请重新登录后查看进度。' : '这个任务已无法访问，请返回我的墙。';
+    if (turn) turn.textContent = '';
+    steps.forEach(function (el) { el.classList.remove('progress__step--current'); el.removeAttribute('aria-current'); });
+    var hint = root.querySelector('.job-progress__hint');
+    var link = document.createElement('a');
+    link.href = status === 401 ? '/login?next=' + encodeURIComponent(location.pathname) : '/';
+    link.textContent = status === 401 ? '重新登录' : '返回我的墙';
+    if (hint) hint.replaceChildren(link);
+  }
+
   function poll() {
     if (finished) return;
     fetch(statusUrl, { credentials: 'same-origin', headers: { accept: 'application/json' }, cache: 'no-store' })
       .then(function (response) {
+        if ([401, 403, 404].includes(response.status)) { unavailable(response.status); return null; }
         if (!response.ok) throw new Error(String(response.status));
         return response.json();
       })
       .then(function (data) {
+        if (finished) return;
         failures = 0;
         render(data);
         if (data.done) finish(data);
         else timer = setTimeout(poll, pollMs);
       })
       .catch(function () {
+        if (finished) return;
         failures += 1;
         // 断网或服务暂时不可用：慢一点再试，不刷新整页
         timer = setTimeout(poll, Math.min(pollMs * (failures + 1), 30000));
@@ -93,7 +111,7 @@
     finish(data);
   });
   source.addEventListener('gone', function () {
-    finish(null);
+    unavailable(404);
   });
   source.onerror = function () {
     errors += 1;

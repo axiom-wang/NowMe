@@ -242,7 +242,11 @@ describe('用平台 AI 做页面（完整流程）', () => {
     // 已经用了 14 点（上限）：墙不再出，个人没有点数 → 不开始
     const second = await edit(web, wall, owner, { revisionId: first.job?.revisionId ?? '', block: 'hero', request: '再改一次' });
     expect(second.job).toBeNull();
-    expect(second.location).toContain('hosted=credits');
+    expect(second.response.status).toBe(422);
+    const failedEdit = await second.response.text();
+    expect(failedEdit).toContain('点数不够，这次没有开始');
+    expect(failedEdit).toContain('再改一次');
+    expect(failedEdit).toContain('value="hero" selected');
     expect(await workspaceHtml(web, owner.session, wall.id, '?hosted=credits')).toContain('点数不够，这次没有开始');
     await topUp(web, owner.session, 4);
     const third = await edit(web, wall, owner, { revisionId: first.job?.revisionId ?? '', block: 'hero', request: '再改一次' });

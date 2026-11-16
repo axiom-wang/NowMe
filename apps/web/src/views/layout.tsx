@@ -102,11 +102,11 @@ export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; active?:
       {auth?.user.nickname ? <>
         <nav class="site-nav" aria-label="主导航">
           <a class={`site-nav__link${active === 'home' ? ' is-active' : ''}`} href="/" aria-current={active === 'home' ? 'page' : undefined}>我的</a>
-          <a class={`site-nav__link${active === 'messages' ? ' is-active' : ''}`} href="/messages" aria-current={active === 'messages' ? 'page' : undefined}>消息 <span class="message-badge" data-message-unread hidden aria-label="未读消息"></span></a>
+          <a class={`site-nav__link${active === 'messages' ? ' is-active' : ''}`} href="/messages" aria-current={active === 'messages' ? 'page' : undefined}><span>消息</span><span class="message-badge" data-message-unread hidden aria-label="未读消息"></span></a>
           <a class={`site-nav__link${active === 'data' ? ' is-active' : ''}`} href="/account/data" aria-current={active === 'data' ? 'page' : undefined}>我的资料</a>
         </nav>
         <details class="account-menu" data-dismissable>
-          <summary class="user-chip"><span class="avatar avatar--sm" aria-hidden="true">{auth.user.avatarVersion ? <img src={`/account/avatar?v=${auth.user.avatarVersion}`} alt="" /> : initialOf(auth.user.nickname ?? '')}</span><span class="user-chip__name">{auth.user.nickname}</span><HomeIcon name="chevron" /></summary>
+          <summary class="user-chip" aria-label={`账号菜单：${auth.user.nickname}`}><span class="avatar avatar--sm" aria-hidden="true">{auth.user.avatarVersion ? <img src={`/account/avatar?v=${auth.user.avatarVersion}`} alt="" /> : initialOf(auth.user.nickname ?? '')}</span><span class="user-chip__name">{auth.user.nickname}</span><HomeIcon name="chevron" /></summary>
           <div class="popover account-menu__panel">
             {!demo ? <a href="/account/credits">点数</a> : null}
             {!demo ? <a href="/account/ai">AI 设置</a> : null}
@@ -129,7 +129,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
       <html lang="zh-CN">
         <head>
           <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <meta name="viewport" content={bodyClass === 'page--conversation' ? 'width=device-width, initial-scale=1, interactive-widget=resizes-content' : 'width=device-width, initial-scale=1'} />
           <meta name="referrer" content="same-origin" />
           <title>{title === 'NOWMe' ? title : `${title} · NOWMe`}</title>
           {stylesheetsFor(path ?? '', bodyClass, styles).map((name) => (
@@ -144,7 +144,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
         </head>
         <body class={bodyClass ? `site ${bodyClass}` : 'site'}>
           <a class="skip-link" href="#main">跳到主要内容</a>
-          <SiteHeader auth={auth} demo={demo} path={path} active={bodyClass === 'page--data' ? 'data' : bodyClass === 'page--messages' ? 'messages' : bodyClass === 'page--home' ? 'home' : undefined} />
+          <SiteHeader auth={auth} demo={demo} path={path} active={bodyClass === 'page--data' ? 'data' : bodyClass === 'page--messages' || bodyClass === 'page--conversation' ? 'messages' : bodyClass === 'page--home' ? 'home' : undefined} />
           <main id="main" class="site-main" tabindex={-1}>{children}</main>
           <Footer />
         </body>

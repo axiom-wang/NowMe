@@ -6,6 +6,18 @@ import type { FC, PropsWithChildren } from 'hono/jsx';
 
 export const CsrfField: FC<{ token: string }> = ({ token }) => <input type="hidden" name={CSRF_FIELD_NAME} value={token} />;
 
+/** 图片上传共用外观；脚本未加载时保留可用的原生输入框。 */
+export const ImagePicker: FC<{ id: string; name: string; label: string; describedBy: string; required?: boolean; invalid?: boolean }> = ({ id, name, label, describedBy, required, invalid }) => (
+  <div class="file-picker">
+    <label class="file-picker__label" id={`${id}-label`} for={id}>{label}</label>
+    <div class="file-picker__row" data-file-picker>
+      <input class="file-picker__input" id={id} name={name} type="file" accept="image/jpeg,image/png,image/webp" aria-labelledby={`${id}-label`} aria-describedby={describedBy} aria-invalid={invalid ? 'true' : undefined} required={required} />
+      <label class="file-picker__button btn btn--ghost btn--small" for={id} aria-hidden="true" hidden>选择图片</label>
+      <span class="file-picker__name" role="status" hidden>未选择图片</span>
+    </div>
+  </div>
+);
+
 export interface PostButtonProps {
   action: string;
   csrf: string;

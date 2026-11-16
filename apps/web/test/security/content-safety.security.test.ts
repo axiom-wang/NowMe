@@ -158,8 +158,8 @@ describe('路由边界：被拦下的内容不写库、不交给模型', () => {
     const { wall } = seedWall(web, createUser(web, 'org@example.com', '组织者'), '周末黑客松');
     const owner = await joinAs(web, wall, 'm@example.com', '阿柚');
     const response = await post(web, owner.session, `/w/${wall.id}/me/edit`, { revisionId: '', block: '', request: '把标题换成：稳赚不赔的项目，来就送' });
-    expect(response.status).toBe(400);
-    expect(await response.text()).toContain('这条修改要求');
+    expect(response.status).toBe(422);
+    expect(await response.text()).toContain('把标题换成：稳赚不赔的项目，来就送');
     expect(web.db.prepare('SELECT COUNT(*) AS n FROM generation_jobs').get()).toEqual({ n: 0 });
     expect(web.fake.calls).toHaveLength(0);
   });

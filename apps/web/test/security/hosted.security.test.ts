@@ -131,7 +131,14 @@ describe('S7 托管资料只属于主人', () => {
       ];
       for (const [path, fields] of posts) {
         const response = await postForm(w.t, path, { _csrf: csrf ?? 'x', ...fields }, { cookie });
-        expect([303, 401, 404], `${who} POST ${path} → ${response.status}`).toContain(response.status);
+        expect(path.endsWith('/me/edit') ? [422, 401, 404] : [303, 401, 404], `${who} POST ${path} → ${response.status}`).toContain(response.status);
+        if (response.status === 422) {
+          const html = await response.text();
+          expect(html).toContain('这一版不能修改');
+          expect(html).not.toContain(SECRET_SNIPPET);
+          expect(html).not.toContain('私密修改要求');
+          expect(html).not.toContain('<option value="hero"');
+        }
         if (response.status === 303) expect(response.headers.get('location'), `${who} POST ${path}`).not.toMatch(/\/jobs\//);
       }
     }

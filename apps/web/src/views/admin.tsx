@@ -9,7 +9,7 @@ import type { WallCredits } from '../services/billing.js';
 import type { AdminMemberRow } from '../db/wall-queries.js';
 import type { Wall } from '../db/walls.js';
 import { formatDateTime } from '../format.js';
-import { CsrfField, Notice } from './forms.js';
+import { CsrfField, ImagePicker, Notice } from './forms.js';
 import { OrganizerReports } from './moderation.js';
 import type { OrganizerReport } from '../services/moderation.js';
 import { PAGE_STATE_LABEL } from './home.js';
@@ -197,8 +197,7 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError,
             {coverError ? <Notice tone="error" id="wall-cover-error">{coverError}</Notice> : null}
             <form method="post" action={`/w/${wall.id}/admin/cover`} enctype="multipart/form-data" class="stack">
               <CsrfField token={csrf} />
-              <label for="wall-cover-file">{model.coverUrl ? '更换封面图' : '上传封面图'}</label>
-              <input id="wall-cover-file" name="cover" type="file" accept="image/jpeg,image/png,image/webp" aria-invalid={coverError ? 'true' : undefined} aria-describedby={coverError ? 'wall-cover-error wall-cover-help' : 'wall-cover-help'} required />
+              <ImagePicker id="wall-cover-file" name="cover" label={model.coverUrl ? '更换封面图' : '上传封面图'} describedBy={coverError ? 'wall-cover-error wall-cover-help' : 'wall-cover-help'} invalid={!!coverError} required />
               <p id="wall-cover-help" class="field-help">JPG、PNG 或 WebP，5 MB 以内。建议使用 1:1 正方形图片，其他比例将居中裁切。</p>
               <button type="submit" class="btn btn--primary">保存封面</button>
             </form>

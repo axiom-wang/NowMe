@@ -12,11 +12,13 @@ const CARDS = [
 ];
 
 const WALL_HTML = `<section class="wall-board" data-wall-board>
-  <div class="section-head"><span data-wall-count>4</span>
+  <div class="section-head"><span data-wall-count>4</span><span data-wall-count-note>位已上墙 · 共 10 位成员 · 每次进来顺序都不一样</span>
     <label class="wall-search"><input type="search" data-wall-search /></label></div>
+  <button type="button" aria-pressed="false" data-filter="0:0">设计</button>
+  <button type="button" hidden data-filter-clear>清除筛选</button>
   <ul class="wall-grid">
     <li class="wall-ghost"><a class="wall-ghost__link" href="#">这里留给你</a></li>
-    ${CARDS.map((card) => `<li class="wall-card" data-wall-card data-search="${card.search}"><a class="wall-card__link" href="#">${card.name}</a></li>`).join('')}
+    ${CARDS.map((card, index) => `<li class="wall-card" data-wall-card data-search="${card.search}" data-answers="${index < 2 ? '0:0' : ''}"><a class="wall-card__link" href="#">${card.name}</a></li>`).join('')}
   </ul>
   <p class="wall-board__none" hidden data-wall-none>墙上没有找到相关的人。</p>
 </section>`;
@@ -35,11 +37,14 @@ test('墙上搜索：多个词都命中才显示，数量与空结果提示同�
 
   const visible = () => page.locator('[data-wall-card]:visible').allTextContents();
   const input = page.locator('[data-wall-search]');
+  const count = page.locator('[data-wall-count]');
+  const countNote = page.locator('[data-wall-count-note]');
   expect(await visible()).toEqual(['林舟', '苏晴', '阿岚', '栗子']);
 
   await input.fill('后端');
   expect(await visible()).toEqual(['林舟', '苏晴']);
-  await expect(page.locator('[data-wall-count]')).toHaveText('2');
+  await expect(count).toHaveText('2');
+  await expect(countNote).toHaveText('位符合条件');
   await expect(page.locator('.wall-ghost')).toBeHidden();
   await expect(page.locator('[data-wall-none]')).toBeHidden();
 
@@ -49,13 +54,23 @@ test('墙上搜索：多个词都命中才显示，数量与空结果提示同�
 
   await input.fill('不存在的话题');
   expect(await visible()).toEqual([]);
-  await expect(page.locator('[data-wall-count]')).toHaveText('0');
+  await expect(count).toHaveText('0');
+  await expect(countNote).toHaveText('位符合条件');
   await expect(page.locator('[data-wall-none]')).toBeVisible();
 
   await input.fill('');
   expect(await visible()).toEqual(['林舟', '苏晴', '阿岚', '栗子']);
-  await expect(page.locator('[data-wall-count]')).toHaveText('4');
+  await expect(count).toHaveText('4');
+  await expect(countNote).toContainText('位已上墙 · 共 10 位成员');
   await expect(page.locator('.wall-ghost')).toBeVisible();
   await expect(page.locator('[data-wall-none]')).toBeHidden();
+
+  await page.getByRole('button', { name: '设计', exact: true }).click();
+  expect(await visible()).toEqual(['林舟', '苏晴']);
+  await expect(count).toHaveText('2');
+  await expect(countNote).toHaveText('位符合条件');
+  await page.getByRole('button', { name: '清除筛选' }).click();
+  await expect(count).toHaveText('4');
+  await expect(countNote).toContainText('位已上墙 · 共 10 位成员');
   expect(violations).toEqual([]);
 });

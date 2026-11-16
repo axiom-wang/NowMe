@@ -260,6 +260,7 @@ export function removeMember(deps: WallDeps, wall: Wall, organizerId: string, me
     }
     deps.repos.icebreakers.deleteForViewerWall(membership.userId, wall.id);
     deps.repos.intros.deleteForViewerWall(membership.userId, wall.id);
+    deps.repos.asks.deleteForViewerWall(membership.userId, wall.id);
     recordEvent(deps, 'member_removed', { wallId: wall.id, pageId: page?.id ?? null, actorId: organizerId });
     return deps.repos.memberships.findById(membership.id);
   });
@@ -290,6 +291,7 @@ export function closeWall(deps: WallDeps, wall: Wall, organizerId: string): Clos
     }
     deps.repos.icebreakers.deleteForWall(wall.id);
     deps.repos.intros.deleteForWall(wall.id);
+    deps.repos.asks.deleteForWall(wall.id);
     deps.repos.portraits.deleteForWall(wall.id);
     // 墙的剩余额度退回组织者的个人余额（contracts 12）
     returnWallCredits(deps, wall);

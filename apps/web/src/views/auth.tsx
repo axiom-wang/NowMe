@@ -105,8 +105,8 @@ export const VerifyView: FC<VerifyViewProps> = ({ email, next, error, expired, d
             required
             inputmode="numeric"
             autocomplete="one-time-code"
-            pattern={`\\d{${LOGIN_CODE_DIGITS}}`}
-            maxlength={LOGIN_CODE_DIGITS}
+            pattern={`(?:\\s*[0-9]){${LOGIN_CODE_DIGITS}}\\s*`}
+            maxlength={32}
             class="input--code"
             aria-invalid={error ? 'true' : undefined}
             aria-describedby={error ? 'verify-error' : undefined}

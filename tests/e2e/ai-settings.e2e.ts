@@ -8,6 +8,8 @@ test('账号保存自己的 AI API、跨设备管理、隔离与删除（桌面�
   await owner.page.locator('.account-menu > summary').click();
   await owner.page.getByRole('link', { name: 'AI 设置', exact: true }).click();
   await expect(owner.page.getByRole('heading', { name: '使用自己的 AI 服务' })).toBeVisible();
+  await expect(owner.page.getByText('NOWMe 的 AI 暂未开放。', { exact: false })).toBeVisible();
+  await expect(owner.page.getByText('不填自己的 Key 也可以用 NOWMe 的 AI。', { exact: false })).toHaveCount(0);
   await owner.page.locator('#interview-provider').selectOption('deepseek');
   await expect(owner.page.locator('#interview-url')).toHaveValue('https://api.deepseek.com/v1');
   await expect(owner.page.locator('#interview-model')).toHaveValue('deepseek-chat');

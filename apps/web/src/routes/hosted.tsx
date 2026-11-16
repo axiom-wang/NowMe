@@ -13,7 +13,7 @@ import { EXAMPLES_DIR, listExampleDirs, loadExamplesIndex } from '@nowme/skill';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import type { AppDeps, AppEnv, AppHono, FormFields } from '../context.js';
-import { clip, isMotionLevel, type FollowupAnswer, type InterviewAnswers } from '../hosted/brief.js';
+import { choiceLabel, clip, isMotionLevel, type FollowupAnswer, type InterviewAnswers } from '../hosted/brief.js';
 import { deleteOwnBrief, deleteOwnProfile } from '../hosted/data.js';
 import type { ConfirmEdits, HostedService, StepResult } from '../hosted/service.js';
 import { requireForm } from '../security/forms.js';
@@ -25,7 +25,8 @@ import { questionsGate } from './organizer-tools.js';
 import { findOwnPage, type OwnPage } from '../services/access.js';
 import { renderError, renderNotFound } from '../views/errors.js';
 import { demoModelError } from '../demo-access.js';
-import { BriefPageView, CreateView, JOB_START_ERROR_TEXT, JobView, MyDataView, STEP_ERROR_TEXT, type JobCharge } from '../views/hosted.js';
+import { BriefPageView, CreateView, EditForm, JOB_START_ERROR_TEXT, JobView, MyDataView, STEP_ERROR_TEXT, type JobCharge } from '../views/hosted.js';
+import { Notice } from '../views/forms.js';
 import { renderPage } from '../views/layout.js';
 
 const STEP_ERRORS = new Set(Object.keys(STEP_ERROR_TEXT));
@@ -60,12 +61,12 @@ export function readInterviewAnswers(fields: FormFields, hosted: HostedService, 
     const selected: string[] = [];
     if (question.multi) {
       question.options.forEach((option, index) => {
-        if (fields[`q_${question.id}_${index}`] === '1') selected.push(option.replace('（默认勾选）', ''));
+        if (fields[`q_${question.id}_${index}`] === '1') selected.push(choiceLabel(option));
       });
     } else {
       const index = Number(fields[`q_${question.id}`]);
       const option = Number.isInteger(index) ? question.options[index] : undefined;
-      if (option) selected.push(option);
+      if (option && (question.required || option !== '跳过')) selected.push(option);
     }
     choices[question.id] = { selected, text: text(fields, `q_${question.id}_text`, 200) };
   }
@@ -133,7 +134,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     return { credits: -charge.delta, payer: charge.account.kind, refunded: deps.repos.credits.findJobEntry('job_refund', jobId) !== null };
   };
 
-  const renderCreate = (c: Context<AppEnv>, own: OwnPage, hosted: HostedService, error: string | null, status = 200, welcome = false) => {
+  const renderCreate = (c: Context<AppEnv>, own: OwnPage, hosted: HostedService, error: string | null, status = 200, welcome = false, submittedAnswers?: InterviewAnswers) => {
     const auth = authOf(c);
     return renderPage(c, {
       title: `做一页你自己 · ${own.wall.name}`,
@@ -151,15 +152,16 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
             overview: hosted.overview(own, auth.user.id),
             error,
             welcome,
+            submittedAnswers,
           }}
         />
       ),
     });
   };
 
-  const afterStep = (c: Context<AppEnv>, own: OwnPage, hosted: HostedService, result: StepResult) => {
-    if (result.ok) return c.redirect(`/w/${own.wall.id}/me/create`, 303);
-    return renderCreate(c, own, hosted, (deps.demo ? demoModelError(result.error) : null) ?? STEP_ERROR_TEXT[result.error], result.error === 'rate-limited' ? 429 : 422);
+  const afterStep = (c: Context<AppEnv>, own: OwnPage, hosted: HostedService, result: StepResult, answers?: InterviewAnswers) => {
+    if (result.ok) return c.redirect(`/w/${own.wall.id}/me/create#create-step`, 303);
+    return renderCreate(c, own, hosted, (deps.demo ? demoModelError(result.error) : null) ?? STEP_ERROR_TEXT[result.error], result.error === 'rate-limited' ? 429 : 422, false, answers);
   };
 
   app.get('/w/:wallId/me/create', user, (c) => {
@@ -179,9 +181,9 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     const answers = readInterviewAnswers(c.get('form'), found.hosted, found.own);
     // 内容安全（contracts 16.1）：在交给模型之前检查
     const verdict = await deps.contentSafety.checkTexts('interview', [answers.material, ...Object.values(answers.choices).map((choice) => choice.text)]);
-    if (!verdict.ok) return renderCreate(c, found.own, found.hosted, verdict.message, 422);
+    if (!verdict.ok) return renderCreate(c, found.own, found.hosted, verdict.message, 422, false, answers);
     const result = await found.hosted.startInterview(found.own, authOf(c).user.id, answers, c.get('uploads') ?? []);
-    return afterStep(c, found.own, found.hosted, result);
+    return afterStep(c, found.own, found.hosted, result, answers);
   });
 
   app.post('/w/:wallId/me/create/followups', form, async (c) => {
@@ -225,7 +227,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     const found = ownOf(c);
     if (!found) return renderNotFound(c);
     await found.hosted.restart(found.own, authOf(c).user.id);
-    return c.redirect(`/w/${found.own.wall.id}/me/create`, 303);
+    return c.redirect(`/w/${found.own.wall.id}/me/create#create-step`, 303);
   });
 
   app.get('/w/:wallId/me/create/assets/:assetId', user, async (c) => {
@@ -258,18 +260,27 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     const found = ownOf(c);
     if (!found) return renderNotFound(c);
     const fields = c.get('form');
-    const verdict = await deps.contentSafety.checkText('edit', fields.request);
-    if (!verdict.ok) {
-      return renderError(c, { status: 400, title: '这条修改要求先不执行', message: verdict.message, back: { href: `/w/${found.own.wall.id}/me`, label: '回到工作区' } });
-    }
     const block = fields.block && NM_ID_PATTERN.test(fields.block) ? fields.block : null;
+    const renderEditError = (message: string) => {
+      const revision = deps.repos.revisions.findById(fields.revisionId ?? '');
+      const blocks = revision?.pageId === found.own.page.id ? revision.report.stats.blocks : [];
+      return renderPage(c, { title: '修改还没开始', status: 422, body: <div class="container container--form stack" id="hosted">
+        <h1>修改还没开始</h1>
+        <Notice tone="error">{message}</Notice>
+        <EditForm wallId={found.own.wall.id} csrf={authOf(c).session.csrfToken} revisionId={fields.revisionId ?? ''} blocks={blocks} request={fields.request ?? ''} targetBlock={block ?? ''} />
+        <p><a href="/account/credits">补充点数</a> · <a href="/account/ai">AI 设置</a></p>
+        <a href={`/w/${found.own.wall.id}/me`}>回到工作区</a>
+      </div> });
+    };
+    const verdict = await deps.contentSafety.checkText('edit', fields.request);
+    if (!verdict.ok) return renderEditError(verdict.message);
     const result = found.hosted.startJob(found.own, authOf(c).user.id, {
       kind: 'edit',
       baseRevisionId: fields.revisionId ?? null,
       targetBlock: block,
       request: fields.request ?? '',
     });
-    if (!result.ok) return c.redirect(`/w/${found.own.wall.id}/me?hosted=${result.error}#hosted`, 303);
+    if (!result.ok) return renderEditError((deps.demo ? demoModelError(result.error) : null) ?? JOB_START_ERROR_TEXT[result.error]);
     return c.redirect(`/w/${found.own.wall.id}/me/jobs/${result.job.id}`, 303);
   });
 

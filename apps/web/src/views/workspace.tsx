@@ -713,12 +713,9 @@ export const WorkspaceView: FC<{ model: WorkspaceModel; ownerName: string }> = (
         <nav class="crumbs" aria-label="当前位置">
           <a href="/">我的</a>
           <span aria-hidden="true">/</span>
-          <a href={`/w/${model.wall.id}`}>{model.wall.name}</a>
+          <a class="crumbs__wall" href={`/w/${model.wall.id}`} title={model.wall.name}>{model.wall.name}</a>
         </nav>
-        <h1 class="hero__title">
-          <span class="display">我的页面</span>
-          <span class="ws-hero__sub">{model.wall.name}</span>
-        </h1>
+        <h1 class="hero__title"><span class="display">我的页面</span></h1>
         <Progress model={model} />
       </section>
       {model.notice ? <WorkspaceNoticeView notice={model.notice} /> : null}

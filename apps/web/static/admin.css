@@ -243,7 +243,6 @@
 
 /* 组织者上传的墙封面（与成员页面封面独立）。 */
 .wall-cover-settings__preview { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 14px; margin: 16px 0; background: var(--paper-2); }
-.wall-cover-settings input[type='file'] { max-width: 100%; width: 100%; font-size: 14px; }
 .wall-cover-settings__delete { margin-top: 12px; }
 .reports__list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .reports__item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
