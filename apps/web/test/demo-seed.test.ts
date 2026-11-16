@@ -7,6 +7,8 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { ensureDemoClubPages, seedDemo, type DemoSeed } from '../scripts/demo-seed.js';
 import { DEMO_TEST_NAME } from '../scripts/demo-content.js';
 import { DEMO_TEST_PROFILE } from '../scripts/demo-persona.js';
+import { DEMO_ANSWERS, DEMO_QUESTIONS } from '../scripts/demo-organizer.js';
+import { loadPortrait } from '../src/services/portrait.js';
 import { DEMO_ACCOUNTS } from '../src/demo-access.js';
 import { createTestWeb, csrfOf, postForm, sessionTokenFrom, type TestWeb } from './helpers.js';
 
@@ -21,7 +23,7 @@ afterAll(async () => { await t.close(); });
 describe('demo 种子', () => {
   it('全部演示用户有不同的本地头像；重复补齐不覆盖用户头像', async () => {
     const users = t.db.prepare('SELECT id, avatar_version AS version FROM users').all() as { id: string; version: string }[];
-    expect(users).toHaveLength(27);
+    expect(users).toHaveLength(30);
     expect(new Set(users.map((user) => user.version)).size).toBe(users.length);
     for (const user of users) {
       const image = t.repos.users.avatarForUser(user.id);
@@ -48,12 +50,54 @@ describe('demo 种子', () => {
     expect(seed.inviteUrl).toContain('/join/');
   });
 
-  it('社团墙保留三页，再增补江予安与温溪；使用原测试账号且重复启动不会新增版本', async () => {
+  it('黑客松墙和摄影社墙上的人物都贴合各自的墙', () => {
+    expect(seed.members.map((m) => m.nickname)).toEqual(['林舟', '苏晴', '程野', '方棠', '祝一一', '周一鸣']);
+    expect(seed.members.filter((m) => m.published).map((m) => m.exampleDir)).toEqual(['hackathon-terminal', 'hackathon-poster', 'hack-chengye', 'hack-fangtang', 'hack-zhuyiyi']);
+    expect(seed.club.members.map((m) => m.nickname)).toEqual(['栗子', '贺川', '麦冬', DEMO_TEST_NAME, '温溪']);
+    for (const member of seed.members.filter((m) => m.published)) {
+      const html = readFileSync(join(t.dataDir, 'revisions', member.revisionId, 'original', 'index.html'), 'utf8');
+      expect(html).not.toMatch(/黑胶|话剧|菜市场/);
+    }
+  });
+
+  it('组织者工具有预置数据：两道必答题、回答、完成度里有人没答、墙上能筛选并看到群像', async () => {
+    const questions = t.repos.questions.listForWall(seed.wall.id);
+    expect(questions.map((question) => [question.prompt, question.kind])).toEqual(DEMO_QUESTIONS.map((question) => [question.prompt, question.kind]));
+    const answered = t.db.prepare('SELECT COUNT(DISTINCT user_id) AS n FROM wall_answers WHERE wall_id = ?').get(seed.wall.id) as { n: number };
+    expect(answered.n).toBe(Object.keys(DEMO_ANSWERS).length);
+    const unpublished = seed.members.find((member) => !member.published)!;
+    expect(t.db.prepare('SELECT COUNT(*) AS n FROM wall_answers WHERE user_id = ?').get(unpublished.userId)).toEqual({ n: 0 });
+    const portrait = loadPortrait(t.web.deps, seed.wall.id);
+    expect(portrait.kind).toBe('ready');
+    if (portrait.kind !== 'ready') return;
+    expect(portrait.view.pageCount).toBe(5);
+    expect(portrait.view.stats.map((stat) => stat.answered)).toEqual([5, 5]);
+    // S13：群像里不出现名字、链接和数字人数
+    const text = [portrait.view.summary, ...portrait.view.themes.flatMap((theme) => [theme.title, theme.detail])].join('\n');
+    for (const member of seed.members) expect(text).not.toContain(member.nickname);
+    expect(text).not.toMatch(/https?:|www\.|\d+\s*(人|位|个人)/);
+
+    // 体验成员已经答过题，进墙不会被拦去答题；墙上有群像和按回答筛选
+    const member = await postForm(t, '/login/demo', { identity: 'member' });
+    const wall = await t.request(`/w/${seed.wall.id}`, { headers: { cookie: `nowme_session=${sessionTokenFrom(member)}` } });
+    expect(wall.status).toBe(200);
+    const html = await wall.text();
+    expect(html).toContain(portrait.view.summary);
+    expect(html).toContain(DEMO_QUESTIONS[0].prompt);
+    const organizer = await postForm(t, '/login/demo', { identity: 'organizer' });
+    const admin = await (await t.request(`/w/${seed.wall.id}/admin`, { headers: { cookie: `nowme_session=${sessionTokenFrom(organizer)}` } })).text();
+    expect(admin).toContain(portrait.view.summary);
+    expect(admin).toContain(unpublished.nickname);
+    // 其他墙没有题目
+    expect(t.repos.questions.listForWall(seed.club.wall.id)).toEqual([]);
+  });
+
+  it('社团墙三位拍照的人，再增补江予安与温溪；使用原测试账号且重复启动不会新增版本', async () => {
     expect(seed.club.wall.sceneType).toBe('club');
     expect(seed.club.wall.organizerId).toBe(seed.organizer.userId);
-    expect(seed.club.members.map((m) => m.exampleDir)).toEqual(['club-newbie-sticker', 'club-senior-quest', 'interest-film-zine', 'club-light-notes', 'club-tide-atlas']);
+    expect(seed.club.members.map((m) => m.exampleDir)).toEqual(['interest-film-zine', 'club-hechuan', 'club-maidong', 'club-light-notes', 'club-tide-atlas']);
     expect(seed.club.members.every((m) => m.published)).toBe(true);
-    for (const member of seed.club.members.slice(0, 3)) expect(seed.members.some((m) => m.userId === member.userId)).toBe(true);
+    for (const member of seed.club.members.slice(0, 3)) expect(seed.members.some((m) => m.userId === member.userId)).toBe(false);
     expect(seed.club.members[3]!.userId).toBe(seed.tester.userId);
     expect(seed.club.members[3]!.nickname).toBe(DEMO_TEST_NAME);
     expect(seed.club.members[4]!.nickname).toBe('温溪');
@@ -160,10 +204,15 @@ describe('demo 种子', () => {
   });
 
   it('模拟聊天有双向消息、正确归属和已读/未读；未参与的私聊不出现在主测试账号中', () => {
-    expect(seed.chat).toEqual({ groups: 4, directs: 15, messages: 92 });
+    expect(seed.chat).toEqual({ groups: 4, directs: 15, messages: 79 });
     const list = t.repos.chat.list(seed.tester.userId).conversations;
     expect(list).toHaveLength(16); // 四个群 + 每墙三个私聊。
     expect(list.filter((entry) => entry.kind === 'direct')).toHaveLength(12);
+    // 12 段私聊各写各的：没有任何一句话重复出现，消息列表里看不出模板
+    const directTexts = (t.db.prepare(`SELECT msg.body AS body FROM chat_messages msg JOIN conversations c ON c.id = msg.conversation_id
+      WHERE c.kind = 'direct' AND (c.user_a = ? OR c.user_b = ?)`).all(seed.tester.userId, seed.tester.userId) as { body: string }[]).map((row) => row.body);
+    expect(directTexts).toHaveLength(46);
+    expect(new Set(directTexts).size).toBe(directTexts.length);
     expect(list.some((entry) => entry.unread > 0)).toBe(true);
     expect(list.some((entry) => entry.unread === 0)).toBe(true);
     expect(t.db.prepare(`SELECT count(*) AS n FROM chat_messages msg JOIN conversations c ON c.id = msg.conversation_id

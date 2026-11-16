@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "lively",
+  "fonts": [
+    { "id": "smiley-sans", "weights": [400] },
+    { "id": "lxgw-wenkai", "weights": [400] },
+    { "id": "space-grotesk", "weights": [700] }
+  ],
+  "extraChars": "",
+  "blocks": ["hero", "projects", "skills", "idea", "say-hi"],
+  "generator": { "agent": "nowme-hosted", "skillVersion": "0.1.0" }
+}

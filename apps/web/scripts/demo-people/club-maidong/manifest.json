@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "lively",
+  "fonts": [
+    { "id": "smiley-sans", "weights": [400] },
+    { "id": "lxgw-wenkai", "weights": [400] },
+    { "id": "jetbrains-mono", "weights": [700] }
+  ],
+  "extraChars": "",
+  "blocks": ["hero", "intro", "want-to-try", "gear", "hobbies", "say-hi"],
+  "generator": { "agent": "nowme-hosted", "skillVersion": "0.1.0" }
+}

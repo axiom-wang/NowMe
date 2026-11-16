@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "lively",
+  "fonts": [
+    { "id": "smiley-sans", "weights": [400] },
+    { "id": "noto-sans-sc", "weights": [500] },
+    { "id": "jetbrains-mono", "weights": [800] }
+  ],
+  "extraChars": "",
+  "blocks": ["hero", "projects", "teammate", "skills", "idea", "outro"],
+  "generator": { "agent": "nowme-hosted", "skillVersion": "0.1.0" }
+}

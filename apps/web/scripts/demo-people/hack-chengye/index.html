@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="zh-CN" class="nm-theme-ink" data-nm-motion="medium">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>程野 · 开发 · 模型和后端我全包</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<script src="/_nowme/kit/v1/nowme.js"></script>
+<style>
+  :root {
+    --nm-font-body: "JetBrains Mono", var(--nm-font-noto-sans-sc);
+    --nm-font-display: var(--nm-font-noto-sans-sc);
+    --nm-font-code: "JetBrains Mono", var(--nm-font-noto-sans-sc);
+    --nm-bg: #14110f;
+    --nm-surface: #1c1815;
+    --nm-surface-2: #262019;
+    --nm-fg: #f5efe6;
+    --nm-muted: #a1927f;
+    --nm-line: #342b23;
+    --nm-accent: #ff7a3d;
+    --nm-accent-2: #7fe3c4;
+    --nm-on-accent: #1a0e05;
+    --ink: #f5efe6;
+    --orange: #ff7a3d;
+    --mint: #7fe3c4;
+  }
+  body { font-size: 15px; line-height: 1.72; }
+  .mono { font-family: var(--nm-font-code); }
+  .dim { color: var(--nm-muted); }
+  .o { color: var(--orange); }
+  .m { color: var(--mint); }
+  .nm-page { padding-inline: 20px; }
+
+  /* ---------- 首屏 ---------- */
+  .hero { position: relative; overflow: hidden; margin-inline: -20px; padding: 20px 20px 34px; }
+  .hero::after {
+    content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(to bottom, rgba(255, 255, 255, 0.022) 0 1px, transparent 1px 3px);
+  }
+  .hero__inner { position: relative; z-index: 1; }
+  .status { display: flex; align-items: center; gap: 8px; font-size: 11px; letter-spacing: 0.06em; color: var(--nm-muted); white-space: nowrap; overflow: hidden; }
+  .dot { flex: none; width: 7px; height: 7px; border-radius: 50%; background: var(--orange); box-shadow: 0 0 10px var(--orange); }
+  .cmd { margin-top: 20px; font-size: 12.5px; color: var(--nm-muted); }
+  .cmd::before { content: "~/hackathon $ "; color: var(--mint); }
+  .name { margin-top: 2px; font-family: var(--nm-font-display); font-size: 62px; line-height: 1.02; font-weight: 900; letter-spacing: 0.02em; }
+  .name small { display: block; margin-top: 6px; font-family: var(--nm-font-code); font-size: 12px; font-weight: 400; letter-spacing: 0.04em; color: var(--nm-muted); }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px 12px; margin-top: 12px; font-size: 13px; }
+  .tags span::before { content: "# "; color: var(--nm-muted); }
+
+  .issue { position: relative; margin-top: 22px; padding: 15px 15px 17px; border: 1px solid rgba(255, 122, 61, 0.55); border-radius: 12px;
+    background: linear-gradient(180deg, rgba(255, 122, 61, 0.12), rgba(255, 122, 61, 0.02));
+    box-shadow: 0 0 40px rgba(255, 122, 61, 0.12); }
+  .issue__meta { display: flex; align-items: center; gap: 8px; font-size: 11px; color: var(--nm-muted); }
+  .open { display: inline-flex; align-items: center; gap: 5px; padding: 1px 9px; border-radius: 999px; background: #2f9e5f; color: #fff; font-weight: 700; }
+  .issue__title { margin: 9px 0 7px; font-family: var(--nm-font-display); font-size: 26px; line-height: 1.3; font-weight: 900; color: #fff8f1; }
+  .issue__title em { font-style: normal; color: var(--orange); }
+  .issue__body { font-size: 13px; color: #e0d5c7; }
+  .labels { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 11px; }
+  .label { padding: 1px 9px; border-radius: 999px; font-size: 11px; border: 1px solid currentColor; }
+
+  .echo { margin-top: 14px; min-height: 3.4em; font-size: 13px; line-height: 1.7; color: var(--mint); }
+  .echo::before { content: "> "; color: var(--nm-muted); }
+  .skills-inline { margin-top: 6px; }
+  .skills-inline .nm-chip { font-size: 12.5px; background: transparent; color: var(--ink); border-color: rgba(245, 239, 230, 0.3); }
+  .hint { margin-top: 22px; }
+
+  /* ---------- 区块通用 ---------- */
+  .block { padding: 40px 0 6px; }
+  .block__cmd { font-size: 12.5px; color: var(--nm-muted); }
+  .block__cmd::before { content: "~/hackathon $ "; color: var(--mint); }
+  .block h2 { margin: 8px 0 14px; font-size: 25px; font-weight: 900; line-height: 1.3; }
+  .block h2 small { display: block; margin-top: 4px; font-family: var(--nm-font-code); font-size: 11.5px; font-weight: 400; letter-spacing: 0.06em; color: var(--nm-muted); }
+
+  /* ---------- 团队分工 ---------- */
+  .diff { font-size: 13px; }
+  .diff .nm-terminal__body { padding-inline: 0; }
+  .dl { display: block; padding: 3px 16px; }
+  .dl.add { background: rgba(127, 227, 196, 0.1); }
+  .dl.del { background: rgba(255, 122, 61, 0.1); }
+  .dl.hunk { color: var(--mint); padding-top: 8px; }
+  .dl::before { display: inline-block; width: 1.5em; color: var(--nm-muted); }
+  .dl.add::before { content: "+"; color: var(--mint); }
+  .dl.del::before { content: "-"; color: var(--orange); }
+  .quote { margin-top: 18px; padding-left: 14px; border-left: 3px solid var(--orange); font-family: var(--nm-font-display); font-size: 17px; line-height: 1.65; color: #fff8f1; }
+  .quote small { display: block; margin-top: 4px; font-family: var(--nm-font-code); font-size: 11.5px; color: var(--nm-muted); }
+
+  /* ---------- 项目 ---------- */
+  .proj { display: grid; grid-template-columns: 124px 1fr; gap: 15px; align-items: start; }
+  .proj .nm-phone { --nm-phone-width: 124px; padding: 6px; border-radius: 22px; }
+  .proj .nm-phone::before { top: 11px; height: 10px; }
+  .proj .nm-phone__screen { border-radius: 17px; background: #f7f4f0; }
+  .proj h3 { font-family: var(--nm-font-display); font-size: 21px; font-weight: 900; line-height: 1.3; }
+  .proj h3 small { display: block; margin-top: 4px; font-family: var(--nm-font-code); font-size: 11.5px; font-weight: 400; color: var(--nm-muted); }
+  .facts { margin: 11px 0 0; padding: 0; list-style: none; font-size: 12.5px; line-height: 1.6; }
+  .facts li { padding: 6px 0; border-bottom: 1px dashed var(--nm-line); }
+  .facts li:last-child { border-bottom: 0; }
+  .facts b { display: block; font-size: 10.5px; font-weight: 400; letter-spacing: 0.06em; color: var(--nm-muted); }
+  .stat { display: flex; align-items: baseline; gap: 10px; margin-top: 16px; padding: 12px 14px; border: 1px solid var(--nm-line); border-radius: 10px; background: var(--nm-surface); }
+  .stat strong { font-family: var(--nm-font-code); font-size: 36px; line-height: 1; font-weight: 800; color: var(--orange); }
+  .stat span { font-size: 12.5px; color: var(--nm-muted); }
+  .onebox { display: grid; grid-template-columns: 1fr auto; gap: 12px; align-items: center; margin-top: 16px; padding: 14px; border: 1px dashed var(--nm-line); border-radius: 10px; }
+  .onebox svg { display: block; width: 100%; max-width: 150px; height: auto; }
+  .onebox p { font-size: 12.5px; line-height: 1.6; }
+  .note { margin-top: 10px; font-size: 11.5px; color: var(--nm-muted); }
+
+  /* ---------- 技能 ---------- */
+  .json { font-size: 12.5px; line-height: 1.85; overflow-x: auto; }
+  .json .k { color: var(--mint); }
+  .json .s { color: #ffc9a3; }
+  .json .p { color: var(--nm-muted); }
+  .json .cm { color: var(--nm-muted); }
+  .ask { margin-top: 14px; font-size: 13.5px; }
+
+  /* ---------- 想法：一句话 → 候选时间 ---------- */
+  .flow { display: grid; gap: 10px; }
+  .bubble { align-self: start; max-width: 92%; padding: 10px 14px; border-radius: 14px; background: #f7f4f0; color: #1c1815; font-family: var(--nm-font-display); font-size: 15px; line-height: 1.5; }
+  .slot { display: flex; gap: 9px; padding: 9px 11px; border: 1px solid rgba(127, 227, 196, 0.5); border-radius: 10px; font-size: 12.5px; background: rgba(127, 227, 196, 0.06); animation: slot-in 7s var(--nm-ease-out) infinite both; }
+  .slot::before { content: "✓"; flex: none; color: var(--mint); }
+  .slot:nth-child(2) { animation-delay: 0.5s; }
+  .slot:nth-child(3) { animation-delay: 1s; }
+  @keyframes slot-in { 0% { opacity: 0; translate: 0 8px; } 10%, 85% { opacity: 1; translate: 0; } 100% { opacity: 0.55; translate: 0; } }
+  .flow__label { font-size: 10.5px; letter-spacing: 0.08em; color: var(--nm-muted); }
+  .idea-note { margin-top: 16px; font-size: 14px; line-height: 1.75; }
+
+  /* ---------- 收尾 ---------- */
+  .ping { padding: 44px 0 52px; }
+  .ping__text { font-family: var(--nm-font-display); font-size: 19px; font-weight: 700; line-height: 1.65; }
+  .kbd { display: inline-block; padding: 0 8px; border: 1px solid var(--orange); border-radius: 6px; color: var(--orange); font-size: 16px; }
+  .foot { margin-top: 30px; font-size: 11px; color: var(--nm-muted); }
+</style>
+</head>
+<body class="nm-grain">
+<main class="nm-page">
+
+  <header class="hero" data-nm-id="hero">
+    <canvas class="nm-particles" data-nm-particles="dust" data-nm-color="#ff7a3d"></canvas>
+    <div class="hero__inner">
+      <div class="status"><span class="dot nm-pulse"></span>组队中 · NOWMe 演示黑客松 · 48 小时</div>
+
+      <p class="cmd mono">whoami</p>
+      <h1 class="name">程野<small>开发 · 计算机研一 · 自然语言处理</small></h1>
+      <div class="tags"><span>微调小模型</span><span>搭检索问答</span><span>Python 后端</span></div>
+
+      <article class="issue" aria-label="招募队友">
+        <div class="issue__meta"><span class="open">Open</span><span>#1 · team/looking-for</span></div>
+        <p class="issue__title">找<em>会做视觉 / UI 的设计</em><br>和<em>能理需求的产品</em></p>
+        <p class="issue__body">模型我来训，接口我来写，界面就靠你了。</p>
+        <div class="labels"><span class="label o">looking for</span><span class="label m">UI / 视觉</span><span class="label dim">产品 · 需求</span></div>
+      </article>
+
+      <p class="echo"><span data-nm-typewriter><span>能把一个问答机器人做到四十多人在用</span><span>但界面永远是那一个输入框</span><span>所以这次特别想找一个做设计的</span></span></p>
+      <ul class="nm-chips skills-inline" aria-label="技能">
+        <li class="nm-chip">模型微调</li><li class="nm-chip">检索问答</li><li class="nm-chip">Python 后端</li><li class="nm-chip">AI 应用</li>
+      </ul>
+      <div class="hint nm-scroll-hint">往下看：一个四十多人在用的项目和这次想做的事</div>
+    </div>
+  </header>
+
+  <section class="block nm-reveal" data-nm-id="teammate">
+    <p class="block__cmd">git diff 我们俩的分工</p>
+    <div class="nm-terminal diff">
+      <div class="nm-terminal__bar"><span class="nm-terminal__title">team.md</span></div>
+      <div class="nm-terminal__body">
+        <span class="dl hunk">@@ 分工 @@</span>
+        <span class="dl add">程野：模型微调、检索、接口和后端</span>
+        <span class="dl add">你（设计）：视觉、界面、让它不只有一个输入框</span>
+        <span class="dl add">你（产品）：理需求、写文档、把范围收住</span>
+        <span class="dl del">一个人从训练脚本写到界面</span>
+      </div>
+    </div>
+    <p class="quote">“不擅长界面，我做出来的东西总是只有一个输入框。”<small>— 程野的原话</small></p>
+  </section>
+
+  <section class="block nm-reveal" data-nm-id="projects">
+    <p class="block__cmd">ls projects/</p>
+    <h2>查选课评价的问答机器人<small>给宿舍楼用的 · 已经上线在跑</small></h2>
+    <div class="proj">
+      <div class="nm-phone" aria-hidden="true">
+        <div class="nm-phone__screen">
+          <svg viewBox="0 0 112 240" width="100%" height="100%" font-family="sans-serif">
+            <rect width="112" height="240" fill="#f7f4f0"/>
+            <text x="10" y="24" font-size="9" font-weight="700" fill="#1c1815">选课评价问答</text>
+            <rect x="10" y="32" width="76" height="18" rx="9" fill="#e6e0d8"/>
+            <text x="17" y="44" font-size="6" fill="#6b6157">高数 A 上得怎么样？</text>
+            <rect x="26" y="56" width="76" height="34" rx="9" fill="#ff7a3d"/>
+            <text x="33" y="68" font-size="6" fill="#fff">任教老师板书慢，作业偏多</text>
+            <text x="33" y="78" font-size="6" fill="#fff">给分居中；口碑一般的两门：</text>
+            <text x="33" y="86" font-size="6" fill="#fff">线代 B、大物实验</text>
+            <rect x="10" y="96" width="70" height="18" rx="9" fill="#e6e0d8"/>
+            <text x="17" y="108" font-size="6" fill="#6b6157">作业多吗</text>
+            <rect x="26" y="120" width="76" height="26" rx="9" fill="#ff7a3d"/>
+            <text x="33" y="132" font-size="6" fill="#fff">偏多：每周两章习题</text>
+            <text x="33" y="141" font-size="6" fill="#fff">加一次小测</text>
+            <rect x="10" y="196" width="92" height="20" rx="10" fill="#fff" stroke="#ddd6cc"/>
+            <text x="17" y="209" font-size="6" fill="#a49a8e">继续问……</text>
+            <rect x="88" y="196" width="14" height="20" rx="7" fill="#1c1815"/>
+          </svg>
+        </div>
+      </div>
+      <div>
+        <h3>一个人做的后端 + 模型<small>界面是室友帮我凑的</small></h3>
+        <ul class="facts">
+          <li><b>解决什么</b>选课前想先听实话：这门课到底怎么样</li>
+          <li><b>我负责</b>模型微调 + 后端</li>
+          <li><b>界面</b>室友帮忙凑的，就是一个输入框加气泡</li>
+          <li><b>现在</b>已经上线在用，宿舍楼里传开了</li>
+        </ul>
+      </div>
+    </div>
+    <div class="stat"><strong class="nm-num" data-nm-count="40">40</strong><span>多个人在用（宿舍楼里）</span></div>
+    <div class="onebox">
+      <div>
+        <p style="font-family:var(--nm-font-display);font-size:15px;font-weight:700;color:var(--ink)">“所以我做的东西总是只有一个输入框”</p>
+        <p class="dim">这不是谦虚，是现状。</p>
+      </div>
+      <svg viewBox="0 0 120 84" aria-hidden="true">
+        <rect x="4" y="10" width="112" height="26" rx="6" fill="#f7f4f0"/>
+        <rect x="12" y="19" width="54" height="4" rx="2" fill="#c9c0b5"/>
+        <rect x="4" y="48" width="112" height="26" rx="6" fill="none" stroke="#ff7a3d" stroke-width="2" stroke-dasharray="5 4"/>
+        <text x="14" y="65" font-size="9" fill="#ff7a3d">这里空着，留给你</text>
+      </svg>
+    </div>
+    <p class="note">界面图是按原样画的示意，不是截图；没有公开链接。</p>
+  </section>
+
+  <section class="block nm-reveal" data-nm-id="skills">
+    <p class="block__cmd">cat skills.json</p>
+    <div class="nm-terminal json">
+      <div class="nm-terminal__bar"><span class="nm-terminal__title">skills.json</span></div>
+      <div class="nm-terminal__body"><span class="p">{</span>
+  <span class="k">"角色"</span><span class="p">:</span> <span class="s">"开发"</span><span class="p">,</span>
+  <span class="k">"AI"</span><span class="p">: [</span><span class="s">"微调小模型"</span>, <span class="s">"搭检索问答"</span><span class="p">],</span>
+  <span class="k">"后端"</span><span class="p">:</span> <span class="s">"Python"</span><span class="p">,</span>
+  <span class="k">"不擅长"</span><span class="p">:</span> <span class="s">"界面和视觉"</span>
+<span class="p">}</span>
+<span class="cm">// 不擅长的那一行，就是我发这张招募卡的原因</span></div>
+    </div>
+    <p class="ask">如果你们队缺一个能把模型接起来、把接口写完的人，我们可以直接聊分工。</p>
+  </section>
+
+  <section class="block nm-reveal" data-nm-id="idea">
+    <p class="block__cmd">cat idea.md</p>
+    <h2>这次想做：能听懂“帮我约个时间”的小助手<small>方向：AI 应用</small></h2>
+    <div class="flow" aria-hidden="true">
+      <span class="flow__label">你说</span>
+      <p class="bubble">“帮我约个时间”</p>
+      <span class="flow__label">它整理出</span>
+      <div class="slot">周三 15:00 之后 · 你我都没课</div>
+      <div class="slot">地点：3 教 204 空着</div>
+      <div class="slot">需要你确认：周四 10:00 行吗</div>
+    </div>
+    <p class="idea-note">想做一个能听懂“帮我约个时间”这种话的小助手。模型和后端我来，界面和需求边界，我很想听你的。</p>
+  </section>
+
+  <footer class="ping nm-reveal" data-nm-id="ping">
+    <p class="block__cmd">./say-hi</p>
+    <p class="ping__text">想组队？点页面里的 <span class="kbd">想聊这个</span>，挑一个话题来找我 —— 我回得很快，模型都训得出来，回消息肯定不慢。</p>
+    <p class="foot">程野 · NOWMe 演示黑客松 · 页面不放联系方式，聊起来在应用里说</p>
+  </footer>
+
+</main>
+<script>
+  nowme.ready(function () {
+    var chips = Array.prototype.slice.call(document.querySelectorAll('.skills-inline .nm-chip'));
+    chips.forEach(function (chip) {
+      chip.setAttribute('title', '我拿得出手的技能之一');
+    });
+  });
+</script>
+</body>
+</html>

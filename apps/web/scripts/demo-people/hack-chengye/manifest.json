@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "medium",
+  "fonts": [
+    {
+      "id": "noto-sans-sc",
+      "weights": [
+        400,
+        900
+      ]
+    },
+    {
+      "id": "jetbrains-mono",
+      "weights": [
+        400,
+        800
+      ]
+    }
+  ],
+  "extraChars": "技拿",
+  "blocks": [
+    "hero",
+    "teammate",
+    "projects",
+    "skills",
+    "idea",
+    "ping"
+  ],
+  "generator": {
+    "agent": "nowme-hosted",
+    "skillVersion": "0.1.0"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "麦冬",
+  "tagline": "大一新生，两百多张夜市和宿舍窗户，还没给别人看过",
+  "hooks": [
+    {
+      "id": "night-market-shots",
+      "kind": "obsessed",
+      "text": "我在沉迷拍夜市招牌和宿舍窗户",
+      "opener": "你说你拍了两百多张还没给别人看过——我能当第一个看的人吗？最喜欢哪一张？"
+    },
+    {
+      "id": "first-street-walk",
+      "kind": "want-to-try",
+      "text": "我也想试第一次扫街、学会自己修一张照片",
+      "opener": "周六早上扫街你来吗？我也刚学，可以一起从手机开始拍。"
+    },
+    {
+      "id": "old-compact-camera",
+      "kind": "want-to-try",
+      "text": "拿着手机和爸爸的旧卡片机，想学修图",
+      "opener": "你爸爸那台旧卡片机是什么型号？我会调一点参数，可以一起试试。"
+    }
+  ]
+}

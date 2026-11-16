@@ -1,0 +1,314 @@
+<!doctype html>
+<html lang="zh-CN" class="nm-theme-candy" data-nm-motion="lively">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>麦冬 · 山海摄影社新人</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<script src="/_nowme/kit/v1/nowme.js"></script>
+<style>
+  :root {
+    --nm-font-body: var(--nm-font-lxgw-wenkai);
+    --nm-font-hand: var(--nm-font-lxgw-wenkai);
+    --nm-font-display: var(--nm-font-smiley-sans);
+    --nm-font-code: "JetBrains Mono", var(--nm-font-lxgw-wenkai);
+    --nm-display-weight: 400;
+    --ink: #2b1631;
+    --night: #1f1738;
+    --neon: #ffe94a;
+    --pink: #ff4f9a;
+    --blue: #3d7bff;
+    --mint: #6fe3b4;
+  }
+  body { font-size: 16px; line-height: 1.75; }
+
+  /* ---------- 顶部跑马灯 ---------- */
+  .ribbon { margin-inline: calc(var(--nm-gutter) * -1); padding: 6px 0; background: var(--ink); color: var(--neon); --nm-marquee-duration: 17s; --nm-marquee-gap: 1.1rem; }
+  .ribbon .nm-marquee__track { font-weight: 700; font-size: 13px; letter-spacing: 0.04em; }
+  .ribbon .nm-marquee__track span:nth-child(even) { color: #fff; font-family: var(--nm-font-display); }
+
+  /* ---------- 首屏 ---------- */
+  .hero { position: relative; margin-inline: calc(var(--nm-gutter) * -1); padding: 16px var(--nm-gutter) 22px; --nm-pattern-color: rgba(43, 22, 49, 0.13); --nm-pattern-size: 18px; }
+  .hello { font-size: 16px; line-height: 1.4; }
+  .bigname { font-family: var(--nm-font-display); font-size: 84px; line-height: 0.98; color: var(--ink); text-shadow: 4px 4px 0 var(--pink); letter-spacing: -0.02em; margin: 2px 0 6px; }
+  .lede { font-size: 16px; line-height: 1.65; }
+  .lede b { background: linear-gradient(transparent 58%, var(--neon) 58%); padding: 0 2px; }
+
+  .strip { position: relative; display: flex; margin-top: 14px; padding: 8px 8px 22px; background: #fffdf6; border: 2px solid var(--ink); border-radius: 6px; box-shadow: 5px 5px 0 var(--ink); rotate: -1.2deg; }
+  .frames { display: flex; gap: 5px; width: 100%; }
+  .frame { position: relative; flex: 1; aspect-ratio: 3 / 4; overflow: hidden; border-radius: 3px; }
+  .frame svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .strip__caption { position: absolute; left: 10px; bottom: 5px; font-size: 11.5px; color: #6b5b6e; }
+  .count { position: absolute; right: 10px; bottom: 3px; font-family: var(--nm-font-code); font-weight: 700; font-size: 12.5px; color: var(--pink); }
+  .tape { position: absolute; width: 54px; height: 17px; background: rgba(255, 233, 74, 0.8); border: 1px dashed rgba(43, 22, 49, 0.25); }
+  .tape--l { left: -14px; top: -9px; rotate: -22deg; }
+  .tape--r { right: -12px; top: -7px; rotate: 18deg; }
+
+  .id-row { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 14px; }
+  .id-row .nm-chip { border: 2px solid var(--ink); background: #fff; font-size: 13px; font-weight: 400; }
+  .id-row .nm-chip--accent { background: var(--ink); color: var(--neon); }
+
+  /* ---------- 区块通用 ---------- */
+  .block { padding: 34px 0 4px; }
+  .block__title { display: flex; align-items: center; gap: 10px; font-family: var(--nm-font-display); font-size: 27px; line-height: 1.25; }
+  .block__title i { font-style: normal; display: inline-grid; place-items: center; flex: 0 0 auto; width: 32px; height: 32px; border: 2px solid var(--ink); border-radius: 50%; background: var(--neon); font-family: var(--nm-font-code); font-weight: 700; font-size: 13px; }
+  .block__sub { margin-top: 4px; font-size: 14px; color: #6b5b6e; }
+
+  /* ---------- 拍什么 ---------- */
+  .shots { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-top: 14px; }
+  .shot { padding: 12px; border: 2px solid var(--ink); border-radius: 16px; background: #fff; }
+  .shot svg { width: 100%; height: 62px; display: block; }
+  .shot h3 { margin-top: 6px; font-size: 17px; line-height: 1.3; }
+  .shot p { font-size: 13.5px; line-height: 1.6; color: #4a3b4d; }
+  .shot--wide { grid-column: 1 / -1; display: grid; grid-template-columns: 92px 1fr; gap: 10px; align-items: center; background: #fff6d6; }
+  .shot--wide svg { height: 70px; }
+  .shot--wide h3 { margin-top: 0; }
+  .quote { margin-top: 14px; padding: 12px 14px 12px 18px; border-left: 6px solid var(--pink); background: rgba(255, 255, 255, 0.78); font-size: 16.5px; line-height: 1.7; }
+
+  /* ---------- 想尝试 ---------- */
+  .wishes { display: grid; gap: 11px; margin-top: 14px; }
+  .wish { position: relative; display: grid; grid-template-columns: 34px 1fr; gap: 10px; align-items: start; padding: 13px 14px; border: 2.5px solid var(--ink); border-radius: 18px; background: var(--neon); box-shadow: 4px 4px 0 var(--ink); }
+  .wish:nth-child(2) { background: var(--mint); rotate: 0.7deg; }
+  .wish:nth-child(3) { background: #ffc2dc; rotate: -0.5deg; }
+  .wish__no { font-family: var(--nm-font-code); font-weight: 700; font-size: 12.5px; padding-top: 4px; }
+  .wish h3 { font-size: 19px; line-height: 1.35; }
+  .wish p { margin-top: 2px; font-size: 14px; line-height: 1.6; }
+  .wish__tag { display: inline-block; margin-top: 7px; padding: 1px 9px; border: 2px solid var(--ink); border-radius: 999px; font-size: 12px; background: #fff; }
+
+  /* ---------- 两台机器 ---------- */
+  .gear { display: grid; gap: 11px; margin-top: 14px; }
+  .kit { display: grid; grid-template-columns: 62px 1fr; gap: 12px; align-items: center; padding: 12px; border: 2px dashed var(--ink); border-radius: 18px; background: rgba(255, 255, 255, 0.74); }
+  .kit svg { width: 62px; height: 62px; }
+  .kit h3 { font-size: 18px; line-height: 1.3; }
+  .kit p { font-size: 13.5px; line-height: 1.6; }
+  .kit .nm-stamp { position: relative; display: inline-block; margin-top: 6px; font-size: 11.5px; }
+
+  /* ---------- 社团之外 ---------- */
+  .hobbies { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-top: 14px; }
+  .hobby { padding: 12px; border: 2px solid var(--ink); border-radius: 16px; background: #fff6d6; }
+  .hobby:nth-child(2) { background: #e8f6ef; }
+  .hobby svg { width: 40px; height: 40px; display: block; }
+  .hobby h3 { margin-top: 4px; font-size: 17px; line-height: 1.3; }
+  .hobby p { font-size: 13.5px; line-height: 1.6; color: #4a3b4d; }
+
+  /* ---------- 道别 ---------- */
+  .hi { padding: 36px 0 52px; text-align: center; }
+  .hi .nm-speech { max-width: 300px; margin: 0 auto; padding: 15px 17px; border: 3px solid var(--ink); border-radius: 22px; font-size: 16.5px; line-height: 1.6; text-align: left; }
+  .hi .nm-speech::after { left: 50%; margin-left: -8px; border-width: 3px; }
+  .wave { margin-top: 24px; padding: 13px 26px; min-height: 44px; border: 3px solid var(--ink); border-radius: 999px; background: var(--pink); color: #fff; font-family: var(--nm-font-display); font-size: 21px; box-shadow: 5px 5px 0 var(--ink); cursor: pointer; }
+  .wave:active { translate: 3px 3px; box-shadow: 2px 2px 0 var(--ink); }
+  .wave-note { margin-top: 12px; font-size: 13px; color: #6b5b6e; }
+
+  @media (min-width: 480px) {
+    .bigname { font-size: 104px; }
+    .shots { grid-template-columns: repeat(3, 1fr); }
+    .shot--wide { grid-column: 1 / -1; }
+  }
+</style>
+</head>
+<body class="nm-grain">
+<div class="nm-page">
+
+  <div class="ribbon nm-marquee" aria-hidden="true">
+    <div class="nm-marquee__track"><span>NEW MEMBER</span><span>新人报到</span><span>山海摄影社</span><span>麦冬</span></div>
+  </div>
+
+  <header class="hero nm-bg-dots" data-nm-id="hero">
+    <p class="hello">你好，我是</p>
+    <h1 class="bigname">麦冬</h1>
+    <p class="lede">一台手机，一台爸爸留下的旧卡片机，<b>两百多张照片，都还没给别人看过</b>。</p>
+
+    <div class="strip">
+      <span class="tape tape--l" aria-hidden="true"></span>
+      <span class="tape tape--r" aria-hidden="true"></span>
+      <div class="frames" aria-hidden="true">
+        <div class="frame">
+          <svg viewBox="0 0 90 120">
+            <rect width="90" height="120" fill="#1f1738"/>
+            <rect x="26" y="14" width="38" height="30" rx="2" fill="#ffe94a" opacity=".85"/>
+            <rect x="30" y="20" width="20" height="4" fill="#1f1738" opacity=".7"/>
+            <rect x="30" y="28" width="26" height="3" fill="#1f1738" opacity=".55"/>
+            <rect x="48" y="4" width="3" height="112" fill="#2b1631" opacity=".5"/>
+            <circle cx="18" cy="70" r="5" fill="#ff4f9a" opacity=".8"/>
+            <circle cx="76" cy="92" r="4" fill="#6fe3b4" opacity=".75"/>
+          </svg>
+        </div>
+        <div class="frame">
+          <svg viewBox="0 0 90 120">
+            <rect width="90" height="120" fill="#14252f"/>
+            <rect x="10" y="18" width="26" height="30" fill="#ffd98a" opacity=".75"/>
+            <rect x="48" y="26" width="24" height="22" fill="#ffd98a" opacity=".45"/>
+            <rect x="16" y="60" width="22" height="26" fill="#ffd98a" opacity=".3"/>
+            <rect x="52" y="66" width="28" height="28" fill="#ffd98a" opacity=".6"/>
+            <rect x="8" y="92" width="74" height="2" fill="#6fe3b4" opacity=".5"/>
+          </svg>
+        </div>
+        <div class="frame">
+          <svg viewBox="0 0 90 120">
+            <rect width="90" height="120" fill="#241a2e"/>
+            <path d="M6 30 H84" stroke="#ffb0d0" stroke-width="3" opacity=".6"/>
+            <path d="M30 30 v26 a10 10 0 0 0 20 0 V30" fill="#ffffff" opacity=".72"/>
+            <path d="M44 34 v22" stroke="#241a2e" stroke-width="2" opacity=".35"/>
+            <path d="M12 64 H78" stroke="#ffb0d0" stroke-width="3" opacity=".45"/>
+          </svg>
+        </div>
+      </div>
+      <span class="strip__caption">手机拍的</span>
+      <span class="count">200+</span>
+    </div>
+
+    <div class="id-row">
+      <span class="nm-chip nm-chip--accent">新成员</span>
+      <span class="nm-chip">大一 · 城乡规划</span>
+      <span class="nm-chip">等你来当第一个观众</span>
+    </div>
+  </header>
+
+  <section class="block" data-nm-id="intro">
+    <h2 class="block__title nm-reveal"><i>01</i>我都在拍什么</h2>
+    <p class="block__sub nm-reveal">拍的时候没想过给谁看，就是忍不住按下来。</p>
+    <div class="shots" data-nm-stagger="90">
+      <div class="shot nm-reveal">
+        <svg viewBox="0 0 120 74" aria-hidden="true">
+          <rect x="14" y="6" width="92" height="26" rx="3" fill="#ffe94a"/>
+          <text x="26" y="25" font-size="15" font-weight="700" fill="#2b1631">夜市</text>
+          <circle cx="86" cy="19" r="7" fill="none" stroke="#2b1631" stroke-width="2.5"/>
+          <rect x="18" y="38" width="84" height="3" fill="#2b1631" opacity=".5"/>
+          <path d="M22 41 v22 M98 41 v22" stroke="#2b1631" stroke-width="2.5"/>
+          <circle cx="34" cy="54" r="5" fill="#ff4f9a"/>
+          <circle cx="60" cy="58" r="4" fill="#3d7bff"/>
+          <circle cx="86" cy="52" r="5" fill="#6fe3b4"/>
+        </svg>
+        <h3>夜市的招牌</h3>
+        <p>灯箱一块接一块，字都很凶，颜色都乱来。</p>
+      </div>
+      <div class="shot nm-reveal">
+        <svg viewBox="0 0 120 74" aria-hidden="true">
+          <rect width="120" height="74" rx="4" fill="#1f1738"/>
+          <rect x="10" y="8" width="24" height="20" fill="#ffd98a" opacity=".8"/>
+          <rect x="44" y="14" width="20" height="16" fill="#ffd98a" opacity=".35"/>
+          <rect x="72" y="6" width="26" height="22" fill="#ffd98a" opacity=".65"/>
+          <rect x="16" y="40" width="22" height="18" fill="#ffd98a" opacity=".25"/>
+          <rect x="50" y="36" width="18" height="22" fill="#ffd98a" opacity=".55"/>
+          <rect x="80" y="42" width="26" height="16" fill="#ffd98a" opacity=".4"/>
+          <rect x="6" y="66" width="108" height="2" fill="#6fe3b4" opacity=".6"/>
+        </svg>
+        <h3>宿舍楼晚上的窗</h3>
+        <p>哪扇亮着、哪扇暗着，比人脸好认。</p>
+      </div>
+      <div class="shot shot--wide nm-reveal">
+        <svg viewBox="0 0 120 74" aria-hidden="true">
+          <path d="M6 18 H114" stroke="#ffb0d0" stroke-width="3"/>
+          <path d="M34 18 v22 a12 12 0 0 0 24 0 V18" fill="#ffffff" stroke="#2b1631" stroke-width="2"/>
+          <path d="M46 24 v16" stroke="#2b1631" stroke-width="1.6" opacity=".4"/>
+          <path d="M72 18 v18 a10 10 0 0 0 20 0 V18" fill="#9ad7ff" stroke="#2b1631" stroke-width="2"/>
+          <path d="M4 58 H116" stroke="#ffb0d0" stroke-width="3"/>
+          <circle cx="24" cy="66" r="3" fill="#ffe94a"/>
+          <circle cx="100" cy="66" r="3" fill="#ffe94a"/>
+        </svg>
+        <div>
+          <h3>阳台上的衣服</h3>
+          <p>晾在那里就是一副画，风一吹又换了构图——所以每次都手忙脚乱。</p>
+        </div>
+      </div>
+    </div>
+    <p class="quote nm-reveal">拍了两百多张，都是手机拍的，还没给别人看过。</p>
+  </section>
+
+  <section class="block" data-nm-id="want-to-try">
+    <h2 class="block__title nm-reveal"><i>02</i>在社团想试的</h2>
+    <p class="block__sub nm-reveal">都是第一次，找到一起开始的人就敢了。</p>
+    <div class="wishes">
+      <div class="wish nm-reveal">
+        <span class="wish__no">01</span>
+        <div>
+          <h3>学一门新手艺</h3>
+          <p>什么都想学一点，从最基础的来。</p>
+          <span class="wish__tag">还没定学哪个</span>
+        </div>
+      </div>
+      <div class="wish nm-reveal">
+        <span class="wish__no">02</span>
+        <div>
+          <h3>认识不同专业的朋友</h3>
+          <p>我学城乡规划，班上的人看的东西都差不多。</p>
+          <span class="wish__tag">想听听别的专业怎么拍</span>
+        </div>
+      </div>
+      <div class="wish nm-reveal">
+        <span class="wish__no">03</span>
+        <div>
+          <h3>把胶片机真正用起来</h3>
+          <p>爸爸留下的旧卡片机，还不太会调参数，想有天自己拍出一卷冲洗出来。</p>
+          <span class="wish__tag">想找个人带带我</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" data-nm-id="gear">
+    <h2 class="block__title nm-reveal"><i>03</i>我手上有什么</h2>
+    <p class="block__sub nm-reveal">没有好器材，只有两台机器。</p>
+    <div class="gear" data-nm-stagger="90">
+      <div class="kit nm-reveal">
+        <svg viewBox="0 0 84 84" aria-hidden="true">
+          <rect x="26" y="8" width="32" height="68" rx="7" fill="#2b1631"/>
+          <rect x="30" y="16" width="24" height="48" rx="2" fill="#6fe3b4"/>
+          <circle cx="42" cy="70" r="3" fill="#fff"/>
+        </svg>
+        <div>
+          <h3>一台手机</h3>
+          <p>两百多张全在它里面，夜市、窗户、阳台，一张没删。</p>
+          <span class="nm-stamp nm-stamp--worn">待观众</span>
+        </div>
+      </div>
+      <div class="kit nm-reveal">
+        <svg viewBox="0 0 84 84" aria-hidden="true">
+          <rect x="8" y="24" width="68" height="40" rx="6" fill="#ffd23f" stroke="#2b1631" stroke-width="3"/>
+          <circle cx="42" cy="44" r="13" fill="#2b1631"/>
+          <circle cx="42" cy="44" r="6" fill="#ff4f9a"/>
+          <rect x="14" y="18" width="16" height="7" rx="2" fill="#2b1631"/>
+          <circle cx="66" cy="32" r="3" fill="#2b1631"/>
+        </svg>
+        <div>
+          <h3>爸爸留下的旧卡片机</h3>
+          <p>还不太会调参数。会的人教我一句，我就记一句。</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" data-nm-id="hobbies">
+    <h2 class="block__title nm-reveal"><i>04</i>社团之外</h2>
+    <p class="block__sub nm-reveal">这两件事最近占掉我大半空闲。</p>
+    <div class="hobbies" data-nm-stagger="90">
+      <div class="hobby nm-reveal">
+        <svg viewBox="0 0 46 46" aria-hidden="true">
+          <path d="M8 22a15 15 0 0 1 30 0z" fill="#ffd23f" stroke="#2b1631" stroke-width="2.5"/>
+          <rect x="6" y="22" width="34" height="7" rx="3" fill="#fff" stroke="#2b1631" stroke-width="2.5"/>
+          <rect x="9" y="32" width="28" height="8" rx="3" fill="#6fe3b4" stroke="#2b1631" stroke-width="2.5"/>
+        </svg>
+        <h3>做饭 / 探店</h3>
+        <p>先把食堂之外的店吃一遍，再自己照着做。</p>
+      </div>
+      <div class="hobby nm-reveal">
+        <svg viewBox="0 0 46 46" aria-hidden="true">
+          <circle cx="23" cy="16" r="7" fill="#ff4f9a" stroke="#2b1631" stroke-width="2.5"/>
+          <path d="M12 40c0-7 5-12 11-12s11 5 11 12" fill="none" stroke="#2b1631" stroke-width="2.5" stroke-linecap="round"/>
+          <path d="M34 30l6 4-6 4" fill="none" stroke="#3d7bff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        <h3>旅行 / 城市散步</h3>
+        <p>不走大路，专挑没走过的小巷拐进去。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="hi" data-nm-id="say-hi">
+    <p class="nm-speech nm-reveal">想当第一个看我照片的人，或者周六早上带我去扫街的，点页面下方的“想聊这个”。</p>
+    <div><button class="wave" type="button" data-nm-confetti="90">跟我打个招呼</button></div>
+    <p class="wave-note">（按钮只撒花，真正找我请用“想聊这个”）</p>
+  </section>
+
+</div>
+</body>
+</html>

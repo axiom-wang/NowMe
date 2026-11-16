@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "祝一一",
+  "tagline": "市场营销大三 · 不会写代码，但会做用户访谈、写文案、上台路演",
+  "hooks": [
+    {
+      "id": "looking-for-devs",
+      "kind": "looking-for",
+      "text": "找前端 / 后端 / AI 的技术队友",
+      "opener": "你说想找一支技术队伍——我这边在做的东西正好缺人讲清楚，要不要先聊聊？"
+    },
+    {
+      "id": "interview-and-pitch",
+      "kind": "can-help",
+      "text": "我能帮你做用户访谈和路演",
+      "opener": "我做的工具还没人验证过，你能帮我访谈几个同学、把话讲明白吗？"
+    },
+    {
+      "id": "campus-idea",
+      "kind": "want-to-build",
+      "text": "想做校园 / 生活服务，点子和队友一起定",
+      "opener": "你的方向是校园生活服务？我有个还没成形的想法，想找人一起定。"
+    }
+  ]
+}

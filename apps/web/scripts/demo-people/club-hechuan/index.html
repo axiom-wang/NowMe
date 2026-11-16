@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="zh-CN" class="nm-theme-mono" data-nm-motion="calm">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>贺川 · 暗房工作单</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<script src="/_nowme/kit/v1/nowme.js"></script>
+<style>
+  :root {
+    --nm-font-body: var(--nm-font-noto-sans-sc);
+    --nm-font-display: var(--nm-font-noto-sans-sc);
+    --nm-font-code: "JetBrains Mono", var(--nm-font-noto-sans-sc);
+    --nm-display-weight: 900;
+    --mono: "JetBrains Mono", var(--nm-font-noto-sans-sc);
+    --ink: #111111;
+    --ink-2: #454545;
+    --ink-3: #767676;
+    --paper: #f4f3ef;
+    --paper-2: #e8e6e0;
+    --safelight: #c4302b;
+    --rule: rgba(17, 17, 17, 0.16);
+    --nm-bg: #f4f3ef;
+    --nm-fg: #111111;
+    --nm-muted: #5a5a5a;
+    --nm-line: rgba(17, 17, 17, 0.2);
+    --nm-accent: #c4302b;
+  }
+  body { background: var(--paper); color: var(--ink); font-size: 15.5px; line-height: 1.75; }
+  .mono { font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.08em; color: var(--ink-3); }
+  .num { font-family: var(--mono); font-weight: 500; }
+
+  /* ---------- 首屏：工作单 ---------- */
+  .hero { position: relative; padding: 20px 0 22px; }
+  .jobhead { display: flex; justify-content: space-between; align-items: flex-end; padding-bottom: 7px; border-bottom: 2px solid var(--ink); }
+  .jobhead b { font-family: var(--mono); font-size: 12px; font-weight: 700; letter-spacing: 0.14em; color: var(--ink); }
+  .jobhead span { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; color: var(--ink-3); }
+  .name { margin-top: 12px; font-family: var(--nm-font-display); font-weight: 900; font-size: 74px; line-height: 0.92; letter-spacing: -0.03em; }
+  .name .dot { color: var(--safelight); }
+  .role { margin-top: 8px; font-size: 16.5px; line-height: 1.55; font-weight: 500; }
+  .role em { font-style: normal; box-shadow: inset 0 -0.5em 0 rgba(196, 48, 43, 0.18); }
+  .fields { margin: 14px 0 0; padding: 0; display: grid; grid-template-columns: 1fr 1fr; }
+  .field { padding: 6px 0 7px; border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .field:nth-child(odd) { padding-right: 12px; border-right: 1px solid var(--rule); }
+  .field:nth-child(even) { padding-left: 12px; }
+  .field dt { font-family: var(--mono); font-size: 10px; letter-spacing: 0.12em; color: var(--ink-3); }
+  .field dd { margin: 1px 0 0; font-size: 14.5px; font-weight: 500; line-height: 1.45; }
+  .field dd.accent { color: var(--safelight); font-weight: 700; }
+
+  /* 接触印样：一格一格的空框 */
+  .sheetstrip { margin-top: 16px; padding: 9px 10px 7px; background: var(--paper-2); border: 1px solid var(--rule); }
+  .sheetstrip__label { display: flex; justify-content: space-between; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--ink-3); }
+  .frameImg { display: block; width: 100%; height: auto; margin-top: 5px; }
+  .sheetstrip__cap { margin: 3px 0 0; font-size: 12.5px; line-height: 1.55; color: var(--ink-2); }
+
+  /* ---------- 通用区块 ---------- */
+  .block { padding: 32px 0 2px; }
+  .block__head { display: flex; align-items: baseline; gap: 9px; padding-bottom: 5px; border-bottom: 1.5px solid var(--ink); }
+  .block__head .idx { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.1em; color: var(--ink-3); }
+  .block__head h2 { margin: 0; font-family: var(--nm-font-display); font-weight: 900; font-size: 24px; line-height: 1.2; letter-spacing: -0.01em; }
+  .block__head .tail { margin-left: auto; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--ink-3); }
+  .block__sub { margin: 7px 0 0; font-size: 13.5px; color: var(--ink-2); }
+
+  /* ---------- 可以来问我 ---------- */
+  .rows { margin-top: 2px; }
+  .row { display: grid; grid-template-columns: 26px 1fr; gap: 8px; padding: 12px 0; border-bottom: 1px solid var(--rule); }
+  .row__no { font-family: var(--mono); font-size: 11px; color: var(--safelight); padding-top: 4px; }
+  .row__q { margin: 0; font-size: 16.5px; font-weight: 700; line-height: 1.45; }
+  .row__a { margin: 3px 0 0; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+  .row__a b { color: var(--ink); font-weight: 700; }
+  .row__tag { display: inline-block; margin-top: 5px; padding: 0 6px; border: 1px solid var(--ink); font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; line-height: 1.7; color: var(--ink); }
+  .row__tag.red { border-color: var(--safelight); color: var(--safelight); }
+
+  /* 大数字 */
+  .tally { display: grid; grid-template-columns: auto 1fr; gap: 14px; align-items: center; margin-top: 16px; padding: 14px; border: 1.5px solid var(--ink); background: #ffffff; }
+  .tally__num { font-family: var(--nm-font-display); font-weight: 900; font-size: 56px; line-height: 0.85; letter-spacing: -0.04em; color: var(--safelight); }
+  .tally__num small { display: block; margin-top: 8px; font-family: var(--mono); font-size: 9.5px; font-weight: 400; letter-spacing: 0.06em; color: var(--ink-3); }
+  .tally__txt { margin: 0; font-size: 14px; line-height: 1.68; color: var(--ink-2); }
+  .tally__txt b { color: var(--ink); }
+
+  /* ---------- 我管的 ---------- */
+  .duties { margin-top: 4px; }
+  .duty { display: grid; grid-template-columns: 58px 1fr; gap: 9px; padding: 10px 0; border-bottom: 1px solid var(--rule); align-items: start; }
+  .duty__k { font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--ink-3); padding-top: 4px; }
+  .duty__v { font-size: 14.5px; line-height: 1.65; }
+  .duty__v b { font-weight: 700; }
+
+  /* ---------- 周三晚上 ---------- */
+  .wed { margin-top: 14px; padding: 13px 15px; border: 1.5px solid var(--safelight); background: #fbf6f4; }
+  .wed__when { margin: 0; font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.12em; color: var(--safelight); }
+  .wed__big { margin: 5px 0 0; font-family: var(--nm-font-display); font-weight: 900; font-size: 20px; line-height: 1.4; }
+  .wed__line { margin: 6px 0 0; font-size: 13.5px; line-height: 1.7; color: var(--ink-2); }
+
+  /* ---------- 社团之外 ---------- */
+  .outside { display: grid; grid-template-columns: 88px 1fr; gap: 13px; margin-top: 14px; padding: 11px; border: 1px solid var(--rule); background: #ffffff; align-items: center; }
+  .outside svg { width: 88px; height: 88px; display: block; }
+  .outside h3 { margin: 0; font-size: 19px; font-weight: 900; line-height: 1.3; }
+  .outside p { margin: 3px 0 0; font-size: 13.5px; line-height: 1.7; color: var(--ink-2); }
+
+  /* ---------- 引语 ---------- */
+  .quote { margin-top: 16px; padding: 4px 0 4px 13px; border-left: 3px solid var(--ink); }
+  .quote p { margin: 0; font-size: 15px; line-height: 1.75; }
+  .quote cite { display: block; margin-top: 5px; font-style: normal; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--ink-3); }
+
+  /* ---------- 页脚 ---------- */
+  .foot { margin-top: 30px; padding: 13px 0 44px; border-top: 2px solid var(--ink); }
+  .foot p { margin: 0; font-size: 13px; line-height: 1.7; color: var(--ink-2); }
+  .foot p b { color: var(--ink); }
+  .foot .sign { margin-top: 9px; font-family: var(--mono); font-size: 10px; letter-spacing: 0.1em; color: var(--ink-3); }
+</style>
+</head>
+<body>
+<main class="nm-page">
+
+  <header class="hero" data-nm-id="hero">
+    <div class="jobhead">
+      <b>山海摄影社 · 暗房工作单</b>
+      <span>JOB No. 03</span>
+    </div>
+    <h1 class="name">贺川<span class="dot">.</span></h1>
+    <p class="role">摄影社第三年，管社里的暗房。<br><em>黑白的活儿，我都在。</em></p>
+    <dl class="fields">
+      <div class="field"><dt>年级 · 专业</dt><dd>大三 · 化学</dd></div>
+      <div class="field"><dt>身份</dt><dd>老成员 · 暗房值守</dd></div>
+      <div class="field"><dt>管什么</dt><dd>药水配比 / 开放排班</dd></div>
+      <div class="field"><dt>固定在场</dt><dd class="accent">每周三晚上</dd></div>
+    </dl>
+
+    <div class="sheetstrip">
+      <div class="sheetstrip__label"><span>CONTACT SHEET</span><span>40+ ROLLS</span></div>
+      <svg class="frameImg" viewBox="0 0 360 112" role="img" aria-label="一格一格空着的接触印样，脚注写着四十多卷">
+        <rect x="0" y="0" width="360" height="112" fill="#dcdad4"/>
+        <g fill="#f4f3ef" stroke="#111111" stroke-opacity="0.5">
+          <rect x="4" y="14" width="56" height="40"/><rect x="65" y="14" width="56" height="40"/><rect x="126" y="14" width="56" height="40"/><rect x="187" y="14" width="56" height="40"/><rect x="248" y="14" width="56" height="40"/><rect x="309" y="14" width="47" height="40"/>
+          <rect x="4" y="58" width="56" height="40"/><rect x="65" y="58" width="56" height="40"/><rect x="126" y="58" width="56" height="40"/><rect x="187" y="58" width="56" height="40"/><rect x="248" y="58" width="56" height="40"/><rect x="309" y="58" width="47" height="40"/>
+        </g>
+        <g fill="#111111" fill-opacity="0.6" font-family="JetBrains Mono, monospace" font-size="7" letter-spacing="1">
+          <text x="18" y="11">01</text><text x="79" y="11">02</text><text x="140" y="11">03</text><text x="201" y="11">04</text><text x="262" y="11">05</text><text x="323" y="11">06</text>
+          <text x="18" y="107">07</text><text x="79" y="107">08</text><text x="140" y="107">09</text><text x="201" y="107">10</text><text x="262" y="107">11</text><text x="323" y="107">12</text>
+        </g>
+      </svg>
+      <p class="sheetstrip__cap">每一格都是别人冲出来的第一卷——我陪着冲过的，四十多卷。</p>
+    </div>
+  </header>
+
+  <section class="block" data-nm-id="ask-me">
+    <div class="block__head"><span class="idx">01 / ASK</span><h2>可以来问我</h2><span class="tail">新人常问</span></div>
+    <p class="block__sub">新人最常来问的两件事，答案先写在这儿。</p>
+    <div class="rows" data-nm-stagger="60">
+      <div class="row nm-reveal">
+        <span class="row__no">Q1</span>
+        <div>
+          <p class="row__q">第一卷胶片买什么？</p>
+          <p class="row__a">直接来找我问。每卷的脾气不一样，我也说不清哪卷配哪台机器，当面说更准。</p>
+          <span class="row__tag red">当面答</span>
+        </div>
+      </div>
+      <div class="row nm-reveal">
+        <span class="row__no">Q2</span>
+        <div>
+          <p class="row__q">相机借哪台？</p>
+          <p class="row__a">同样是新人最常问的一句。手上有没有机器、想拍什么，决定该借哪台——周三来暗房，我拿给你看。</p>
+          <span class="row__tag">周三暗房</span>
+        </div>
+      </div>
+      <div class="row nm-reveal">
+        <span class="row__no">Q3</span>
+        <div>
+          <p class="row__q">药水配比、开放排班</p>
+          <p class="row__a">这两样都是我在管：<b>“暗房的药水配比和开放排班都是我在管。”</b>想约时间、想问怎么配，都可以来问。</p>
+          <span class="row__tag">我负责</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="tally nm-reveal">
+      <div class="tally__num"><span data-nm-count="40">40</span>+<small>卷 / 新人第一卷</small></div>
+      <p class="tally__txt"><b>带过两届新人的第一次暗房体验</b>，前后加起来冲过四十多卷。第一次进暗室手抖很正常，第一次我都在旁边。</p>
+    </div>
+  </section>
+
+  <section class="block" data-nm-id="duties">
+    <div class="block__head"><span class="idx">02 / DUTY</span><h2>我管的那部分</h2><span class="tail">DARKROOM</span></div>
+    <div class="duties">
+      <div class="duty nm-reveal"><span class="duty__k">药水</span><div class="duty__v"><b>配比</b>——显影、定影的配比，由我配、由我记。</div></div>
+      <div class="duty nm-reveal"><span class="duty__k">排班</span><div class="duty__v"><b>开放时间</b>——暗房什么时候开、谁在，排班表我排。</div></div>
+      <div class="duty nm-reveal"><span class="duty__k">带人</span><div class="duty__v"><b>新人的第一次</b>——两届新人的第一次暗房体验，是我带的。</div></div>
+      <div class="duty nm-reveal"><span class="duty__k">自己</span><div class="duty__v"><b>黑白胶片</b>——我自己拍黑白，习惯自己冲洗和放大。</div></div>
+    </div>
+  </section>
+
+  <section class="block" data-nm-id="want-to-try">
+    <div class="block__head"><span class="idx">03 / OPEN</span><h2>周三晚上，暗房有人</h2><span class="tail">WED NIGHT</span></div>
+    <div class="wed nm-reveal">
+      <p class="wed__when">EVERY WEDNESDAY NIGHT</p>
+      <p class="wed__big">“每周三晚上暗房开放，我基本都在。”</p>
+      <p class="wed__line">想第一次进暗房、想借台相机、想买第一卷胶片的，周三来就行。门开着、红灯亮着，就是有人在。</p>
+    </div>
+    <p class="block__sub">今年想在社里继续带新人、分享经验——来的话不用客气，直接问。</p>
+  </section>
+
+  <section class="block" data-nm-id="outside">
+    <div class="block__head"><span class="idx">04 / OUTSIDE</span><h2>社团之外</h2><span class="tail">最近</span></div>
+    <div class="outside nm-reveal">
+      <svg viewBox="0 0 88 88" role="img" aria-label="唱片与唱针的简单图形，代表最近在玩音乐">
+        <rect x="2" y="2" width="84" height="84" fill="#ffffff" stroke="#111111" stroke-width="1"/>
+        <rect x="31" y="20" width="26" height="34" fill="#e8e6e0" stroke="#111111" stroke-width="1.2"/>
+        <circle cx="44" cy="37" r="7.5" fill="#c4302b"/>
+        <circle cx="44" cy="37" r="1.5" fill="#f4f3ef"/>
+        <path d="M35 26h18" stroke="#111111" stroke-width="1"/>
+        <path d="M62 24l8 0 4 26" fill="none" stroke="#111111" stroke-width="1.4"/>
+        <circle cx="74" cy="52" r="2.4" fill="#111111"/>
+        <rect x="20" y="68" width="48" height="8" fill="#111111"/>
+        <text x="44" y="74.4" text-anchor="middle" font-family="JetBrains Mono, monospace" font-size="6" fill="#f4f3ef" letter-spacing="1">MUSIC</text>
+      </svg>
+      <div>
+        <h3>最近在玩音乐</h3>
+        <p>社团之外最近在玩音乐。具体在玩什么还没跟人细说过——哪天在暗房里聊起来再说。</p>
+      </div>
+    </div>
+    <div class="quote nm-reveal">
+      <p>“页面想做得像一张暗房里的接触印样或工作单。”</p>
+      <cite>——贺川</cite>
+    </div>
+  </section>
+
+  <footer class="foot" data-nm-id="foot">
+    <p><b>想聊这个？</b>页面下方有“想聊这个”，点它就能找到我。第一卷胶片、借相机、约暗房时间，都从这一句开始。</p>
+    <p class="sign">山海摄影社 · 2026 秋 · 暗房值守 贺川 · BLACK &amp; WHITE ONLY</p>
+  </footer>
+
+</main>
+<script>
+  nowme.ready(function () {
+    document.documentElement.className += ' nm-loaded';
+  });
+</script>
+</body>
+</html>

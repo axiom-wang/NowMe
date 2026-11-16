@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "方棠",
+  "tagline": "电子信息大二，电路外壳固件一个人做完，找设计和前端",
+  "hooks": [
+    {
+      "id": "all-in-one-hardware",
+      "kind": "can-help",
+      "text": "我能把电路、外壳和固件全做出来",
+      "opener": "宿舍门口那块“在 / 不在 / 别敲门”的小屏是你做的？我们缺个能把东西焊出来的人，聊聊？"
+    },
+    {
+      "id": "find-designer-frontend",
+      "kind": "looking-for",
+      "text": "找会做视觉 / UI 的设计和能落地页面的前端",
+      "opener": "我硬件能做，界面这块想找人一起——你对做现场的签到小盒子有兴趣吗？"
+    },
+    {
+      "id": "checkin-box",
+      "kind": "want-to-build",
+      "text": "想做社团活动现场的实体签到小盒子",
+      "opener": "那个现场签到小盒子你想做成什么样？我想听听你的想法。"
+    }
+  ]
+}

@@ -1,0 +1,209 @@
+<!doctype html>
+<html lang="zh-CN" class="nm-theme-candy" data-nm-motion="lively">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>祝一一 · 产品 / 不会写代码，但会把话讲明白</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<script src="/_nowme/kit/v1/nowme.js"></script>
+<style>
+  :root {
+    --nm-font-body: var(--nm-font-lxgw-wenkai);
+    --nm-font-hand: var(--nm-font-lxgw-wenkai);
+    --nm-font-display: var(--nm-font-smiley-sans);
+    --nm-display-weight: 400;
+    --latin: "Space Grotesk", var(--nm-font-smiley-sans);
+    --pink: #ff4f9a;
+    --blue: #3d7bff;
+    --lemon: #ffd23f;
+    --mint: #6fe3b4;
+    --plum: #2b1631;
+    --nm-gutter: 16px;
+  }
+  body { font-size: 16px; line-height: 1.75; }
+  .nm-page { max-width: 520px; }
+
+  /* ---------- 顶部跑马灯 ---------- */
+  .ribbon { margin-inline: calc(var(--nm-gutter) * -1); padding: 6px 0; background: var(--plum); color: var(--lemon); --nm-marquee-duration: 15s; --nm-marquee-gap: 1.1rem; }
+  .ribbon .nm-marquee__track { font-family: var(--latin); font-weight: 700; font-size: 13px; letter-spacing: 0.08em; }
+  .ribbon .nm-marquee__track span:nth-child(even) { color: #fff; font-family: var(--nm-font-display); letter-spacing: 0.02em; }
+
+  /* ---------- 首屏（封面 375×500 之内） ---------- */
+  .hero { position: relative; margin-inline: calc(var(--nm-gutter) * -1); padding: 0 var(--nm-gutter) 18px; --nm-pattern-color: rgba(61, 123, 255, 0.20); --nm-pattern-size: 20px; }
+  .stage { position: relative; height: 184px; }
+  .hello { position: absolute; left: 0; top: 6px; font-size: 14px; color: var(--nm-muted); }
+  .bigname { position: absolute; left: -4px; top: 26px; font-family: var(--nm-font-display); font-size: 92px; line-height: 1; color: var(--plum); text-shadow: 5px 5px 0 var(--pink); letter-spacing: 0.01em; white-space: nowrap; }
+  .role-line { position: absolute; left: 2px; top: 128px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .role-line .nm-chip { border: 2px solid var(--plum); background: #fff; font-size: 13px; font-weight: 400; padding: 2px 9px; }
+  .role-line .nm-chip--accent { background: var(--plum); color: var(--lemon); }
+  .stage .nm-sticker { position: absolute; z-index: 2; }
+  .s-code { right: -2px; top: 12px; --nm-sticker-size: 88px; --nm-sticker-bg: var(--blue); --nm-sticker-fg: #fff; --nm-tilt: 9deg; font-size: 13px; line-height: 1.3; }
+  .s-interview { left: 0; top: 166px; --nm-sticker-bg: var(--mint); --nm-tilt: -4deg; font-size: 12.5px; padding: 5px 11px; }
+  .s-eight { right: 0; top: 168px; --nm-sticker-bg: var(--lemon); --nm-tilt: 4deg; font-size: 12.5px; padding: 5px 11px; }
+  .drag-hint { position: absolute; left: 0; bottom: -14px; font-size: 11px; color: var(--nm-muted); }
+
+  .need { margin-top: 22px; padding: 11px 13px 12px; border: 3px solid var(--plum); border-radius: 18px; background: #fff; box-shadow: 5px 5px 0 var(--plum); }
+  .need__label { display: inline-block; padding: 1px 9px; border-radius: 999px; background: var(--pink); color: #fff; font-family: var(--latin); font-weight: 700; font-size: 11px; letter-spacing: 0.07em; }
+  .need h2 { margin-top: 5px; font-family: var(--nm-font-display); font-size: 20px; line-height: 1.3; color: var(--plum); }
+  .need ul { margin-top: 7px; display: grid; gap: 3px; font-size: 13.5px; line-height: 1.5; }
+  .need li { display: grid; grid-template-columns: 14px 1fr; gap: 5px; }
+  .need li::before { content: "→"; color: var(--blue); font-family: var(--latin); font-weight: 700; }
+
+  /* ---------- 区块通用 ---------- */
+  .block { padding: 36px 0 4px; }
+  .block__title { display: flex; align-items: center; gap: 10px; font-family: var(--nm-font-display); font-size: 27px; line-height: 1.2; }
+  .block__title i { font-style: normal; display: inline-grid; place-items: center; width: 32px; height: 32px; border: 2px solid var(--plum); border-radius: 50%; background: var(--lemon); font-family: var(--latin); font-weight: 700; font-size: 14px; }
+  .block__sub { margin-top: 4px; font-size: 14px; line-height: 1.6; color: var(--nm-muted); }
+
+  /* ---------- 项目：改稿时间线 ---------- */
+  .case { margin-top: 14px; padding: 16px 16px 14px; border: 3px solid var(--plum); border-radius: 20px; background: #fff; box-shadow: 6px 6px 0 var(--plum); }
+  .case h3 { font-family: var(--nm-font-display); font-size: 22px; line-height: 1.25; }
+  .case .meta { margin-top: 2px; font-size: 13px; line-height: 1.5; color: var(--nm-muted); }
+  .draft { display: grid; grid-template-columns: 50px 1fr; gap: 9px; align-items: center; margin-top: 12px; }
+  .draft .num { font-family: var(--latin); font-weight: 700; font-size: 19px; line-height: 1; color: var(--plum); }
+  .draft .num small { display: block; margin-top: 3px; font-size: 11px; font-weight: 400; color: var(--nm-muted); }
+  .draft .bar { display: flex; align-items: center; gap: 8px; padding: 6px 9px; border: 2px solid var(--plum); border-radius: 10px; background: #ffe9f2; font-size: 12.5px; }
+  .draft .bar::after { content: ""; flex: 1; height: 7px; border-radius: 999px; background: var(--pink); }
+  .draft.short .bar { background: #e8f2ff; }
+  .draft.short .bar::after { flex: 0 0 34%; background: var(--blue); }
+  .cut { position: relative; height: 24px; margin-left: 8px; }
+  .cut span { position: absolute; left: 0; top: 3px; font-size: 12px; color: var(--pink); font-family: var(--latin); font-weight: 700; }
+  .case .quote { margin-top: 12px; padding-top: 11px; border-top: 2px dashed rgba(43, 22, 49, 0.18); font-family: var(--nm-font-hand); font-size: 16.5px; line-height: 1.6; }
+  .case .quote b { color: var(--pink); font-weight: 400; }
+
+  .owned { display: grid; gap: 9px; margin-top: 14px; }
+  .owned div { display: grid; grid-template-columns: 20px 1fr; gap: 8px; align-items: start; font-size: 15px; line-height: 1.6; }
+  .owned svg { width: 20px; height: 20px; margin-top: 3px; }
+  .fence { margin-top: 14px; padding: 10px 12px; border: 2px dashed var(--plum); border-radius: 14px; font-size: 13.5px; line-height: 1.65; background: rgba(255, 210, 63, 0.22); }
+
+  /* ---------- 技能 ---------- */
+  .skills { display: grid; grid-template-columns: 1fr 1fr; gap: 11px; margin-top: 14px; }
+  .skill { padding: 13px; border: 2.5px solid var(--plum); border-radius: 18px; background: var(--lemon); }
+  .skill:nth-child(2) { background: var(--mint); }
+  .skill h3 { font-family: var(--nm-font-display); font-size: 21px; line-height: 1.2; }
+  .skill p { margin-top: 4px; font-size: 13.5px; line-height: 1.55; }
+  .skill .no { font-family: var(--latin); font-weight: 700; font-size: 11px; letter-spacing: 0.06em; color: rgba(43, 22, 49, 0.6); }
+
+  /* ---------- 这次想做 ---------- */
+  .idea { margin-top: 14px; padding: 17px; border: 3px solid var(--plum); border-radius: 20px; background: var(--plum); color: #fff; }
+  .idea h3 { font-family: var(--nm-font-display); font-size: 23px; line-height: 1.25; color: var(--lemon); }
+  .idea p { margin-top: 7px; font-size: 15px; line-height: 1.7; }
+  .idea .tags { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 11px; }
+  .idea .tags span { padding: 2px 11px; border-radius: 999px; border: 2px solid var(--lemon); font-size: 12.5px; color: var(--lemon); }
+  .idea .flip { margin-top: 12px; padding-top: 11px; border-top: 2px dashed rgba(255, 255, 255, 0.35); font-size: 13.5px; line-height: 1.65; color: #ffd9e8; }
+
+  /* ---------- 打招呼 ---------- */
+  .hi { padding: 40px 0 52px; text-align: center; }
+  .hi .nm-speech { max-width: 300px; padding: 15px 17px; border: 3px solid var(--plum); border-radius: 22px; font-size: 16.5px; line-height: 1.6; text-align: left; }
+  .hi .nm-speech::after { left: 50%; margin-left: -8px; border-width: 3px; }
+  .wave { margin-top: 24px; padding: 13px 24px; border: 3px solid var(--plum); border-radius: 999px; background: var(--pink); color: #fff; font-family: var(--nm-font-display); font-size: 20px; box-shadow: 5px 5px 0 var(--plum); }
+  .wave:active { translate: 3px 3px; box-shadow: 2px 2px 0 var(--plum); }
+  .wave-note { margin-top: 11px; font-size: 12.5px; line-height: 1.6; color: var(--nm-muted); }
+</style>
+</head>
+<body>
+<div class="nm-page">
+
+  <div class="ribbon nm-marquee" aria-hidden="true">
+    <div class="nm-marquee__track"><span>PRODUCT</span><span>不会写代码</span><span>USER RESEARCH</span><span>会做用户访谈</span><span>PITCH</span><span>上台路演</span></div>
+  </div>
+
+  <header class="hero nm-bg-dots" data-nm-id="hero">
+    <div class="stage">
+      <p class="hello">你好，我是祝一一</p>
+      <h1 class="bigname">祝一一</h1>
+      <div class="role-line">
+        <span class="nm-chip nm-chip--accent">产品</span>
+        <span class="nm-chip">市场营销大三</span>
+      </div>
+      <span class="nm-sticker nm-sticker--round s-code nm-float" data-nm-drag>不会写代码</span>
+      <span class="nm-sticker s-interview" data-nm-drag>访谈过 30 多位同学</span>
+      <span class="nm-sticker s-eight nm-wiggle" data-nm-drag>路演稿 8 分钟 → 3 分钟</span>
+      <span class="drag-hint">（贴纸可以拖着玩）</span>
+    </div>
+    <div class="need">
+      <span class="need__label">LOOKING FOR</span>
+      <h2>想找一支技术队伍，<br>帮你们把东西讲明白</h2>
+      <ul>
+        <li>能把原型变成能点页面的前端</li>
+        <li>能写后端 / 接口 / 数据库的开发</li>
+        <li>懂 AI / 模型 / 数据的开发</li>
+      </ul>
+    </div>
+  </header>
+
+  <section class="block" data-nm-id="projects">
+    <h2 class="block__title nm-reveal"><i>01</i>做过的一次改稿</h2>
+    <p class="block__sub nm-reveal">上学期帮一个校园二手书项目做用户侧的事。产品是队友做的，我做的是下面这些。</p>
+
+    <div class="case nm-reveal">
+      <h3>路演稿：从八分钟改到三分钟</h3>
+      <p class="meta">校园二手书项目 · 我负责访谈提纲、结论和路演稿</p>
+
+      <div class="draft">
+        <span class="num">8<small>分钟</small></span>
+        <span class="bar">第一版</span>
+      </div>
+      <div class="cut"><span>↓ 删掉讲不清的部分</span></div>
+      <div class="draft short">
+        <span class="num">3<small>分钟</small></span>
+        <span class="bar">改完的版本</span>
+      </div>
+
+      <p class="quote">想找一支技术队伍，<b>帮你们把东西讲明白，找到第一批愿意试的人。</b></p>
+    </div>
+
+    <div class="owned" data-nm-stagger="80">
+      <div class="nm-reveal">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="#6fe3b4" stroke="#2b1631" stroke-width="2"/><path d="M6 10.5l2.5 2.5L14.5 7" fill="none" stroke="#2b1631" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>写了访谈提纲，访谈了 30 多位同学</span>
+      </div>
+      <div class="nm-reveal">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="#6fe3b4" stroke="#2b1631" stroke-width="2"/><path d="M6 10.5l2.5 2.5L14.5 7" fill="none" stroke="#2b1631" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>把访谈整理成结论，交给队友</span>
+      </div>
+      <div class="nm-reveal">
+        <svg viewBox="0 0 20 20" aria-hidden="true"><circle cx="10" cy="10" r="9" fill="#6fe3b4" stroke="#2b1631" stroke-width="2"/><path d="M6 10.5l2.5 2.5L14.5 7" fill="none" stroke="#2b1631" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <span>写最后的路演稿，把八分钟压到三分钟</span>
+      </div>
+    </div>
+
+    <p class="fence nm-reveal">边界说清楚：产品是队友做的，我不会写代码。我负责的是「先问清谁需要、再把它讲明白」这一段。</p>
+  </section>
+
+  <section class="block" data-nm-id="skills">
+    <h2 class="block__title nm-reveal"><i>02</i>我拿得出手的</h2>
+    <p class="block__sub nm-reveal">两项，都是干过的活。</p>
+    <div class="skills" data-nm-stagger="90">
+      <div class="skill nm-reveal">
+        <span class="no">SKILL 1</span>
+        <h3>用户研究</h3>
+        <p>会做用户访谈：写提纲、约人聊、把三十多份回答收成能用的结论。</p>
+      </div>
+      <div class="skill nm-reveal">
+        <span class="no">SKILL 2</span>
+        <h3>路演 / 讲故事</h3>
+        <p>写文案、改稿子、上台讲。八分钟压到三分钟，重点不掉。</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="block" data-nm-id="idea">
+    <h2 class="block__title nm-reveal"><i>03</i>这次想做的</h2>
+    <div class="idea nm-reveal">
+      <h3>校园 / 生活服务</h3>
+      <p>方向是这个，具体做什么我还没定——想跟队友一起定。我的打算是：你们把东西做出来，我去验证它到底有没有人愿意用。</p>
+      <div class="tags"><span>校园</span><span>生活服务</span><span>点子和队友一起定</span></div>
+      <p class="flip">如果你们已经有想做的，也很欢迎——我可以先帮你们把第一批用户聊出来。</p>
+    </div>
+  </section>
+
+  <section class="hi" data-nm-id="say-hi">
+    <p class="nm-speech nm-reveal">不会写代码，但会做用户访谈、写文案、上台路演。缺人讲清楚你们做的东西，来找我聊。</p>
+    <div><button class="wave" data-nm-confetti="90">跟我打个招呼</button></div>
+    <p class="wave-note">（按钮只会撒花；真正找我，点页面下方的“想聊这个”）</p>
+  </section>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "noto-sans-sc", "weights": [400, 900] },
+    { "id": "jetbrains-mono", "weights": [400] }
+  ],
+  "extraChars": "",
+  "blocks": ["hero", "ask-me", "duties", "want-to-try", "outside", "foot"],
+  "generator": { "agent": "nowme-hosted", "skillVersion": "0.1.0" }
+}

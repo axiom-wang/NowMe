@@ -268,5 +268,35 @@
     "nickname": "周一鸣",
     "file": "zhouyiming.webp",
     "source": "https://api.dicebear.com/9.x/notionists-neutral/svg?seed=nowme-zhouyiming%40demo.nowme.test&backgroundColor=e1e8f1&size=256"
+  },
+  {
+    "email": "chengye@demo.nowme.test",
+    "nickname": "程野",
+    "file": "city-01.webp",
+    "source": "https://api.dicebear.com/9.x/notionists-neutral/svg?seed=nowme-city-01%40demo.nowme.test&backgroundColor=dcebe3&size=256"
+  },
+  {
+    "email": "fangtang@demo.nowme.test",
+    "nickname": "方棠",
+    "file": "city-02.webp",
+    "source": "https://api.dicebear.com/9.x/notionists-neutral/svg?seed=nowme-city-02%40demo.nowme.test&backgroundColor=f0e5c9&size=256"
+  },
+  {
+    "email": "zhuyiyi@demo.nowme.test",
+    "nickname": "祝一一",
+    "file": "city-03.webp",
+    "source": "https://api.dicebear.com/9.x/notionists-neutral/svg?seed=nowme-city-03%40demo.nowme.test&backgroundColor=e8edce&size=256"
+  },
+  {
+    "email": "hechuan@demo.nowme.test",
+    "nickname": "贺川",
+    "file": "studio-01.webp",
+    "source": "https://api.dicebear.com/9.x/notionists-neutral/svg?seed=nowme-studio-01%40demo.nowme.test&backgroundColor=f0e5c9&size=256"
+  },
+  {
+    "email": "maidong@demo.nowme.test",
+    "nickname": "麦冬",
+    "file": "studio-02.webp",
+    "source": "https://api.dicebear.com/9.x/notionists-neutral/svg?seed=nowme-studio-02%40demo.nowme.test&backgroundColor=e8edce&size=256"
   }
 ]

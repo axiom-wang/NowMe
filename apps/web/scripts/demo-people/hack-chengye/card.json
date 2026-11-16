@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "程野",
+  "tagline": "模型和后端一个人全包，界面只有一个输入框——所以在找设计",
+  "hooks": [
+    {
+      "id": "find-designer",
+      "kind": "looking-for",
+      "text": "找会做视觉 / UI 的设计",
+      "opener": "看到你的模型和后端都是自己做的——我是做视觉和 UI 的，要不要一起把那个小助手的界面做出来？"
+    },
+    {
+      "id": "can-help-model",
+      "kind": "can-help",
+      "text": "我能帮你微调模型、搭检索问答和后端",
+      "opener": "我们这边正好缺一个能把模型接起来的人，你那个查选课评价的机器人是怎么做的？"
+    },
+    {
+      "id": "build-scheduler",
+      "kind": "want-to-build",
+      "text": "想做能听懂“帮我约个时间”的小助手",
+      "opener": "“帮我约个时间”这个点子挺具体的，你想先做哪一步？我可以帮你把需求理一理。"
+    }
+  ]
+}

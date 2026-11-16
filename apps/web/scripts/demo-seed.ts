@@ -2,8 +2,9 @@ import { seedDemoAvatars } from './demo-avatars.js';
 /**
  * 演示数据（`pnpm demo` 与 demo 种子测试共用）。
  *
- * - 黑客松墙：1 名组织者 + 6 名成员（6 个 Skill 示例页各属于一名成员）+ 1 名还没做页面的体验成员。最后一名成员保持“已提交未发布”。
- * - 社团墙“山海摄影社 · 2026 秋季招新”：原有三页，加上体验成员江予安与温溪两页。
+ * - 黑客松墙：1 名组织者 + 6 名成员 + 1 名还没做页面的体验成员；墙上五位都是来组队的人（林舟、苏晴用 Skill 示例页，
+ *   程野、方棠、祝一一用 demo-people/ 里真实生成的页面）。最后一名成员保持“已提交未发布”。组织者工具的数据见 demo-organizer.ts。
+ * - 社团墙“山海摄影社 · 2026 秋季招新”：栗子、贺川、麦冬三位拍照的人，加上体验成员江予安与温溪两页。
  * - AI 共创与山野轻徒步墙各 10 人、6 页，体验成员保留空白工作区。
  * - 四个全员群和虚构私聊：经过聊天服务写入历史消息与部分已读位置。
  * 每名成员都走真实提交管线：生成 Agent 指令 → `/api/agent/exchange` 换凭证 → `/api/agent/revisions` 提交
@@ -11,6 +12,7 @@ import { seedDemoAvatars } from './demo-avatars.js';
  */
 import { readFileSync, readdirSync } from 'node:fs';
 import { join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { cardSchema, generateId, LEGAL_VERSION, type ExchangeResponse, type RevisionResponse } from '@nowme/contracts';
 import { EXAMPLES_DIR } from '@nowme/skill';
 import type { WebApp } from '../src/app.js';
@@ -25,14 +27,21 @@ import { buildDemoProfile, DEMO_EXTRA_WALLS, DEMO_TEST_EMAIL, DEMO_TEST_NAME, pr
 import { DEMO_AI_PUBLISHED_INDICES } from './demo-ai/index.js';
 import { DEMO_TRAIL_PUBLISHED_INDICES } from './demo-trail/index.js';
 import { buildDemoClubProfile, DEMO_CLUB_ADDITIONS } from './demo-club.js';
+import { seedDemoOrganizerTools } from './demo-organizer.js';
+import { DEMO_DIRECT_SCRIPTS } from './demo-chats.js';
 
 export const DEMO_DOMAIN = 'demo.nowme.test';
 import { DEMO_WALL_NAME } from '../src/demo-access.js';
 export { DEMO_WALL_NAME };
 export const DEMO_CLUB_WALL_NAME = '山海摄影社 · 2026 秋季招新';
 
+/** 真实生成后原样保存的人物页（见 demo-people/README.md）。 */
+export const DEMO_PEOPLE_DIR = fileURLToPath(new URL('./demo-people/', import.meta.url));
+
 interface DemoMemberPlan {
+  /** 页面目录名：默认在 Skill 示例页里找；`people` 为 true 时在 demo-people/ 里找。 */
   dir: string;
+  people?: boolean;
   profile?: { files: Record<string, string>; displayName: string };
   email: string;
   /** 发布时是否公开联系方式。 */
@@ -42,21 +51,21 @@ interface DemoMemberPlan {
   publish: boolean;
 }
 
-/** 6 个示例页 → 6 名成员。 */
+/** 黑客松墙的 6 名成员：墙上五位都是来组队的人，周一鸣只提交、不发布。 */
 export const DEMO_MEMBER_PLANS: readonly DemoMemberPlan[] = [
   { dir: 'hackathon-terminal', email: `linzhou@${DEMO_DOMAIN}`, contactPublic: true, contact: { channel: 'wechat', value: 'linzhou_dev' }, publish: true },
   { dir: 'hackathon-poster', email: `suqing@${DEMO_DOMAIN}`, contactPublic: true, contact: { channel: 'wechat', value: 'suqing_design' }, publish: true },
-  { dir: 'interest-vinyl', email: `alan@${DEMO_DOMAIN}`, contactPublic: false, contact: { channel: 'wechat', value: 'alan_vinyl' }, publish: true },
-  { dir: 'interest-film-zine', email: `lizi@${DEMO_DOMAIN}`, contactPublic: true, contact: { channel: 'email', value: `lizi@${DEMO_DOMAIN}` }, publish: true },
-  { dir: 'club-newbie-sticker', email: `xiaoman@${DEMO_DOMAIN}`, contactPublic: false, contact: { channel: 'wechat', value: 'xiaoman_2026' }, publish: true },
+  { dir: 'hack-chengye', people: true, email: `chengye@${DEMO_DOMAIN}`, contactPublic: false, contact: { channel: 'wechat', value: 'chengye_nlp' }, publish: true },
+  { dir: 'hack-fangtang', people: true, email: `fangtang@${DEMO_DOMAIN}`, contactPublic: true, contact: { channel: 'email', value: `fangtang@${DEMO_DOMAIN}` }, publish: true },
+  { dir: 'hack-zhuyiyi', people: true, email: `zhuyiyi@${DEMO_DOMAIN}`, contactPublic: false, contact: { channel: 'wechat', value: 'zhuyiyi_pitch' }, publish: true },
   { dir: 'club-senior-quest', email: `zhouyiming@${DEMO_DOMAIN}`, contactPublic: true, contact: { channel: 'wechat', value: 'zhou_yiming' }, publish: false },
 ];
 
-/** 社团墙：复用黑客松墙的三个账号（按邮箱对应），各发布一页。 */
+/** 社团墙：三位拍照的人（各自的账号，不在黑客松墙里），各发布一页。 */
 export const DEMO_CLUB_PLANS: readonly DemoMemberPlan[] = [
-  { dir: 'club-newbie-sticker', email: `xiaoman@${DEMO_DOMAIN}`, contactPublic: true, contact: { channel: 'wechat', value: 'xiaoman_2026' }, publish: true },
-  { dir: 'club-senior-quest', email: `zhouyiming@${DEMO_DOMAIN}`, contactPublic: true, contact: { channel: 'wechat', value: 'zhou_yiming' }, publish: true },
   { dir: 'interest-film-zine', email: `lizi@${DEMO_DOMAIN}`, contactPublic: false, contact: { channel: 'email', value: `lizi@${DEMO_DOMAIN}` }, publish: true },
+  { dir: 'club-hechuan', people: true, email: `hechuan@${DEMO_DOMAIN}`, contactPublic: true, contact: { channel: 'wechat', value: 'hechuan_darkroom' }, publish: true },
+  { dir: 'club-maidong', people: true, email: `maidong@${DEMO_DOMAIN}`, contactPublic: false, contact: { channel: 'wechat', value: 'maidong_2026' }, publish: true },
 ];
 
 export interface DemoMember {
@@ -87,8 +96,8 @@ export interface DemoSeed {
 /** Membership creates a page slot; an empty workspace has no revision or publication. */
 export type DemoWallMember = Omit<DemoMember, 'revisionId'> & { revisionId: string | null };
 
-function readExample(dir: string): { files: Record<string, string>; displayName: string } {
-  const root = join(EXAMPLES_DIR, dir);
+function readExample(plan: Pick<DemoMemberPlan, 'dir' | 'people'>): { files: Record<string, string>; displayName: string } {
+  const root = join(plan.people ? DEMO_PEOPLE_DIR : EXAMPLES_DIR, plan.dir);
   const files: Record<string, string> = {};
   for (const entry of readdirSync(root)) {
     if (entry === 'DESIGN.md') continue;
@@ -127,7 +136,7 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
   const members: DemoMember[] = [];
   const userIds = new Map<string, string>();
   for (const plan of DEMO_MEMBER_PLANS) {
-    const userId = newUser(plan.email, readExample(plan.dir).displayName);
+    const userId = newUser(plan.email, readExample(plan).displayName);
     userIds.set(plan.email, userId);
     members.push(await submitAndPublish(web, wall, userId, plan, log));
   }
@@ -141,7 +150,7 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
     instruction: createInstruction(deps, wall, newcomerPage),
   };
 
-  // 社团墙：保留原有三页，增补江予安与温溪两页。
+  // 社团墙：三位拍照的人，再增补江予安与温溪两页。
   const { wall: clubWall } = createWall(deps, {
     organizerId: organizer.userId,
     name: DEMO_CLUB_WALL_NAME,
@@ -152,8 +161,8 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
   log(`社团墙「${DEMO_CLUB_WALL_NAME}」`);
   const clubMembers: DemoMember[] = [];
   for (const plan of DEMO_CLUB_PLANS) {
-    const userId = userIds.get(plan.email);
-    if (!userId) throw new Error(`演示数据异常：社团墙成员 ${plan.email} 不在黑客松墙里`);
+    const userId = userIds.get(plan.email) ?? newUser(plan.email, readExample(plan).displayName);
+    userIds.set(plan.email, userId);
     clubMembers.push(await submitAndPublish(web, clubWall, userId, plan, log));
   }
   addMember(deps, clubWall, newcomerUserId);
@@ -191,20 +200,22 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
 
   seedDemoAvatars(deps);
   seedDemoPersonalData(deps, tester.userId, []);
+  seedDemoOrganizerTools(deps, wall, { organizerId: organizer.userId, testerId: tester.userId, members });
 
   const chat = seedDemoChats(web, tester.userId, [
     { wall, members: [{ userId: tester.userId, nickname: tester.nickname }, ...members], discussion: [
       [0, '欢迎来黑客松墙！这里可以先看每个人的页面，再从感兴趣的话题开始聊天。'],
       [1, '我可以帮忙写后端，想找一个有意思的小问题一起做。'],
       [2, '我带了产品原型，周末可以一起试试。'],
-      [4, '我可以帮忙拍过程记录，大家组队之后叫我就好。'],
+      [4, '我带了几块开发板和传感器，谁的点子需要一个实体的东西，叫我就好。'],
+      [5, '还没想好做什么的队伍也可以找我，我先帮你们找十个同学聊一圈。'],
       [0, '组队前先互相聊聊，想法还没成形也欢迎。'],
     ] },
     { wall: clubWall, members: [{ userId: tester.userId, nickname: tester.nickname }, ...clubMembers.filter((member) => member.userId !== tester.userId)], discussion: [
       [0, '摄影社这周先做一次作品交流，新同学也可以带手机照片。'],
-      [1, '我带了一组校园里的树影，想听听大家怎么选照片。'],
-      [2, '我可以分享构图经验，周六见！'],
-      [3, '我把最近一卷胶片洗出来了，也带过来一起看。'],
+      [1, '我把最近一卷胶片洗出来了，也带过来一起看。'],
+      [2, '周三晚上暗房照常开，想自己冲第一卷的提前跟我说一声。'],
+      [3, '我只有手机拍的夜市照片，可以带来吗？'],
       [0, '周六下午两点，先看照片，再去附近走走。'],
     ] },
     ...extraWalls.map((entry, index) => ({ ...entry, discussion: DEMO_EXTRA_WALLS[index]!.discussion })),
@@ -251,7 +262,7 @@ export async function ensureDemoClubPages(web: WebApp, log: (message: string) =>
 async function submitAndPublish(web: WebApp, wall: Wall, userId: string, plan: DemoMemberPlan, log: (message: string) => void): Promise<DemoMember> {
   const { deps } = web;
   const { repos, config } = deps;
-  const example = plan.profile ?? readExample(plan.dir);
+  const example = plan.profile ?? readExample(plan);
   // 组织者建墙时已自动拥有成员关系与页面。
   const existing = findOwnPage(repos, userId, wall.id);
   const page = existing?.page ?? addMember(deps, wall, userId).page;
@@ -337,23 +348,19 @@ function seedDemoChats(web: WebApp, testerId: string, walls: ChatWall[]): DemoSe
     });
     // 已读到中段，保留后半段未读，便于评委体验未读数变化。
     readAt.set(groupId, 3);
-    const extraPlan = DEMO_EXTRA_WALLS[wallIndex - 2];
-    for (let memberIndex = 1; memberIndex <= Math.min(3, entry.members.length - 1); memberIndex += 1) {
-      const other = entry.members[memberIndex]!;
+    const scripts = DEMO_DIRECT_SCRIPTS[wallIndex] ?? [];
+    scripts.forEach((script, scriptIndex) => {
+      const other = entry.members[scriptIndex + 1];
+      if (!other || other.nickname !== script.with) throw new Error(`模拟私聊与成员顺序对不上：${script.with}`);
       const conversationId = openDirect(deps, testerId, entry.wall.id, other.userId);
       if (!conversationId) throw new Error('模拟私聊创建失败');
       result.directs += 1;
-      const topic = extraPlan?.directTopics[memberIndex - 1];
-      const exchange: [string, string][] = [
-        [testerId, `${other.nickname}你好！看了你的页面，想和你聊聊${topic?.[0] ?? '周末一起参加活动的安排'}。`],
-        [other.userId, '好呀，很高兴在这面墙上认识你！你比较想先从哪一部分开始？'],
-        [testerId, '先互相看看手上的小作品吧，周末见面时就有具体的话题了。'],
-        [other.userId, topic?.[1] ?? '可以，我把最近做的东西整理一下，周末带过来。'],
-        [other.userId, '对了，你周六下午方便吗？我们也可以先在群里约个时间。'],
-      ];
-      exchange.forEach(([userId, text], index) => pending.push({ conversationId, userId, text, at: base + 12 * 60 * 60_000 + wallIndex * 40 * 60_000 + memberIndex * 15 * 60_000 + index * 3 * 60_000 }));
-      readAt.set(conversationId, memberIndex === 2 ? exchange.length : 3);
-    }
+      script.lines.forEach(([who, text], index) => pending.push({
+        conversationId, userId: who === 'me' ? testerId : other.userId, text,
+        at: base + 12 * 60 * 60_000 + wallIndex * 40 * 60_000 + (scriptIndex + 1) * 15 * 60_000 + index * 3 * 60_000,
+      }));
+      readAt.set(conversationId, script.read);
+    });
     // 让其他成员之间也有自己的私聊；主测试账号无权读取这段历史。
     if (entry.members.length >= 6) {
       const a = entry.members[4]!;
