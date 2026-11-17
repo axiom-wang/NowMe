@@ -165,7 +165,7 @@ describe('数据库迁移', () => {
     expect(migrate(db)).toEqual([]);
     db.close();
     const again = open(file);
-    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }, { version: '004_user_models.sql' }, { version: '005_chat.sql' }, { version: '006_wall_covers.sql' }, { version: '007_user_avatar.sql' }, { version: '008_icebreakers.sql' }, { version: '009_credits.sql' }, { version: '010_job_queue.sql' }, { version: '011_account_deletion.sql' }, { version: '012_moderation.sql' }, { version: '013_consent.sql' }, { version: '014_deletion_evidence.sql' }, { version: '015_notify_prefs.sql' }, { version: '020_organizer_tools.sql' }, { version: '021_intros.sql' }, { version: '022_wall_asks.sql' }]);
+    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }, { version: '004_user_models.sql' }, { version: '005_chat.sql' }, { version: '006_wall_covers.sql' }, { version: '007_user_avatar.sql' }, { version: '008_icebreakers.sql' }, { version: '009_credits.sql' }, { version: '010_job_queue.sql' }, { version: '011_account_deletion.sql' }, { version: '012_moderation.sql' }, { version: '013_consent.sql' }, { version: '014_deletion_evidence.sql' }, { version: '015_notify_prefs.sql' }, { version: '020_organizer_tools.sql' }, { version: '021_intros.sql' }, { version: '022_wall_asks.sql' }, { version: '023_interview_context.sql' }]);
   });
 
   it('从旧数据库增量升级保留用户、页面、brief、版本、发布与历史任务', () => {

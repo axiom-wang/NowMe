@@ -87,7 +87,8 @@ describe('应用内采访', () => {
     });
     expect(started.status).toBe(303);
     const followups = t.repos.briefs.findForPage(owner.member.page.id, owner.session.userId);
-    expect(followups?.status).toBe('followups');
+    expect(followups?.status).toBe('review')
+    expect(t.fake.calls).toHaveLength(1);
     const assets = t.repos.briefAssets.listForBrief(followups?.id ?? '', owner.session.userId);
     expect(assets.map((asset) => [asset.fileName, asset.mime])).toEqual([['photo-1.jpg', 'image/jpeg']]); // 按魔数，不按文件名
     expect(existsSync(join(t.dataDir, 'hosted', owner.member.page.id, 'assets', 'photo-1.jpg'))).toBe(true);
@@ -97,7 +98,7 @@ describe('应用内采访', () => {
     expect(answers.motion).toBe('calm');
 
     const followPage = await (await get(t, `/w/${wall.id}/me/create`, { cookie: owner.session.cookie })).text();
-    expect(followPage).toContain('能说一个只属于你的具体细节吗？');
+    expect(followPage).toContain('你提到手冲咖啡，最想聊哪一段？');
     expect((await post(t, owner.session, `/w/${wall.id}/me/create/followups`, { f_f1: '1', f_f1_text: '手冲咖啡' })).status).toBe(303);
     const review = t.repos.briefs.findForPage(owner.member.page.id, owner.session.userId);
     expect(review?.status).toBe('review');
@@ -170,7 +171,9 @@ describe('应用内采访', () => {
     const { t, wall } = setup({ NOWME_INTERVIEW_DAILY_CALLS: '1' });
     const owner = await joinAs(t, wall, 'a@example.com', '阿柚');
     expect((await postMultipart(t, `/w/${wall.id}/me/create/start`, interviewFields(owner.session), [], { cookie: owner.session.cookie })).status).toBe(303);
-    const limited = await post(t, owner.session, `/w/${wall.id}/me/create/followups`, { f_f1: 'skip' });
+    const skipped = await post(t, owner.session, `/w/${wall.id}/me/create/followups`, { f_f1: 'skip' });
+    expect(skipped.status).toBe(303);
+    const limited = await post(t, owner.session, `/w/${wall.id}/me/create/followups`, { f_f1_text: '我自己焊过一把键盘' });
     expect(limited.status).toBe(429);
   });
 });
@@ -305,7 +308,7 @@ describe('提示缓存与模型选择', () => {
     await generate(t, wall, owner);
     const interview = t.fake.calls.filter((call) => call.tool_choice?.type === 'tool');
     const generation = t.fake.calls.filter((call) => call.tool_choice?.type !== 'tool');
-    expect(interview.length).toBeGreaterThanOrEqual(2);
+    expect(interview.length).toBe(1);
     expect(interview.every((call) => call.model === 'claude-haiku-5-5')).toBe(true);
     expect(generation.every((call) => call.model === 'claude-sonnet-5-5')).toBe(true);
     for (const call of t.fake.calls) {
@@ -345,7 +348,7 @@ describe('brief 渲染', () => {
     });
     const brief = toStructuredBrief(output, { material: '', choices: {}, styles: [], motion: 'lively' });
     const md = renderBriefMarkdown(brief, { name: '话剧社', description: '', sceneType: 'club', organizerNote: null }, {
-      id: 'club', label: '社团', goal: 'g', interviewBudgetSeconds: 180, assetPrompt: 'a', choiceQuestions: [], followUps: [], maxFollowUps: 1,
+      id: 'club', label: '社团', goal: 'g', interviewBudgetSeconds: 180, assetPrompt: 'a', choiceQuestions: [], quickQuestions: [], sentenceStarters: [], followUps: [], maxFollowUps: 1,
       mustHave: [], hookKinds: [{ kind: 'obsessed', pattern: 'p' }], defaults: { showSchool: false, useNickname: false, contactPublic: false },
       pageGoal: 'p', suggestedBlocks: ['hero'], visualTone: 'v', examples: ['club-newbie-sticker'],
     });

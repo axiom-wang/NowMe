@@ -16,6 +16,9 @@ export const PROFILE_CATEGORIES: readonly ProfileCategory[] = ['fact', 'quote', 
 export interface ProfileEntry {
   id: string;
   userId: string;
+  scope?: string;
+  sourceWallId?: string | null;
+  questionKey?: string | null;
   category: ProfileCategory;
   text: string;
   source: 'interview' | 'owner-file';
@@ -28,6 +31,9 @@ function toProfileEntry(row: Record<string, unknown>): ProfileEntry {
   return {
     id: row.id as string,
     userId: row.user_id as string,
+    scope: row.scope as string,
+    sourceWallId: row.source_wall_id as string | null,
+    questionKey: row.question_key as string | null,
     category: row.category as ProfileCategory,
     text: row.text as string,
     source: row.source as ProfileEntry['source'],
@@ -39,7 +45,7 @@ function toProfileEntry(row: Record<string, unknown>): ProfileEntry {
 
 export function createProfileEntriesRepo(db: Database) {
   const insert = db.prepare(
-    'INSERT INTO profile_entries (id, user_id, category, text, source, confirmation, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+    'INSERT INTO profile_entries (id, user_id, category, text, source, confirmation, created_at, updated_at, scope, source_wall_id, question_key) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)',
   );
   const list = db.prepare('SELECT * FROM profile_entries WHERE user_id = ? ORDER BY created_at, id');
   const deleteOne = db.prepare('DELETE FROM profile_entries WHERE id = ? AND user_id = ?');
@@ -48,7 +54,10 @@ export function createProfileEntriesRepo(db: Database) {
 
   return {
     insert(entry: ProfileEntry): void {
-      insert.run(entry.id, entry.userId, entry.category, entry.text, entry.source, entry.confirmation, entry.createdAt, entry.updatedAt);
+      insert.run(entry.id, entry.userId, entry.category, entry.text, entry.source, entry.confirmation, entry.createdAt, entry.updatedAt, entry.scope ?? 'all', entry.sourceWallId ?? null, entry.questionKey ?? null);
+    },
+    updateForUser(userId: string, id: string, text: string, category: ProfileCategory, scope: string, now: string): boolean {
+      return Number(db.prepare('UPDATE profile_entries SET text = ?, category = ?, scope = ?, question_key = NULL, confirmation = ?, updated_at = ? WHERE id = ? AND user_id = ?').run(text, category, scope, 'owner-stated', now, id, userId).changes) === 1;
     },
     has(userId: string, category: ProfileCategory, text: string): boolean {
       return exists.get(userId, category, text) !== undefined;
@@ -280,6 +289,7 @@ export interface GenerationJob {
   baseRevisionId: string | null;
   targetBlock: string | null;
   requestText: string | null;
+  rememberFacts?: boolean;
   resultMessage: string | null;
   revisionId: string | null;
   errorCode: string | null;
@@ -308,6 +318,7 @@ function toJob(row: Record<string, unknown> | undefined): GenerationJob | null {
     baseRevisionId: row.base_revision_id as string | null,
     targetBlock: row.target_block as string | null,
     requestText: row.request_text as string | null,
+    rememberFacts: Number(row.remember_facts) === 1,
     resultMessage: row.result_message as string | null,
     revisionId: row.revision_id as string | null,
     errorCode: row.error_code as string | null,

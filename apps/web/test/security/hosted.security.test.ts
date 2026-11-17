@@ -374,3 +374,54 @@ describe('S8 生成环境隔离且结果不受信', () => {
     void addMember;
   });
 });
+
+describe('采访上下文升级仍遵守 S7 / S8', () => {
+  it('画像新增、修改与合并只按当前会话；他人条目不可作为目标或合并来源', async () => {
+    const w = await world();
+    const original = w.t.repos.profileEntries.listForUser(w.owner.session.userId);
+    expect((await post(w.t, w.other.session, '/account/profile/entry', { entryId: w.profileId, text: '覆盖别人的资料', category: 'fact', scope: 'all' })).status).toBe(404);
+    expect((await post(w.t, w.other.session, '/account/profile/entry', { text: '我自己写的事实', category: 'fact', scope: 'all', userId: w.owner.session.userId })).status).toBe(303);
+    const mine = w.t.repos.profileEntries.listForUser(w.other.session.userId)[0]!;
+    expect((await post(w.t, w.other.session, '/account/profile/entry', { entryId: mine.id, mergeId: w.profileId, text: '合并后的事实', category: 'fact', scope: 'all' })).status).toBe(404);
+    expect(w.t.repos.profileEntries.listForUser(w.owner.session.userId)).toEqual(original);
+    expect((await postForm(w.t, '/account/profile/entry', { _csrf: 'wrong', text: '不该保存', category: 'fact', scope: 'all' }, { cookie: w.owner.session.cookie })).status).toBe(403);
+    expect((await get(w.t, '/account/data', { cookie: w.other.session.cookie })).status).toBe(200);
+  });
+
+  it('失败或需要澄清的修改不会把事实写回；模型虚构的原文也不能入画像', async () => {
+    const w = await world();
+    const before = w.t.repos.briefs.findForPage(w.owner.member.page.id, w.owner.session.userId)!;
+    const profiles = w.t.repos.profileEntries.listForUser(w.owner.session.userId);
+    for (const request of ['再加一句我拿了奖【假模型：澄清】', '再加一句我拿了奖【假模型：不结束】']) {
+      const response = await post(w.t, w.owner.session, `/w/${w.wall.id}/me/edit`, { revisionId: w.revisionId, request, rememberFacts: '1' });
+      expect(response.status).toBe(303);
+      await w.t.web.deps.hosted!.idle();
+      expect(w.t.repos.briefs.findForPage(w.owner.member.page.id, w.owner.session.userId)!.briefJson).toBe(before.briefJson);
+      expect(w.t.repos.profileEntries.listForUser(w.owner.session.userId)).toEqual(profiles);
+    }
+    const create = w.t.fake.createMessage.bind(w.t.fake);
+    w.t.fake.createMessage = async (params) => {
+      const response = await create(params);
+      for (const block of response.content) if (block.type === 'tool_use' && block.name === 'finish') (block.input as Record<string, unknown>).newFacts = ['我拿过诺贝尔奖'];
+      return response;
+    };
+    await post(w.t, w.owner.session, `/w/${w.wall.id}/me/edit`, { revisionId: w.revisionId, request: '换成蓝色', rememberFacts: '1' });
+    await w.t.web.deps.hosted!.idle();
+    expect(w.t.repos.briefs.findForPage(w.owner.member.page.id, w.owner.session.userId)!.briefMd).not.toContain('诺贝尔奖');
+    expect(w.t.repos.profileEntries.listForUser(w.owner.session.userId)).toEqual(profiles);
+  });
+
+  it('补充入口不能读取别人页面，尚未发布不能发起渐进补充', async () => {
+    const w = await world();
+    expect((await post(w.t, w.owner.session, `/w/${w.wall.id}/me/enrich`, { answer: '私有补充' })).status).toBe(404);
+    expect((await post(w.t, w.outsider, `/w/${w.wall.id}/me/enrich`, { answer: '私有补充' })).status).toBe(404);
+    const before = w.t.repos.briefs.findForPage(w.owner.member.page.id, w.owner.session.userId)!.briefJson;
+    await publish(w.t, w.owner.session, w.wall.id, w.revisionId, JSON.parse(w.t.repos.revisions.findById(w.revisionId)!.cardJson!));
+    const response = await post(w.t, w.owner.session, `/w/${w.wall.id}/me/enrich`, { questionIndex: '2', answer: '修键盘' });
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain('把这条加进页面？');
+    expect(html).toContain('补充：朋友最常找我帮忙的是：修键盘');
+    expect(w.t.repos.briefs.findForPage(w.owner.member.page.id, w.owner.session.userId)!.briefJson).toBe(before);
+  });
+});

@@ -334,3 +334,10 @@ export function skillArchiveFileName(version: string): string {
 
 /** [原型默认] 每页每日（滚动 24 小时）远程预览上限。 */
 export const REMOTE_PREVIEWS_PER_PAGE_PER_DAY = 100;
+
+/** 发布后的渐进补充：题目与第一人称句首配对，短回答不能丢掉题目语境。 */
+export const PROFILE_ENRICHMENT_QUESTIONS = [
+  { question: '最近做成的一件小事是什么？', statement: '我最近做成的一件小事是：' },
+  { question: '有什么话题，你能连讲十分钟？', statement: '我能连讲十分钟的话题是：' },
+  { question: '朋友最常找你帮什么忙？', statement: '朋友最常找我帮忙的是：' },
+] as const;

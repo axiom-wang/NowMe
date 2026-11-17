@@ -125,8 +125,8 @@ test('真实采访表单拒绝非图片、错误回显全部选择；群像等�
   expect(await page.evaluate(() => (window as any).prevented)).toEqual([false, true]);
   await page.goto(`/w/${wallId}/me/create`);
   const school = page.locator('[name="q_boundaries_0"]');
-  await expect(school).toBeChecked(); await expect(page.locator('main')).not.toContainText('默认勾选');
-  await school.uncheck();
+  await expect(school).toHaveCount(0); // 展示边界移到确认页，第一屏不再询问
+  await expect(page.locator('main')).not.toContainText('默认勾选');
   const photos = page.locator('[name="photos"]');
   await photos.setInputFiles({ name: 'hello.txt', mimeType: 'text/plain', buffer: Buffer.from('hi') });
   await expect(page.locator('[data-photo-status]')).toContainText('只支持 PNG');
@@ -134,10 +134,11 @@ test('真实采访表单拒绝非图片、错误回显全部选择；群像等�
   await photos.setInputFiles([]);
   await page.locator('[name="material"]').fill('我的素材'.repeat(100) + '稳赚不赔');
   await page.locator('[name="q_teammate_0"]').check();
+  await page.getByText('风格与动效（可以看到草稿后再调）', { exact: true }).click();
   await page.locator('[name="style_hackathon-terminal"]').check();
   await page.getByRole('button', { name: '下一步', exact: true }).click();
   await expect(page.locator('[name="material"]')).toHaveValue('我的素材'.repeat(100) + '稳赚不赔');
-  await expect(school).not.toBeChecked();
+  await expect(school).toHaveCount(0);
   await expect(page.locator('[name="q_teammate_0"]')).toBeChecked();
   await expect(page.locator('[name="style_hackathon-terminal"]')).toBeChecked();
 });

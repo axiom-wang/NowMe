@@ -81,7 +81,7 @@ export const GENERATION_TOOLS: ToolDefinition[] = [
     description: '结束本次任务。outcome 为 "done"（页面已完成，交给平台重新校验）或 "clarify"（只用于修改任务：作用范围不清，message 写给主人的问题）。',
     input_schema: {
       type: 'object',
-      properties: { outcome: { type: 'string', enum: ['done', 'clarify'] }, message: { type: 'string' } },
+      properties: { outcome: { type: 'string', enum: ['done', 'clarify'] }, message: { type: 'string' }, newFacts: { type: 'array', maxItems: 6, items: { type: 'string', maxLength: 200 }, description: '仅修改任务：主人修改要求里新说的事实，每条逐字摘录，不要包含修改指令、推测或风格要求；没有则空数组' } },
       required: ['outcome', 'message'],
     },
     cache_control: { type: 'ephemeral' },
@@ -136,6 +136,7 @@ function checkPagePath(path: string): string {
 export interface FinishSignal {
   outcome: 'done' | 'clarify';
   message: string;
+  newFacts?: string[];
 }
 
 export interface ToolCallResult {
@@ -237,7 +238,9 @@ export class GenerationWorkspace {
           const outcome = asString(input, 'outcome');
           if (outcome !== 'done' && outcome !== 'clarify') throw new ToolError('outcome 只能是 done 或 clarify');
           const message = Array.from(asString(input, 'message').trim()).slice(0, 300).join('');
-          return { content: '好的', isError: false, finish: { outcome, message } };
+          const raw = (input as Record<string, unknown>).newFacts;
+          const newFacts = Array.isArray(raw) ? raw.filter((v): v is string => typeof v === 'string' && v.trim().length > 0 && Array.from(v).length <= 200).slice(0, 6).map((v) => v.trim()) : [];
+          return { content: '好的', isError: false, finish: { outcome, message, newFacts } };
         }
         default:
           throw new ToolError(`没有这个工具：${name}`);

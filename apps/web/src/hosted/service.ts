@@ -17,15 +17,18 @@ import { transaction } from '../db/index.js';
 import type { BriefAsset, BriefRecord, GenerationJob, JobKind, JobModelSource, ProfileCategory } from '../db/hosted.js';
 import type { EventProps } from '../db/events.js';
 import { InsufficientCredits } from '../db/credits.js';
-import type { OwnPage } from '../services/access.js';
+import { findOwnPage, type OwnPage } from '../services/access.js';
 import { aiStatus, chargeJob, planJob, type AiStatus } from '../services/billing.js';
 import type { JobDispatch } from '../worker/dispatch.js';
 import { assetFileName, checkUpload, readAsset, writeAsset } from './assets.js';
+import { normalizedProfileText } from './profile.js';
+import { knownContext, type KnownContext } from './known-context.js';
 import { eraseBriefRecord } from './data.js';
 import {
   renderBriefMarkdown,
   toStructuredBrief,
   type BriefHook,
+  type ReviewEdits,
   type FollowupAnswer,
   type FollowupState,
   type InterviewAnswers,
@@ -34,7 +37,7 @@ import {
 import { modelFailureCode, type ModelAccessCode } from './model-errors.js';
 import type { ModelRole, ResolvedModel } from './user-models.js';
 import type { UsageTotals } from './model-client.js';
-import { InterviewError, runComposeBrief, runFollowups } from './interview.js';
+import { InterviewError, runComposeBrief, runInterviewDraft } from './interview.js';
 
 type HostedDeps = Pick<AppDeps, 'config' | 'db' | 'repos' | 'now' | 'kitFonts' | 'log'>;
 
@@ -95,18 +98,14 @@ export interface HostedOverview {
   recentJobs: GenerationJob[];
 }
 
-export interface ConfirmEdits {
-  aiView: { text: string; drop: boolean }[];
-  hooks: { text: string; opener: string; drop: boolean }[];
-  /** 勾选写回画像的 profileSuggestions 下标。 */
-  keepProfile: number[];
-}
+export type ConfirmEdits = ReviewEdits;
 
 export interface JobRequest {
   kind: JobKind;
   baseRevisionId?: string | null;
   targetBlock?: string | null;
   request?: string | null;
+  rememberFacts?: boolean;
 }
 
 export interface HostedService {
@@ -114,11 +113,12 @@ export interface HostedService {
   overview(own: OwnPage, userId: string): HostedOverview;
   loadBrief(own: OwnPage, userId: string): BriefView | null;
   scene(own: OwnPage): SceneGuide;
+  known(own: OwnPage, userId: string): KnownContext;
   startInterview(own: OwnPage, userId: string, answers: InterviewAnswers, uploads: Uint8Array[]): Promise<StepResult>;
-  answerFollowups(own: OwnPage, userId: string, answers: Record<string, FollowupAnswer>): Promise<StepResult>;
+  answerFollowups(own: OwnPage, userId: string, answers: Record<string, FollowupAnswer>, edits?: ConfirmEdits): Promise<StepResult>;
   revise(own: OwnPage, userId: string, note: string): Promise<StepResult>;
   confirm(own: OwnPage, userId: string, edits: ConfirmEdits): StepResult;
-  /** 删除这一页的采访（brief 与素材）。 */
+  /** 返回填写页，保留答案与图片。 */
   restart(own: OwnPage, userId: string): Promise<void>;
   readAssetFile(userId: string, assetId: string, pageId: string): Promise<{ asset: BriefAsset; bytes: Uint8Array } | null>;
   startJob(own: OwnPage, userId: string, request: JobRequest): JobStartResult;
@@ -212,13 +212,15 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
   };
 
   /** 调用 #2 / #3。成功后状态 review。 */
-  async function compose(own: OwnPage, userId: string, view: BriefView, note: string | null): Promise<StepResult> {
+  async function compose(own: OwnPage, userId: string, view: BriefView, note: string | null, edits?: ConfirmEdits): Promise<StepResult> {
     if (!view.answers || !view.followups) return { ok: false, error: 'wrong-state' };
+    note ??= view.followups.correction ?? null;
     if (!interviewAllowed(own.page.id)) return { ok: false, error: 'rate-limited' };
     const started = Date.now();
     const sceneGuide = scene(own);
     try {
       const model = options.resolve(userId, 'interview');
+      const known = knownContext(repos, own, userId, sceneGuide);
       const result = await runComposeBrief(
         model.client,
         model.endpoint.model!,
@@ -226,18 +228,35 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
           wall: own.wall,
           scene: sceneGuide,
           answers: view.answers,
-          profile: repos.profileEntries.listForUser(userId),
+          profile: known.profile,
+          knownAnswers: [...(known.nickname ? [{ question: '账号昵称（可更改）', answers: [known.nickname] }] : []), ...known.knownAnswers],
           imageFiles: view.assets.map((asset) => asset.fileName),
         },
         view.followups,
         note && view.brief ? { previous: view.brief, note } : null,
       );
       recordCall(own, userId, note ? 3 : 2, true, started, result.usage);
+      const current = loadBrief(own, userId);
+      if (!findOwnPage(repos, userId, own.wall.id) || current?.record.id !== view.record.id || current.record.briefJson !== view.record.briefJson || current.record.status !== view.record.status || current.record.followupsJson !== view.record.followupsJson || current.record.answersJson !== view.record.answersJson) return { ok: false, error: 'wrong-state' };
       const files = new Set(view.assets.map((asset) => asset.fileName));
       const output = { ...result.output, images: result.output.images.filter((image) => files.has(image.file)) };
       const structured = toStructuredBrief(output, view.answers);
+      const reviewEdits = edits ?? view.followups.reviewEdits;
+      // 同时提交的改写和边界优先于模型重新整理，不能因为补一个例子而丢掉。
+      if (reviewEdits && view.brief) {
+        structured.profileSelection = view.brief.profileSuggestions.filter((_, i) => reviewEdits.keepProfile.includes(i)).map((p) => p.text);
+        if (reviewEdits.displayName) structured.displayName = reviewEdits.displayName;
+        if (reviewEdits.boundaries) structured.boundaries = reviewEdits.boundaries;
+        structured.aiView = structured.aiView.map((sentence, i) => reviewEdits.aiView[i] && reviewEdits.aiView[i]!.text !== view.brief!.aiView[i] ? reviewEdits.aiView[i]!.text : sentence).filter((_, i) => !reviewEdits.aiView[i]?.drop);
+        structured.hooks = structured.hooks.map((hook, i) => {
+          const edit = reviewEdits.hooks[i]; const old = view.brief!.hooks[i];
+          return edit && old ? { ...hook, text: edit.text !== old.text ? edit.text : hook.text, opener: edit.opener !== old.opener ? edit.opener : hook.opener } : hook;
+        }).filter((_, i) => !reviewEdits.hooks[i]?.drop);
+      }
       saveBrief(view, {
         status: 'review',
+        followupsJson: JSON.stringify({ ...view.followups, pending: false, reviewEdits: undefined, correction: undefined }),
+        answersJson: JSON.stringify({ ...view.answers, updates: [...(view.answers.updates ?? []), ...(note ? [note] : [])] }),
         briefJson: JSON.stringify(structured),
         briefMd: renderBriefMarkdown(structured, own.wall, sceneGuide),
         confirmedAt: null,
@@ -258,6 +277,7 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
     settings,
     loadBrief,
     scene,
+    known: (own, userId) => knownContext(repos, own, userId, scene(own)),
     modelReady: (userId) => options.ready(userId),
     resolveModel: (userId, role) => options.resolve(userId, role),
     overview(own, userId) {
@@ -283,6 +303,8 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
       // 重新采访：旧的 brief 与素材整体替换
       const existing = repos.briefs.findForPage(own.page.id, userId);
       if (existing && existing.status !== 'collecting') return { ok: false, error: 'wrong-state' };
+      const previousAnswers = parse<InterviewAnswers>(existing?.answersJson ?? null);
+      answers.updates = previousAnswers?.updates ?? [];
       // 重试时沿用已保存的图片；模型失败不会让用户重新上传。
       if (existing && uploads.length === 0) {
         for (const asset of repos.briefAssets.listForBrief(existing.id, userId)) uploads.push(await readAsset(config.dataDir, own.page.id, asset.fileName));
@@ -318,24 +340,28 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
       const started = Date.now();
       const sceneGuide = scene(own);
       let followups: FollowupState;
+      let draft: StructuredBrief;
       try {
         const model = options.resolve(userId, 'interview');
-        const result = await runFollowups(model.client, model.endpoint.model!, {
+        const known = knownContext(repos, own, userId, sceneGuide);
+        const result = await runInterviewDraft(model.client, model.endpoint.model!, {
           wall: own.wall,
           scene: sceneGuide,
           answers,
-          profile: repos.profileEntries.listForUser(userId),
+          profile: known.profile,
+          knownAnswers: [...(known.nickname ? [{ question: '账号昵称（可更改）', answers: [known.nickname] }] : []), ...known.knownAnswers],
           images,
         });
         recordCall(own, userId, 1, true, started, result.usage);
         const files = new Set(images.map((image) => image.asset.fileName));
         followups = {
-          facts: result.output.facts,
-          imageNotes: result.output.imageNotes.filter((note) => files.has(note.file)),
-          missing: result.output.missing,
-          questions: result.output.questions.map((question, index) => ({ id: `f${index + 1}`, question: question.question, options: question.options })),
+          facts: result.output.followups.facts,
+          imageNotes: result.output.followups.imageNotes.filter((note) => files.has(note.file)),
+          missing: result.output.followups.missing,
+          questions: result.output.followups.questions.map((question, index) => ({ id: `f${index + 1}`, question: question.question, options: question.options })),
           answers: {},
         };
+        draft = toStructuredBrief({ ...result.output.brief, images: result.output.brief.images.filter((image) => files.has(image.file)) }, answers);
       } catch (error) {
         if (error instanceof InterviewError) {
           recordCall(own, userId, 1, false, started, error.usage);
@@ -346,34 +372,35 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
         throw error;
       }
       const view = loadBrief(own, userId);
-      if (!view) return { ok: false, error: 'wrong-state' };
-      saveBrief(view, { status: 'followups', followupsJson: JSON.stringify(followups) });
-      if (followups.questions.length === 0) {
-        const fresh = loadBrief(own, userId);
-        if (fresh) return compose(own, userId, fresh, null);
-      }
+      if (!view || view.record.id !== brief.id || view.record.status !== 'collecting' || !findOwnPage(repos, userId, own.wall.id)) return { ok: false, error: 'wrong-state' };
+      saveBrief(view, { status: 'review', followupsJson: JSON.stringify(followups), briefJson: JSON.stringify(draft), briefMd: renderBriefMarkdown(draft, own.wall, sceneGuide) });
       return { ok: true };
     },
 
-    async answerFollowups(own, userId, answers) {
+    async answerFollowups(own, userId, answers, edits) {
       const view = loadBrief(own, userId);
-      if (!view || view.record.status !== 'followups' || !view.followups) return { ok: false, error: 'wrong-state' };
-      const followups: FollowupState = { ...view.followups, answers };
+      if (!view || !['review', 'followups'].includes(view.record.status) || !view.followups) return { ok: false, error: 'wrong-state' };
+      const additions = Object.fromEntries(Object.entries(answers).filter(([, a]) => !a.skipped));
+      if (view.brief && !view.followups.pending && Object.keys(additions).length === 0) return { ok: true };
+      const followups: FollowupState = { ...view.followups, ...(edits ? { reviewEdits: edits } : {}), pending: true, answers: { ...view.followups.answers, ...additions } };
       saveBrief(view, { followupsJson: JSON.stringify(followups) });
       const fresh = loadBrief(own, userId);
-      return fresh ? compose(own, userId, fresh, null) : { ok: false, error: 'wrong-state' };
+      return fresh ? compose(own, userId, fresh, null, edits) : { ok: false, error: 'wrong-state' };
     },
 
     async revise(own, userId, note) {
       const view = loadBrief(own, userId);
       if (!view || view.record.status !== 'review' || !view.brief) return { ok: false, error: 'wrong-state' };
       if (note.trim().length === 0) return { ok: false, error: 'note-empty' };
-      return compose(own, userId, view, note.trim());
+      saveBrief(view, { followupsJson: JSON.stringify({ ...view.followups, pending: true, correction: note.trim() }) });
+      const fresh = loadBrief(own, userId);
+      return fresh ? compose(own, userId, fresh, note.trim()) : { ok: false, error: 'wrong-state' };
     },
 
     confirm(own, userId, edits) {
       const view = loadBrief(own, userId);
       if (!view || view.record.status !== 'review' || !view.brief) return { ok: false, error: 'wrong-state' };
+      if (view.followups?.pending) return { ok: false, error: 'wrong-state' };
       const brief = view.brief;
       const aiView = edits.aiView
         .slice(0, brief.aiView.length)
@@ -394,20 +421,25 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
       if (hooks.length < 2) return { ok: false, error: 'need-two-hooks' };
 
       const nowIso = deps.now().toISOString();
-      const confirmed: StructuredBrief = { ...brief, aiView, hooks, confirmedAt: nowIso };
+      const confirmed: StructuredBrief = { ...brief, aiView, hooks, displayName: edits.displayName?.trim() || brief.displayName, boundaries: edits.boundaries ?? brief.boundaries, confirmedAt: nowIso };
       const keep = new Set(edits.keepProfile);
       const chosen = brief.profileSuggestions.filter((_, index) => keep.has(index));
       let saved = 0;
       transaction(db, () => {
         for (const suggestion of chosen) {
           const category = suggestion.category as ProfileCategory;
-          if (repos.profileEntries.has(userId, category, suggestion.text)) continue;
+          const scope = category === 'boundary' ? `wall:${own.wall.id}` : own.wall.sceneType;
+          if (repos.profileEntries.listForUser(userId).some((entry) => entry.category === category && entry.scope === scope && normalizedProfileText(entry.text) === normalizedProfileText(suggestion.text))) continue;
+          const questionId = Object.entries(view.answers?.choices ?? {}).find(([, a]) => a.selected.includes(suggestion.text) || a.text === suggestion.text)?.[0];
           repos.profileEntries.insert({
             id: generateId('pfe'),
             userId,
             category,
             text: suggestion.text,
             source: 'interview',
+            scope,
+            sourceWallId: own.wall.id,
+            questionKey: questionId ? `${own.wall.sceneType}:${questionId}` : null,
             confirmation: 'owner-confirmed',
             createdAt: nowIso,
             updatedAt: nowIso,
@@ -428,8 +460,9 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
     async restart(own, userId) {
       const existing = repos.briefs.findForPage(own.page.id, userId);
       if (!existing) return;
-      await eraseBrief(existing);
-      record('brief_delete', own, userId, { count: 1 });
+      const previous = loadBrief(own, userId);
+      const additions = previous?.followups?.questions.flatMap((q) => { const a = previous.followups?.answers[q.id]; return a && !a.skipped ? [`${q.question}：${[a.selected, a.text].filter(Boolean).join('；')}`] : []; }) ?? [];
+      repos.briefs.update({ ...existing, answersJson: JSON.stringify({ ...previous?.answers, updates: [...new Set([...(previous?.answers?.updates ?? []), ...(previous?.followups?.correction ? [previous.followups.correction] : []), ...additions])] }), status: 'collecting', confirmedAt: null, updatedAt: deps.now().toISOString() });
     },
 
     async readAssetFile(userId, assetId, pageId) {
@@ -475,6 +508,7 @@ export function createHostedService(deps: HostedDeps, options: HostedServiceOpti
         }
         const id = generateId('gen');
         repos.jobs.create({ id, pageId: own.page.id, ownerId: userId, kind: request.kind, baseRevisionId, targetBlock, requestText, createdAt: nowIso, modelSource: plan.source, modelVersion });
+        db.prepare('UPDATE generation_jobs SET remember_facts = ? WHERE id = ?').run(request.rememberFacts ? 1 : 0, id);
         chargeJob(deps, id, plan, userId);
         repos.jobEvents.append(id, 'queued', nowIso);
         return { ok: true, job: repos.jobs.findById(id) as GenerationJob };

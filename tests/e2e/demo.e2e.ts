@@ -61,7 +61,8 @@ test('黑客松评审：两个入口、浏览、真实采访生成修改、本�
   await page.locator('textarea[name="material"]').fill('我叫阿柚。做过三个校园小程序，负责 TypeScript 前端。想在这次黑客松做一个帮新朋友找到队友的小工具，想找设计师。我能写交互和原型，喜欢手冲咖啡。页面想要像终端一样简洁，深色绿色，无动效，保留联系方式但不公开。作品还没有公开链接，请不要编造。');
   await page.locator('input[name="q_role"][value="0"]').check();
   await page.locator('input[name="q_teammate_0"]').check();
-  await page.locator('input[name="style_hackathon-terminal"]').check();
+  await page.getByText('风格与动效（可以看到草稿后再调）', { exact: true }).click();
+      await page.locator('input[name="style_hackathon-terminal"]').check();
   await page.locator('input[name="motion"][value="calm"]').check();
   await page.getByRole('button', { name: '下一步' }).click();
   await page.waitForLoadState('networkidle');

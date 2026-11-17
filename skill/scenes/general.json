@@ -55,5 +55,7 @@
   "pageGoal": "围绕本页意图组织：首屏说清你是谁、最想被记住的那一面；用 1–2 个具体细节做视觉重点；最后给出别人可以接话的点。",
   "suggestedBlocks": ["hero", "about", "highlights", "connect"],
   "visualTone": "按主人的气质和本页意图选择；从 6 个示例里挑最接近的一个做起点，再按这面墙的语境调整。",
-  "examples": ["hackathon-terminal", "hackathon-poster", "interest-vinyl", "interest-film-zine", "club-newbie-sticker", "club-senior-quest"]
+  "examples": ["hackathon-terminal", "hackathon-poster", "interest-vinyl", "interest-film-zine", "club-newbie-sticker", "club-senior-quest"],
+  "quickQuestions": [{"id": "snapshot", "question": "空出一个下午，你会选？", "options": ["空出一个下午，我想动手做点东西", "空出一个下午，我想出去走走", "空出一个下午，我想约人聊天", "空出一个下午，我想一个人放空"]}],
+  "sentenceStarters": ["朋友最常找我帮忙的是", "我能连讲十分钟的话题是"]
 }

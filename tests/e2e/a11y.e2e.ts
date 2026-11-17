@@ -104,14 +104,17 @@ test('创作工作区各阶段：采访、追问、确认、生成进度、预�
       await page.locator('textarea[name="material"]').fill('我叫阿柚。做过 3 个校园小程序，负责前端。');
       await page.locator('input[name="q_role"][value="0"]').check();
       await page.locator('input[name="q_teammate_0"]').check();
+      await page.getByText('风格与动效（可以看到草稿后再调）', { exact: true }).click();
       await page.locator('input[name="style_hackathon-terminal"]').check();
       await page.getByRole('button', { name: '下一步' }).click();
+      await page.getByText(/^补一个例子：/).first().click();
       await expect(page.locator('input[name="f_f1_text"]')).toBeVisible();
       await check(page, { label: '采访·追问' }, viewport, 41);
       await page.locator('input[name="f_f1_text"]').fill('会用五种方言说你吃了没');
-      await page.getByRole('button', { name: '整理“AI 眼中的你”' }).click();
+      await page.getByRole('button', { name: '用补充内容重新整理' }).click();
       await expect(page.getByRole('heading', { name: '这是 AI 眼中的你' })).toBeVisible();
       await check(page, { label: '采访·确认 AI 眼中的你' }, viewport, 42);
+      await page.locator('.hosted-aiview details summary').first().click();
       await page.getByRole('textbox', { name: '第 1 句', exact: true }).fill('你是阿柚，一个做小程序的前端。');
       await page.getByRole('button', { name: '确认，就是我' }).click();
       await expect(page.getByRole('heading', { name: '资料确认好了' })).toBeVisible();

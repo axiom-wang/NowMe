@@ -67,5 +67,7 @@
   "pageGoal": "首屏和封面（页面顶部 375×500）一眼看出：角色、最拿得出手的 1–3 个技能、想找什么样的队友；往下是 1 个具体项目（做了什么、负责哪部分、截图或外链）和这次想做的方向。信息密度可以高，让人扫一眼就能判断“要不要来聊”。",
   "suggestedBlocks": ["hero", "teammate", "projects", "skills", "idea"],
   "visualTone": "偏利落、科技感：清晰的网格与层级、等宽或几何无衬线字、一个高对比点缀色；只是建议，主人选的风格优先。页面不能联网：可运行的 demo 只能放截图、动图或用 data-nm-href 外链。",
-  "examples": ["hackathon-terminal", "hackathon-poster"]
+  "examples": ["hackathon-terminal", "hackathon-poster"],
+  "quickQuestions": [{"id": "snapshot", "question": "凌晨三点，你更像哪一个？", "options": ["凌晨三点，我还在改 bug", "凌晨三点，我还在改 PPT", "凌晨三点，我负责点外卖", "凌晨三点，我已经睡了"]}],
+  "sentenceStarters": ["朋友最常找我帮忙的是", "我能连讲十分钟的话题是"]
 }

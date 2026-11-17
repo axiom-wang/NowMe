@@ -233,6 +233,12 @@ export const sceneGuideSchema = z.strictObject({
   goal: nonEmptyText,
   interviewBudgetSeconds: z.int().positive(),
   assetPrompt: nonEmptyText,
+  quickQuestions: z.array(z.strictObject({
+    id: slugSchema,
+    question: nonEmptyText,
+    options: z.array(nonEmptyText).refine((items) => items.length === 2 || items.length === 4, '快问快答须有两个或四个选项'),
+  })).max(4).superRefine((items, ctx) => uniqueBy(items, (item) => item.id, ctx, 'id', '快问快答 id ')).default([]),
+  sentenceStarters: z.array(nonEmptyText).max(3).default([]),
   choiceQuestions: z
     .array(
       z.strictObject({
@@ -339,3 +345,10 @@ export const skillPackageManifestSchema = z.strictObject({
 });
 
 export type SkillPackageManifest = z.infer<typeof skillPackageManifestSchema>;
+
+/** 主人维护长期画像：适用范围不由模型扩大。 */
+export const profileEntryInputSchema = z.object({
+  text: z.string().trim().min(1, '请写一句要记住的内容').max(200, '画像每条最多 200 字'),
+  category: z.enum(['fact', 'quote', 'preference', 'boundary']),
+  scope: z.union([z.literal('all'), z.enum(SCENE_TYPES), z.string().regex(/^wall:wal_[a-z2-7]+$/)]),
+});

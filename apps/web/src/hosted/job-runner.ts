@@ -9,10 +9,10 @@
  * - 每轮调用模型前确认仍持有租约、页面与成员关系仍有效（被移出、退出、墙关闭时立即停止，按 PAGE_GONE 退点）；
  * - 不重试：被打断（租约过期、优雅退出超时）的任务标记 INTERRUPTED 并全额退点，避免重复计费。
  */
-import { cp, mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
+import { cp, readFile, mkdir, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { HOSTED_JOB_TIMEOUT_MS, type HostedConfig, type ValidationIssue } from '@nowme/contracts';
+import { generateId, HOSTED_JOB_TIMEOUT_MS, type HostedConfig, type ValidationIssue } from '@nowme/contracts';
 import { loadSceneGuide } from '@nowme/skill';
 import { validatePage } from '@nowme/validator';
 import type { AppDeps } from '../context.js';
@@ -24,8 +24,10 @@ import { buildAgentContext } from '../services/agent.js';
 import { revisionDir, REVISION_ORIGINAL_DIR } from '../services/revision-storage.js';
 import type { SubmissionStore } from '../services/submissions.js';
 import type { JobContext } from '../worker/runtime.js';
+import { renderBriefMarkdown } from './brief.js';
+import { normalizedProfileText } from './profile.js';
 import { readAsset } from './assets.js';
-import { untrusted, type UsageTotals } from './model-client.js';
+import { untrusted, type TextBlock, type ImageBlock, type UsageTotals } from './model-client.js';
 import { modelFailureCode } from './model-errors.js';
 import { RunError, runGeneration } from './runner.js';
 import { loadBriefView, usageProps, type BriefView } from './service.js';
@@ -200,12 +202,20 @@ export function createGenerationExecutor(deps: GenerationDeps, options: Generati
       const workspace = new GenerationWorkspace(dir, deps.kitFonts, previewer);
       let wrote = false;
       let currentTurn = 0;
+      const initial: (TextBlock | ImageBlock)[] = [{ type: 'text', text: firstMessage(own, job, confirmed?.record.briefMd ?? null, confirmed?.assets ?? [], prepared.baseNumber, notes) }];
+      if (model.endpoint.vision) {
+        for (const asset of confirmed?.assets ?? []) {
+          const bytes = await readFile(join(dir, 'page', 'assets', asset.fileName));
+          initial.push({ type: 'text', text: `主人原图：assets/${asset.fileName}；只按 brief 的展示边界使用。` });
+          initial.push({ type: 'image', source: { type: 'base64', media_type: asset.mime, data: bytes.toString('base64') } });
+        }
+      }
       const result = await runGeneration({
         client: model.client,
         model: model.endpoint.model!,
         maxTurns: settings.maxTurns,
         workspace,
-        firstMessage: firstMessage(own, job, confirmed?.record.briefMd ?? null, confirmed?.assets ?? [], prepared.baseNumber, notes),
+        firstMessage: initial,
         signal,
         onTurn: (turn) => {
           // 每轮调用模型前确认仍持有租约、页面与成员关系仍有效：任务被中止（停用账号、注销、删除页面、退出、被移出、
@@ -257,6 +267,20 @@ export function createGenerationExecutor(deps: GenerationDeps, options: Generati
         extraWarnings,
         // 与写版本同一个事务：结算（保留扣点）并结束任务。上面的 stillValid 已在这个事务里确认持有租约
         onStored: (revisionId) => {
+          // 与版本写入同事务；失败、澄清、失去租约时不会写回，更不会重建主人已删除的资料。
+          if (job.kind === 'edit' && job.requestText && confirmed?.brief) {
+            const current = repos.briefs.findForPage(job.pageId, job.ownerId);
+            if (current?.id === confirmed.record.id && current.status === 'confirmed' && current.briefJson === confirmed.record.briefJson) {
+              const facts = [...new Set(result.finish.newFacts ?? [])].filter((fact) => job.requestText!.includes(fact));
+              const updated = { ...confirmed.brief, facts: [...confirmed.brief.facts, ...facts.filter((text) => !confirmed.brief!.facts.some((f) => f.text === text)).map((text) => ({ text, source: 'interview' as const }))], ownerEdits: [...(confirmed.brief.ownerEdits ?? []), job.requestText] };
+              repos.briefs.update({ ...current, answersJson: JSON.stringify({ ...confirmed.answers, updates: [...(confirmed.answers?.updates ?? []), job.requestText] }), briefJson: JSON.stringify(updated), briefMd: renderBriefMarkdown(updated, own.wall, loadSceneGuide(own.wall.sceneType)), updatedAt: deps.now().toISOString() });
+              if (job.rememberFacts) for (const fact of facts) {
+                if (repos.profileEntries.listForUser(job.ownerId).some((p) => p.scope === own.wall.sceneType && normalizedProfileText(p.text) === normalizedProfileText(fact))) continue;
+                const now = deps.now().toISOString();
+                repos.profileEntries.insert({ id: generateId('pfe'), userId: job.ownerId, category: 'fact', text: fact, scope: own.wall.sceneType, sourceWallId: own.wall.id, source: 'interview', confirmation: 'owner-stated', createdAt: now, updatedAt: now });
+              }
+            }
+          }
           if (!settleAndFinish('succeeded', { revisionId, message })) throw new Error('写版本时租约已不在');
         },
       });

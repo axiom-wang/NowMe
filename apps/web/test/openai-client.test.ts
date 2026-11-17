@@ -212,14 +212,8 @@ function createMockOpenAIServer() {
     const body = JSON.parse(String(init?.body)) as ChatCompletionRequest;
     recorded.push({ url: String(input), headers: Object.fromEntries(new Headers(init?.headers).entries()), body });
     const choice = body.tool_choice;
-    if (typeof choice === 'object' && choice.function.name === 'submit_followups') {
-      return reply({ content: null, tool_calls: [toolCall('submit_followups', { facts: ['做过 3 个校园小程序'], missing: [], questions: [] })] });
-    }
-    if (typeof choice === 'object' && choice.function.name === 'submit_brief') {
-      return reply({
-        content: null,
-        tool_calls: [
-          toolCall('submit_brief', {
+    if (typeof choice === 'object' && choice.function.name === 'submit_interview') {
+      return reply({ content: null, tool_calls: [toolCall('submit_interview', { brief: {
             displayName: '阿柚',
             firstScreen: '名字与想找的队友',
             facts: [{ text: '做过 3 个校园小程序', source: 'interview' }],
@@ -230,9 +224,7 @@ function createMockOpenAIServer() {
             aiView: ['你是阿柚，一个做小程序的前端。'],
             unknowns: [],
             profileSuggestions: [{ category: 'fact', text: '做过 3 个校园小程序' }],
-          }),
-        ],
-      });
+      }, followups: { facts: ['做过 3 个校园小程序'], missing: [], questions: [] } })] });
     }
     const turn = body.messages.filter((message) => message.role === 'assistant').length + 1;
     switch (turn) {
@@ -283,7 +275,7 @@ describe('OpenAI 兼容服务走通托管路线', () => {
     expect(revision).toMatchObject({ source: 'hosted', status: 'accepted' });
     expect(job?.usage.cacheReadTokens).toBeGreaterThan(0);
 
-    expect(server.recorded.length).toBeGreaterThanOrEqual(6);
+    expect(server.recorded.length).toBeGreaterThanOrEqual(5);
     for (const request of server.recorded) {
       expect(request.url).toBe('https://api.deepseek.com/v1/chat/completions');
       expect(request.headers.authorization).toBe(`Bearer ${key}`);

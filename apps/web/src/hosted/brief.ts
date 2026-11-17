@@ -58,6 +58,11 @@ export interface ChoiceAnswer {
 
 export interface InterviewAnswers {
   material: string;
+  intent?: string;
+  updates?: string[];
+  quick?: Record<string, string>;
+  starters?: Record<string, string>;
+  wallTopics?: string[];
   choices: Record<string, ChoiceAnswer>;
   /** 选中的示例目录名；空数组表示“你来定”。 */
   styles: string[];
@@ -76,7 +81,18 @@ export interface FollowupAnswer {
   skipped: boolean;
 }
 
+export interface ReviewEdits {
+  aiView: { text: string; drop: boolean }[];
+  hooks: { text: string; opener: string; drop: boolean }[];
+  keepProfile: number[];
+  displayName?: string;
+  boundaries?: StructuredBrief['boundaries'];
+}
+
 export interface FollowupState {
+  reviewEdits?: ReviewEdits;
+  correction?: string;
+  pending?: boolean;
   facts: string[];
   imageNotes: { file: string; description: string }[];
   missing: { id: string; reason: string }[];
@@ -234,6 +250,7 @@ export const briefOutputSchema = z.object({
         .slice(0, 8),
     ),
 });
+export const interviewDraftSchema = z.object({ brief: briefOutputSchema, followups: followupOutputSchema });
 export type BriefOutput = z.output<typeof briefOutputSchema>;
 export type BriefFactSource = 'interview' | 'owner-file' | 'profile';
 export type BriefHook = { kind: string; text: string; opener: string };
@@ -305,12 +322,18 @@ export const BRIEF_TOOL_SCHEMA = {
   required: ['displayName', 'firstScreen', 'facts', 'hooks', 'aiView', 'unknowns'],
 } as const;
 
+export const INTERVIEW_DRAFT_TOOL_SCHEMA = { type: 'object', properties: { brief: BRIEF_TOOL_SCHEMA, followups: FOLLOWUP_TOOL_SCHEMA }, required: ['brief', 'followups'] };
+
 /** 存进 `brief_json` 的结构化 brief：模型输出 + 平台从表单确定的字段（风格、动效不信任模型）。 */
 export interface StructuredBrief extends BriefOutput {
   styles: string[];
   motion: MotionLevel;
   /** 主人在确认页划掉 / 改写后的版本由 `applyOwnerEdits` 写回 hooks 与 aiView。 */
   confirmedAt: string | null;
+  /** 成功修改后的主人原始要求，保留事实与更正的上下文。 */
+  ownerEdits?: string[];
+  /** 主人已作出的记忆选择，重新整理不擅自重新勾选。 */
+  profileSelection?: string[];
 }
 
 export function toStructuredBrief(output: BriefOutput, answers: InterviewAnswers): StructuredBrief {
@@ -358,6 +381,11 @@ export function renderBriefMarkdown(brief: StructuredBrief, wall: Pick<Wall, 'na
   for (const image of brief.images) out.push(`- 图片：\`assets/${image.file}\` —— ${image.description}　〔来源：主人提供〕`);
   out.push('');
 
+  if (brief.ownerEdits?.length) {
+    out.push('主人后续补充与更正（原文；只把明确的自述作为事实，视觉要求不当作经历；更正优先于旧事实）：');
+    for (const edit of brief.ownerEdits) out.push(`- ${edit}`);
+    out.push('');
+  }
   out.push('## 原话', '');
   if (brief.quotes.length === 0) out.push('- （无）');
   for (const quote of brief.quotes) out.push(`- “${quote}”`);

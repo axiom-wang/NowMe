@@ -21,7 +21,7 @@ it('采访被拦截保留本次文字、选择与风格，不保存被拦内容�
   const owner = await joinAs(t, wall, 'member@example.com', '成员');
   const path = `/w/${wall.id}/me/create`;
   const initial = await (await get(t, path, { cookie: owner.session.cookie })).text();
-  expect(initial).toMatch(/name="q_boundaries_0"[^>]*checked/);
+  expect(initial).not.toContain('name="q_boundaries_0"');
   expect(initial).not.toContain('默认勾选');
   const material = '我的素材'.repeat(100) + '稳赚不赔';
   const response = await postMultipart(t, path + '/start', { ...interviewFields(owner.session, material), q_skills_1: '1', q_role_text: '补充说明' }, [], { cookie: owner.session.cookie });

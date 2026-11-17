@@ -305,7 +305,14 @@ const validScene = {
 
 describe('sceneGuideSchema', () => {
   it('接受合法的场景指南', () => {
-    expect(sceneGuideSchema.parse(validScene)).toEqual(validScene);
+    expect(sceneGuideSchema.parse(validScene)).toEqual({ ...validScene, quickQuestions: [], sentenceStarters: [] });
+  });
+
+  it('快问快答只接受两个或四个原话选项，题目 id 不重复', () => {
+    const q = { id: 'snapshot', question: '凌晨三点你在？', options: ['我在改 bug', '我已经睡了'] };
+    expect(sceneGuideSchema.safeParse({ ...validScene, quickQuestions: [q], sentenceStarters: ['我能连讲十分钟的话题是'] }).success).toBe(true);
+    expect(sceneGuideSchema.safeParse({ ...validScene, quickQuestions: [{ ...q, options: [...q.options, '我在点外卖'] }] }).success).toBe(false);
+    expect(sceneGuideSchema.safeParse({ ...validScene, quickQuestions: [q, q] }).success).toBe(false);
   });
 
   it('拒绝非法场景、缺字段、重复的接话点类型、少于两个选项', () => {

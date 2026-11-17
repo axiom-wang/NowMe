@@ -86,7 +86,7 @@ function interviewFollowups(text: string): ModelResponse {
   const maxFollowUps = Number(/最多 (\d+) 个追问/.exec(text)?.[1] ?? '1');
   const questions =
     maxFollowUps > 0
-      ? [{ question: '能说一个只属于你的具体细节吗？', options: ['有个冷门技能', '最近在沉迷一件事', '有个朋友都知道的小习惯'] }]
+      ? [{ question: material.includes('手冲咖啡') ? '你提到手冲咖啡，最想聊哪一段？' : `你提到“${clip(facts.at(-1) ?? '这个想法', 40)}”，能补一个例子吗？`, options: material.includes('手冲咖啡') ? ['我想聊冲煮方法', '我想聊豆子风味', '我想聊器具'] : ['这是我一直在做的事', '这是我最近尝试的事'] }]
       : [];
   return respond([
     toolUse('submit_followups', {
@@ -105,7 +105,7 @@ function interviewBrief(text: string): ModelResponse {
   const answers = between(text, 'owner_followup_answers');
   const correction = between(text, 'owner_correction');
   const kinds = hookKinds(text);
-  const files = [...between(text, 'owner_images').matchAll(/(photo-\d+\.[a-z]+)/g)].map((match) => match[1] as string);
+  const files = [...(between(text, 'owner_images') || text).matchAll(/(photo-\d+\.[a-z]+)/g)].map((match) => match[1] as string);
   const aiView = [
     correction ? `按你的意见改了：${clip(correction, 60)}` : `你是${name}。`,
     ...facts.slice(0, 2).map((fact) => `${clip(fact, 80)}。`),
@@ -283,7 +283,7 @@ function generation(params: CreateMessageParams): ModelResponse {
       case 3:
         return respond([toolUse('validate_page', {})]);
       default:
-        return respond([toolUse('finish', { outcome: 'done', message: `已修改 ${block ?? '页面'}。` })]);
+        return respond([toolUse('finish', { outcome: 'done', message: `已修改 ${block ?? '页面'}。`, newFacts: [...between(firstUserText(params.messages), 'owner_edit_request').matchAll(/(?:再加一句|补充：)([^。；\n]+)/g)].map((m) => m[1]) })]);
     }
   }
 
@@ -495,6 +495,12 @@ export function createFakeModel(): FakeModel {
     async createMessage(params) {
       calls.push(structuredClone(params));
       const choice = params.tool_choice;
+      if (choice?.type === 'tool' && choice.name === 'submit_interview') {
+        const text = allUserText(params.messages);
+        const brief = interviewBrief(text).content.find((b) => b.type === 'tool_use');
+        const followups = interviewFollowups(text).content.find((b) => b.type === 'tool_use');
+        return respond([toolUse('submit_interview', { brief: brief?.type === 'tool_use' ? brief.input : {}, followups: followups?.type === 'tool_use' ? followups.input : {} })]);
+      }
       if (choice?.type === 'tool' && choice.name === 'submit_followups') return interviewFollowups(allUserText(params.messages));
       if (choice?.type === 'tool' && choice.name === 'submit_brief') return interviewBrief(allUserText(params.messages));
       if (choice?.type === 'tool' && choice.name === 'submit_icebreaker') return icebreaker(allUserText(params.messages));

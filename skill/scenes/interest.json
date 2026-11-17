@@ -59,5 +59,7 @@
   "pageGoal": "作品或爱好本身是视觉主角：首屏先让人看到你最痴迷的东西（作品、收藏、现场），个人信息靠后、点到为止。让同好一眼认出“同类”，并知道可以约你一起做什么。",
   "suggestedBlocks": ["hero", "collection", "works", "guide", "together"],
   "visualTone": "跟着兴趣本身的气质走：胶片就有颗粒与相纸，黑胶就有唱片与封套，手作就有纸张与胶带；只是建议，主人选的风格优先。",
-  "examples": ["interest-vinyl", "interest-film-zine"]
+  "examples": ["interest-vinyl", "interest-film-zine"],
+  "quickQuestions": [{"id": "snapshot", "question": "遇到喜欢的东西，你通常会？", "options": ["喜欢一个东西，我会研究它怎么做", "喜欢一个东西，我会找人聊聊"]}],
+  "sentenceStarters": ["朋友最常找我帮忙的是", "我能连讲十分钟的话题是"]
 }

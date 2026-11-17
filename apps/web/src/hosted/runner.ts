@@ -3,7 +3,7 @@
  * 结束条件：模型调用 `finish`；只回文字、没有调用工具时提醒一次，再不调用视为失败（NO_FINISH）；超过轮数（MAX_TURNS）；被取消（TIMEOUT）。
  * 循环里的校验结果不被信任：调用方在结束后用平台的提交管线重新校验（3.1 第 4 步）。
  */
-import { addUsage, emptyUsage, type ModelClient, type ModelMessage, type ToolResultBlock, type UsageTotals } from './model-client.js';
+import { addUsage, emptyUsage, type ModelClient, type ModelMessage, type TextBlock, type ImageBlock, type ToolResultBlock, type UsageTotals } from './model-client.js';
 import { modelFailureCode, modelFailureStatus, type ModelAccessCode } from './model-errors.js';
 import { generationSystem } from './prompts.js';
 import { GENERATION_TOOLS, type FinishSignal, type GenerationWorkspace } from './tools.js';
@@ -35,7 +35,7 @@ export interface RunOptions {
   maxTurns: number;
   workspace: GenerationWorkspace;
   /** 第一条用户消息（墙的情境、场景指南、brief、修改要求，均已用 untrusted() 包好）。 */
-  firstMessage: string;
+  firstMessage: string | (TextBlock | ImageBlock)[];
   signal?: AbortSignal;
   maxTokens?: number;
   /** 每一轮调用模型之前（进度事件用，只给轮次）。 */
@@ -63,7 +63,7 @@ export const NO_TOOL_NUDGE = '你刚才只回复了文字，没有调用工具�
 export async function runGeneration(options: RunOptions): Promise<RunResult> {
   const { client, workspace } = options;
   const usage = emptyUsage();
-  const messages: ModelMessage[] = [{ role: 'user', content: [{ type: 'text', text: options.firstMessage }] }];
+  const messages: ModelMessage[] = [{ role: 'user', content: typeof options.firstMessage === 'string' ? [{ type: 'text', text: options.firstMessage }] : options.firstMessage }];
   const system = generationSystem();
   let nudged = false;
 

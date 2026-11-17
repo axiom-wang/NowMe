@@ -466,6 +466,8 @@ Kit 调用 `parent.postMessage({ type: 'nowme:open-link', url }, '*')`。主站�
 
 ```ts
 interface SceneGuide {
+  quickQuestions: { id: string; question: string; options: string[] }[]; // 0–4 道，每道 2 或 4 个完整原话选项
+  sentenceStarters: string[]; // 0–3 个填空句开头
   id: SceneType; label: string; goal: string; interviewBudgetSeconds: number;
   assetPrompt: string;
   choiceQuestions: { id: string; question: string; options: string[]; multi: boolean; required: boolean }[];

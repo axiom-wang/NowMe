@@ -70,5 +70,7 @@
   "pageGoal": "突出个性和趣味，可以更玩一点：首屏就是“你这个人”（名字 + 一个让人记住的细节）。新成员：想尝试的事和社团之外的爱好，让人找到话头；老成员：“可以来问我”的清单放在显眼处。主人同意时显示年级和专业。",
   "suggestedBlocks": ["hero", "intro", "want-to-try", "ask-me", "hobbies"],
   "visualTone": "偏活泼、个人化：贴纸、手写感、游戏感、可以点着玩的小互动都合适；只是建议，主人选的风格优先。",
-  "examples": ["club-newbie-sticker", "club-senior-quest"]
+  "examples": ["club-newbie-sticker", "club-senior-quest"],
+  "quickQuestions": [{"id": "snapshot", "question": "第一次参加活动，你更像哪一个？", "options": ["第一次参加活动，我会主动打招呼", "第一次参加活动，我先观察再加入"]}],
+  "sentenceStarters": ["朋友最常找我帮忙的是", "我能连讲十分钟的话题是"]
 }

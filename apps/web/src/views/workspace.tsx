@@ -1,3 +1,4 @@
+import { PROFILE_ENRICHMENT_QUESTIONS } from '@nowme/contracts';
 import { DEMO_MODEL_READY, DEMO_MODEL_MISSING, demoModelError } from '../demo-access.js';
 /**
  * 我的页面（创作工作区，`GET /w/:wallId/me`）。按主人现在所处的阶段只突出一件事（contracts 18.1，阶段见
@@ -15,7 +16,7 @@ import { JOB_ERROR_TEXT } from '../hosted/service.js';
 import { isRevisionDeleted, isRevisionUsable } from '../services/page-lifecycle.js';
 import type { WorkspaceModel, WorkspaceNotice } from '../services/workspace.js';
 import { creditGap, type CreationRoute } from '../services/workspace-stage.js';
-import { Notice, PostButton } from './forms.js';
+import { CsrfField, Notice, PostButton } from './forms.js';
 import { PageFrame } from './page-frame.js';
 import { JobProgress, jobPath } from './progress.js';
 import { MoreActionsSection, PublishForm, WallStatusSection } from './publish.js';
@@ -349,6 +350,17 @@ const RouteAction: FC<{ route: CreationRoute }> = ({ route }) =>
     </a>
   );
 
+const ProgressiveQuestion: FC<{ model: WorkspaceModel }> = ({ model }) => {
+  if (!model.hosted || model.hosted.overview.activeJob) return null;
+  const count = model.hosted.overview.brief?.brief?.ownerEdits?.length ?? 0;
+  const questionIndex = count % PROFILE_ENRICHMENT_QUESTIONS.length;
+  const question = PROFILE_ENRICHMENT_QUESTIONS[questionIndex]!;
+  return <form method="post" action={`/w/${model.wall.id}/me/enrich`} class="card stack">
+    <CsrfField token={model.csrf} /><input type="hidden" name="questionIndex" value={String(questionIndex)} /><label class="field"><span>{question.question}</span><input type="text" name="answer" maxlength={200} placeholder="有空补一句，让页面更具体（可选）" /></label>
+    <button class="btn btn--ghost" type="submit">看看要不要加进页面</button>
+  </form>;
+};
+
 const EditDetails: FC<{ model: WorkspaceModel; summary: string }> = ({ model, summary }) => {
   const hosted = model.hosted;
   if (!hosted || !model.selected || hosted.overview.activeJob) return null;
@@ -508,6 +520,7 @@ const NextStep: FC<{ model: WorkspaceModel }> = ({ model }) => {
       }
       return (
         <NextStepCard eyebrow="已发布" title="你的页面已经在墙上了" tone="live">
+          <ProgressiveQuestion model={model} />
           <p>墙上的人现在能看到你的第 {active?.revisionNumber ?? '?'} 版，点小卡片上的话题就能来找你聊。</p>
           {error}
           <div class="actions">
@@ -531,6 +544,7 @@ const LocalNextStep: FC<{ model: WorkspaceModel }> = ({ model }) => {
   if (model.stage === 'published') {
     return (
       <NextStepCard eyebrow="已发布" title="你的页面已经在墙上了" tone="live">
+          <ProgressiveQuestion model={model} />
         <div class="actions">
           {model.wallPagePath ? (
             <a class="btn btn--primary btn--lg" href={model.wallPagePath}>

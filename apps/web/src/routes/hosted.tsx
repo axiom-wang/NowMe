@@ -1,3 +1,4 @@
+import { transaction } from '../db/index.js';
 import { saveAccountProfile } from '../services/account-profile.js';
 /**
  * 平台托管路线的路由（contracts 9 / hosted-route 5）。全部是会话 + CSRF + Origin 的表单路由，忽略 `Authorization` 头；
@@ -8,7 +9,7 @@ import { saveAccountProfile } from '../services/account-profile.js';
  */
 import type { Context, MiddlewareHandler } from 'hono';
 import { streamSSE } from 'hono/streaming';
-import { BRIEF_MATERIAL_MAX_CHARS, BRIEF_ASSET_ID_PATTERN, BRIEF_ID_PATTERN, GENERATION_JOB_ID_PATTERN, NM_ID_PATTERN, PROFILE_ENTRY_ID_PATTERN } from '@nowme/contracts';
+import { PROFILE_ENRICHMENT_QUESTIONS, generateId, profileEntryInputSchema, BRIEF_MATERIAL_MAX_CHARS, BRIEF_ASSET_ID_PATTERN, BRIEF_ID_PATTERN, GENERATION_JOB_ID_PATTERN, NM_ID_PATTERN, PROFILE_ENTRY_ID_PATTERN } from '@nowme/contracts';
 import { EXAMPLES_DIR, listExampleDirs, loadExamplesIndex } from '@nowme/skill';
 import { readFile } from 'node:fs/promises';
 import { join } from 'node:path';
@@ -57,6 +58,7 @@ function text(fields: FormFields, name: string, max: number): string {
 export function readInterviewAnswers(fields: FormFields, hosted: HostedService, own: OwnPage): InterviewAnswers {
   const scene = hosted.scene(own);
   const choices: InterviewAnswers['choices'] = {};
+  const known = hosted.known(own, own.page.ownerId);
   for (const question of scene.choiceQuestions) {
     const selected: string[] = [];
     if (question.multi) {
@@ -68,16 +70,26 @@ export function readInterviewAnswers(fields: FormFields, hosted: HostedService, 
       const option = Number.isInteger(index) ? question.options[index] : undefined;
       if (option && (question.required || option !== '跳过')) selected.push(option);
     }
-    choices[question.id] = { selected, text: text(fields, `q_${question.id}_text`, 200) };
+    const written = text(fields, `q_${question.id}_text`, 200);
+    choices[question.id] = fields[`reuse_${question.id}`] === '1' && known.choices[question.id]
+      ? known.choices[question.id]! : { selected, text: written };
   }
-  const known = new Set(listExampleDirs());
+  const knownStyles = new Set(listExampleDirs());
   const styles = Object.keys(fields)
     .filter((key) => key.startsWith('style_') && fields[key] === '1')
     .map((key) => key.slice('style_'.length))
-    .filter((dir) => known.has(dir))
+    .filter((dir) => knownStyles.has(dir))
     .slice(0, MAX_STYLES);
   const motion = fields.motion && isMotionLevel(fields.motion) ? fields.motion : 'medium';
-  return { material: text(fields, 'material', BRIEF_MATERIAL_MAX_CHARS), choices, styles, motion };
+  const quick: Record<string, string> = {};
+  for (const q of scene.quickQuestions) {
+    const raw = fields[`quick_${q.id}`];
+    const value = raw !== undefined ? q.options[Number(raw)] : undefined;
+    if (value) quick[q.id] = value;
+  }
+  const starters = Object.fromEntries(scene.sentenceStarters.map((_, i) => [String(i), text(fields, `starter_${i}`, 200)]));
+  const wallTopics = known.topics.filter((_, i) => fields[`topic_${i}`] === '1');
+  return { material: text(fields, 'material', BRIEF_MATERIAL_MAX_CHARS), choices, styles, motion, intent: text(fields, 'intent', 200), quick, starters, wallTopics };
 }
 
 function readFollowupAnswers(fields: FormFields, questions: { id: string; options: string[] }[]): Record<string, FollowupAnswer> {
@@ -92,12 +104,12 @@ function readFollowupAnswers(fields: FormFields, questions: { id: string; option
   return answers;
 }
 
-function readConfirmEdits(fields: FormFields, counts: { aiView: number; hooks: number; profile: number }): ConfirmEdits {
+function readConfirmEdits(fields: FormFields, counts: { aiView: number; hooks: number; profile: number }, current?: import('../hosted/brief.js').StructuredBrief): ConfirmEdits {
   return {
-    aiView: Array.from({ length: counts.aiView }, (_, index) => ({ text: fields[`ai_${index}`] ?? '', drop: fields[`ai_${index}_drop`] === '1' })),
+    aiView: Array.from({ length: counts.aiView }, (_, index) => ({ text: clip(fields[`ai_${index}`] ?? current?.aiView[index] ?? '', 120), drop: fields[`ai_${index}_drop`] === '1' })),
     hooks: Array.from({ length: counts.hooks }, (_, index) => ({
-      text: fields[`hook_${index}_text`] ?? '',
-      opener: fields[`hook_${index}_opener`] ?? '',
+      text: clip(fields[`hook_${index}_text`] ?? current?.hooks[index]?.text ?? '', 32),
+      opener: clip(fields[`hook_${index}_opener`] ?? current?.hooks[index]?.opener ?? '', 80),
       drop: fields[`hook_${index}_drop`] === '1',
     })),
     keepProfile: Array.from({ length: counts.profile }, (_, index) => index).filter((index) => fields[`profile_${index}`] === '1'),
@@ -153,6 +165,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
             error,
             welcome,
             submittedAnswers,
+            known: hosted.known(own, auth.user.id),
           }}
         />
       ),
@@ -180,7 +193,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     if (!found) return renderNotFound(c);
     const answers = readInterviewAnswers(c.get('form'), found.hosted, found.own);
     // 内容安全（contracts 16.1）：在交给模型之前检查
-    const verdict = await deps.contentSafety.checkTexts('interview', [answers.material, ...Object.values(answers.choices).map((choice) => choice.text)]);
+    const verdict = await deps.contentSafety.checkTexts('interview', [answers.material, ...Object.values(answers.choices).map((choice) => choice.text), answers.intent ?? '', ...Object.values(answers.starters ?? {})]);
     if (!verdict.ok) return renderCreate(c, found.own, found.hosted, verdict.message, 422, false, answers);
     const result = await found.hosted.startInterview(found.own, authOf(c).user.id, answers, c.get('uploads') ?? []);
     return afterStep(c, found.own, found.hosted, result, answers);
@@ -217,9 +230,24 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
       aiView: brief?.aiView.length ?? 0,
       hooks: brief?.hooks.length ?? 0,
       profile: brief?.profileSuggestions.length ?? 0,
-    });
-    const verdict = await deps.contentSafety.checkTexts('interview', [...edits.aiView.map((item) => item.text), ...edits.hooks.flatMap((hook) => [hook.text, hook.opener])]);
+    }, brief ?? undefined);
+    const fields = c.get('form');
+    if (brief && fields.displayName !== undefined) {
+      edits.displayName = text(fields, 'displayName', 24);
+      if (!edits.displayName) return renderCreate(c, found.own, found.hosted, '请填写页面上的显示名。', 422);
+      edits.boundaries = {
+        name: `昵称“${edits.displayName}”`, school: fields.showSchool === '1' ? '显示' : '不显示',
+        gradeMajor: fields.showGradeMajor === '1' ? '显示' : '不显示', photo: fields.showPhoto === '1' ? '可以' : '不可以',
+        hidden: text(fields, 'hidden', 300).split('；').filter(Boolean), rejected: brief.boundaries.rejected,
+      };
+    }
+    const followupAnswers = readFollowupAnswers(fields, found.hosted.loadBrief(found.own, userId)?.followups?.questions ?? []);
+    const verdict = await deps.contentSafety.checkTexts('interview', [...Object.values(followupAnswers).map((a) => a.text), edits.displayName ?? '', ...(edits.boundaries?.hidden ?? []), ...edits.aiView.map((item) => item.text), ...edits.hooks.flatMap((hook) => [hook.text, hook.opener])]);
     if (!verdict.ok) return renderCreate(c, found.own, found.hosted, verdict.message, 422);
+    if (Object.values(followupAnswers).some((a) => !a.skipped) || found.hosted.loadBrief(found.own, userId)?.followups?.pending) {
+      return afterStep(c, found.own, found.hosted, await found.hosted.answerFollowups(found.own, userId, followupAnswers, edits));
+    }
+    if (fields.reviewAction === 'compose') return afterStep(c, found.own, found.hosted, { ok: true });
     return afterStep(c, found.own, found.hosted, found.hosted.confirm(found.own, userId, edits));
   });
 
@@ -260,6 +288,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
     const found = ownOf(c);
     if (!found) return renderNotFound(c);
     const fields = c.get('form');
+    if (['更大胆', '换配色', '更安静', '首屏换一个细节'].includes(fields.shortcut ?? '')) fields.request = [fields.request?.trim(), fields.shortcut].filter(Boolean).join('；');
     const block = fields.block && NM_ID_PATTERN.test(fields.block) ? fields.block : null;
     const renderEditError = (message: string) => {
       const revision = deps.repos.revisions.findById(fields.revisionId ?? '');
@@ -267,7 +296,7 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
       return renderPage(c, { title: '修改还没开始', status: 422, body: <div class="container container--form stack" id="hosted">
         <h1>修改还没开始</h1>
         <Notice tone="error">{message}</Notice>
-        <EditForm wallId={found.own.wall.id} csrf={authOf(c).session.csrfToken} revisionId={fields.revisionId ?? ''} blocks={blocks} request={fields.request ?? ''} targetBlock={block ?? ''} />
+        <EditForm wallId={found.own.wall.id} csrf={authOf(c).session.csrfToken} revisionId={fields.revisionId ?? ''} blocks={blocks} request={fields.request ?? ''} targetBlock={block ?? ''} rememberFacts={fields.rememberFacts === '1'} />
         <p><a href="/account/credits">补充点数</a> · <a href="/account/ai">AI 设置</a></p>
         <a href={`/w/${found.own.wall.id}/me`}>回到工作区</a>
       </div> });
@@ -279,9 +308,33 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
       baseRevisionId: fields.revisionId ?? null,
       targetBlock: block,
       request: fields.request ?? '',
+      rememberFacts: fields.rememberFacts === '1',
     });
     if (!result.ok) return renderEditError((deps.demo ? demoModelError(result.error) : null) ?? JOB_START_ERROR_TEXT[result.error]);
     return c.redirect(`/w/${found.own.wall.id}/me/jobs/${result.job.id}`, 303);
+  });
+
+  app.post('/w/:wallId/me/enrich', form, async (c) => {
+    const found = ownOf(c);
+    if (!found) return renderNotFound(c);
+    const publication = deps.repos.publications.findActiveForPage(found.own.page.id);
+    if (!publication) return renderNotFound(c);
+    const fields = c.get('form');
+    const questionIndex = Number(fields.questionIndex ?? '0');
+    const question = Number.isInteger(questionIndex) ? PROFILE_ENRICHMENT_QUESTIONS[questionIndex] : undefined;
+    if (!question) return renderNotFound(c);
+    const answer = text(fields, 'answer', 200);
+    const statement = question.statement + answer;
+    if (!answer) return c.redirect(`/w/${found.own.wall.id}/me`, 303);
+    const verdict = await deps.contentSafety.checkText('interview', answer);
+    if (!verdict.ok) return renderError(c, { status: 400, title: '补充还没有保存', message: verdict.message });
+    const revision = deps.repos.revisions.findById(publication.revisionId);
+    if (!revision) return renderNotFound(c);
+    return renderPage(c, { title: '把这条加进页面？', body: <div class="container container--form stack">
+      <h1>把这条加进页面？</h1><p>{statement}</p><p class="muted">会先做一个新版本给你预览，现有页面由你确认后才更新。</p>
+      <EditForm wallId={found.own.wall.id} csrf={authOf(c).session.csrfToken} revisionId={revision.id} blocks={revision.report.stats.blocks} request={`补充：${statement}`} />
+      <a href={`/w/${found.own.wall.id}/me`}>这次先不加</a>
+    </div> });
   });
 
   /** 任务主人才能看到的任务（不是主人、页面不在、格式不对 → null，路由一律 404）。 */
@@ -464,6 +517,31 @@ export function registerHostedRoutes(app: AppHono, deps: AppDeps): void {
       title: '我的资料', bodyClass: 'page--data', status: 400,
       body: <MyDataView accountLinks={!deps.demo} nickname={auth.user.nickname ?? '我'} avatarVersion={auth.user.avatarVersion} nicknameDraft={nickname} error={error} csrf={auth.session.csrfToken} profile={deps.repos.profileEntries.listForUser(auth.user.id)} briefs={deps.repos.briefs.listForOwner(auth.user.id)} blocked={deps.repos.moderation.listBlockedBy(auth.user.id)} remindersOn={deps.repos.reminders.acceptsReminders(auth.user.id)} notifyEmail={deps.repos.notify.jobEmailEnabled(auth.user.id)} notice={null} />,
     });
+    return c.redirect('/account/data?notice=profile-saved', 303);
+  });
+
+  app.post('/account/profile/entry', form, async (c) => {
+    const auth = authOf(c);
+    const fields = c.get('form');
+    const entries = deps.repos.profileEntries.listForUser(auth.user.id);
+    const entry = fields.entryId ? entries.find((e) => e.id === fields.entryId) : null;
+    const merge = fields.mergeId ? entries.find((e) => e.id === fields.mergeId) : null;
+    if ((fields.entryId && !entry) || (fields.mergeId && (!entry || !merge || entry.id === merge.id))) return renderNotFound(c);
+    const input = profileEntryInputSchema.safeParse(fields);
+    if (!input.success) return renderError(c, { status: 400, title: '画像没有保存', message: input.error.issues[0]?.message ?? '请检查填写的内容' });
+    if (input.data.scope.startsWith('wall:') && input.data.scope !== entry?.scope && !findOwnPage(deps.repos, auth.user.id, input.data.scope.slice(5))) return renderNotFound(c);
+    const verdict = await deps.contentSafety.checkText('interview', input.data.text);
+    if (!verdict.ok) return renderError(c, { status: 400, title: '画像没有保存', message: verdict.message });
+    const now = deps.now().toISOString();
+    const saved = transaction(deps.db, () => {
+      const current = deps.repos.profileEntries.listForUser(auth.user.id);
+      if ((entry && !current.some((e) => e.id === entry.id)) || (merge && !current.some((e) => e.id === merge.id))) return false;
+      if (entry) deps.repos.profileEntries.updateForUser(auth.user.id, entry.id, input.data.text, input.data.category, input.data.scope, now);
+      else deps.repos.profileEntries.insert({ id: generateId('pfe'), userId: auth.user.id, ...input.data, source: 'owner-file', confirmation: 'owner-stated', createdAt: now, updatedAt: now });
+      if (merge) deps.repos.profileEntries.deleteForUser(auth.user.id, merge.id);
+      return true;
+    });
+    if (!saved) return renderNotFound(c);
     return c.redirect('/account/data?notice=profile-saved', 303);
   });
 
