@@ -88,13 +88,13 @@ const walls = db.prepare("SELECT name FROM walls WHERE status = 'open' ORDER BY 
 const line = '─'.repeat(64);
 console.log([
   '', line, ' NOWMe 黑客松评审演示已就绪', line,
-  `  主站：${config.webOrigin}（首页与 /login 均可一键登录）`,
+  `  主站：${config.webOrigin}（首页点“体验”或打开 /login 均可一键登录）`,
   '  页面沙箱已在同一进程启动，无需打开其他地址。',
   `  演示墙：${walls.map((wall) => wall.name).join('、')}`,
   `  数据目录：${config.dataDir}（重启保留；pnpm demo --reset 清空重建）`,
   '', ' 两个体验身份',
-  '  以成员身份体验：先进入首页，再从黑客松墙卡片进入创作工作区，可浏览、采访、生成、修改、预览和本人确认发布。',
-  '  以组织者身份体验：先进入首页，再从黑客松墙卡片进入组织者后台，可管理成员与邀请，不能查看他人草稿和采访资料。',
+  '  以成员身份体验：先点首页“体验”，登录后从黑客松墙卡片进入创作工作区，可浏览、采访、生成、修改、预览和本人确认发布。',
+  '  以组织者身份体验：先点首页“体验”，登录后从黑客松墙卡片进入组织者后台，可管理成员与邀请，不能查看他人草稿和采访资料。',
   '  顶部“切换身份”直接替换会话；“退出登录”结束当前会话。背景人物不开放登录。',
   '', ' 网页内创作',
   `  ${modelReady ? DEMO_MODEL_READY : DEMO_MODEL_MISSING}`,

@@ -115,7 +115,7 @@ export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; active?:
           </div>
         </details>
       </> : !auth && !(path ?? '').startsWith('/login') ? (
-        <a class="btn btn--primary btn--small site-header__login" href="/login">登录</a>
+        <a class="btn btn--primary btn--small site-header__login" href="/login">{demo ? '体验' : '登录'}</a>
       ) : null}
     </div>
   </header>

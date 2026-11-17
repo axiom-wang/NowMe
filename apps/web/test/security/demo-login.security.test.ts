@@ -31,15 +31,18 @@ describe('评审演示登录隔离', () => {
     } finally { await normal.close(); }
   });
 
-  it('首页和登录页只显示两个固定身份，不公开背景账号或邮箱', async () => {
-    for (const path of ['/', '/login']) {
-      const html = await (await t.request(path)).text();
-      expect(html).toContain('以成员身份体验');
-      expect(html).toContain('以组织者身份体验');
-      expect(html.match(/action="\/login\/demo"/g)).toHaveLength(2);
-      expect(html).not.toContain('name="email"');
-      expect(html).not.toContain('@demo.nowme.test');
-    }
+  it('登录页只显示两个固定身份，首页不公开背景账号或邮箱', async () => {
+    const home = await (await t.request('/')).text();
+    expect(home).toContain('组织者只要做三件事');
+    expect(home).not.toContain('action="/login/demo"');
+    expect(home).not.toContain('以成员身份体验');
+    expect(home).not.toContain('@demo.nowme.test');
+    const html = await (await t.request('/login')).text();
+    expect(html).toContain('以成员身份体验');
+    expect(html).toContain('以组织者身份体验');
+    expect(html.match(/action="\/login\/demo"/g)).toHaveLength(2);
+    expect(html).not.toContain('name="email"');
+    expect(html).not.toContain('@demo.nowme.test');
     expect((await t.request('/dev/outbox')).status).toBe(404);
   });
 

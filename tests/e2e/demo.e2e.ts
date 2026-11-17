@@ -31,6 +31,9 @@ test('黑客松评审：两个入口、浏览、真实采访生成修改、本�
   test.setTimeout(1_200_000);
   await page.setViewportSize({ width: 375, height: 812 });
   await page.goto('/');
+  await expect(page.locator('body')).toHaveClass(/page--landing/);
+  await page.locator('.site-header').getByRole('link', { name: '体验', exact: true }).click();
+  await expect(page).toHaveURL(/\/login$/);
   await expect(page.getByRole('button', { name: '以成员身份体验' })).toBeVisible();
   await expect(page.getByRole('button', { name: '以组织者身份体验' })).toBeVisible();
   await page.screenshot({ path: '.data/demo-login-mobile.png', fullPage: true });

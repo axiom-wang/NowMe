@@ -1,6 +1,6 @@
 /**
- * 正式首页（`GET /`，未登录且不是演示模式）：先讲给组织者听（建墙 → 发邀请 → 新人上墙 → 找到话题），
- * 再告诉被邀请来的成员怎么开始，最后是隐私承诺和登录入口。
+ * 未登录首页（`GET /`）：先讲给组织者听（建墙 → 发邀请 → 新人上墙 → 找到话题），
+ * 再告诉被邀请来的成员怎么开始，最后是隐私承诺和登录入口；演示模式的登录按钮显示为“体验”。
  * 墙面示意是纯 HTML + CSS（不放真人资料），样式在 `static/landing.css`。
  */
 import type { FC } from 'hono/jsx';
@@ -75,7 +75,7 @@ const PROMISES = [
   { title: '组织者看不到你的草稿', text: '组织者只看得到昵称、加入时间和有没有发布，看不到你和 AI 的聊天，也看不到没公开的联系方式。' },
 ] as const;
 
-export const LandingView: FC = () => (
+export const LandingView: FC<{ demo?: boolean }> = ({ demo = false }) => (
   <div class="landing">
     <section class="landing-hero" aria-labelledby="landing-heading">
       <div class="landing-hero__copy">
@@ -147,7 +147,7 @@ export const LandingView: FC = () => (
       </h2>
       <div class="landing-final__actions">
         <a class="btn btn--accent btn--lg" href={LANDING_CREATE_HREF}>建一面墙</a>
-        <a class="btn btn--on-dark btn--lg" href={LANDING_LOGIN_HREF}>登录</a>
+        <a class="btn btn--on-dark btn--lg" href={LANDING_LOGIN_HREF}>{demo ? '体验' : '登录'}</a>
       </div>
     </section>
   </div>

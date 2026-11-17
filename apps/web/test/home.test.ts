@@ -124,12 +124,19 @@ describe('未登录的正式首页', () => {
     expect(response.headers.get('location')).toContain('/welcome');
   });
 
-  it('演示模式的首页仍是一键体验登录', async () => {
+  it('演示模式复用正式首页，只把登录按钮换成体验入口', async () => {
     t = createTestWeb({ demo: true });
-    const html = await (await get(t, '/')).text();
-    expect(html).toContain('action="/login/demo"');
-    expect(html).not.toContain('组织者只要做三件事');
-    // 登录视图的样式包按路径判断，“/”不在其中，必须显式带上，否则首页没有样式。
-    expect(html).toMatch(/<link rel="stylesheet" href="\/static\/auth\.[^"]*css"/);
+    const response = await get(t, '/');
+    expect(response.status).toBe(200);
+    const html = await response.text();
+    expect(html).toContain('<title>给你的圈子建一面墙 · NOWMe</title>');
+    expect(html).toContain('class="site page--landing"');
+    expect(html).toContain('组织者只要做三件事');
+    expect(html).toContain('收到邀请了？');
+    expect(html).toMatch(/href="\/static\/landing\.[0-9a-f]{10}\.css"/);
+    expect(html).toContain('site-header__login" href="/login">体验</a>');
+    expect(html.match(/>体验<\/a>/g)).toHaveLength(2);
+    expect(html).not.toContain('action="/login/demo"');
+    expect(html).not.toContain('以成员身份体验');
   });
 });
