@@ -244,6 +244,9 @@ describe('浏览器：工作区沙箱 iframe（contracts 5.1、5.2）', () => {
     expect(await frame.getAttribute('src')).not.toBe(beforeSrc);
     expect(await frame.getAttribute('sandbox')).toBe(PAGE_IFRAME_SANDBOX);
     expect(await tab.locator('[data-nm-stage-position]').textContent()).toBe('2 / 2');
+    const switchedName = await tab.locator('[data-nm-stage-name]').textContent();
+    expect(await root.getAttribute('aria-label')).toBe(`${switchedName}的展示模式`);
+    expect(await root.getAttribute('aria-label')).not.toContain('林舟');
 
     // 连播切换后的新 iframe 仍然拦截自我导航
     const switched = tab.frames().find((candidate) => candidate !== tab.mainFrame())!;

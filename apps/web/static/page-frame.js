@@ -139,6 +139,7 @@
     else root.removeAttribute('data-nm-stage-prev');
     if (data.nextId) root.setAttribute('data-nm-stage-next', data.nextId);
     else root.removeAttribute('data-nm-stage-next');
+    root.setAttribute('aria-label', data.displayName + '的展示模式');
     root.querySelector('[data-nm-stage-name]').textContent = data.displayName;
     root.querySelector('[data-nm-stage-tagline]').textContent = data.tagline;
     root.querySelector('[data-nm-stage-position]').textContent = data.position + ' / ' + data.total;
