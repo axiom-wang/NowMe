@@ -92,7 +92,9 @@ export const LandingView: FC<{ demo?: boolean }> = ({ demo = false }) => (
           <a class="btn btn--primary btn--lg" href={LANDING_CREATE_HREF}>建一面墙</a>
           <a class="btn btn--ghost btn--lg" href="#invited">我收到了邀请</a>
         </div>
-        <p class="landing-hero__fine">用邮箱登录，收一个 {LOGIN_CODE_DIGITS} 位验证码就行，不用设密码。</p>
+        <p class="landing-hero__fine">
+          {demo ? '演示环境不用邮箱：点右上角“体验”，选一个身份就能进来。' : <>用邮箱登录，收一个 {LOGIN_CODE_DIGITS} 位验证码就行，不用设密码。</>}
+        </p>
       </div>
       <WallPreview />
     </section>

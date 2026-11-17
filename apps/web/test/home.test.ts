@@ -138,5 +138,8 @@ describe('未登录的正式首页', () => {
     expect(html.match(/>体验<\/a>/g)).toHaveLength(2);
     expect(html).not.toContain('action="/login/demo"');
     expect(html).not.toContain('以成员身份体验');
+    // 演示环境没有邮箱验证码登录，首屏不能这样提示
+    expect(html).not.toContain('位验证码就行');
+    expect(html).toContain('演示环境不用邮箱');
   });
 });
