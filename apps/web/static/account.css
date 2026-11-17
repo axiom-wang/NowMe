@@ -414,10 +414,6 @@
 /* ------------------------------------------------------------------ */
 /* AI 设置（routes/ai-settings.tsx） */
 
-.page--ai .site-main > .ai-settings {
-  max-width: 1180px;
-}
-
 .ai-settings__header {
   display: flex;
   justify-content: space-between;

@@ -33,6 +33,6 @@
 
 ## 已有基线问题与验证边界
 
-`tests/e2e/layout.e2e.ts` 要求每个页面与 1240px 内容边界一致；基线提交 `b02bb65` 已把 `apps/web/static/account.css` 的 `.page--ai .site-main > .ai-settings` 设为 `max-width: 1180px`。1920px 视口下因此得到 x=370，而旧测试期待 x=340。该样式与布局测试均未在本次改动中修改；其失败不来自采访链路。没有为通过检查改动已有 AI 设置页设计或放宽断言。
+`tests/e2e/layout.e2e.ts` 要求每个页面与 1240px 内容边界一致；基线提交 `b02bb65` 曾把 `apps/web/static/account.css` 的 `.page--ai .site-main > .ai-settings` 设为 `max-width: 1180px`，1920px 视口下得到 x=370，而旧测试期待 x=340。该失败不来自采访链路。后续展示模式改造中已删除这条宽度覆盖，让 AI 设置页回到共用内容边界，`tests/e2e/layout.e2e.ts` 全部通过。
 
 模型调用使用确定性假模型和协议模拟服务，未调用真实付费服务，也未进行生成质量评测。正常托管 brief 的修改会写回；没有托管 brief 的本地页面修改不自动创建一份未经确认的 brief。为避免覆盖主人较新的修改，任务写回前检查原资料是否仍存在且未变化；主动删除或并行替换后的资料不会被旧任务复活。
