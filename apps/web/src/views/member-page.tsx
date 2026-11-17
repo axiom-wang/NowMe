@@ -208,7 +208,7 @@ export const MemberPageView: FC<{ model: MemberPageModel; csrf: string; icebreak
           {!own ? <form method="post" action={`${base}/direct`}><CsrfField token={csrf} /><button type="submit" class="btn btn--ghost">直接发私信</button></form> : null}
         </header>
         <div class="member-layout__frame">
-          <PageFrame ticket={model.ticket} title={`${card.displayName}的页面`} />
+          <PageFrame ticket={model.ticket} title={`${card.displayName}的页面`} stage={model.stage} />
         </div>
         <div class="member-layout__details">
           {icebreaker ? <TalkPanel base={base} name={card.displayName} csrf={csrf} panel={icebreaker} error={icebreakerError} aiSettings={aiSettings} intro={intro} /> : null}

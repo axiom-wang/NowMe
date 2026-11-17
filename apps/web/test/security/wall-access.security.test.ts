@@ -55,6 +55,7 @@ function wallRoutes(wall: Wall, target: PublishedMember): Route[] {
   return [
     { method: 'GET', path: `/w/${w}` },
     { method: 'GET', path: `/w/${w}/p/${p}` },
+    { method: 'GET', path: `/w/${w}/p/${p}/stage` },
     { method: 'GET', path: `/w/${w}/covers/${p}.png` },
     { method: 'GET', path: `/w/${w}/admin` },
     { method: 'POST', path: `/w/${w}/p/${p}/chat`, fields: { hookId: 'can-help' } },
@@ -310,6 +311,26 @@ describe('S1 成员页的沙箱 iframe 与票据', () => {
     expect(await response.text()).not.toContain('/v/');
   });
 
+  it('连播接口：跳过拉黑与未发布的人，票据只对应当前发布版本', async () => {
+    const hidden = publishedMember(t, wall, { name: '互相拉黑' });
+    const first = publishedMember(t, wall, { name: '第一位' });
+    const second = publishedMember(t, wall, { name: '第二位' });
+    const unpublished = seedMember(t, wall, (await login(t, 'draft@example.com', '未发布')).userId);
+    seedRevision(t, unpublished.page, makeCard('未发布'));
+    t.repos.moderation.block(hidden.userId, viewer.userId, t.clock.now().toISOString());
+
+    const response = await get(t, `/w/${wall.id}/p/${second.page.id}/stage`, { cookie: viewer.cookie });
+    expect(response.status).toBe(200);
+    const model = (await response.json()) as { pageId: string; src: string; position: number; total: number; prevId: string | null; nextId: string | null };
+    expect(model).toMatchObject({ pageId: second.page.id, position: 2, total: 2, prevId: first.page.id, nextId: first.page.id });
+
+    const blocked = await get(t, `/w/${wall.id}/p/${hidden.page.id}/stage`, { cookie: viewer.cookie });
+    expect(blocked.status).toBe(404);
+
+    withdraw(t, second.page);
+    expect((await get(t, `/w/${wall.id}/p/${second.page.id}/stage`, { cookie: viewer.cookie })).status).toBe(404);
+  });
+
   it('T3.1 的所有页面都没有内联脚本、内联样式与事件属性；响应带 no-store', async () => {
     const target = publishedMember(t, wall, { name: '阿柚', contact: CONTACT });
     const removedUser = await login(t, 'removed@example.com', '已移除');
@@ -324,6 +345,7 @@ describe('S1 成员页的沙箱 iframe 与票据', () => {
       await get(t, `/join/${wall.inviteCode}`, { cookie: removedUser.cookie }),
       await get(t, `/w/${wall.id}?notice=joined`, { cookie: viewer.cookie }),
       await get(t, `/w/${wall.id}/p/${target.page.id}`, { cookie: viewer.cookie }),
+      await get(t, `/w/${wall.id}/p/${target.page.id}/stage`, { cookie: viewer.cookie }),
       await postForm(t, `/w/${wall.id}/p/${target.page.id}/chat`, { _csrf: viewer.csrf, hookId: 'can-help' }, { cookie: viewer.cookie }),
       await get(t, `/w/${wall.id}/admin?notice=created`, { cookie: organizer.cookie }),
       await postForm(t, `/w/${wall.id}/admin/close`, { _csrf: organizer.csrf }, { cookie: organizer.cookie }),

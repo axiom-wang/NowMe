@@ -5,9 +5,10 @@
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { PAGE_IFRAME_SANDBOX, verifyTicket } from '@nowme/contracts';
 import { loadSceneGuide } from '@nowme/skill';
+import { wallQueries } from '../src/db/wall-queries.js';
 import type { Wall } from '../src/db/walls.js';
 import { qrSvg } from '../src/services/qr.js';
-import { parsePublishedCard, parsePublishedContact, shuffle } from '../src/services/wall-view.js';
+import { parsePublishedCard, parsePublishedContact, shuffle, type StageModel } from '../src/services/wall-view.js';
 import { parseWallForm } from '../src/services/walls.js';
 import {
   agentGet,
@@ -401,6 +402,79 @@ describe('墙（W13）、成员页与想聊这个（W14）', () => {
 
     const events = t.repos.events.listForWall(wall.id).filter((event) => event.type === 'page_open');
     expect(events).toEqual([expect.objectContaining({ actorId: viewer.userId, pageId: ayou.page.id, props: {} })]);
+  });
+
+  it('连播接口按 listPublished 的 published_at,rowid 固定顺序、首尾循环，票据指向当前发布版本', async () => {
+    const first = publishedMember(t, wall, { name: '第一位' });
+    const second = publishedMember(t, wall, { name: '第二位' });
+    const third = publishedMember(t, wall, { name: '第三位' });
+    // 第三条发布时间最早；前两条时间相同，分别验证 published_at 与 rowid 两级排序。
+    t.clock.advance(1_000);
+    t.db.prepare('UPDATE publications SET published_at = ? WHERE id IN (?, ?)').run(t.clock.now().toISOString(), first.publicationId, second.publicationId);
+    const members = [third, first, second];
+    const published = wallQueries(t.db).listPublished(wall.id);
+    expect(published.map((entry) => entry.pageId)).toEqual(members.map((member) => member.page.id));
+    expect(published[0]?.publishedAt).not.toBe(published[1]?.publishedAt);
+    expect(published[1]?.publishedAt).toBe(published[2]?.publishedAt);
+
+    for (const [index, entry] of published.entries()) {
+      const response = await get(t, `/w/${wall.id}/p/${entry.pageId}/stage`, { cookie: viewer.cookie });
+      expect(response.status).toBe(200);
+      const model = (await response.json()) as StageModel;
+      const previous = published[(index - 1 + published.length) % published.length];
+      const next = published[(index + 1) % published.length];
+      expect(model).toEqual({
+        pageId: entry.pageId,
+        displayName: members[index]?.card.displayName,
+        tagline: members[index]?.card.tagline,
+        src: expect.any(String),
+        position: index + 1,
+        total: published.length,
+        prevId: previous?.pageId,
+        nextId: next?.pageId,
+      });
+      const ticket = model.src.match(/\/v\/([^/]+)\/$/)?.[1] ?? '';
+      expect(verifyTicket(ticket, TEST_SECRET, t.clock.now())).toMatchObject({ ok: true, revisionId: entry.revisionId });
+    }
+    const events = t.repos.events.listForWall(wall.id).filter((event) => event.type === 'page_open');
+    expect(events).toEqual(published.map((entry) => expect.objectContaining({ actorId: viewer.userId, pageId: entry.pageId, props: {} })));
+  });
+
+  it('单人墙：连播接口没有上一位 / 下一位，成员页也不渲染这两个按钮', async () => {
+    const only = publishedMember(t, wall, { name: '唯一成员' });
+    const response = await get(t, `/w/${wall.id}/p/${only.page.id}/stage`, { cookie: viewer.cookie });
+    expect(response.status).toBe(200);
+    expect((await response.json()) as StageModel).toMatchObject({ pageId: only.page.id, position: 1, total: 1, prevId: null, nextId: null });
+
+    const html = await (await get(t, `/w/${wall.id}/p/${only.page.id}`, { cookie: viewer.cookie })).text();
+    const nodes = elements(html);
+    const frame = nodes.find((element) => element.attrs['data-nm-page-frame-root'] !== undefined);
+    expect(frame?.attrs).toMatchObject({ 'data-nm-stage-wall': wall.id, 'data-nm-stage-page': only.page.id });
+    expect(frame?.attrs['data-nm-stage-prev']).toBeUndefined();
+    expect(frame?.attrs['data-nm-stage-next']).toBeUndefined();
+    expect(nodes.filter((element) => element.attrs['data-nm-stage-prev-button'] !== undefined)).toEqual([]);
+    expect(nodes.filter((element) => element.attrs['data-nm-stage-next-button'] !== undefined)).toEqual([]);
+    expect(html).toContain('data-nm-stage-position="">1 / 1</span>');
+  });
+
+  it('多人成员页：PageFrame 显示连播序号与上一位 / 下一位按钮', async () => {
+    const first = publishedMember(t, wall, { name: '第一位' });
+    const second = publishedMember(t, wall, { name: '第二位' });
+    const third = publishedMember(t, wall, { name: '第三位' });
+    const html = await (await get(t, `/w/${wall.id}/p/${second.page.id}`, { cookie: viewer.cookie })).text();
+    const nodes = elements(html);
+    const frame = nodes.find((element) => element.attrs['data-nm-page-frame-root'] !== undefined);
+    expect(frame?.attrs).toMatchObject({
+      'data-nm-stage-wall': wall.id,
+      'data-nm-stage-page': second.page.id,
+      'data-nm-stage-prev': first.page.id,
+      'data-nm-stage-next': third.page.id,
+    });
+    expect(html).toContain('data-nm-stage-position="">2 / 3</span>');
+    expect(nodes.filter((element) => element.attrs['data-nm-stage-prev-button'] !== undefined)).toHaveLength(1);
+    expect(nodes.filter((element) => element.attrs['data-nm-stage-next-button'] !== undefined)).toHaveLength(1);
+    expect(html).toContain('上一位');
+    expect(html).toContain('下一位');
   });
 
   it('主人没有公开联系方式：仍可站内聊天，但不能查看联系方式', async () => {

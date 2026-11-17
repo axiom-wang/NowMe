@@ -690,6 +690,11 @@
   min-width: 0;
 }
 
+/* 固定舞台不能被困在成员页手机栏的 sticky 层叠上下文里。 */
+html.nm-stage-open .member-layout__frame {
+  position: static;
+}
+
 .member-layout__details {
   grid-area: details;
   display: grid;

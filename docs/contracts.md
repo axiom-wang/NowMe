@@ -329,7 +329,8 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 | `GET /w/:wallId/cover` | 墙内有效成员 | 当前墙封面（WebP）；不存在、非成员、已退出 / 移出或墙关闭均 404；`Cache-Control: private, no-store`，每次检查权限 |
 | `POST /w/:wallId/admin/cover` | 组织者 | multipart 表单 `_csrf` + 单个 `cover` 文件；JPG / PNG / WebP、最多 5 MiB、最多 4000 万像素；按内容识别、完整解码、自动转正、按 1:1 居中裁切至最多 1200×1200、去除元数据并重编码为静态 WebP；拒绝 SVG、动图、伪造 / 损坏图片；成功后替换旧封面，失败保留原图 |
 | `POST /w/:wallId/admin/cover/delete` | 组织者 | 删除自定义墙封面，首页与后台恢复场景默认插画 |
-| `GET /w/:wallId/p/:pageId` | 墙内有效成员 | 成员页面（沙箱 iframe）+ 接话点 + “想聊这个”；别人的页面另有“和 TA 聊什么”（第 11 节，路由见 11.5） |
+| `GET /w/:wallId/p/:pageId` | 墙内有效成员 | 成员页面（沙箱 iframe）+ 接话点 + “想聊这个”；别人的页面另有“和 TA 聊什么”（第 11 节，路由见 11.5）；PageFrame 提供展示模式与墙内连播 |
+| `GET /w/:wallId/p/:pageId/stage` | 与成员页相同（含必答题门槛） | 墙内连播 JSON：`pageId, displayName, tagline, src, position, total, prevId, nextId`；固定发布顺序首尾循环，过滤拉黑与未发布；`src` 只签当前发布版本；非自己的页记 `page_open`；无权访问一律 404 |
 | `POST /w/:wallId/p/:pageId/chat` | 墙内有效成员 | `hookId` 取当前发布快照；记录事件，303 进入私聊并预填开场白，不自动发送；不依赖外部联系方式 |
 | `POST /w/:wallId/p/:pageId/direct` | 墙内有效成员 | 303 进入与页面主人的同墙私聊；自己页面或未发布页面返回 404 |
 | `POST /w/:wallId/p/:pageId/contact` | 墙内有效成员 | `hookId` 或 `contactHookId`；只返回发布快照中公开的联系方式和开场白；未公开时返回 404 |
@@ -448,6 +449,12 @@ Kit 调用 `parent.postMessage({ type: 'nowme:open-link', url }, '*')`。主站�
 
 沙箱允许 iframe 导航它自己，CSP 也不管导航，所以页面脚本运行时拼出的 `location = '...'` 能把 iframe 带到外部网站（钓鱼、记录访客 IP）。主站展示页面时监听 iframe 的 `load` 事件：第一次加载之后再次触发 `load`，即视为页面自我导航，立即把 `src` 重置为空白页并在 iframe 外提示“这个页面试图跳转，已拦截”。需要浏览器测试覆盖。
 
+### 5.3 展示模式与墙内连播
+
+成员页、公开链接页与工作区预览的 `PageFrame` 都有“放大看”：舞台铺满窗口，并尝试对主站的 `figure` 请求全屏；不支持或拒绝全屏时固定舞台仍可使用。iframe 始终保持 **375×667 逻辑视口**，只通过 `transform: scale(...)` 整体等比缩放，不提供更宽视口。进入与退出只改外层 class 和 CSSOM 自定义属性，**不移动、不重建 iframe**，避免二次 `load` 被 5.2 误判；AI 协助生成标识保留，沙箱、票据与页面 CSP 不变。
+
+只有成员页提供“上一位 / 下一位”和方向键连播。切换通过 `GET /w/:wallId/p/:pageId/stage` 重新授权并取当前发布票据，用 `cloneNode(false)` 继承原 iframe 属性后替换；新节点从 0 计算 `load`，不解除全屏，也不增加浏览器历史。顺序为 `listPublished` 的 `published_at, rowid`，过滤与查看者互相拉黑的人，首尾循环；单人墙不显示切换按钮。接口失败保留当前页；退出时若已切到别人，跳转到对应成员页。iframe 不加 `allow` / `allowfullscreen`，用户页面自己不能发起全屏。
+
 ## 6. 事件（W20）
 
 | 来源 | 类型 |
@@ -494,7 +501,7 @@ interface SceneGuide {
 - 系统文件（`isSystemFile`，在 `@nowme/validator` 导出）在提交时由 CLI 过滤、服务端丢弃，不算白名单路径。
 - 渲染（T1.3）：页面自我导航和被拦截的请求目前归入 `RENDER_CSP_VIOLATION`；主站 CSP 的 `frame-src <pages>` 已能阻止 iframe 跳到外部地址，5.2 的 `load` 检测用于拦截页面源内部的跳转。服务端渲染不要用 Playwright 的 `serviceWorkers: 'block'`（在沙箱文档中会误报脚本异常）。
 - 截图前调用 `nowme.revealAll()`，避免首屏以下的 `.nm-reveal` 内容在整页截图中不可见。
-- `loadConfig` 拒绝主站与页面托管同主机名、TTL 只接受 1–720 小时、票据密钥至少 32 字符。
+- `loadConfig` 拒绝主站与页面托管同主机名（例外见 10.1 的 `NOWME_ALLOW_SAME_IP_ORIGINS`）、TTL 只接受 1–720 小时、票据密钥至少 32 字符。
 
 ## 9. 平台托管路线
 
@@ -510,6 +517,7 @@ interface SceneGuide {
 | --- | --- | --- |
 | `NODE_ENV` | `development` | `production` 时关闭 `/dev/outbox`、拒绝假模型，并执行下面的启动检查 |
 | `NOWME_WEB_ORIGIN` / `NOWME_PAGES_ORIGIN` | 见 0.1 | **对外的源**（用户在浏览器里看到的地址）；两者主机名不能相同 |
+| `NOWME_ALLOW_SAME_IP_ORIGINS` | `0` | 例外开关：`1` 时允许两个源是**同一个 IP 字面量的不同端口**（没有域名、只能 IP 直连时的临时做法）。域名不放行，端口必须不同；生产启动检查会提醒。此时 cookie 不再按站点隔离，主站的会话 cookie 会随请求到达页面托管端口，隔离依靠页面文档的 `sandbox` CSP（S2）、会话 cookie 的 `HttpOnly`、页面托管不读不写 cookie、主站的 Host 校验（含端口）与表单来源检查 |
 | `NOWME_WEB_LISTEN` / `NOWME_PAGES_LISTEN` | 由源推导 | **进程实际监听的地址**：`端口`、`主机:端口` 或 `[IPv6]:端口`（只写端口时主机沿用源的主机名）。部署在反向代理之后时，源写 https 域名，这里写例如 `0.0.0.0:3000` |
 | `NOWME_TRUST_PROXY` | `0` | 进程前可信反向代理层数，0–5（10.3） |
 | `NOWME_DATA_DIR` | `.data` | 相对路径按仓库根解析 |
@@ -572,7 +580,7 @@ interface SceneGuide {
 
 ### 10.4 补充安全头
 
-主站所有响应（`apps/web/src/security/headers.ts`）：第 5 节末尾的 CSP、`X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`、`Referrer-Policy: same-origin`、`Permissions-Policy`（与页面托管同一份关闭清单 `PERMISSIONS_POLICY`）、`Cross-Origin-Opener-Policy: same-origin`、`Cross-Origin-Resource-Policy: same-origin`；动态响应默认 `Cache-Control: no-store`。主站为 https 源时加 `Strict-Transport-Security: max-age=31536000`（不带 `includeSubDomains` / `preload`），会话 cookie 加 `Secure`。
+主站所有响应（`apps/web/src/security/headers.ts`）：第 5 节末尾的 CSP、`X-Content-Type-Options: nosniff`、`X-Frame-Options: DENY`、`Referrer-Policy: same-origin`、`Permissions-Policy`（`WEB_PERMISSIONS_POLICY`，与页面托管同一份关闭清单，唯一差异是主站 `fullscreen=(self)`，供 5.3 展示模式请求全屏；页面托管仍 `fullscreen=()`）、`Cross-Origin-Opener-Policy: same-origin`、`Cross-Origin-Resource-Policy: same-origin`；动态响应默认 `Cache-Control: no-store`。主站为 https 源时加 `Strict-Transport-Security: max-age=31536000`（不带 `includeSubDomains` / `preload`），会话 cookie 加 `Secure`。
 
 ### 10.5 健康检查
 

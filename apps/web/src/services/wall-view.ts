@@ -223,6 +223,28 @@ export function loadWallModel(deps: Pick<AppDeps, 'db' | 'repos' | 'config'>, me
 // 成员页（GET /w/:wallId/p/:pageId）与想聊这个
 // ---------------------------------------------------------------------------
 
+export interface StageModel {
+  pageId: string;
+  displayName: string;
+  tagline: string;
+  src: string;
+  position: number;
+  total: number;
+  prevId: string | null;
+  nextId: string | null;
+}
+
+export interface MemberStageModel {
+  wallId: string;
+  pageId: string;
+  prevId: string | null;
+  nextId: string | null;
+  position: number;
+  total: number;
+  name: string;
+  tagline: string;
+}
+
 export interface MemberPageModel {
   wall: Wall;
   pageId: string;
@@ -232,18 +254,58 @@ export interface MemberPageModel {
   own: boolean;
   /** 当前发布版本的票据（授权检查通过后签发）。 */
   ticket: IssuedTicket;
+  stage: MemberStageModel;
 }
 
-export function loadMemberPageModel(deps: Pick<AppDeps, 'repos' | 'tickets'>, found: PublishedMemberPage): MemberPageModel {
+function loadStage(deps: Pick<AppDeps, 'db' | 'repos' | 'tickets'>, found: PublishedMemberPage): { model: StageModel; ticket: IssuedTicket } {
   const { entry } = found;
+  const hidden = deps.repos.moderation.hiddenPeers(found.membership.userId);
+  // listPublished 使用 published_at,rowid 的固定顺序，不采用墙上的随机展示顺序。
+  const entries = wallQueries(deps.db).listPublished(found.wall.id).filter((item) => !hidden.has(item.ownerId));
+  const index = entries.findIndex((item) => item.pageId === entry.pageId);
+  const total = entries.length;
+  const card = parsePublishedCard(entry.cardJson, nicknameOf(deps, entry.ownerId));
+  // 授权已通过，只给当前发布版本签发票据。
+  const ticket = deps.tickets.issue(entry.revisionId);
+  return {
+    ticket,
+    model: {
+      pageId: entry.pageId,
+      displayName: card.displayName,
+      tagline: card.tagline,
+      src: ticket.src,
+      position: index + 1,
+      total,
+      prevId: total > 1 ? (entries[(index - 1 + total) % total]?.pageId ?? null) : null,
+      nextId: total > 1 ? (entries[(index + 1) % total]?.pageId ?? null) : null,
+    },
+  };
+}
+
+export function loadStageModel(deps: Pick<AppDeps, 'db' | 'repos' | 'tickets'>, found: PublishedMemberPage): StageModel {
+  return loadStage(deps, found).model;
+}
+
+export function loadMemberPageModel(deps: Pick<AppDeps, 'db' | 'repos' | 'tickets'>, found: PublishedMemberPage): MemberPageModel {
+  const { entry } = found;
+  const { model: stage, ticket } = loadStage(deps, found);
   return {
     wall: found.wall,
     pageId: entry.pageId,
     card: parsePublishedCard(entry.cardJson, nicknameOf(deps, entry.ownerId)),
     contact: parsePublishedContact(entry.contactJson),
     own: found.own,
-    // 授权已通过（查看者是有效成员 + 页面在墙上可见），只为当前发布版本签发票据
-    ticket: deps.tickets.issue(entry.revisionId),
+    ticket,
+    stage: {
+      wallId: found.wall.id,
+      pageId: stage.pageId,
+      prevId: stage.prevId,
+      nextId: stage.nextId,
+      position: stage.position,
+      total: stage.total,
+      name: stage.displayName,
+      tagline: stage.tagline,
+    },
   };
 }
 

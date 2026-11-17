@@ -1,5 +1,5 @@
 import { test, expect } from '@playwright/test';
-import { createWall, login, uniqueEmail } from './helpers.js';
+import { createWall, exchangeToken, exampleFiles, generateInstruction, login, publishViaUi, submitFiles, uniqueEmail } from './helpers.js';
 
 test('各页面与顶栏共用内容边界，桌面限制最大宽度，手机无横向溢出', async ({ page, browser }, testInfo) => {
   await login(page, uniqueEmail('layout'), '布局测试');
@@ -74,5 +74,60 @@ test('各页面与顶栏共用内容边界，桌面限制最大宽度，手机�
     }
   } finally {
     await anonymous.close();
+  }
+});
+
+test('展示模式保持 375 逻辑视口等比放大，手机不溢出，Esc 退出后还原布局', async ({ page, browser }) => {
+  test.setTimeout(120_000);
+  await login(page, uniqueEmail('stage-layout'), '展示模式测试');
+  const { wallId } = await createWall(page, '展示模式墙');
+  const { token } = await generateInstruction(page, wallId);
+  const credential = await exchangeToken(wallId, token);
+  const submission = await submitFiles(credential, exampleFiles('hackathon-terminal'));
+  expect(submission.status).toBe('accepted');
+  await publishViaUi(page, wallId, { contactValue: 'stage@example.com', contactPublic: false });
+  await page.goto(`/w/${wallId}`);
+  const memberPath = await page.locator('.wall-card__link').first().getAttribute('href');
+  expect(memberPath).toMatch(new RegExp(`^/w/${wallId}/p/pg_`));
+
+  await page.setViewportSize({ width: 1920, height: 1080 });
+  await page.goto(memberPath!);
+  await page.locator('[data-nm-stage-open]').click();
+  await expect(page.locator('[data-nm-page-frame-root]')).toHaveClass(/page-frame--stage/);
+  await expect(page.locator('html')).toHaveClass(/nm-stage-open/);
+  const desktop = await page.locator('iframe[data-nm-page-frame]').evaluate((frame) => ({
+    logicalWidth: frame.getAttribute('width'),
+    logicalClientWidth: frame.clientWidth,
+    height: frame.getBoundingClientRect().height,
+    viewportHeight: innerHeight,
+  }));
+  expect(desktop.logicalWidth).toBe('375');
+  expect(desktop.logicalClientWidth).toBe(375);
+  expect(desktop.height).toBeGreaterThanOrEqual(desktop.viewportHeight * 0.85);
+
+  await page.keyboard.press('Escape');
+  await expect(page.locator('[data-nm-page-frame-root]')).not.toHaveClass(/page-frame--stage/);
+  await expect(page.locator('html')).not.toHaveClass(/nm-stage-open/);
+  await expect(page.locator('.member-layout__frame')).toHaveCSS('position', 'sticky');
+
+  // 全屏会把浏览器窗口置为 fullscreen，无法再调整视口；手机尺寸另开一个上下文。
+  const mobileContext = await browser.newContext({ viewport: { width: 390, height: 844 }, storageState: await page.context().storageState() });
+  try {
+    const mobilePage = await mobileContext.newPage();
+    await mobilePage.goto(memberPath!);
+    await mobilePage.locator('[data-nm-stage-open]').click();
+    await expect(mobilePage.locator('[data-nm-page-frame-root]')).toHaveClass(/page-frame--stage/);
+    const mobile = await mobilePage.evaluate(() => {
+      const phone = document.querySelector('.page-frame__phone')!.getBoundingClientRect();
+      return { overflow: document.documentElement.scrollWidth > innerWidth, left: phone.left, right: phone.right, width: innerWidth };
+    });
+    expect(mobile.overflow).toBe(false);
+    expect(mobile.left).toBeGreaterThanOrEqual(0);
+    expect(mobile.right).toBeLessThanOrEqual(mobile.width);
+    await mobilePage.keyboard.press('Escape');
+    await expect(mobilePage.locator('html')).not.toHaveClass(/nm-stage-open/);
+    await expect(mobilePage.locator('.member-layout__frame')).toHaveCSS('position', 'static');
+  } finally {
+    await mobileContext.close();
   }
 });

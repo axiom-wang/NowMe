@@ -1,9 +1,10 @@
 /**
  * 上线加固（contracts 10.4、10.5）：主站的补充安全头、健康检查端点。
  */
-import { PERMISSIONS_POLICY } from '@nowme/contracts';
+import { PERMISSIONS_POLICY, WEB_PERMISSIONS_POLICY } from '@nowme/contracts';
+import { createPagesApp } from '@nowme/pages-host';
 import { afterEach, describe, expect, it } from 'vitest';
-import { createTestWeb, get, type TestWeb } from '../helpers.js';
+import { createTestWeb, get, TEST_SECRET, type TestWeb } from '../helpers.js';
 
 let t: TestWeb | null = null;
 afterEach(async () => {
@@ -16,12 +17,22 @@ describe('主站补充安全头', () => {
     t = createTestWeb();
     for (const path of ['/login', '/static/app.css', '/no-such-page', '/api/agent/context']) {
       const response = await get(t, path);
-      expect(response.headers.get('permissions-policy'), path).toBe(PERMISSIONS_POLICY);
+      expect(response.headers.get('permissions-policy'), path).toBe(WEB_PERMISSIONS_POLICY);
       expect(response.headers.get('cross-origin-opener-policy'), path).toBe('same-origin');
       expect(response.headers.get('cross-origin-resource-policy'), path).toBe('same-origin');
       expect(response.headers.get('strict-transport-security'), path).toBeNull();
       expect(response.headers.get('content-security-policy'), path).toContain("default-src 'self'");
     }
+  });
+
+  it('展示模式只需要主站同源文档可以全屏；页面托管仍然全部关闭', async () => {
+    t = createTestWeb();
+    expect(WEB_PERMISSIONS_POLICY).toContain('fullscreen=(self)');
+    expect(PERMISSIONS_POLICY).toContain('fullscreen=()');
+    expect(WEB_PERMISSIONS_POLICY.replace('fullscreen=(self)', 'fullscreen=()')).toBe(PERMISSIONS_POLICY);
+    const pages = createPagesApp({ ...t.config, ticketSecret: TEST_SECRET }, { log: () => {} });
+    const response = await pages.request('http://127.0.0.1:4000/healthz');
+    expect(response.headers.get('permissions-policy')).toBe(PERMISSIONS_POLICY);
   });
 
   it('https 源：发 HSTS（不带 includeSubDomains / preload），会话 cookie 带 Secure', async () => {

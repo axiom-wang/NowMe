@@ -14,9 +14,10 @@ import type { AddressInfo } from 'node:net';
 import { serve } from '@hono/node-server';
 import { chromium, type Browser, type Page as BrowserPage } from 'playwright';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { generateId, SESSION_COOKIE_NAME } from '@nowme/contracts';
+import { generateId, PAGE_IFRAME_SANDBOX, SESSION_COOKIE_NAME } from '@nowme/contracts';
 import { createPagesApp } from '@nowme/pages-host';
 import { writeRevisionFiles } from '../../src/services/revision-storage.js';
+import { publishPage, publishedMember } from '../wall-helpers.js';
 import { createClock, createTestWeb, login, seedWall, TEST_SECRET, type TestSession, type TestWeb } from '../helpers.js';
 import type { Page } from '../../src/db/pages.js';
 import type { Wall } from '../../src/db/walls.js';
@@ -25,6 +26,8 @@ import type { Wall } from '../../src/db/walls.js';
 interface BrowserWindow {
   __opened: unknown[];
   __violations?: string[];
+  __loads?: number;
+  __frame?: unknown;
   open: (...args: unknown[]) => unknown;
   postMessage: (message: unknown, targetOrigin: string) => void;
   document: {
@@ -60,6 +63,7 @@ describe('浏览器：工作区沙箱 iframe（contracts 5.1、5.2）', () => {
   let owner: TestSession;
   let wall: Wall;
   let page: Page;
+  let member: ReturnType<typeof seedWall>;
   let browser: Browser;
   let webServer: ReturnType<typeof serve>;
   let pagesServer: ReturnType<typeof serve>;
@@ -88,7 +92,7 @@ describe('浏览器：工作区沙箱 iframe（contracts 5.1、5.2）', () => {
     return id;
   }
 
-  async function openWorkspace(revisionId: string): Promise<{ tab: BrowserPage; violations: string[]; dialogs: string[] }> {
+  async function openSite(path: string): Promise<{ tab: BrowserPage; violations: string[]; dialogs: string[] }> {
     const context = await browser.newContext();
     await context.addCookies([{ name: SESSION_COOKIE_NAME, value: owner.token, domain: 'localhost', path: '/' }]);
     // 只允许访问两个本地源，外部地址一律拦下
@@ -114,9 +118,13 @@ describe('浏览器：工作区沙箱 iframe（contracts 5.1、5.2）', () => {
       dialogs.push(dialog.message());
       void dialog.accept();
     });
-    await tab.goto(`${t.config.webOrigin}/w/${wall.id}/me?rev=${revisionId}`);
+    await tab.goto(`${t.config.webOrigin}${path}`);
     const violations = await tab.evaluate(() => (globalThis as unknown as BrowserWindow).__violations ?? []);
     return { tab, violations, dialogs };
+  }
+
+  async function openWorkspace(revisionId: string): Promise<{ tab: BrowserPage; violations: string[]; dialogs: string[] }> {
+    return openSite(`/w/${wall.id}/me?rev=${revisionId}`);
   }
 
   beforeAll(async () => {
@@ -128,7 +136,8 @@ describe('浏览器：工作区沙箱 iframe（contracts 5.1、5.2）', () => {
       env: { NOWME_WEB_ORIGIN: `http://localhost:${webPort}`, NOWME_PAGES_ORIGIN: `http://127.0.0.1:${pagesPort}` },
     });
     owner = await login(t, 'owner@example.com', '林舟');
-    ({ wall, page } = seedWall(t, owner.userId));
+    member = seedWall(t, owner.userId);
+    ({ wall, page } = member);
     webServer = serve({ fetch: t.web.fetch, port: webPort, hostname: '127.0.0.1' });
     const pagesApp = createPagesApp({ ...t.config, ticketSecret: TEST_SECRET }, { log: () => {} });
     pagesServer = serve({ fetch: pagesApp.fetch, port: pagesPort, hostname: '127.0.0.1' });
@@ -176,6 +185,78 @@ describe('浏览器：工作区沙箱 iframe（contracts 5.1、5.2）', () => {
     expect(await tab.evaluate(() => (globalThis as unknown as BrowserWindow).__opened.length)).toBe(1);
     // 页面没有跳转，iframe 没有被重置
     expect(await tab.locator('iframe[data-nm-page-frame]').getAttribute('src')).toMatch(new RegExp(`^${t.config.pagesOrigin}/v/`));
+    expect(violations).toEqual([]);
+    await tab.context().close();
+  }, 60_000);
+
+  it('展示模式：进入不重建 iframe；连播切换保留严格 sandbox，Esc 退出并跟随当前页', async () => {
+    const first = publishPage(t, member, '林舟');
+    const second = publishedMember(t, wall, { name: '第二位' });
+    const { tab, dialogs, violations } = await openSite(`/w/${wall.id}/p/${first.page.id}`);
+    const root = tab.locator('[data-nm-page-frame-root]');
+    const frame = tab.locator('iframe[data-nm-page-frame]');
+    await expect.poll(() => frame.getAttribute('src')).toMatch(new RegExp(`^${t.config.pagesOrigin}/v/`));
+    const beforeSrc = (await frame.getAttribute('src'))!;
+
+    await tab.evaluate(() => {
+      const win = globalThis as unknown as BrowserWindow & {
+        document: { querySelector(selector: string): { addEventListener(type: string, listener: () => void): void } | null };
+      };
+      win.__loads = 0;
+      const element = win.document.querySelector('iframe[data-nm-page-frame]')!;
+      win.__frame = element;
+      element.addEventListener('load', () => {
+        win.__loads = (win.__loads ?? 0) + 1;
+      });
+    });
+
+    await tab.locator('[data-nm-stage-open]').click();
+    await expect.poll(() => root.getAttribute('class')).toContain('page-frame--stage');
+    expect(await tab.evaluate(() => {
+      const win = globalThis as unknown as BrowserWindow & {
+        document: { querySelector(selector: string): unknown };
+      };
+      return win.document.querySelector('iframe[data-nm-page-frame]') === win.__frame;
+    })).toBe(true);
+    expect(await frame.getAttribute('src')).toBe(beforeSrc);
+    expect(await frame.getAttribute('sandbox')).toBe(PAGE_IFRAME_SANDBOX);
+    expect(await frame.evaluate((element) => element.hasAttribute('allow'))).toBe(false);
+    expect(await frame.evaluate((element) => element.clientWidth)).toBe(375);
+    await tab.waitForTimeout(400);
+    expect(await tab.evaluate(() => (globalThis as unknown as BrowserWindow).__loads)).toBe(0);
+
+    // 展示模式里页面发起的 openLink 仍然要确认后才打开
+    const child = tab.frames().find((candidate) => candidate !== tab.mainFrame())!;
+    await child.evaluate(() => {
+      (globalThis as unknown as { parent: { postMessage(message: unknown, targetOrigin: string): void } }).parent.postMessage(
+        { type: 'nowme:open-link', url: 'https://example.com/stage' },
+        '*',
+      );
+    });
+    await expect.poll(() => tab.evaluate(() => (globalThis as unknown as BrowserWindow).__opened.length)).toBe(1);
+    expect(dialogs.at(-1)).toContain('example.com');
+
+    // 下一位：换一个新 iframe，沙箱不变，位置更新
+    // 全屏时 Playwright 的命中测试不可用，直接触发按钮的 click。
+    await tab.locator('[data-nm-stage-next-button]').evaluate((button) => (button as unknown as { click(): void }).click());
+    await expect.poll(() => root.getAttribute('data-nm-stage-page')).toBe(second.page.id);
+    await expect.poll(() => frame.getAttribute('src')).toMatch(new RegExp(`^${t.config.pagesOrigin}/v/`));
+    expect(await frame.getAttribute('src')).not.toBe(beforeSrc);
+    expect(await frame.getAttribute('sandbox')).toBe(PAGE_IFRAME_SANDBOX);
+    expect(await tab.locator('[data-nm-stage-position]').textContent()).toBe('2 / 2');
+
+    // 连播切换后的新 iframe 仍然拦截自我导航
+    const switched = tab.frames().find((candidate) => candidate !== tab.mainFrame())!;
+    await switched.evaluate(() => {
+      const win = globalThis as unknown as { location: { href: string } };
+      win.location.href = win.location.href.replace(/\/?$/, '/index.html');
+    });
+    await expect.poll(() => frame.getAttribute('src'), { timeout: 10_000 }).toBe('about:blank');
+
+    // Esc 退出展示模式，并跟随到当前正在看的那一页
+    await tab.keyboard.press('Escape');
+    await expect.poll(() => root.getAttribute('class')).not.toContain('page-frame--stage');
+    await expect.poll(() => tab.url()).toContain(`/p/${second.page.id}`);
     expect(violations).toEqual([]);
     await tab.context().close();
   }, 60_000);

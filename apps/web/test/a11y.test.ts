@@ -74,6 +74,25 @@ describe('无障碍：服务端渲染约定', () => {
     expect(appJs).toContain("addEventListener('focusin'");
   });
 
+  it('展示模式：按钮有可读名称，舞台有 aria-label；沙箱与 title 不变', () => {
+    const html = String(jsx(PageFrame, {
+      ticket: { src: 'http://127.0.0.1:4200/v/abc/' } as never,
+      title: '林舟的页面',
+      stage: { wallId: 'wal_x', pageId: 'pg_1', prevId: 'pg_0', nextId: 'pg_2', position: 2, total: 3, name: '林舟', tagline: '做前端' },
+    }));
+    expect(html).toContain('data-nm-stage-open');
+    expect(html).toContain('放大看');
+    expect(html).toContain('aria-label="林舟的展示模式"');
+    expect(html).toContain('aria-label="展示模式工具栏"');
+    expect(html).toContain('aria-label="墙内连播"');
+    expect(html).toContain('上一位');
+    expect(html).toContain('下一位');
+    expect(html).toContain('2 / 3');
+    expect(html).toContain('退出');
+    expect(html).toContain(`sandbox="${PAGE_IFRAME_SANDBOX}"`);
+    expect(html).not.toMatch(/\sallow=/);
+  });
+
   it('展示用户页面的 iframe 有 title，sandbox 仍然只是 allow-scripts', () => {
     const html = String(jsx(PageFrame, { ticket: { src: 'http://127.0.0.1:4200/v/abc/' } as never, title: '林舟的页面' }));
     expect(html).toMatch(/<iframe[^>]*title="林舟的页面"/);

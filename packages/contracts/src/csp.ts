@@ -131,6 +131,11 @@ export const PERMISSIONS_POLICY_DISABLED_FEATURES = [
 
 export const PERMISSIONS_POLICY = PERMISSIONS_POLICY_DISABLED_FEATURES.map((feature) => `${feature}=()`).join(', ');
 
+/** 主站只允许同源文档请求全屏；页面托管仍使用全部关闭的 PERMISSIONS_POLICY。 */
+export const WEB_PERMISSIONS_POLICY = PERMISSIONS_POLICY_DISABLED_FEATURES.map((feature) =>
+  feature === 'fullscreen' ? 'fullscreen=(self)' : `${feature}=()`,
+).join(', ');
+
 /**
  * 页面托管所有响应都带的安全头（S2）。页面文档另加 `Content-Security-Policy: buildPageCsp(...)`。
  * 页面托管不设置任何 cookie。

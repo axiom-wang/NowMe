@@ -30,7 +30,7 @@ import type { Wall } from '../db/walls.js';
 import { requireForm } from '../security/forms.js';
 import { authOf, requireUser } from '../security/session.js';
 import { findMemberWall, findPublishedMemberPage } from '../services/access.js';
-import { coverFilePath, loadMemberPageModel, loadWallModel, parsePublishedCard, resolveChat } from '../services/wall-view.js';
+import { coverFilePath, loadMemberPageModel, loadStageModel, loadWallModel, parsePublishedCard, resolveChat } from '../services/wall-view.js';
 import { createWall, joinState, joinWall, parseWallForm } from '../services/walls.js';
 import { parseQuestionForm, questionTexts, saveQuestions } from '../services/wall-questions.js';
 import { questionsGate } from './organizer-tools.js';
@@ -311,6 +311,24 @@ export function registerWallRoutes(app: AppHono, deps: AppDeps): void {
   // -------------------------------------------------------------------------
   // 成员页与想聊这个（W14）
   // -------------------------------------------------------------------------
+
+  app.get('/w/:wallId/p/:pageId/stage', user, (c) => {
+    const auth = authOf(c);
+    const found = findPublishedMemberPage(deps, auth.user.id, c.req.param('wallId'), c.req.param('pageId'));
+    if (!found) return renderNotFound(c);
+    const gate = questionsGate(c, deps, found);
+    if (gate) return gate;
+    if (!found.own) {
+      deps.repos.events.record({
+        type: 'page_open',
+        wallId: found.wall.id,
+        pageId: found.entry.pageId,
+        actorId: auth.user.id,
+        createdAt: deps.now().toISOString(),
+      });
+    }
+    return c.json(loadStageModel(deps, found));
+  });
 
   app.get('/w/:wallId/p/:pageId', user, (c) => {
     const auth = authOf(c);

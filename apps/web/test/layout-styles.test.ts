@@ -53,6 +53,7 @@ const NOT_PAGES = new Set([
   '/w/:wallId/me/create/assets/:assetId',
   '/w/:wallId/me/jobs/:jobId/status',
   '/w/:wallId/me/jobs/:jobId/progress',
+  '/w/:wallId/p/:pageId/stage',
   '/account/avatar',
   '/account/export',
   '/hosted/examples/:file',
