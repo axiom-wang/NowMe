@@ -1,5 +1,6 @@
 import { seedDemoAvatars } from '../scripts/demo-avatars.js';
 import sharp from 'sharp';
+import { CHAT_PAGE_SIZE } from '@nowme/contracts';
 /** 真实校验 / 提交 / 发布 / 聊天服务；渲染器用假实现，真实渲染由 pnpm demo 验收。 */
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -10,7 +11,7 @@ import { DEMO_TEST_PROFILE } from '../scripts/demo-persona.js';
 import { DEMO_ANSWERS, DEMO_QUESTIONS } from '../scripts/demo-organizer.js';
 import { loadPortrait } from '../src/services/portrait.js';
 import { DEMO_ACCOUNTS } from '../src/demo-access.js';
-import { createTestWeb, csrfOf, postForm, sessionTokenFrom, type TestWeb } from './helpers.js';
+import { createTestWeb, csrfOf, postForm, sessionTokenFrom, START, type TestWeb } from './helpers.js';
 
 let t: TestWeb;
 let seed: DemoSeed;
@@ -203,25 +204,63 @@ describe('demo 种子', () => {
     }
   });
 
-  it('模拟聊天有双向消息、正确归属和已读/未读；未参与的私聊不出现在主测试账号中', () => {
-    expect(seed.chat).toEqual({ groups: 4, directs: 15, messages: 79 });
+  it('模拟聊天跨天、由组织者主持、内容不重复，且有齐全的阅读与回复状态', () => {
+    expect(seed.chat).toEqual({ groups: 4, directs: 21, messages: 260 });
     const list = t.repos.chat.list(seed.tester.userId).conversations;
-    expect(list).toHaveLength(16); // 四个群 + 每墙三个私聊。
-    expect(list.filter((entry) => entry.kind === 'direct')).toHaveLength(12);
-    // 12 段私聊各写各的：没有任何一句话重复出现，消息列表里看不出模板
-    const directTexts = (t.db.prepare(`SELECT msg.body AS body FROM chat_messages msg JOIN conversations c ON c.id = msg.conversation_id
-      WHERE c.kind = 'direct' AND (c.user_a = ? OR c.user_b = ?)`).all(seed.tester.userId, seed.tester.userId) as { body: string }[]).map((row) => row.body);
-    expect(directTexts).toHaveLength(46);
-    expect(new Set(directTexts).size).toBe(directTexts.length);
+    const visibleDirects = list.filter((entry) => entry.kind === 'direct');
+    expect(list).toHaveLength(22); // 四个群 + 十八段体验成员私聊。
+    expect(visibleDirects).toHaveLength(18);
+
+    const allMessages = t.db.prepare('SELECT body, created_at AS createdAt FROM chat_messages').all() as { body: string; createdAt: string }[];
+    expect(allMessages).toHaveLength(260);
+    expect(new Set(allMessages.map((message) => message.body)).size).toBe(allMessages.length);
+    for (const message of allMessages) {
+      expect(message.createdAt < START.toISOString()).toBe(true);
+      expect(message.body).not.toMatch(/https?:\/\/|www\.|@|\d{7,}|微信号/i);
+    }
+    const times = allMessages.map((message) => Date.parse(message.createdAt));
+    expect(Math.max(...times) - Math.min(...times)).toBeGreaterThanOrEqual(3 * 24 * 60 * 60_000);
+
+    const conversations = t.db.prepare('SELECT id, kind FROM conversations').all() as { id: string; kind: 'group' | 'direct' }[];
+    for (const conversation of conversations) {
+      const history = t.repos.chat.history(conversation.id).messages;
+      expect(history.length).toBeLessThanOrEqual(CHAT_PAGE_SIZE);
+      expect(history.map((message) => message.createdAt)).toEqual(history.map((message) => message.createdAt).sort());
+      if (conversation.kind === 'group') {
+        expect(history.length).toBeGreaterThanOrEqual(20);
+        expect(history.length).toBeLessThanOrEqual(26);
+        expect(new Set(history.map((message) => message.senderId)).size).toBeGreaterThanOrEqual(6);
+      }
+    }
+    for (const direct of visibleDirects) {
+      const count = t.repos.chat.history(direct.id).messages.length;
+      expect(count).toBeGreaterThanOrEqual(6);
+      expect(count).toBeLessThanOrEqual(14);
+    }
+    for (const wall of [seed.wall, seed.club.wall]) {
+      const group = t.db.prepare("SELECT id FROM conversations WHERE wall_id = ? AND kind = 'group'").get(wall.id) as { id: string };
+      const first = t.repos.chat.history(group.id).messages[0]!;
+      expect(first.senderId).toBe(wall.organizerId);
+      expect(first.senderId).not.toBe(seed.tester.userId);
+    }
+
     expect(list.some((entry) => entry.unread > 0)).toBe(true);
     expect(list.some((entry) => entry.unread === 0)).toBe(true);
+    expect(t.repos.chat.unread(seed.tester.userId)).toBe(16);
+    expect(visibleDirects.some((entry) => t.repos.chat.history(entry.id).messages.at(-1)?.senderId === seed.tester.userId)).toBe(true);
     expect(t.db.prepare(`SELECT count(*) AS n FROM chat_messages msg JOIN conversations c ON c.id = msg.conversation_id
       LEFT JOIN memberships m ON m.wall_id = c.wall_id AND m.user_id = msg.sender_id AND m.status = 'active' WHERE m.id IS NULL`).get()).toEqual({ n: 0 });
-    const privateChat = t.db.prepare("SELECT id FROM conversations WHERE kind = 'direct' AND user_a <> ? AND user_b <> ? LIMIT 1").get(seed.tester.userId, seed.tester.userId) as { id: string };
-    expect(t.repos.chat.findVisible(privateChat.id, seed.tester.userId)).toBeNull();
-    const history = t.repos.chat.history(list.find((entry) => entry.kind === 'direct')!.id).messages;
+
+    const privateChats = t.db.prepare("SELECT id FROM conversations WHERE kind = 'direct' AND user_a <> ? AND user_b <> ?").all(seed.tester.userId, seed.tester.userId) as { id: string }[];
+    expect(privateChats).toHaveLength(3);
+    for (const privateChat of privateChats) {
+      expect(t.repos.chat.findVisible(privateChat.id, seed.tester.userId)).toBeNull();
+      const history = t.repos.chat.history(privateChat.id).messages;
+      expect(history.length).toBeGreaterThanOrEqual(4);
+      expect(history.length).toBeLessThanOrEqual(6);
+    }
+    const history = t.repos.chat.history(visibleDirects[0]!.id).messages;
     expect(new Set(history.map((message) => message.senderId)).size).toBe(2);
-    expect(history.map((message) => message.createdAt)).toEqual(history.map((message) => message.createdAt).sort());
   });
 
   it('身份、聊天和私有画像保持一致；AI、山野墙工作区留空', async () => {

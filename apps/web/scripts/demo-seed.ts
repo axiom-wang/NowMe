@@ -28,7 +28,7 @@ import { DEMO_AI_PUBLISHED_INDICES } from './demo-ai/index.js';
 import { DEMO_TRAIL_PUBLISHED_INDICES } from './demo-trail/index.js';
 import { buildDemoClubProfile, DEMO_CLUB_ADDITIONS } from './demo-club.js';
 import { seedDemoOrganizerTools } from './demo-organizer.js';
-import { DEMO_DIRECT_SCRIPTS } from './demo-chats.js';
+import { DEMO_CHATS, type DemoChatWallKey, type Session } from './demo-chats.js';
 
 export const DEMO_DOMAIN = 'demo.nowme.test';
 import { DEMO_WALL_NAME } from '../src/demo-access.js';
@@ -203,22 +203,9 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
   seedDemoOrganizerTools(deps, wall, { organizerId: organizer.userId, testerId: tester.userId, members });
 
   const chat = seedDemoChats(web, tester.userId, [
-    { wall, members: [{ userId: tester.userId, nickname: tester.nickname }, ...members], discussion: [
-      [0, '欢迎来黑客松墙！这里可以先看每个人的页面，再从感兴趣的话题开始聊天。'],
-      [1, '我可以帮忙写后端，想找一个有意思的小问题一起做。'],
-      [2, '我带了产品原型，周末可以一起试试。'],
-      [4, '我带了几块开发板和传感器，谁的点子需要一个实体的东西，叫我就好。'],
-      [5, '还没想好做什么的队伍也可以找我，我先帮你们找十个同学聊一圈。'],
-      [0, '组队前先互相聊聊，想法还没成形也欢迎。'],
-    ] },
-    { wall: clubWall, members: [{ userId: tester.userId, nickname: tester.nickname }, ...clubMembers.filter((member) => member.userId !== tester.userId)], discussion: [
-      [0, '摄影社这周先做一次作品交流，新同学也可以带手机照片。'],
-      [1, '我把最近一卷胶片洗出来了，也带过来一起看。'],
-      [2, '周三晚上暗房照常开，想自己冲第一卷的提前跟我说一声。'],
-      [3, '我只有手机拍的夜市照片，可以带来吗？'],
-      [0, '周六下午两点，先看照片，再去附近走走。'],
-    ] },
-    ...extraWalls.map((entry, index) => ({ ...entry, discussion: DEMO_EXTRA_WALLS[index]!.discussion })),
+    { key: 'hackathon', wall, members: [organizer, tester, ...members] },
+    { key: 'club', wall: clubWall, members: [organizer, ...clubMembers] },
+    ...extraWalls.map((entry, index): ChatWall => ({ ...entry, key: index === 0 ? 'ai' : 'trail' })),
   ]);
   log(`聊天已就绪：${chat.groups} 个全员群、${chat.directs} 个私聊、${chat.messages} 条消息`);
 
@@ -325,53 +312,75 @@ async function submitAndPublish(web: WebApp, wall: Wall, userId: string, plan: D
 }
 
 interface ChatWall {
+  key: DemoChatWallKey;
   wall: Wall;
-  members: { userId: string; nickname: string }[];
-  discussion: readonly (readonly [number, string])[];
+  members: readonly { userId: string; nickname: string }[];
 }
 
 /** 经过实际聊天服务写入，包含历史往返、部分已读与待回复消息，不调用模型。 */
-function seedDemoChats(web: WebApp, testerId: string, walls: ChatWall[]): DemoSeed['chat'] {
+function seedDemoChats(web: WebApp, testerId: string, walls: readonly ChatWall[]): DemoSeed['chat'] {
   const { deps } = web;
   const result = { groups: 0, directs: 0, messages: 0 };
-  const base = deps.now().getTime() - 30 * 60 * 60 * 1000;
+  const now = deps.now().getTime();
   // 全部消息按时间顺序写入，保证序号排序与时间排序一致。
   const pending: { conversationId: string; userId: string; text: string; at: number }[] = [];
   const readAt = new Map<string, number>();
-  walls.forEach((entry, wallIndex) => {
+
+  for (const entry of walls) {
+    const script = DEMO_CHATS[entry.key];
+    const members = new Map(entry.members.map((member) => [member.nickname, member.userId]));
+    const speakerId = (speaker: string): string => {
+      if (speaker === 'me') return testerId;
+      const userId = members.get(speaker);
+      if (!userId) throw new Error(`模拟聊天的昵称在墙内不存在：${entry.wall.name}/${speaker}`);
+      return userId;
+    };
+    const addSessions = (conversationId: string, sessions: readonly Session[]): void => {
+      for (const session of sessions) {
+        let at = now - session.hoursAgo * 60 * 60_000;
+        session.lines.forEach(([speaker, text], index) => {
+          if (index > 0) {
+            const previous = session.lines[index - 1]![1];
+            at += (1 + [...previous].length % 6) * 60_000;
+          }
+          pending.push({ conversationId, userId: speakerId(speaker), text, at });
+        });
+      }
+    };
+    const setRead = (conversationId: string, sessions: readonly Session[], read: number): void => {
+      const count = sessions.reduce((total, session) => total + session.lines.length, 0);
+      if (read < 0 || read > count) throw new Error(`模拟聊天的已读位置超出消息数：${entry.wall.name}`);
+      readAt.set(conversationId, read);
+    };
+
     const groupId = deps.repos.chat.ensureGroup(entry.wall.id, entry.wall.createdAt);
     result.groups += 1;
-    entry.discussion.forEach(([index, text], messageIndex) => {
-      const member = entry.members[index];
-      if (!member) throw new Error('模拟群聊的成员不存在');
-      pending.push({ conversationId: groupId, userId: member.userId, text, at: base + wallIndex * 45 * 60_000 + messageIndex * 9 * 60_000 });
-    });
-    // 已读到中段，保留后半段未读，便于评委体验未读数变化。
-    readAt.set(groupId, 3);
-    const scripts = DEMO_DIRECT_SCRIPTS[wallIndex] ?? [];
-    scripts.forEach((script, scriptIndex) => {
-      const other = entry.members[scriptIndex + 1];
-      if (!other || other.nickname !== script.with) throw new Error(`模拟私聊与成员顺序对不上：${script.with}`);
-      const conversationId = openDirect(deps, testerId, entry.wall.id, other.userId);
-      if (!conversationId) throw new Error('模拟私聊创建失败');
+    addSessions(groupId, script.group.sessions);
+    setRead(groupId, script.group.sessions, script.group.read);
+
+    for (const direct of script.directs) {
+      const otherId = speakerId(direct.with);
+      const conversationId = openDirect(deps, testerId, entry.wall.id, otherId);
+      if (!conversationId) throw new Error(`模拟私聊创建失败：${direct.with}`);
       result.directs += 1;
-      script.lines.forEach(([who, text], index) => pending.push({
-        conversationId, userId: who === 'me' ? testerId : other.userId, text,
-        at: base + 12 * 60 * 60_000 + wallIndex * 40 * 60_000 + (scriptIndex + 1) * 15 * 60_000 + index * 3 * 60_000,
-      }));
-      readAt.set(conversationId, script.read);
-    });
-    // 让其他成员之间也有自己的私聊；主测试账号无权读取这段历史。
-    if (entry.members.length >= 6) {
-      const a = entry.members[4]!;
-      const b = entry.members[5]!;
-      const id = openDirect(deps, a.userId, entry.wall.id, b.userId);
-      if (!id) throw new Error('模拟成员私聊创建失败');
-      result.directs += 1;
-      pending.push({ conversationId: id, userId: a.userId, text: `${b.nickname}，刚在群里看到你的介绍，周末活动的时候想听你多讲讲。`, at: base + 20 * 60 * 60_000 + wallIndex * 20 * 60_000 });
-      pending.push({ conversationId: id, userId: b.userId, text: '没问题，我也对你的作品很感兴趣，见面一起聊。', at: base + 20 * 60 * 60_000 + wallIndex * 20 * 60_000 + 5 * 60_000 });
+      addSessions(conversationId, direct.sessions);
+      setRead(conversationId, direct.sessions, direct.read);
     }
-  });
+
+    // 其他成员之间也有自己的私聊；体验成员无权读取这些历史。
+    for (const peer of script.peers) {
+      const aId = speakerId(peer.a);
+      const bId = speakerId(peer.b);
+      const conversationId = openDirect(deps, aId, entry.wall.id, bId);
+      if (!conversationId) throw new Error(`模拟成员私聊创建失败：${peer.a}/${peer.b}`);
+      result.directs += 1;
+      addSessions(conversationId, peer.sessions);
+    }
+  }
+
+  for (const message of pending) {
+    if (message.at >= now) throw new Error(`模拟聊天时间不能等于或晚于种子时刻：${message.text}`);
+  }
   const sent = new Map<string, number[]>();
   for (const [index, message] of pending.sort((a, b) => a.at - b.at).entries()) {
     const item = sendMessage({ ...deps, now: () => new Date(message.at) }, message.userId, message.conversationId, `demo-message-${String(index).padStart(6, '0')}`, message.text);
