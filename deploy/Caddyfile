@@ -1,0 +1,29 @@
+# NOWMe 在单台服务器上用 IP 直连（没有域名时的临时做法，docs/deploy.md 第 9 节）。
+# 证书：Let's Encrypt 的 IP 证书（只在 shortlived 配置下签发，约 6 天有效，Caddy 自动续期；验证走 80 / 443 端口）。
+{
+	# 用 IP 访问的浏览器不发送 SNI，要告诉 Caddy 默认用哪张证书
+	default_sni 124.222.53.43
+	cert_issuer acme {
+		profile shortlived
+	}
+}
+
+# 正式环境：主站
+https://124.222.53.43 {
+	reverse_proxy web:3000
+}
+
+# 正式环境：用户页面托管
+https://124.222.53.43:8443 {
+	reverse_proxy pages:4000
+}
+
+# 演示环境：主站（一键体验登录）
+https://124.222.53.43:8444 {
+	reverse_proxy demo:3000
+}
+
+# 演示环境：用户页面托管
+https://124.222.53.43:8445 {
+	reverse_proxy demo:4000
+}

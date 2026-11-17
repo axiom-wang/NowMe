@@ -1,0 +1,51 @@
+# 单台服务器、IP 直连的追加编排（docs/deploy.md 第 9 节）。与根目录的 docker-compose.yml 一起用：
+#   docker compose -f docker-compose.yml -f deploy/compose.ip.yml up -d
+# 在正式环境（web / pages / worker）之外增加：
+#   demo    演示环境（pnpm demo：独立数据卷、一键体验登录、维护者预置的演示模型），主站与页面托管同一进程
+#   caddy   反向代理与 HTTPS（deploy/Caddyfile）：443 / 8443 是正式环境，8444 / 8445 是演示环境
+# 路径相对于仓库根（第一个 compose 文件所在目录）。
+
+services:
+  demo:
+    image: nowme:latest
+    restart: unless-stopped
+    init: true
+    env_file:
+      - deploy/demo.env
+    command: ["pnpm", "--filter", "@nowme/web", "demo"]
+    environment:
+      NOWME_WEB_LISTEN: 0.0.0.0:3000
+      NOWME_PAGES_LISTEN: 0.0.0.0:4000
+    volumes:
+      # pnpm demo 的数据目录固定是 <仓库根>/.data/demo
+      - nowme-demo-data:/app/.data/demo
+    stop_grace_period: 20s
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/healthz').then((r)=>process.exit(r.ok?0:1),()=>process.exit(1))"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      # 第一次启动要渲染 23 个页面版本，需要几分钟
+      start_period: 600s
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8443:8443"
+      - "8444:8444"
+      - "8445:8445"
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      - web
+      - pages
+
+volumes:
+  nowme-demo-data:
+  caddy-data:
+  caddy-config:

@@ -148,3 +148,22 @@ Docker 默认的 json-file 日志驱动不限大小；在 `/etc/docker/daemon.js
 ## 8. CI
 
 `.github/workflows/ci.yml`：每次 push 与 pull request 运行 `test` 任务（安装、Chromium、Kit 字体、Skill 打包、`typecheck`、`test`、`build`）与独立的 `e2e` 任务（`pnpm test:e2e`）。本地想复现，按同样顺序执行这些命令即可。
+
+## 9. 没有域名时：单台服务器、IP 直连
+
+域名备案完成之前的临时做法（`deploy/`）。一台服务器上同时跑正式环境、演示环境和 Caddy：
+
+| 地址 | 内容 |
+| --- | --- |
+| `https://<IP>` | 正式环境主站（`web`） |
+| `https://<IP>:8443` | 正式环境页面托管（`pages`） |
+| `https://<IP>:8444` | 演示环境主站（`demo`，`pnpm demo`：一键体验登录、独立数据卷 `nowme-demo-data`） |
+| `https://<IP>:8445` | 演示环境页面托管（与演示主站同一进程） |
+
+- 云防火墙放行 TCP 80、443、8443、8444、8445（80 只用于证书验证与跳转）。
+- 证书：Caddy 向 Let's Encrypt 申请 IP 证书（`shortlived` 配置，约 6 天有效，自动续期）。
+- 两个源在同一个 IP 上，必须设置 `NOWME_ALLOW_SAME_IP_ORIGINS=1`（contracts 10.1）。这放宽了“主站与页面托管是不同站点”的约定：会话 cookie 会随请求到达页面托管端口。有了两个域名后去掉这个变量，按第 3 节部署。
+- 演示环境任何人都能一键登录并使用维护者预置的模型 Key，注意模型费用；不需要时 `docker compose ... stop demo`。
+- 环境文件：`deploy/prod.env`（上传后是服务器上的 `.env`）与 `deploy/demo.env`，含密钥，不入库。
+- 部署 / 更新：`deploy/deploy.sh`（rsync 当前工作区 → 服务器上构建镜像，使用国内下载镜像 → `docker compose -f docker-compose.yml -f deploy/compose.ip.yml up -d`）。只改了配置时加 `--no-build`。
+- 服务器上的日常命令要带上两个 compose 文件，例如 `cd /opt/nowme && sudo docker compose -f docker-compose.yml -f deploy/compose.ip.yml logs -f web`。

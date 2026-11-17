@@ -33,3 +33,6 @@ packages/kit/fonts/*.woff2
 .vscode
 .idea
 .history
+
+# 服务器部署文件（含密钥的 env）
+deploy

@@ -8,8 +8,16 @@ ARG NODE_VERSION=22
 # base：Node 22 + pnpm（版本与根 package.json 的 packageManager 一致）
 # ---------------------------------------------------------------------------
 FROM node:${NODE_VERSION}-bookworm-slim AS base
+# 可选的下载镜像（网络访问 npm / Debian / Playwright 官方源不稳定时用，默认留空即官方源）：
+#   --build-arg NPM_REGISTRY=https://registry.npmmirror.com
+#   --build-arg APT_MIRROR=mirrors.cloud.tencent.com
+#   --build-arg PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/playwright
+ARG NPM_REGISTRY=
+ARG APT_MIRROR=
 ENV CI=true
-RUN npm install -g pnpm@12.8.1 && npm cache clean --force
+RUN if [ -n "$NPM_REGISTRY" ]; then npm config set --global registry "$NPM_REGISTRY"; fi \
+    && if [ -n "$APT_MIRROR" ]; then sed -i "s|deb.debian.org|$APT_MIRROR|g" /etc/apt/sources.list.d/debian.sources; fi \
+    && npm install -g pnpm@12.8.1 && npm cache clean --force
 WORKDIR /app
 
 # ---------------------------------------------------------------------------
@@ -29,12 +37,14 @@ RUN pnpm --filter @nowme/skill pack:skill
 # runtime：构建产物 + Playwright Chromium（主站渲染页面截图用）+ 系统依赖；非 root 用户运行
 # ---------------------------------------------------------------------------
 FROM base AS runtime
+ARG PLAYWRIGHT_DOWNLOAD_HOST=
 ENV NODE_ENV=production \
     NOWME_DATA_DIR=/data \
     PLAYWRIGHT_BROWSERS_PATH=/ms-playwright
 COPY --from=build /app /app
 # Chromium 及其系统库（apt）。装完清掉 apt 缓存。
-RUN pnpm --filter @nowme/render exec playwright install --with-deps chromium \
+RUN if [ -z "$PLAYWRIGHT_DOWNLOAD_HOST" ]; then unset PLAYWRIGHT_DOWNLOAD_HOST; fi \
+    && pnpm --filter @nowme/render exec playwright install --with-deps chromium \
     && rm -rf /var/lib/apt/lists/* \
     && mkdir -p /data /backups \
     && chown -R node:node /data /backups

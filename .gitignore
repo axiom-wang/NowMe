@@ -35,3 +35,6 @@ skill/dist-package/
 marketing/
 
 backups/
+
+# 部署到服务器用的环境文件（含密钥）
+deploy/*.env

@@ -248,6 +248,11 @@ function listenAddress(origin: string): { hostname: string; port: number } {
   return { hostname, port };
 }
 
+/** IPv4 点分十进制或 IPv6 字面量（`listenAddress` 已去掉方括号）。 */
+function isIpLiteral(hostname: string): boolean {
+  return /^\d{1,3}(\.\d{1,3}){3}$/.test(hostname) || hostname.includes(':');
+}
+
 /** `NOWME_*_LISTEN`：`端口`、`主机:端口` 或 `[IPv6]:端口`。没设置时用由源推导的地址。 */
 function parseListen(env: Env, name: string, fallback: { hostname: string; port: number }): { hostname: string; port: number } {
   const raw = nonEmpty(env[name]);
@@ -446,11 +451,20 @@ export function loadConfig(env: Env = process.env): NowmeConfig {
   const pagesPublic = listenAddress(pagesOrigin);
 
   // 主站与页面托管必须是不同站点：cookie 不按端口隔离，同主机不同端口会共享 cookie。
+  // 例外（contracts 10.1）：没有域名、只能用同一个公网 IP 直连时，显式设置 NOWME_ALLOW_SAME_IP_ORIGINS=1
+  // 才允许“同一个 IP、不同端口”。只对 IP 字面量生效，域名一律不放行。
   if (webPublic.hostname === pagesPublic.hostname) {
-    throw new ConfigError(
-      `NOWME_WEB_ORIGIN 与 NOWME_PAGES_ORIGIN 的主机名不能相同（${webPublic.hostname}），` +
-        '例如主站用 localhost、页面托管用 127.0.0.1',
-    );
+    const allowRaw = nonEmpty(env.NOWME_ALLOW_SAME_IP_ORIGINS);
+    if (allowRaw !== undefined && allowRaw !== '0' && allowRaw !== '1') throw new ConfigError('NOWME_ALLOW_SAME_IP_ORIGINS 只能是 1 或 0');
+    if (allowRaw !== '1' || !isIpLiteral(webPublic.hostname)) {
+      throw new ConfigError(
+        `NOWME_WEB_ORIGIN 与 NOWME_PAGES_ORIGIN 的主机名不能相同（${webPublic.hostname}），` +
+          '例如主站用 localhost、页面托管用 127.0.0.1',
+      );
+    }
+    if (webPublic.port === pagesPublic.port) {
+      throw new ConfigError('NOWME_WEB_ORIGIN 与 NOWME_PAGES_ORIGIN 用同一个 IP 时端口必须不同');
+    }
   }
   const web = parseListen(env, 'NOWME_WEB_LISTEN', webPublic);
   const pages = parseListen(env, 'NOWME_PAGES_LISTEN', pagesPublic);
@@ -525,7 +539,12 @@ export function checkProductionConfig(config: NowmeConfig, env: Env, role: 'web'
   }
   const webHost = new URL(config.webOrigin).hostname;
   const pagesHost = new URL(config.pagesOrigin).hostname;
-  if (registrableDomainGuess(webHost) === registrableDomainGuess(pagesHost)) {
+  if (webHost === pagesHost) {
+    warnings.push(
+      `NOWME_ALLOW_SAME_IP_ORIGINS=1：主站与页面托管共用同一个 IP（${webHost}），cookie 不按端口隔离，` +
+        '主站的会话 cookie 会随请求带到页面托管端口；这只是没有域名时的临时做法，有了两个域名后请去掉这个变量',
+    );
+  } else if (registrableDomainGuess(webHost) === registrableDomainGuess(pagesHost)) {
     warnings.push(
       `主站（${webHost}）与页面托管（${pagesHost}）看起来在同一个可注册域名下。子域名之间属于“同站”，` +
         'SameSite cookie 不把它们当作跨站；建议给用户页面单独注册一个域名（类似 githubusercontent.com 的做法）',

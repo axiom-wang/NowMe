@@ -26,7 +26,7 @@
 - 登录只做邮箱验证码；`NOWME_MAIL_TRANSPORT=smtp` 时真实投递，本地默认写文件。
 - 用户自己的 Key 按账号加密保存（需要 `NOWME_AI_ENCRYPTION_KEY`），可跨设备管理与删除。
 - 举报、拉黑与平台运营处理（contracts 15，`pnpm --filter @nowme/web moderation …`）；注销账号与导出个人数据（contracts 14）；内容安全检查、AI 协助生成标识、用户协议 / 隐私政策与 18 岁确认（contracts 16）。
-- 部署：主站、页面托管、后台 worker 三个进程（`NOWME_WORKER_MODE=separate`，contracts 13）；Docker / compose、备份恢复、结构化日志与 CI 见 `docs/deploy.md`（contracts 17）。
+- 部署：主站、页面托管、后台 worker 三个进程（`NOWME_WORKER_MODE=separate`，contracts 13）；Docker / compose、备份恢复、结构化日志与 CI 见 `docs/deploy.md`（contracts 17）；没有域名时单台服务器 IP 直连（正式 + 演示 + Caddy）见 `deploy/` 与 `docs/deploy.md` 第 9 节。
 - 还不做：派生到新墙（W18）、支付渠道、组织者数据看板、AI 质量评测、数据埋点与漏斗分析、上线地区的备案 / 实名等合规。
 
 ## 命令
@@ -72,7 +72,7 @@ pnpm --filter @nowme/<包> test   # 只测一个包
 - 每个功能附带测试；安全相关测试放在路径含 `security` 的文件里，使 `pnpm test:security` 能单独运行。
 - hono/jsx 不会自动输出 `<!doctype html>`，布局里要手动写。
 - `node:sqlite` 会打印 ExperimentalWarning，可用 `--disable-warning=ExperimentalWarning` 去掉。
-- 主站用 `localhost`，页面托管用 `127.0.0.1`：两个不同站点，cookie 不会互相携带。不要把两者改成同一主机名。
+- 主站用 `localhost`，页面托管用 `127.0.0.1`：两个不同站点，cookie 不会互相携带。不要把两者改成同一主机名。唯一的例外是没有域名、只能 IP 直连的部署：显式设置 `NOWME_ALLOW_SAME_IP_ORIGINS=1` 后允许同一个 IP 的不同端口（contracts 10.1，`docs/deploy.md` 第 9 节）；本地开发与测试不要用它。
 
 ## 安全红线（contracts 第 5 节，改动前必须有测试守住）
 
