@@ -52,7 +52,7 @@ echo '[deploy] 更新 Demo 并检查实际页面'
 "${COMPOSE[@]}" up -d --no-build --wait --wait-timeout 660 demo
 # healthz 不足以发现 JSX 配置错误，额外检查实际 HTML。
 "${COMPOSE[@]}" exec -T demo node -e \
-  "fetch('http://127.0.0.1:3000/login').then(async r=>{if(!r.ok||!(await r.text()).includes('以成员身份体验'))process.exit(1)})"
+  "fetch('http://127.0.0.1:3000/login',{headers:{Host:new URL(process.env.NOWME_WEB_ORIGIN).host},signal:AbortSignal.timeout(15000)}).then(async r=>{if(!r.ok)throw new Error('Demo 登录页检查失败：HTTP '+r.status);if(!(await r.text()).includes('以成员身份体验'))throw new Error('Demo 登录页缺少体验入口')}).catch(e=>{console.error(e.message);process.exit(1)})"
 echo '[deploy] 更新正式环境'
 "${COMPOSE[@]}" up -d --no-build --wait --wait-timeout 120 web pages worker
 "${COMPOSE[@]}" up -d --no-build caddy

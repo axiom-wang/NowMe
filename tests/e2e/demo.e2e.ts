@@ -12,14 +12,14 @@ test('双入口、真实会话替换、组织者权限与退出（不调用模�
   await expect(page).toHaveURL(`${demoOrigin}/`);
   await expect(page.getByRole('heading', { name: '我加入的墙' })).toBeVisible();
   await expect(page.locator('form[action="/login/demo"]')).toHaveCount(0);
-  const workspace = (await page.locator('.wall-tile', { hasText: 'NOWMe 演示黑客松' }).getByRole('link', { name: '继续创作', exact: true }).getAttribute('href'))!;
+  const workspace = (await page.locator('li', { hasText: 'NOWMe 演示黑客松' }).getByRole('link', { name: '继续创作', exact: true }).getAttribute('href'))!;
   const oldCookie = (await page.context().cookies()).find((cookie) => cookie.name === cookieName)!.value;
   await page.locator('.account-menu > summary').click();
   await page.getByRole('link', { name: '切换身份', exact: true }).click();
   await page.getByRole('button', { name: '以组织者身份体验' }).click();
   await expect(page).toHaveURL(`${demoOrigin}/`);
   await expect(page.locator('form[action="/login/demo"]')).toHaveCount(0);
-  await page.locator('.wall-tile', { hasText: 'NOWMe 演示黑客松' }).getByRole('link', { name: '组织者后台' }).click();
+  await page.locator('li', { hasText: 'NOWMe 演示黑客松' }).getByRole('link', { name: '组织者后台' }).click();
   await expect(page).toHaveURL(/\/admin$/);
   expect((await page.context().cookies()).find((cookie) => cookie.name === cookieName)!.value).not.toBe(oldCookie);
   expect((await page.request.get(workspace, { headers: { cookie: `${cookieName}=${oldCookie}` }, maxRedirects: 0 })).status()).toBe(303);
@@ -48,7 +48,7 @@ test('黑客松评审：两个入口、浏览、真实采访生成修改、本�
   await page.getByRole('button', { name: '以成员身份体验' }).click();
   await expect(page).toHaveURL(`${demoOrigin}/`);
   await expect(page.locator('form[action="/login/demo"]')).toHaveCount(0);
-  await page.locator('.wall-tile', { hasText: 'NOWMe 演示黑客松' }).getByRole('link', { name: '继续创作', exact: true }).click();
+  await page.locator('li', { hasText: 'NOWMe 演示黑客松' }).getByRole('link', { name: '继续创作', exact: true }).click();
   await expect(page).toHaveURL(/\/w\/wal_.*\/me$/);
   const workspace = new URL(page.url()).pathname;
   const wall = workspace.replace(/\/me$/, '');
@@ -112,7 +112,7 @@ test('黑客松评审：两个入口、浏览、真实采访生成修改、本�
   await page.getByRole('button', { name: '以组织者身份体验' }).click();
   await expect(page).toHaveURL(`${demoOrigin}/`);
   await expect(page.locator('form[action="/login/demo"]')).toHaveCount(0);
-  await page.locator('.wall-tile', { hasText: 'NOWMe 演示黑客松' }).getByRole('link', { name: '组织者后台' }).click();
+  await page.locator('li', { hasText: 'NOWMe 演示黑客松' }).getByRole('link', { name: '组织者后台' }).click();
   await expect(page).toHaveURL(new RegExp(`${wall}/admin$`));
   const nextSession = (await page.context().cookies()).find((cookie) => cookie.name === cookieName)?.value;
   expect(nextSession).not.toBe(firstSession);
