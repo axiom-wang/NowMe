@@ -30,6 +30,8 @@ echo "==> 同步代码到 $HOST:$DIR"
 rsync -az --delete -e "ssh -i $KEY -o IdentitiesOnly=yes" \
   --exclude .git --exclude node_modules --exclude dist --exclude '*.tsbuildinfo' \
   --exclude .data --exclude backups \
+  --exclude /releases --exclude /incoming --exclude /current-release \
+  --exclude /deployed-sha --exclude /previous-image --exclude /.deploy.lock \
   --include '/.env.example' --include '/.env.production.example' --exclude '/.env' --exclude '/.env.*' \
   --exclude test-results --exclude playwright-report --exclude .nowme-test-home --exclude .nowme-preview \
   --exclude marketing --exclude .history --exclude .vscode --exclude .claude --exclude .DS_Store --exclude skill/dist-package \

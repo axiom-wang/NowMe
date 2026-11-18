@@ -193,7 +193,7 @@ GitHub 仓库 Actions secrets：`TENCENT_DEPLOY_KEY`（专用私钥）、`TENCEN
 - 同一 IP 上运行正式站与 Demo 时，非默认端口的主站使用 `nowme_session_<端口>` Cookie，两个环境登录与退出互不覆盖；数据库、票据密钥与加密密钥仍各自独立。
 - 演示环境任何人都能一键登录并使用维护者预置的模型 Key，注意模型费用；不需要时 `docker compose ... stop demo`。
 - 环境文件：`deploy/prod.env`（上传后是服务器上的 `.env`）与 `deploy/demo.env`，含密钥，不入库。
-- 部署 / 更新：`deploy/deploy.sh`（rsync 当前工作区 → 服务器上构建镜像，使用国内下载镜像 → `docker compose -f docker-compose.yml -f deploy/compose.ip.yml up -d`）。只改了配置时加 `--no-build`。
+- 日常更新走第 8 节的 GitHub 自动发布。首次部署或手动修复可用 `deploy/deploy.sh`（rsync 当前工作区 → 服务器上构建镜像 → 启动服务）；仅改配置时加 `--no-build`。手动部署会使用本机环境文件，应先核实它们与服务器一致。
 - 服务器上的日常命令要带上两个 compose 文件，例如 `cd /opt/nowme && sudo docker compose -f docker-compose.yml -f deploy/compose.ip.yml logs -f web`。
 
 ### 腾讯云构建时的浏览器下载备用路径
