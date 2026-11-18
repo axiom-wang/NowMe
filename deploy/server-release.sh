@@ -50,9 +50,10 @@ COMPOSE=("${DOCKER[@]}" compose --project-name nowme --project-directory "$ROOT"
 
 echo '[deploy] 更新 Demo 并检查实际页面'
 "${COMPOSE[@]}" up -d --no-build --wait --wait-timeout 660 demo
-# healthz 不足以发现 JSX 配置错误，额外检查实际 HTML。
-"${COMPOSE[@]}" exec -T demo node -e \
-  "fetch('http://127.0.0.1:3000/login').then(async r=>{if(!r.ok||!(await r.text()).includes('以成员身份体验'))process.exit(1)})"
+# 通过 Caddy 校验真实页面，保留公开 Host / TLS 校验，连接本机避免公网 NAT 回环差异。
+DEMO_HTML=$(curl --fail --silent --show-error --max-time 30 --retry 5 --retry-delay 3 \
+  --connect-to 124.222.53.43:8444:127.0.0.1:8444 https://124.222.53.43:8444/login)
+[[ "$DEMO_HTML" == *'以成员身份体验'* ]]
 echo '[deploy] 更新正式环境'
 "${COMPOSE[@]}" up -d --no-build --wait --wait-timeout 120 web pages worker
 "${COMPOSE[@]}" up -d --no-build caddy
@@ -61,8 +62,10 @@ echo '[deploy] 更新正式环境'
 WORKER=$("${COMPOSE[@]}" ps -q worker)
 sleep 10
 [[ "$("${DOCKER[@]}" inspect "$WORKER" --format '{{.State.Running}} {{.RestartCount}}')" == 'true 0' ]]
-curl --fail --silent --show-error --retry 5 --retry-delay 3 https://124.222.53.43/readyz >/dev/null
-DEMO_HTML=$(curl --fail --silent --show-error --retry 5 --retry-delay 3 https://124.222.53.43:8444/login)
+curl --fail --silent --show-error --max-time 30 --retry 5 --retry-delay 3 \
+  --connect-to 124.222.53.43:443:127.0.0.1:443 https://124.222.53.43/readyz >/dev/null
+DEMO_HTML=$(curl --fail --silent --show-error --max-time 30 --retry 5 --retry-delay 3 \
+  --connect-to 124.222.53.43:8444:127.0.0.1:8444 https://124.222.53.43:8444/login)
 [[ "$DEMO_HTML" == *'以成员身份体验'* ]]
 ln -sfn "$STAGE" "$ROOT/current-release"
 printf '%s\n' "$SHA" > "$ROOT/deployed-sha"
