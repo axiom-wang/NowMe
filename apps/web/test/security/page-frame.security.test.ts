@@ -236,6 +236,12 @@ describe('浏览器：工作区沙箱 iframe（contracts 5.1、5.2）', () => {
     await expect.poll(() => tab.evaluate(() => (globalThis as unknown as BrowserWindow).__opened.length)).toBe(1);
     expect(dialogs.at(-1)).toContain('example.com');
 
+    // Linux Chromium 可能在原生 confirm 弹窗时退出全屏，重新进入后再验证连播。
+    if (!(await root.getAttribute('class'))?.includes('page-frame--stage')) {
+      await tab.locator('[data-nm-stage-open]').click();
+      await expect.poll(() => root.getAttribute('class')).toContain('page-frame--stage');
+    }
+
     // 下一位：换一个新 iframe，沙箱不变，位置更新
     // 全屏时 Playwright 的命中测试不可用，直接触发按钮的 click。
     await tab.locator('[data-nm-stage-next-button]').evaluate((button) => (button as unknown as { click(): void }).click());

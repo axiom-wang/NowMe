@@ -12,7 +12,10 @@ describe('Playwright 冒烟测试（本机 Chromium）', () => {
   let browser: Browser;
 
   beforeAll(async () => {
-    browser = await launchChromium();
+    // Linux 默认关闭 WebBluetooth，连对应的 Permissions-Policy 名字也不识别。
+    // 在测试中开启该能力，才能验证响应头确实禁止它；生产响应头不变。
+    // Chromium: services/network/public/cpp/permissions_policy/permissions_policy_features.json5
+    browser = await launchChromium({ args: ['--enable-blink-features=WebBluetooth'] });
   }, 60_000);
 
   afterAll(async () => {
@@ -70,6 +73,10 @@ describe('Playwright 冒烟测试（本机 Chromium）', () => {
     // CSP sandbox allow-scripts（无 allow-same-origin）：文档是不透明源，拿不到 localStorage
     expect(results.origin).toBe('null');
     expect(results.storage).toBe('blocked');
+    expect(await page.evaluate(() => {
+      const policy = (globalThis as unknown as { document: { featurePolicy: { allowsFeature(feature: string): boolean } } }).document.featurePolicy;
+      return policy.allowsFeature('bluetooth');
+    })).toBe(false);
 
     const fetchResult = await page.evaluate(async () => {
       try {
