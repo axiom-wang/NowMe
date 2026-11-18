@@ -5,8 +5,8 @@
 import type { RevisionStatus, ValidationReport } from '@nowme/contracts';
 import type { Database } from './database.js';
 
-/** 版本来源：本地 Agent 提交 / 平台托管生成（contracts 9）。 */
-export type RevisionSource = 'local-agent' | 'hosted';
+/** 版本来源：本地 Agent 提交 / 平台托管生成（contracts 9）/ 主人直接改文字（contracts 22）。 */
+export type RevisionSource = 'local-agent' | 'hosted' | 'owner-edit';
 
 export interface Revision {
   id: string;

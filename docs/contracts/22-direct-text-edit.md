@@ -1,6 +1,6 @@
 # 22. 直接改文字（S16）
 
-> 状态：2026-11-18 起草，用户同意先起草再实现。产品编号 W24。
+> 状态：2026-11-18 起草并实现（分支 `feat/direct-text-edit`）。产品编号 W24。
 
 名字写错、少一个字这类小改动，主人在工作区直接改页面上的文字，**不调用模型、不扣点数**，几秒出一个新版本，预览后照常发布。两条创作路线（本地 Agent、网页内创作）做出来的版本都能改，不要求开启托管功能。代码：`apps/web/src/services/text-edit.ts`（取字与替换，纯函数）、`apps/web/src/services/owner-edit.ts`（入队、等待、worker 一侧存版本）、`apps/web/src/routes/text-edit.tsx`、`apps/web/src/views/text-edit.tsx`，迁移 `024_owner_edit.sql`；常量 `TEXT_EDIT_LIMITS` 在 `packages/contracts`。
 

@@ -1150,3 +1150,10 @@
 .job-charge {
   margin: 0;
 }
+
+/* 直接改文字（contracts 22） */
+.text-edit__notes { margin: 0; padding-left: 1.2em; line-height: 1.8; }
+.text-edit__block { border: 1px solid var(--line, rgba(0, 0, 0, 0.12)); }
+.text-edit__legend { font-weight: 650; padding: 0 6px; }
+.text-edit__field input,
+.text-edit__field textarea { width: 100%; }

@@ -28,6 +28,7 @@ const NOTICE_TEXT: Record<WorkspaceNotice, { tone: 'success' | 'warning' | 'erro
   disconnected: { tone: 'success', text: '已断开你电脑上的 AI 助手：之前给它的连接和没用过的指令都已失效。需要时重新生成指令即可。' },
   'not-previewable': { tone: 'warning', text: '这一版没有做成，不能预览。在下面“做过的每一版”里展开说明，看看哪里有问题。' },
   'deleted-revision': { tone: 'warning', text: '这一版已随页面删除，不能预览或发布。' },
+  'text-edited': { tone: 'success', text: '改好了：这是改过文字的新一版。墙上的页面还没变，看看预览，满意就发布。' },
   published: { tone: 'success', text: '已发布：墙上的人现在看到的是这一版，以及你刚确认的小卡片和联系方式。' },
   withdrawn: { tone: 'success', text: '已从墙上撤下：墙上的人看不到你的页面了。做过的每一版都还在，随时可以重新发布。' },
   'not-published': { tone: 'warning', text: '现在墙上没有你的页面，不需要撤下。' },
@@ -57,6 +58,7 @@ const NOTICE_TEXT: Record<WorkspaceNotice, { tone: 'success' | 'warning' | 'erro
 const SOURCE_LABEL: Record<RevisionListItem['source'], string> = {
   'local-agent': '你电脑上的 AI 助手做的',
   hosted: '在 NOWMe 上做的',
+  'owner-edit': '你自己改了文字',
 };
 
 function basePath(model: WorkspaceModel): string {
@@ -378,6 +380,15 @@ const EditDetails: FC<{ model: WorkspaceModel; summary: string }> = ({ model, su
   );
 };
 
+/** 直接改文字的入口（contracts 22）：两条创作路线都有，不需要 AI。 */
+const TextEditLink: FC<{ model: WorkspaceModel }> = ({ model }) =>
+  model.selected && isRevisionUsable(model.selected) ? (
+    <p class="ws-text-edit">
+      <a href={`${basePath(model)}/text?rev=${model.selected.id}`}>只是改几个字？直接改文字</a>
+      <span class="muted">（不用 AI，不扣点数）</span>
+    </p>
+  ) : null;
+
 const NextStepCard: FC<PropsWithChildren<{ eyebrow: string; title: string; tone?: string }>> = ({ eyebrow, title, children, tone }) => (
   <section class={`card card--pinned next-step${tone ? ` next-step--${tone}` : ''}`} id="next-step" aria-labelledby="next-step-heading">
     <p class="next-step__eyebrow">{eyebrow}</p>
@@ -496,6 +507,7 @@ const NextStep: FC<{ model: WorkspaceModel }> = ({ model }) => {
             ) : null}
           </div>
           <EditDetails model={model} summary="想改一改？用一句话告诉 AI" />
+          <TextEditLink model={model} />
         </NextStepCard>
       );
     case 'published':
@@ -515,6 +527,7 @@ const NextStep: FC<{ model: WorkspaceModel }> = ({ model }) => {
               ) : null}
             </div>
             <EditDetails model={model} summary="再改一改？用一句话告诉 AI" />
+          <TextEditLink model={model} />
           </NextStepCard>
         );
       }
@@ -534,6 +547,7 @@ const NextStep: FC<{ model: WorkspaceModel }> = ({ model }) => {
             </a>
           </div>
           <EditDetails model={model} summary="想改一改？用一句话告诉 AI" />
+          <TextEditLink model={model} />
         </NextStepCard>
       );
   }
@@ -552,6 +566,7 @@ const LocalNextStep: FC<{ model: WorkspaceModel }> = ({ model }) => {
             </a>
           ) : null}
         </div>
+        <TextEditLink model={model} />
       </NextStepCard>
     );
   }
@@ -566,6 +581,7 @@ const LocalNextStep: FC<{ model: WorkspaceModel }> = ({ model }) => {
             </a>
           ) : null}
         </div>
+        <TextEditLink model={model} />
       </NextStepCard>
     );
   }

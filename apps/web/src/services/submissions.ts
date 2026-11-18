@@ -32,7 +32,8 @@ import type { RenderJob } from '../db/job-queue.js';
 import type { Revision, RevisionListItem } from '../db/revisions.js';
 import type { JobDispatch } from '../worker/dispatch.js';
 import type { JobContext } from '../worker/runtime.js';
-import { readStaged, removeStaging, stageFiles } from '../worker/staging.js';
+import { readStaged, removeStaging, stageFiles, writeResult } from '../worker/staging.js';
+import { findOwnPage } from './access.js';
 import { revalidateAgentAuth, workspaceUrl } from './agent.js';
 import type { ProcessedSubmission, SubmissionProcessor } from './processor.js';
 import type { SerialQueue } from './queue.js';
@@ -69,6 +70,21 @@ export interface SubmissionStore {
   runSubmission(job: RenderJob, ctx: JobContext): Promise<void>;
   /** 托管任务的结果：平台重新校验，通过才存为 `hosted` 版本；不通过不写库（hosted-route 3.1）。 */
   storeHosted(input: HostedStoreInput): Promise<HostedStoreOutcome>;
+  /** 执行一个直接改文字任务（render_jobs.kind = owner-edit，contracts 22.2）：通过才存为 `owner-edit` 版本。 */
+  runOwnerEdit(job: RenderJob, ctx: JobContext): Promise<void>;
+}
+
+/** 直接改文字被校验拒绝时写在暂存目录里的结果（主站读走后删除）。 */
+export interface OwnerEditRejection {
+  report: ValidationReport;
+}
+
+/** 主人仍拥有这一页：成员关系有效、墙未关闭、页面未删除（contracts 22.2）。 */
+export function ownerStillOwns(repos: Repos, ownerId: string | null, pageId: string): boolean {
+  if (!ownerId) return false;
+  const page = repos.pages.findById(pageId);
+  if (!page) return false;
+  return findOwnPage(repos, ownerId, page.wallId)?.page.id === pageId;
 }
 
 export interface SubmissionStoreOptions {
@@ -379,6 +395,63 @@ export function createSubmissionStore(options: SubmissionStoreOptions): Submissi
       });
       if (outcome.kind === 'stored') log(`托管生成 ${input.pageId} #${outcome.number}：accepted`);
       return outcome;
+    },
+    async runOwnerEdit(job, ctx) {
+      const complete = (outcome: 'rate_limited' | 'credential_invalid' | 'rejected') => {
+        if (repos.queue.completeRender(job.id, ctx.workerId, { outcome, now: now().toISOString() })) ctx.progress('failed');
+      };
+      if (!ownerStillOwns(repos, job.ownerId, job.pageId)) return complete('credential_invalid');
+      if (overLimit(job.pageId)) return complete('rate_limited');
+      const prepared = await readStaged(config.dataDir, job.id);
+      ctx.progress('validating', { attempt: job.attempts });
+      ctx.progress('rendering', { attempt: job.attempts });
+      let lost = false;
+      let invalid = false;
+      const stored = await processAndStore<{ revisionId: string; number: number } | ValidationReport | null>({
+        files: prepared.files,
+        ignored: [],
+        acceptedOnly: true,
+        onRejected: (report) => report,
+        onAborted: () => null,
+        insertRow: ({ id, report, processed }) => {
+          if (!repos.queue.holdsRender(job.id, ctx.workerId)) {
+            lost = true;
+            return null;
+          }
+          if (!ownerStillOwns(repos, job.ownerId, job.pageId)) {
+            invalid = true;
+            return null;
+          }
+          const createdAt = now().toISOString();
+          const number = repos.revisions.insert({
+            id,
+            pageId: job.pageId,
+            source: 'owner-edit',
+            credentialId: null,
+            status: 'accepted',
+            report,
+            cardJson: normalizedJson(prepared.files.get(PAGE_CARD_FILE)),
+            manifestJson: normalizedJson(prepared.files.get(PAGE_MANIFEST_FILE)),
+            renderedText: processed.renderedText,
+            renderJson: processed.render ? JSON.stringify(processed.render) : null,
+            createdAt,
+          });
+          repos.pages.touch(job.pageId, createdAt);
+          // 写版本与结束任务在同一个事务里：重试不会重复存版本
+          repos.queue.completeRender(job.id, ctx.workerId, { outcome: 'stored', revisionId: id, now: createdAt });
+          return { revisionId: id, number };
+        },
+      });
+      if (lost) return;
+      if (invalid || stored === null) return complete('credential_invalid');
+      if ('errors' in stored) {
+        if (!repos.queue.holdsRender(job.id, ctx.workerId)) return;
+        const rejection: OwnerEditRejection = { report: stored };
+        await writeResult(config.dataDir, job.id, rejection);
+        return complete('rejected');
+      }
+      ctx.progress('succeeded');
+      log(`直接改文字 ${job.pageId} #${stored.number}：accepted`);
     },
   };
 }

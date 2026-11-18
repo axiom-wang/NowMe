@@ -50,6 +50,7 @@ export interface WorkspaceSkill {
 /** 工作区顶部的提示（只用固定文案，不回显请求参数）。 */
 export type WorkspaceNotice =
   | 'disconnected'
+  | 'text-edited'
   | 'not-previewable'
   | 'deleted-revision'
   | 'published'

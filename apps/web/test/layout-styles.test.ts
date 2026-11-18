@@ -25,6 +25,7 @@ const PAGE_STYLES: Record<string, StyleBundle[]> = {
   '/w/:wallId/me': ['workspace'],
   '/w/:wallId/me/delete': ['workspace'],
   '/w/:wallId/leave': ['workspace'],
+  '/w/:wallId/me/text': ['workspace'],
   '/w/:wallId/me/create': ['workspace'],
   '/w/:wallId/me/jobs/:jobId': ['workspace'],
   '/w/:wallId/me/brief': ['workspace'],

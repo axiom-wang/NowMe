@@ -56,7 +56,8 @@ export function authenticateCredential(deps: Pick<AppDeps, 'repos'>, authorizati
 }
 
 /** 按凭证 ID 重新检查（提交处理完成、写库之前再确认一次没有被断开）。 */
-export function revalidateAgentAuth(repos: Repos, credentialId: string): AgentAuth | null {
+export function revalidateAgentAuth(repos: Repos, credentialId: string | null): AgentAuth | null {
+  if (!credentialId) return null;
   const credential = repos.credentials.findById(credentialId);
   return credential ? resolveAgentAuth(repos, credential) : null;
 }

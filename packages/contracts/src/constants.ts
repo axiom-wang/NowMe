@@ -138,6 +138,8 @@ export const CSRF_FIELD_NAME = '_csrf';
 
 /** 每页每日提交上限 [原型默认] 50 次，超出 429 RATE_LIMITED。 */
 export const REVISIONS_PER_PAGE_PER_DAY = 50;
+/** 直接改文字（contracts 22）：最多列出的文本段数、每段新文字的码点上限。 */
+export const TEXT_EDIT_LIMITS = { segments: 300, segment: 500 } as const;
 /** `POST /api/agent/revisions` 请求体上限 12 MB。 */
 export const REVISION_REQUEST_MAX_BYTES = 12 * MB;
 /** [T0.2 暂定] Agent API 其他 JSON 请求体上限。 */

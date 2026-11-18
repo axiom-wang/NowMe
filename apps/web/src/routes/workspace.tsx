@@ -46,6 +46,7 @@ import type { JobStartError } from '../hosted/service.js';
 /** `?notice=` 只接受这些（固定文案，不回显参数）。 */
 const NOTICES: ReadonlySet<string> = new Set<WorkspaceNotice>([
   'disconnected',
+  'text-edited',
   'published',
   'withdrawn',
   'not-published',

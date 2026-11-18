@@ -23,6 +23,7 @@ import type { ProgressHub } from './services/progress.js';
 import type { RemotePreviewService } from './services/remote-preview.js';
 import type { SkillPackage } from './services/skill-package.js';
 import type { SubmissionService } from './services/submissions.js';
+import type { OwnerEditService } from './services/owner-edit.js';
 import type { TicketIssuer } from './services/tickets.js';
 
 /** 主站运行配置（contracts 0.1、4.3、4.4）。`ticketSecret` 已解析（`resolveTicketSecret`）。 */
@@ -42,6 +43,8 @@ export interface AppDeps {
   /** 页面票据签发：只在授权检查通过后调用。 */
   tickets: TicketIssuer;
   submissions: SubmissionService;
+  /** 直接改文字（contracts 22）：不调用模型，存新版本。 */
+  ownerEdit: OwnerEditService;
   outbox: Outbox;
   /** 平台 AI（contracts 12）；没有配置时 `available` 为 false。 */
   platformModel: PlatformModel;

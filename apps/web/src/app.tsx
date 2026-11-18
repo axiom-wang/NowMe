@@ -30,6 +30,7 @@ import { createSmtpOutbox } from './services/mailer.js';
 import { createFileOutbox, type Outbox } from './services/outbox.js';
 import { createRenderProcessor, type SubmissionProcessor } from './services/processor.js';
 import { createSubmissionService } from './services/submissions.js';
+import { createOwnerEditService } from './services/owner-edit.js';
 import { createTicketIssuer } from './services/tickets.js';
 import { createRealRemoteRenderer, createRemotePreviewService, type RemoteRenderer } from './services/remote-preview.js';
 import { loadSkillPackage, type SkillPackage } from './services/skill-package.js';
@@ -167,8 +168,9 @@ export function createWebApp(options: CreateWebAppOptions): WebApp {
   const dispatch = createJobDispatch({ repos, signals, worker: () => runtime?.worker ?? null });
   const submissions = createSubmissionService({ config, db, repos, now, dispatch });
   const remotePreview = createRemotePreviewService({ dataDir: config.dataDir, db, repos, now, dispatch });
+  const ownerEdit = createOwnerEditService({ config, db, repos, now, dispatch });
 
-  const deps: AppDeps = { demo: options.demo ?? null, contentSafety, userModels, platformModel, config, db, repos, now, kitFonts, tickets, submissions, outbox, rateLimiter: createRateLimiter(now), hosted: null, skillPackage, remotePreview, progress: createProgressHub(now, options.progress), log };
+  const deps: AppDeps = { demo: options.demo ?? null, contentSafety, userModels, platformModel, config, db, repos, now, kitFonts, tickets, submissions, ownerEdit, outbox, rateLimiter: createRateLimiter(now), hosted: null, skillPackage, remotePreview, progress: createProgressHub(now, options.progress), log };
   deps.hosted = createHosted(deps, models, dispatch);
   runtime?.worker.start();
   const notifier = createJobNotifier(deps, deps.progress);
