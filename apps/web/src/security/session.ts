@@ -8,7 +8,7 @@
  */
 import type { Context, MiddlewareHandler } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
-import { LEGAL_VERSION, SESSION_COOKIE_NAME, SESSION_TTL_SECONDS } from '@nowme/contracts';
+import { LEGAL_VERSION, sessionCookieName, SESSION_TTL_SECONDS } from '@nowme/contracts';
 import type { AppDeps, AppEnv, SessionAuth, WebConfig } from '../context.js';
 import { demoAccountFor } from '../demo-access.js';
 import { loadSession, type CreatedSession } from '../services/auth.js';
@@ -19,21 +19,21 @@ function isApiPath(path: string): boolean {
 }
 
 /** 加载会话到 `c.var.auth`（Agent API 路径除外）。 */
-export function sessionLoader(deps: Pick<AppDeps, 'repos' | 'now' | 'demo'>): MiddlewareHandler<AppEnv> {
+export function sessionLoader(deps: Pick<AppDeps, 'repos' | 'now' | 'demo' | 'config'>): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
-    const auth = isApiPath(c.req.path) ? null : loadSession(deps, getCookie(c, SESSION_COOKIE_NAME));
+    const auth = isApiPath(c.req.path) ? null : loadSession(deps, readSessionToken(c, deps.config));
     c.set('demo', !!deps.demo);
     c.set('auth', auth && deps.demo && !demoAccountFor(auth.user.email) ? null : auth);
     return next();
   };
 }
 
-export function readSessionToken(c: Context<AppEnv>): string | undefined {
-  return getCookie(c, SESSION_COOKIE_NAME);
+export function readSessionToken(c: Context<AppEnv>, config: Pick<WebConfig, 'webOrigin'>): string | undefined {
+  return getCookie(c, sessionCookieName(config.webOrigin));
 }
 
 export function setSessionCookie(c: Context<AppEnv>, config: Pick<WebConfig, 'webOrigin'>, session: CreatedSession): void {
-  setCookie(c, SESSION_COOKIE_NAME, session.token, {
+  setCookie(c, sessionCookieName(config.webOrigin), session.token, {
     httpOnly: true,
     sameSite: 'Lax',
     path: '/',
@@ -43,7 +43,7 @@ export function setSessionCookie(c: Context<AppEnv>, config: Pick<WebConfig, 'we
 }
 
 export function clearSessionCookie(c: Context<AppEnv>, config: Pick<WebConfig, 'webOrigin'>): void {
-  deleteCookie(c, SESSION_COOKIE_NAME, { path: '/', secure: config.webOrigin.startsWith('https:') });
+  deleteCookie(c, sessionCookieName(config.webOrigin), { path: '/', secure: config.webOrigin.startsWith('https:') });
 }
 
 function currentPath(c: Context<AppEnv>): string {

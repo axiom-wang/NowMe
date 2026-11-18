@@ -6,7 +6,8 @@ on:
 
 concurrency:
   group: ci-${{ github.ref }}
-  cancel-in-progress: true
+  # 正式发布一旦开始不能被下次推送中断。
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 permissions:
   contents: read
@@ -14,7 +15,7 @@ permissions:
 jobs:
   test:
     name: typecheck, test, build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -36,7 +37,7 @@ jobs:
 
   e2e:
     name: e2e
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
       - uses: actions/checkout@v4
@@ -59,3 +60,42 @@ jobs:
           name: e2e-results
           path: test-results
           retention-days: 7
+
+  deploy:
+    name: deploy demo and production
+    needs: [test, e2e]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    concurrency:
+      group: tencent-production
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Configure deployment connection
+        env:
+          DEPLOY_KEY: ${{ secrets.TENCENT_DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ secrets.TENCENT_KNOWN_HOSTS }}
+        run: |
+          test -n "$DEPLOY_KEY" && test -n "$KNOWN_HOSTS"
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/nowme_ci
+          printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
+          chmod 600 ~/.ssh/nowme_ci ~/.ssh/known_hosts
+      - name: Send tested commit and deploy
+        env:
+          DEPLOY_HOST: ${{ vars.TENCENT_DEPLOY_HOST || 'ubuntu@124.222.53.43' }}
+        run: |
+          set -o pipefail
+          git archive --format=tar.gz "$GITHUB_SHA" | ssh \
+            -i ~/.ssh/nowme_ci -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes \
+            -o ServerAliveInterval=20 -o ServerAliveCountMax=30 -o IPQoS=none \
+            "$DEPLOY_HOST" "deploy $GITHUB_SHA"
+      - name: Record deployment
+        run: |
+          printf '已部署提交 %s\n\n- [正式环境](https://124.222.53.43)\n- [Demo](https://124.222.53.43:8444)\n' "$GITHUB_SHA" >> "$GITHUB_STEP_SUMMARY"
+      - name: Remove connection key
+        if: always()
+        run: rm -f ~/.ssh/nowme_ci

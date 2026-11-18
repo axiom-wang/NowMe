@@ -8,7 +8,7 @@
 # 反向代理（Caddy / Nginx）把主站域名转到 127.0.0.1:3000，页面域名转到 127.0.0.1:4000；端口只绑定本机回环地址。
 
 x-nowme: &nowme
-  image: nowme:latest
+  image: ${NOWME_IMAGE:-nowme:latest}
   build:
     context: .
     dockerfile: Dockerfile
@@ -21,7 +21,7 @@ x-nowme: &nowme
 services:
   web:
     <<: *nowme
-    command: ["pnpm", "--filter", "@nowme/web", "start"]
+    command: ["node", "--disable-warning=ExperimentalWarning", "apps/web/dist/main.js"]
     environment:
       NODE_ENV: production
       NOWME_DATA_DIR: /data
@@ -42,7 +42,7 @@ services:
 
   pages:
     <<: *nowme
-    command: ["pnpm", "--filter", "@nowme/pages-host", "start"]
+    command: ["node", "--disable-warning=ExperimentalWarning", "apps/pages-host/dist/main.js"]
     environment:
       NODE_ENV: production
       NOWME_DATA_DIR: /data
@@ -62,12 +62,13 @@ services:
 
   worker:
     <<: *nowme
-    command: ["pnpm", "--filter", "@nowme/web", "start:worker"]
+    command: ["node", "--disable-warning=ExperimentalWarning", "apps/web/dist/worker.js"]
     # 收到 SIGTERM 后最多等进行中的任务 NOWME_WORKER_SHUTDOWN_GRACE_SECONDS（默认 30）秒，停止超时要比它长
     stop_grace_period: 60s
     environment:
       NODE_ENV: production
       NOWME_DATA_DIR: /data
+      NOWME_WORKER_MODE: separate
     volumes:
       - nowme-data:/data
 

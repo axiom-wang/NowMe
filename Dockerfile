@@ -11,7 +11,7 @@ FROM node:${NODE_VERSION}-bookworm-slim AS base
 # 可选的下载镜像（网络访问 npm / Debian / Playwright 官方源不稳定时用，默认留空即官方源）：
 #   --build-arg NPM_REGISTRY=https://registry.npmmirror.com
 #   --build-arg APT_MIRROR=mirrors.cloud.tencent.com
-#   --build-arg PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/playwright
+#   --build-arg PLAYWRIGHT_DOWNLOAD_HOST=http://127.0.0.1:9080（见 docs/deploy.md）
 ARG NPM_REGISTRY=
 ARG APT_MIRROR=
 ENV CI=true
@@ -52,4 +52,4 @@ USER node
 VOLUME ["/data"]
 EXPOSE 3000 4000
 # 默认启动主站；pages / worker 在 docker-compose.yml 里覆盖 command
-CMD ["pnpm", "--filter", "@nowme/web", "start"]
+CMD ["node", "--disable-warning=ExperimentalWarning", "apps/web/dist/main.js"]

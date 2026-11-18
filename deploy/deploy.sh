@@ -30,6 +30,8 @@ echo "==> 同步代码到 $HOST:$DIR"
 rsync -az --delete -e "ssh -i $KEY -o IdentitiesOnly=yes" \
   --exclude .git --exclude node_modules --exclude dist --exclude '*.tsbuildinfo' \
   --exclude .data --exclude backups \
+  --exclude /releases --exclude /incoming --exclude /current-release \
+  --exclude /deployed-sha --exclude /previous-image --exclude /.deploy.lock \
   --include '/.env.example' --include '/.env.production.example' --exclude '/.env' --exclude '/.env.*' \
   --exclude test-results --exclude playwright-report --exclude .nowme-test-home --exclude .nowme-preview \
   --exclude marketing --exclude .history --exclude .vscode --exclude .claude --exclude .DS_Store --exclude skill/dist-package \
@@ -45,7 +47,7 @@ if [ "$BUILD" = 1 ]; then
   "${SSH[@]}" "cd $DIR && sudo docker build -t nowme:latest \
     --build-arg NPM_REGISTRY=https://registry.npmmirror.com \
     --build-arg APT_MIRROR=mirrors.cloud.tencent.com \
-    --build-arg PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/playwright ."
+    --build-arg PLAYWRIGHT_DOWNLOAD_HOST='${NOWME_PLAYWRIGHT_DOWNLOAD_HOST:-}' ."
 fi
 
 echo "==> 启动 / 更新服务"

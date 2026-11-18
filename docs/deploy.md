@@ -8,9 +8,9 @@
 
 | 服务 | 命令 | 端口 | 数据卷 | 说明 |
 | --- | --- | --- | --- | --- |
-| `web` | `pnpm --filter @nowme/web start` | 3000 | 读写 | 主站：登录、墙、页面发布、托管采访与生成的入口；渲染页面截图要用 Chromium |
-| `pages` | `pnpm --filter @nowme/pages-host start` | 4000 | **只读** | 用户页面托管，独立源，不连数据库 |
-| `worker` | `pnpm --filter @nowme/web start:worker` | 无 | 读写 | 后台任务进程（contracts 13） |
+| `web` | `node apps/web/dist/main.js` | 3000 | 读写 | 主站：登录、墙、页面发布、托管采访与生成的入口；渲染页面截图要用 Chromium |
+| `pages` | `node apps/pages-host/dist/main.js` | 4000 | **只读** | 用户页面托管，独立源，不连数据库 |
+| `worker` | `node apps/web/dist/worker.js` | 无 | 读写 | 后台任务进程（contracts 13） |
 
 另有一次性的 `backup` 服务（`profiles: [tools]`），见第 6 节。
 
@@ -70,7 +70,7 @@ docker compose logs -f web            # 启动日志，配置有误时会列出�
 随后配置反向代理，用浏览器访问主站域名，用邮箱验证码登录一次，确认邮件能收到。生成兑换码、发放点数：
 
 ```bash
-docker compose exec web pnpm --filter @nowme/web credits codes --count 20 --credits 100
+docker compose exec web node --import tsx --conditions=source apps/web/scripts/credits.ts codes --count 20 --credits 100
 ```
 
 ## 5. 升级
@@ -147,7 +147,34 @@ Docker 默认的 json-file 日志驱动不限大小；在 `/etc/docker/daemon.js
 
 ## 8. CI
 
-`.github/workflows/ci.yml`：每次 push 与 pull request 运行 `test` 任务（安装、Chromium、Kit 字体、Skill 打包、`typecheck`、`test`、`build`）与独立的 `e2e` 任务（`pnpm test:e2e`）。本地想复现，按同样顺序执行这些命令即可。
+`.github/workflows/ci.yml`：每次 push 与 pull request 运行 `test` 任务（安装、Chromium、Kit 字体、Skill 打包、`typecheck`、`test`、`build`）与独立的 `e2e` 任务（`pnpm test:e2e`）。固定使用 Ubuntu 24.04，避免 `ubuntu-latest` 升级到 Playwright 1.58 不支持的系统。本地想复现，按同样顺序执行这些命令即可。
+
+### GitHub 与腾讯云自动同步
+
+GitHub 是代码的唯一发布入口。本地提交并推送到开发分支、通过 PR 合并到 `main` 后，CI 的 `test` 和 `e2e` 都通过，才运行 `deploy`，同时更新 Demo 与正式环境。开发分支推送只检查，不影响线上；保存本地文件也不会直接上线。
+
+```bash
+git switch -c codex/my-change
+# 修改代码后
+git add <本次修改的文件>
+git commit -m "feat: describe the change"
+git push -u origin codex/my-change
+gh pr create --base main
+# 在 GitHub 合并 PR；到 Actions → CI 查看 deploy 结果
+```
+
+部署流程：
+
+1. GitHub 将**通过测试的准确提交**打成 `git archive`，通过专用 SSH 密钥发送到 `/opt/nowme/releases/<提交号>.<随机值>`。只传受 Git 管理的文件，不同步本地数据和环境文件。
+2. `deploy/server-release.sh` 使用服务器上的字体缓存构建 `nowme:<提交号>`；构建期间旧服务继续运行。
+3. 校验 Caddy 配置、备份正式数据，先更新 Demo 并检查实际登录页，再更新正式主站、页面托管与 worker。
+4. 检查 HTTPS、正式数据库就绪状态与 worker 是否持续存活；全部通过才更新 `/opt/nowme/deployed-sha` 和 `current-release`。
+
+GitHub 仓库 Actions secrets：`TENCENT_DEPLOY_KEY`（专用私钥）、`TENCENT_KNOWN_HOSTS`（已核实的服务器 SSH 主机公钥）。可选 repository variable：`TENCENT_DEPLOY_HOST`，默认 `ubuntu@124.222.53.43`。服务器 `authorized_keys` 中该密钥使用 `restrict,command="/home/ubuntu/.local/bin/nowme-github-deploy"`；该脚本由 `deploy/github-receive.sh` 安装，只接受 `deploy <40 位提交号>`，不提供终端或端口转发。
+
+`.env`、`deploy/demo.env`、数据库、页面文件和 HTTPS 证书保留在服务器上。线上用户数据不会同步回本地或进入 GitHub。若其他电脑或 Agent 改了仓库，本地用 `git pull --ff-only` 获取。不要直接修改服务器上的应用代码；修复也应从本地走 PR。
+
+发布失败到 Actions 查看日志。构建或备份失败时尚未更新应用；开始更新容器后失败，可能留下部分更新，需要修复并重新发布。升级前备份在 `/opt/nowme/backups`，旧镜像 ID 在 `/opt/nowme/previous-image`。数据库迁移不做自动降级，回滚按第 5–6 节操作。
 
 ## 9. 没有域名时：单台服务器、IP 直连
 
@@ -163,7 +190,28 @@ Docker 默认的 json-file 日志驱动不限大小；在 `/etc/docker/daemon.js
 - 云防火墙放行 TCP 80、443、8443、8444、8445（80 只用于证书验证与跳转）。
 - 证书：Caddy 向 Let's Encrypt 申请 IP 证书（`shortlived` 配置，约 6 天有效，自动续期）。
 - 两个源在同一个 IP 上，必须设置 `NOWME_ALLOW_SAME_IP_ORIGINS=1`（contracts 10.1）。这放宽了“主站与页面托管是不同站点”的约定：会话 cookie 会随请求到达页面托管端口。有了两个域名后去掉这个变量，按第 3 节部署。
+- 同一 IP 上运行正式站与 Demo 时，非默认端口的主站使用 `nowme_session_<端口>` Cookie，两个环境登录与退出互不覆盖；数据库、票据密钥与加密密钥仍各自独立。
 - 演示环境任何人都能一键登录并使用维护者预置的模型 Key，注意模型费用；不需要时 `docker compose ... stop demo`。
 - 环境文件：`deploy/prod.env`（上传后是服务器上的 `.env`）与 `deploy/demo.env`，含密钥，不入库。
-- 部署 / 更新：`deploy/deploy.sh`（rsync 当前工作区 → 服务器上构建镜像，使用国内下载镜像 → `docker compose -f docker-compose.yml -f deploy/compose.ip.yml up -d`）。只改了配置时加 `--no-build`。
+- 日常更新走第 8 节的 GitHub 自动发布。首次部署或手动修复可用 `deploy/deploy.sh`（rsync 当前工作区 → 服务器上构建镜像 → 启动服务）；仅改配置时加 `--no-build`。手动部署会使用本机环境文件，应先核实它们与服务器一致。
 - 服务器上的日常命令要带上两个 compose 文件，例如 `cd /opt/nowme && sudo docker compose -f docker-compose.yml -f deploy/compose.ip.yml logs -f web`。
+
+### 腾讯云构建时的浏览器下载备用路径
+
+Playwright 1.58 的 Chromium 使用 Chrome for Testing 下载布局。旧的 `https://npmmirror.com/mirrors/playwright` 不包含 `builds/cft/`，不能再作为统一下载源。默认使用 Playwright 官方源；官方源连接不稳定时，可在服务器上临时运行路径转换器（只绑定回环地址，不对公网开放）：
+
+```bash
+cd /opt/nowme
+sudo docker run -d --name nowme-browser-download -p 127.0.0.1:9080:8080 \
+  -v "$PWD/deploy/browser-download-proxy.cjs:/server.cjs:ro" \
+  node:22-bookworm-slim node /server.cjs
+sudo docker build --network host -t nowme:latest \
+  --build-arg NPM_REGISTRY=https://registry.npmmirror.com \
+  --build-arg APT_MIRROR=mirrors.cloud.tencent.com \
+  --build-arg PLAYWRIGHT_DOWNLOAD_HOST=http://127.0.0.1:9080 .
+sudo docker rm -f nowme-browser-download
+```
+
+转换器只将构建依赖下载重定向到 npmmirror 的 HTTPS 地址，不代理用户请求，不进入应用镜像。复用本机字体时需在服务器构建上下文中保留 `packages/kit/fonts/`，并移除服务器 `.dockerignore` 中对应的字体排除条目。
+
+容器运行时直接调用 Node（Demo 通过 `--import tsx --conditions=source` 运行），避免 pnpm 在 `NODE_ENV=production` 下启动脚本时自动重装依赖。生产容器里的运营脚本同样用 `node --import tsx --conditions=source apps/web/scripts/<脚本>.ts` 调用。

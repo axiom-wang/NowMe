@@ -22,6 +22,7 @@ import {
   DEFAULT_INTERVIEW_DAILY_CALLS,
   HOSTED_DAILY_RANGE,
   HOSTED_MAX_TURNS_RANGE,
+  SESSION_COOKIE_NAME,
 } from './constants.js';
 import { z } from 'zod';
 import { normalizeOrigin } from './csp.js';
@@ -39,6 +40,13 @@ export const TICKET_SECRET_MIN_LENGTH = 32;
 export const AGENT_TOKEN_TTL_HOURS_RANGE = { min: 1, max: 24 * 30 } as const;
 
 export type Env = Readonly<Record<string, string | undefined>>;
+
+/** IP 直连的非默认端口使用独立会话名，避免 Demo 覆盖正式站登录。 */
+export function sessionCookieName(webOrigin: string): string {
+  const url = new URL(webOrigin);
+  const hostname = url.hostname.replace(/^\[|\]$/g, '');
+  return isIpLiteral(hostname) && url.port ? `${SESSION_COOKIE_NAME}_${url.port}` : SESSION_COOKIE_NAME;
+}
 
 export interface NowmeConfig {
   /** 主站源（`NOWME_WEB_ORIGIN`），规范形式，无尾部斜杠。 */

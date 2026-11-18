@@ -63,7 +63,7 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
       if (!account || !user || !wall || Object.keys(form).some((key) => key !== 'identity')) {
         return renderPage(c, { title: '体验登录', bodyClass: c.get('auth') ? 'page--switch' : undefined, status: 400, body: <LoginView next="/" demoAccounts={demoAccounts} error="体验登录失败，请重新选择身份；若演示墙不可用，请联系维护者。" /> });
       }
-      destroySession(deps, readSessionToken(c));
+      destroySession(deps, readSessionToken(c, config));
       setSessionCookie(c, config, createSession(deps, user.id));
       return c.redirect('/', 303);
     });
@@ -140,7 +140,7 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
       });
     }
     // 登录总是换一个新会话（防会话固定）
-    destroySession(deps, readSessionToken(c));
+    destroySession(deps, readSessionToken(c, config));
     const session = createSession(deps, result.user.id);
     setSessionCookie(c, config, session);
     return c.redirect(deps.demo ? '/' : afterLoginPath(result, false, next, config.webOrigin), 303);
@@ -201,7 +201,7 @@ export function registerAuthRoutes(app: AppHono, deps: AppDeps): void {
   });
 
   app.post('/logout', requireForm(deps, { allowMissingNickname: true }), (c) => {
-    destroySession(deps, readSessionToken(c));
+    destroySession(deps, readSessionToken(c, config));
     clearSessionCookie(c, config);
     return c.redirect('/login', 303);
   });
