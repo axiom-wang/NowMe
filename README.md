@@ -18,7 +18,7 @@
 - **点数**：个人余额（兑换码、运营发放）与墙的额度（组织者替成员买单，可设每人上限）。暂未接支付渠道。
 - **账号**：只用邮箱验证码登录；可以导出个人数据、注销账号；支持举报与拉黑。
 
-隐私与安全的硬性约定（用户页面在独立源的沙箱里运行、组织者看不到成员草稿等）见 `docs/contracts.md` 第 5 节。
+隐私与安全的硬性约定（用户页面在独立源的沙箱里运行、组织者看不到成员草稿等）见 `docs/contracts/05-security-invariants.md`。
 
 ## 本地开发
 
@@ -72,7 +72,7 @@ pnpm --filter @nowme/web seed           # 开发种子：用户 + 一面墙 + �
 
 | 文档 | 内容 |
 | --- | --- |
-| [docs/contracts.md](docs/contracts.md) | 接口约定：页面输出契约、校验与错误码、数据模型、API、安全不变量 |
+| [docs/contracts/](docs/contracts/README.md) | 接口约定：页面输出契约、校验与错误码、数据模型、API、安全不变量 |
 | [docs/hosted-route.md](docs/hosted-route.md) | 网页内创作（采访、生成、修改、用户凭证） |
 | [docs/product-mvp-community-wall.md](docs/product-mvp-community-wall.md) | 产品需求 |
 | [docs/page-generation-byo-agent.md](docs/page-generation-byo-agent.md) | Skill、页面生成、凭证与托管 |

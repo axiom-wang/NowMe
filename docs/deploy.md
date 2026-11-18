@@ -1,6 +1,6 @@
 # 部署与运维
 
-面向运维。接口与安全约定见 `contracts.md` 第 10 节（加固）与第 17 节（运维）。
+面向运维。接口与安全约定见 [contracts/10-deploy-hardening.md](contracts/10-deploy-hardening.md)（加固）与 [contracts/17-operations.md](contracts/17-operations.md)（运维）。
 
 ## 1. 进程划分
 
