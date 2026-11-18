@@ -1,6 +1,6 @@
 # 托管采访与画像改造验收（2026-11-17）
 
-分支：`codex/hosted-interview-context`。对应 `build-plan.md` M9，约定见 `hosted-route.md` 第 2、3、4、5、11 节及 contracts 第 7 节。实现与本地 Skill 源码均已更新，未部署、未发布 Skill 到 GitHub。
+分支：`codex/hosted-interview-context`。对应 `archive/build-plan-m0-m9.md` M9，约定见 `hosted-route.md` 第 2、3、4、5、11 节及 contracts 第 7 节。实现与本地 Skill 源码均已更新，未部署、未发布 Skill 到 GitHub。
 
 ## 逐项核对
 

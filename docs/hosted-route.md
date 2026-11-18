@@ -1,6 +1,6 @@
 # NOWMe 接口约定 · 网页内自带 API 创作（contracts 第 9 节）
 
-> 状态：**用户已确认（2026-11-07）**。本文是 `docs/contracts.md` 第 9 节的正文；自带 API 的决定取代此前平台 Key 和免费额度方案。2026-11-14 起另有平台 AI 与点数（contracts 第 12 节）：没有自己配置的用户可用平台的模型，生成 / 修改扣点数；自带 Key 的用户行为与本文一致。
+> 状态：**用户已确认（2026-11-07）**。本文是 contracts 第 9 节（`docs/contracts/09-hosted-route.md`）的正文；自带 API 的决定取代此前平台 Key 和免费额度方案。2026-11-14 起另有平台 AI 与点数（contracts 第 12 节）：没有自己配置的用户可用平台的模型，生成 / 修改扣点数；自带 Key 的用户行为与本文一致。
 > 范围：应用内采访（W05 托管部分、W06）、托管生成、应用内修改（W08 托管部分）、账号 AI 配置。不做派生（W18）、W09 素材管理。
 > 依据：brief-collection 第 3、4、7 节；page-generation 第 7、8 节；MVP 第 6 节与 W05 / W06 / W08。
 
@@ -218,10 +218,6 @@ ID 前缀新增：`pfe_`（画像条目）、`brf_`（brief）、`bas_`（brief 
 - 新增校验码 `HOSTED_BLOCKS_CHANGED`（warning，stage `platform`）。
 - 主站 multipart 只用于 `POST /w/:wallId/me/create/start`（上限 14 MB），其余表单仍是 64 KB 的 urlencoded。
 - 测试：`apps/web/test/hosted.test.ts`（功能）、`apps/web/test/openai-client.test.ts`（转换与模拟服务全流程）、`apps/web/test/security/hosted.security.test.ts`（S7、S8）、`apps/web/test/security/model-provider.security.test.ts`（key 边界）、`tests/e2e/hosted.e2e.ts`（假客户端走通采访 → 生成 → 预览 → 修改 → 发布）。
-
-### 黑客松评审演示验收（2026-11-07）
-
-两种固定体验身份、同源 POST 一键会话、背景账号禁登与演示模型配置保护已实现。维护者提供 DeepSeek 配置后，真实采访 → 资料确认 → 生成 → 沙箱预览 → 指定区块修改 → 本人发布完整通过；没有使用假模型替代。类型检查通过，全量 1,548 项、安全 742 项、普通浏览器回归 3 项、真实演示浏览器验收 2 项通过。配置方法、DNS 环境处理和详细验收见 演示说明（已从仓库删除，见标签 `hackathon-2026` 中的 docs/demo.md）。
 
 ## 11. 采访上下文迭代（2026-11-16）
 

@@ -1,6 +1,6 @@
 # 页面输出契约（第 4–5 步细则）
 
-依据：`docs/contracts.md` 第 1 节与 2.2 节。平台会在提交时重新校验全部规则，不信任本地结果；页面最终在沙箱 iframe（`sandbox="allow-scripts"`）和严格 CSP（`connect-src 'none'`）里运行。
+依据：`docs/contracts/01-page-output.md` 与 `docs/contracts/02-validation.md` 2.2 节。平台会在提交时重新校验全部规则，不信任本地结果；页面最终在沙箱 iframe（`sandbox="allow-scripts"`）和严格 CSP（`connect-src 'none'`）里运行。
 
 ## 目录
 

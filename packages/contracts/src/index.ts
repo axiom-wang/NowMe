@@ -1,5 +1,5 @@
 /**
- * @nowme/contracts：docs/contracts.md 的代码形式。
+ * @nowme/contracts：docs/contracts/ 的代码形式。
  * 所有模块共享的类型、zod schema、常量、错误码，以及安全原语（票据、CSP、令牌）。
  */
 export * from './constants.js';
