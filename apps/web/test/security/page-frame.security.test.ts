@@ -198,6 +198,10 @@ describe('浏览器：工作区沙箱 iframe（contracts 5.1、5.2）', () => {
     await expect.poll(() => frame.getAttribute('src')).toMatch(new RegExp(`^${t.config.pagesOrigin}/v/`));
     const beforeSrc = (await frame.getAttribute('src'))!;
 
+    // 这里验证沙箱在铺满窗口的舞台中保持不变；原生全屏由 layout.e2e.ts 覆盖。
+    // Linux 的 confirm 会异步退出原生全屏，避免它与后续连播操作竞争。
+    await root.evaluate((element) => { Object.defineProperty(element, 'requestFullscreen', { value: undefined }); });
+
     await tab.evaluate(() => {
       const win = globalThis as unknown as BrowserWindow & {
         document: { querySelector(selector: string): { addEventListener(type: string, listener: () => void): void } | null };
@@ -235,12 +239,6 @@ describe('浏览器：工作区沙箱 iframe（contracts 5.1、5.2）', () => {
     });
     await expect.poll(() => tab.evaluate(() => (globalThis as unknown as BrowserWindow).__opened.length)).toBe(1);
     expect(dialogs.at(-1)).toContain('example.com');
-
-    // Linux Chromium 可能在原生 confirm 弹窗时退出全屏，重新进入后再验证连播。
-    if (!(await root.getAttribute('class'))?.includes('page-frame--stage')) {
-      await tab.locator('[data-nm-stage-open]').click();
-      await expect.poll(() => root.getAttribute('class')).toContain('page-frame--stage');
-    }
 
     // 下一位：换一个新 iframe，沙箱不变，位置更新
     // 全屏时 Playwright 的命中测试不可用，直接触发按钮的 click。

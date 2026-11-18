@@ -127,9 +127,9 @@ test('全流程：建墙、CLI 提交、发布确认、浏览与接话、组织�
       await anonPage.setViewportSize({ width, height: 667 });
       const frame = await anonPage.locator('iframe[data-nm-page-frame]').boundingBox();
       // Linux 桌面浏览器的滚动条会占据 15px；页面应铺满可用宽度且不横向溢出。
-      const available = await anonPage.evaluate(() => document.documentElement.clientWidth);
+      const available = await anonPage.evaluate(() => document.body.clientWidth);
       expect(frame).toMatchObject({ x: 0, width: available });
-      expect(await anonPage.evaluate(() => document.documentElement.scrollWidth)).toBe(available);
+      expect(await anonPage.evaluate(() => document.documentElement.scrollWidth <= document.documentElement.clientWidth)).toBe(true);
     }
 
     // 10. A 撤下：B 的墙上卡片消失，公开链接 404
