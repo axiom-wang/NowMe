@@ -52,4 +52,4 @@ USER node
 VOLUME ["/data"]
 EXPOSE 3000 4000
 # 默认启动主站；pages / worker 在 docker-compose.yml 里覆盖 command
-CMD ["pnpm", "--filter", "@nowme/web", "start"]
+CMD ["node", "--disable-warning=ExperimentalWarning", "apps/web/dist/main.js"]

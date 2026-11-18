@@ -50,6 +50,8 @@ const runtime = createWorkerRuntime({
   resolveJob: createJobModelResolver(models, config.hosted),
 });
 runtime.worker.start();
+// 队列轮询定时器为嵌入主站的场景 unref；独立进程必须保持事件循环存活。
+const keepAlive = setInterval(() => {}, 60_000);
 logger.info(
   `[worker] NOWMe 后台任务进程已启动（${runtime.worker.id}，AI 任务并发 ${config.worker.aiConcurrency}，渲染串行，数据目录 ${config.dataDir}）`,
 );
@@ -61,6 +63,7 @@ let closing = false;
 function shutdown(signal: string): void {
   if (closing) return;
   closing = true;
+  clearInterval(keepAlive);
   const graceMs = config.worker.shutdownGraceMs;
   logger.info(`[worker] 收到 ${signal}：停止领取新任务，最多等待 ${Math.round(graceMs / 1000)} 秒`);
   // 兜底：取消之后的收尾也卡住时强制退出（租约到期后由别的 worker 回收）

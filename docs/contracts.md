@@ -313,7 +313,7 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 
 ### 4.2 主站页面与表单（服务端渲染，会话 cookie 认证）
 
-会话：cookie `nowme_session`，`HttpOnly; SameSite=Lax; Path=/`，host-only（不设 `Domain`）。所有改变状态的请求必须是 `POST`，并同时满足：有效会话、表单字段 `_csrf` 与会话一致、`Origin`（或 `Referer`）等于 `NOWME_WEB_ORIGIN`。**这些路由一律忽略 `Authorization` 头**，页面凭证在这里无效。
+会话：cookie `nowme_session`（IP 直连且主站使用非默认端口时为 `nowme_session_<端口>`，由 `sessionCookieName()` 派生，避免正式站和 Demo 互相覆盖登录），`HttpOnly; SameSite=Lax; Path=/`，host-only（不设 `Domain`）。所有改变状态的请求必须是 `POST`，并同时满足：有效会话、表单字段 `_csrf` 与会话一致、`Origin`（或 `Referer`）等于 `NOWME_WEB_ORIGIN`。**这些路由一律忽略 `Authorization` 头**，页面凭证在这里无效。
 
 | 路径 | 谁能访问 | 作用 |
 | --- | --- | --- |

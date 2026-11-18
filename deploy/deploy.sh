@@ -45,7 +45,7 @@ if [ "$BUILD" = 1 ]; then
   "${SSH[@]}" "cd $DIR && sudo docker build -t nowme:latest \
     --build-arg NPM_REGISTRY=https://registry.npmmirror.com \
     --build-arg APT_MIRROR=mirrors.cloud.tencent.com \
-    --build-arg PLAYWRIGHT_DOWNLOAD_HOST=https://npmmirror.com/mirrors/playwright ."
+    --build-arg PLAYWRIGHT_DOWNLOAD_HOST='${NOWME_PLAYWRIGHT_DOWNLOAD_HOST:-}' ."
 fi
 
 echo "==> 启动 / 更新服务"

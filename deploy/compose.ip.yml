@@ -7,12 +7,13 @@
 
 services:
   demo:
-    image: nowme:latest
+    image: ${NOWME_IMAGE:-nowme:latest}
     restart: unless-stopped
     init: true
     env_file:
       - deploy/demo.env
-    command: ["pnpm", "--filter", "@nowme/web", "demo"]
+    working_dir: /app/apps/web
+    command: ["node", "--import", "tsx", "--conditions=source", "--disable-warning=ExperimentalWarning", "scripts/demo.ts"]
     environment:
       NOWME_WEB_LISTEN: 0.0.0.0:3000
       NOWME_PAGES_LISTEN: 0.0.0.0:4000
