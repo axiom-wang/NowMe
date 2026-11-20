@@ -147,11 +147,11 @@ Docker 默认的 json-file 日志驱动不限大小；在 `/etc/docker/daemon.js
 
 ## 8. CI
 
-`.github/workflows/ci.yml`：每次 push 与 pull request 运行 `test` 任务（安装、Chromium、Kit 字体、Skill 打包、`typecheck`、`test`、`build`）与独立的 `e2e` 任务（`pnpm test:e2e`）。固定使用 Ubuntu 24.04，避免 `ubuntu-latest` 升级到 Playwright 1.58 不支持的系统。本地想复现，按同样顺序执行这些命令即可。
+`.github/workflows/ci.yml`：推送到 `main` 只运行 `deploy`，**不跑测试**（2026-11-21 用户决定）。`test` 任务（安装、Chromium、Kit 字体、Skill 打包、`typecheck`、`test`、`build`）与 `e2e` 任务（`pnpm test:e2e`）只在 Actions → CI → Run workflow 手动触发时运行；开发分支与 PR 不再自动跑 CI。固定使用 Ubuntu 24.04，避免 `ubuntu-latest` 升级到 Playwright 1.58 不支持的系统。合并前请在本地跑 `pnpm typecheck && pnpm test`，需要时再跑 `pnpm test:e2e`。
 
 ### GitHub 与腾讯云自动同步
 
-GitHub 是代码的唯一发布入口。本地提交并推送到开发分支、通过 PR 合并到 `main` 后，CI 的 `test` 和 `e2e` 都通过，才运行 `deploy`，同时更新 Demo 与正式环境。开发分支推送只检查，不影响线上；保存本地文件也不会直接上线。
+GitHub 是代码的唯一发布入口。本地提交并推送到开发分支、通过 PR 合并到 `main` 后直接运行 `deploy`（不等测试），同时更新 Demo 与正式环境。开发分支推送不触发 CI，也不影响线上；保存本地文件也不会直接上线。
 
 ```bash
 git switch -c codex/my-change
@@ -165,7 +165,7 @@ gh pr create --base main
 
 部署流程：
 
-1. GitHub 将**通过测试的准确提交**打成 `git archive`，通过专用 SSH 密钥发送到 `/opt/nowme/releases/<提交号>.<随机值>`。只传受 Git 管理的文件，不同步本地数据和环境文件。
+1. GitHub 将合并到 `main` 的**准确提交**打成 `git archive`，通过专用 SSH 密钥发送到 `/opt/nowme/releases/<提交号>.<随机值>`。只传受 Git 管理的文件，不同步本地数据和环境文件。
 2. `deploy/server-release.sh` 使用服务器上的字体缓存构建 `nowme:<提交号>`；构建期间旧服务继续运行。
 3. 校验 Caddy 配置、备份正式数据，先更新 Demo 并检查实际登录页，再更新正式主站、页面托管与 worker。
 4. 检查 HTTPS、正式数据库就绪状态与 worker 是否持续存活；全部通过才更新 `/opt/nowme/deployed-sha` 和 `current-release`。
