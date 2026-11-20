@@ -2,7 +2,9 @@ name: CI
 
 on:
   push:
-  pull_request:
+    branches: [main]
+  # 测试不再自动运行，需要时在 Actions → CI → Run workflow 手动触发。
+  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -15,6 +17,7 @@ permissions:
 jobs:
   test:
     name: typecheck, test, build
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -37,6 +40,7 @@ jobs:
 
   e2e:
     name: e2e
+    if: github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     steps:
@@ -63,7 +67,7 @@ jobs:
 
   deploy:
     name: deploy demo and production
-    needs: [test, e2e]
+    # 不等测试：合并进 main 就部署（2026-11-21 用户决定）。
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 45
@@ -84,7 +88,7 @@ jobs:
           printf '%s\n' "$DEPLOY_KEY" > ~/.ssh/nowme_ci
           printf '%s\n' "$KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/nowme_ci ~/.ssh/known_hosts
-      - name: Send tested commit and deploy
+      - name: Send commit and deploy
         env:
           DEPLOY_HOST: ${{ vars.TENCENT_DEPLOY_HOST || 'ubuntu@124.222.53.43' }}
         run: |
