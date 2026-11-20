@@ -145,7 +145,7 @@ describe('任务表与租约', () => {
     // 表里只有 ID、状态、计数与时间
     const row = t.db.prepare('SELECT * FROM render_jobs WHERE id = ?').get(first!.id) as Record<string, unknown>;
     expect(Object.keys(row).sort()).toEqual(
-      ['attempts', 'created_at', 'credential_id', 'error_code', 'finished_at', 'id', 'kind', 'lease_expires_at', 'lease_owner', 'max_attempts', 'outcome', 'page_id', 'revision_id', 'started_at', 'status'].sort(),
+      ['attempts', 'created_at', 'credential_id', 'error_code', 'finished_at', 'id', 'kind', 'lease_expires_at', 'lease_owner', 'max_attempts', 'outcome', 'owner_id', 'page_id', 'revision_id', 'started_at', 'status'].sort(),
     );
   });
 

@@ -92,8 +92,9 @@ export function createWorkerRuntime(options: WorkerRuntimeOptions): WorkerRuntim
     leaseMs: options.leaseMs,
     pollMs: options.pollMs,
     handlers: {
-      render: (job, ctx) => (job.kind === 'submission' ? store.runSubmission(job, ctx) : preview.run(job, ctx)),
-      // 提交失败时暂存可以删；预览的暂存由主站取结果时删除（主站可能还在等）
+      render: (job, ctx) =>
+        job.kind === 'submission' ? store.runSubmission(job, ctx) : job.kind === 'owner-edit' ? store.runOwnerEdit(job, ctx) : preview.run(job, ctx),
+      // 提交失败时暂存可以删；预览与直接改文字的暂存由主站取结果时删除（主站可能还在等）
       renderFailed: async (job) => {
         if (job.kind === 'submission') await removeStaging(config.dataDir, job.id);
       },

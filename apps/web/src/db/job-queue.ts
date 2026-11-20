@@ -13,16 +13,20 @@ import { transaction, type Database } from './database.js';
 // render_jobs
 // ---------------------------------------------------------------------------
 
-export type RenderJobKind = 'submission' | 'preview';
+export type RenderJobKind = 'submission' | 'preview' | 'owner-edit';
 export type RenderJobStatus = 'queued' | 'running' | 'done' | 'failed';
-export type RenderJobOutcome = 'stored' | 'rendered' | 'rate_limited' | 'credential_invalid';
+/** `credential_invalid`：发起方（页面凭证，或直接改文字的主人）已失去这一页；`rejected`：直接改文字后没通过校验（报告在暂存目录）。 */
+export type RenderJobOutcome = 'stored' | 'rendered' | 'rate_limited' | 'credential_invalid' | 'rejected';
 
 export interface RenderJob {
   id: string;
   kind: RenderJobKind;
   status: RenderJobStatus;
   pageId: string;
-  credentialId: string;
+  /** 本地 Agent 的提交与预览：页面凭证；直接改文字：null。 */
+  credentialId: string | null;
+  /** 直接改文字：页面主人；其他：null。 */
+  ownerId: string | null;
   attempts: number;
   maxAttempts: number;
   leaseOwner: string | null;
@@ -42,7 +46,8 @@ function toRenderJob(row: Record<string, unknown> | undefined): RenderJob | null
     kind: row.kind as RenderJobKind,
     status: row.status as RenderJobStatus,
     pageId: row.page_id as string,
-    credentialId: row.credential_id as string,
+    credentialId: (row.credential_id as string | null) ?? null,
+    ownerId: (row.owner_id as string | null) ?? null,
     attempts: Number(row.attempts),
     maxAttempts: Number(row.max_attempts),
     leaseOwner: (row.lease_owner as string | null) ?? null,
@@ -76,7 +81,7 @@ export interface ReclaimResult {
 
 export function createJobQueueRepo(db: Database) {
   const insertRender = db.prepare(
-    `INSERT INTO render_jobs (id, kind, status, page_id, credential_id, max_attempts, created_at) VALUES (?, ?, 'queued', ?, ?, ?, ?)`,
+    `INSERT INTO render_jobs (id, kind, status, page_id, credential_id, owner_id, max_attempts, created_at) VALUES (?, ?, 'queued', ?, ?, ?, ?, ?)`,
   );
   const renderById = db.prepare('SELECT * FROM render_jobs WHERE id = ?');
   const nextRender = db.prepare("SELECT id FROM render_jobs WHERE status = 'queued' ORDER BY created_at, rowid LIMIT 1");
@@ -124,8 +129,9 @@ export function createJobQueueRepo(db: Database) {
 
   return {
     // ---- 渲染任务 ----
-    enqueueRender(input: { id: string; kind: RenderJobKind; pageId: string; credentialId: string; maxAttempts: number; createdAt: string }): void {
-      insertRender.run(input.id, input.kind, input.pageId, input.credentialId, input.maxAttempts, input.createdAt);
+    /** 提交与预览带 `credentialId`；直接改文字带 `ownerId`（两者恰好一个，表的 CHECK 约束兜底）。 */
+    enqueueRender(input: { id: string; kind: RenderJobKind; pageId: string; credentialId?: string | null; ownerId?: string | null; maxAttempts: number; createdAt: string }): void {
+      insertRender.run(input.id, input.kind, input.pageId, input.credentialId ?? null, input.ownerId ?? null, input.maxAttempts, input.createdAt);
     },
     findRender(id: string): RenderJob | null {
       return toRenderJob(renderById.get(id) as Record<string, unknown> | undefined);

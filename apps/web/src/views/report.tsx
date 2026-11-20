@@ -22,7 +22,7 @@ const IssueItem: FC<{ issue: ValidationIssue }> = ({ issue }) => (
   </li>
 );
 
-export const ReportView: FC<{ report: ValidationReport; source?: 'local-agent' | 'hosted' }> = ({ report, source = 'local-agent' }) => (
+export const ReportView: FC<{ report: ValidationReport; source?: 'local-agent' | 'hosted' | 'owner-edit' }> = ({ report, source = 'local-agent' }) => (
   <div class="report">
     {report.errors.length > 0 ? (
       <>
@@ -47,7 +47,9 @@ export const ReportView: FC<{ report: ValidationReport; source?: 'local-agent' |
     {report.errors.length === 0 && report.warnings.length === 0 ? <p class="muted">没有发现问题。</p> : null}
     {report.errors.length > 0 ? (
       <p class="report__fix muted">
-        {source === 'hosted'
+        {source === 'owner-edit'
+          ? '改过的文字让页面没有通过检查，这次没有保存；已有的版本不受影响。'
+          : source === 'hosted'
           ? '可以再生成一次，或者用一句话告诉 AI 怎么改；已有的版本不受影响。'
           : '把上面的问题交给你电脑上的 AI 助手，让它改好再交回一版（它会自己运行 nowme validate 检查）；已有的版本不受影响。'}
       </p>

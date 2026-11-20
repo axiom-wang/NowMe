@@ -3,6 +3,7 @@
  * - [data-copy="<元素 id>"]：复制该元素的文字（Agent 指令）；
  * - form[data-confirm="<提示>"]：提交前确认（断开、删除等危险操作）；
  * - form[data-busy-label="<说明>"]：提交后显示等待状态（“和 TA 聊什么”）；
+ * - form[data-only-changed]：提交时只带改过的输入框（直接改文字，避免整页文字超过表单上限）；
  * - [data-file-picker]：用统一的外观显示图片选择按钮和文件名；
  * - details[data-dismissable]：弹出菜单（账号菜单、发起聊天、画像管理）。Esc 关闭并把焦点还给标题，
  *   点到外面或键盘焦点移到外面时也关闭；没有脚本时它们就是普通的折叠。
@@ -109,6 +110,11 @@
     if (message && !window.confirm(message)) {
       event.preventDefault();
       return;
+    }
+    if (form.hasAttribute('data-only-changed')) {
+      form.querySelectorAll('input[type="text"], textarea').forEach(function (field) {
+        if (field.value === field.defaultValue) field.disabled = true;
+      });
     }
     // form[data-busy-label]：提交后要等一会儿的操作（请 AI 找话题）。所在的 [data-busy-scope] 进入等待状态，
     // 写明正在做什么，并禁用里面的按钮防止重复提交。页面随后整页跳转，不需要恢复。

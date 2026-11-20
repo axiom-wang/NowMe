@@ -17,6 +17,7 @@
  * | credits.tsx | contracts 12 | 点数：`/account/credits`、兑换码、组织者给墙充额度 |
  * | moderation.tsx | contracts 15 | 举报、拉黑、组织者处理举报 |
  * | account.tsx | contracts 14 | 注销账号与导出数据：`/account/export`、`/account/delete*` |
+ * | text-edit.tsx | contracts 22 | 直接改文字：`/w/:wallId/me/text` |
  * | hosted.tsx | M5 | 平台托管路线：`/w/:wallId/me/create*`、`/generate`、`/edit`、`/jobs/:jobId`、`/brief*`、`/account/data` 等 |
  */
 import type { AppDeps, AppHono } from '../context.js';
@@ -36,6 +37,7 @@ import { registerPublicRoutes } from './public.js';
 import { registerSkillRoutes } from './skill.js';
 import { registerStaticRoutes } from './static.js';
 import { registerWallRoutes } from './walls.js';
+import { registerTextEditRoutes } from './text-edit.js';
 import { registerWorkspaceRoutes } from './workspace.js';
 
 export function registerRoutes(app: AppHono, deps: AppDeps): void {
@@ -48,6 +50,7 @@ export function registerRoutes(app: AppHono, deps: AppDeps): void {
   registerMessageRoutes(app, deps);
   registerModerationRoutes(app, deps);
   registerWorkspaceRoutes(app, deps);
+  registerTextEditRoutes(app, deps);
   registerHostedRoutes(app, deps);
   registerAiSettingsRoutes(app, deps);
   registerCreditsRoutes(app, deps);
