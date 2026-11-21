@@ -15,6 +15,7 @@
   var cards = Array.prototype.slice.call(board.querySelectorAll('[data-wall-card]'));
   var count = board.querySelector('[data-wall-count]');
   var countNote = board.querySelector('[data-wall-count-note]');
+  var summary = board.querySelector('[data-wall-summary]');
   var defaultCountNote = countNote ? countNote.textContent : '';
   var none = board.querySelector('[data-wall-none]');
   var statusEl = board.querySelector('[data-wall-status]');
@@ -57,6 +58,7 @@
     board.classList.toggle('is-filtering', filtering);
     if (count) count.textContent = String(shown);
     if (countNote) countNote.textContent = filtering ? '位符合条件' : defaultCountNote;
+    if (summary) summary.hidden = filtering;
     if (none) none.hidden = shown > 0;
     if (clear) clear.hidden = questions.length === 0;
     // 给读屏的结果播报：停下来 0.4 秒后再说，避免每敲一个字都播报

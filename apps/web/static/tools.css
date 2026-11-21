@@ -327,3 +327,5 @@
 .question-editor__toggle > summary::-webkit-details-marker {
   display: none;
 }
+
+.portrait-theme__count, .filter-chip__count { flex-shrink: 0; white-space: nowrap; }

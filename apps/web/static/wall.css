@@ -1909,3 +1909,23 @@ html.nm-stage-open .member-layout__frame {
 .wall-card__say { color: var(--say-ink); }
 .wall-card__say-label { color: var(--say-muted); }
 .wall-board__assist-link { display: inline-flex; align-items: center; min-height: 44px; font-size: var(--text-sm); color: var(--accent-text); text-underline-offset: 4px; }
+
+/* Count and unit are one wrapping item; tools and secondary notes wrap separately. */
+.wall-board__head { display: grid; gap: 8px 24px; align-items: center; }
+.wall-board__heading { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 16px; min-width: 0; }
+.wall-board__heading .section-title { flex: none; margin: 0; }
+.wall-board__population { display: inline-flex; flex: none; align-items: center; gap: 8px; white-space: nowrap; }
+.wall-board__population .section-head__count { flex: none; transform: none; }
+.wall-board__tools { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 16px; margin-left: auto; }
+.wall-board__assist-link { white-space: nowrap; }
+.wall-board__meta { display: flex; flex-wrap: wrap; gap: 4px 16px; }
+.wall-board__meta > span { white-space: nowrap; }
+.wall-board__head .wall-search { min-width: 0; margin: 0; }
+@media (min-width: 1000px) {
+  .wall-board__head { grid-template-columns: minmax(0, 1fr) minmax(220px, 320px); }
+  .wall-board__heading, .wall-board__meta { grid-column: 1; }
+  .wall-board__head .wall-search { grid-column: 2; grid-row: 1 / span 2; }
+}
+@media (max-width: 639px) {
+  .wall-board__tools { flex-basis: 100%; margin-left: 0; }
+}

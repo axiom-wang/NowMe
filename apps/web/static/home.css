@@ -519,3 +519,5 @@
 @media (max-width: 639px) {
   .home-wall h3 a { display: flex; align-items: center; min-height: 44px; }
 }
+.home-toolbar h2 { white-space: nowrap; }
+.home-total, .home-group__count, .home-group__heading .home-icon { flex-shrink: 0; white-space: nowrap; }

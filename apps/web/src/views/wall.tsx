@@ -161,21 +161,23 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
 
       <section class="wall-members wall-board" aria-labelledby="members-heading" data-wall-board>
         <div class="section-head wall-board__head">
-          <h2 id="members-heading" class="section-title display">
-            墙上的人
-          </h2>
-          {intros ? <a class="wall-board__assist-link" href="#intros">AI 帮我找人</a> : null}
-          {ask ? <a class="wall-board__assist-link" href="#ask">问问这面墙</a> : null}
-          {cards.length > 0 ? (
-            <>
-              <span class="section-head__count" data-wall-count>
-                {cards.length}
+          <div class="wall-board__heading">
+            <h2 id="members-heading" class="section-title display">墙上的人</h2>
+            {cards.length > 0 ? (
+              <span class="wall-board__population">
+                <span class="section-head__count" data-wall-count>{cards.length}</span>
+                <span class="section-head__note" data-wall-count-note>位已上墙</span>
               </span>
-              <span class="section-head__note" data-wall-count-note>
-                位已上墙{model.memberCount > cards.length ? ` · 共 ${model.memberCount} 位成员` : ''} · 每次进来顺序都不一样
-              </span>
-            </>
-          ) : null}
+            ) : null}
+            {intros || ask ? <div class="wall-board__tools">
+              {intros ? <a class="wall-board__assist-link" href="#intros">AI 帮我找人</a> : null}
+              {ask ? <a class="wall-board__assist-link" href="#ask">问问这面墙</a> : null}
+            </div> : null}
+          </div>
+          {cards.length > 0 ? <div class="wall-board__meta section-head__note" data-wall-summary>
+            {model.memberCount > cards.length ? <span>共 {model.memberCount} 位成员</span> : null}
+            <span>每次进来顺序都不一样</span>
+          </div> : null}
           {cards.length >= WALL_SEARCH_MIN_CARDS ? (
             <label class="wall-search">
               <span class="visually-hidden">在墙上找人</span>
