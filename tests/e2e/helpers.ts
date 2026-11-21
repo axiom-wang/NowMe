@@ -8,7 +8,7 @@ import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { join, resolve } from 'node:path';
-import { expect, type BrowserContext, type Page } from '@playwright/test';
+import { expect, type BrowserContext, type Locator, type Page } from '@playwright/test';
 
 export const WEB_ORIGIN = process.env.NOWME_E2E_WEB_ORIGIN ?? 'http://localhost:3200';
 export const PAGES_ORIGIN = process.env.NOWME_E2E_PAGES_ORIGIN ?? 'http://127.0.0.1:4200';
@@ -83,6 +83,12 @@ export async function joinWall(page: Page, inviteUrl: string): Promise<void> {
 }
 
 /** 在“我的页面”的“更多方式”里生成给 AI 助手的指令，返回 token（指令格式：`/nowme-page <wallId> <token> --server <origin>`）。 */
+/** 墙默认是逛墙空间：点海报在详情面板里展开，再从面板进入成员页。 */
+export async function openFromWall(page: Page, link: Locator): Promise<void> {
+  await link.click();
+  await page.locator('[data-space-open]').click();
+}
+
 export async function generateInstruction(page: Page, wallId: string): Promise<{ command: string; token: string }> {
   await page.goto(`/w/${wallId}/me`);
   const more = page.locator('details#more-ways');

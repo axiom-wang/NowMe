@@ -4,11 +4,15 @@
  * - 卡片的名字、一行介绍、接话点取自发布快照（主人确认过的 card）；
  * - 每次请求随机排序（services/wall-view.ts），不按热度；
  * - 封面是静态图片（墙上不运行页面），固定 3:4 画框 + `loading="lazy"`，手机上流畅浏览 100 张卡。
+ *
+ * 逛墙空间（static/wall.js）：有脚本时默认把网格变成一面可以拖动、缩放的墙，点海报在旁边展开介绍和接话点。
+ * 服务端照旧输出完整网格；每张卡片附一份 `<template>` 详情（同一份发布快照里的内容），空间模式只在浏览器里
+ * 重新排布这些已有内容，不发请求、不运行页面。没有脚本时就是原来的网格（逛墙空间没有“列表”切换）。
  */
 import type { Child, FC } from 'hono/jsx';
 import { COVER_CSS_HEIGHT, COVER_CSS_WIDTH } from '@nowme/contracts';
 import type { WallCard, WallModel } from '../services/wall-view.js';
-import { Notice } from './forms.js';
+import { CsrfField, Notice } from './forms.js';
 import { PAGE_STATE_LABEL } from './home.js';
 import { initialOf } from './layout.js';
 import { answerKeys, CardAnswerTags, PortraitPanel, WallFilters } from './organizer-tools.js';
@@ -38,7 +42,7 @@ function searchText(item: WallCard): string {
 const WallCardItem: FC<{ item: WallCard }> = ({ item }) => {
   const [first] = item.card.hooks;
   return (
-    <li class="wall-card" data-wall-card data-search={searchText(item)} data-answers={answerKeys(item.answers)}>
+    <li class="wall-card" data-wall-card data-page-id={item.pageId} data-own={item.own ? '1' : undefined} data-search={searchText(item)} data-answers={answerKeys(item.answers)}>
       <a class="wall-card__link" href={item.href}>
         <span class="wall-card__poster">
           <span class="wall-card__print">
@@ -66,10 +70,157 @@ const WallCardItem: FC<{ item: WallCard }> = ({ item }) => {
           {item.card.tagline ? <span class="wall-card__tagline">{item.card.tagline}</span> : null}
           <CardAnswerTags answers={item.answers} />
         </span>
+        <span class="wall-card__tag">
+          {item.card.displayName}
+        </span>
       </a>
+      <CardDetail item={item} />
     </li>
   );
 };
+
+/**
+ * 逛墙空间里点开海报时展示的详情（名字、一行介绍、回答、全部接话点）。放在 `<template>` 里，
+ * 浏览器不渲染、读屏不读，脚本按需复制到详情面板；内容与成员页一样来自发布快照，经过转义。
+ */
+const CardDetail: FC<{ item: WallCard }> = ({ item }) => (
+  <template data-card-detail>
+    <h2 class="space-detail__name" tabindex={-1}>
+      {item.card.displayName}
+    </h2>
+    {item.card.tagline ? <p class="space-detail__tagline">{item.card.tagline}</p> : null}
+    <CardAnswerTags answers={item.answers} />
+    {item.card.hooks.length > 0 ? (
+      <div class="space-detail__talk">
+        <p class="space-detail__label">{item.own ? '我的接话点' : '可以从这里聊起'}</p>
+        <ul class="space-detail__hooks">
+          {item.card.hooks.map((hook) => (
+            <li>
+              {item.own ? (
+                <p class="space-detail__hook">{hook.text}</p>
+              ) : (
+                <button type="button" class="space-detail__hook" aria-pressed="false" data-hook-id={hook.id}>
+                  {hook.text}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      </div>
+    ) : (
+      <p class="space-detail__none">{item.own ? '你的页面还没有留话题。' : 'TA 还没有留话题，可以先看看 TA 的页面。'}</p>
+    )}
+  </template>
+);
+
+/**
+ * 逛墙空间里这个人的详情：桌面上是墙右侧一直开着的一栏（默认是第一位成员），手机上是点海报后从底部升起的资料卡。
+ * 内容：封面（只在桌面）、名字、一句话介绍、回答、接话点、“想聊这个”、成员页入口；有 AI 找人 / 问墙时最下面一行入口。
+ */
+const SpacePanel: FC<{ csrf: string; intros: boolean; ask: boolean; portrait: boolean }> = ({ csrf, intros, ask, portrait }) => (
+  <aside class="wall-space__panel" aria-label="海报详情" hidden data-space-panel>
+    <div class="space-panel__card" hidden data-space-card>
+      {/* 手机：按住这一条往下拖，收起资料卡 */}
+      <span class="space-panel__grip" aria-hidden="true" data-space-grip></span>
+      <button type="button" class="space-panel__close" aria-label="收起详情" data-space-close>
+        <span aria-hidden="true">×</span>
+      </button>
+      <div class="space-panel__cover" aria-hidden="true" data-space-cover></div>
+      <div class="space-panel__detail" data-space-detail></div>
+      <div class="space-panel__actions">
+        <form method="post" class="space-panel__chat" hidden data-space-chat>
+          <CsrfField token={csrf} />
+          <input type="hidden" name="hookId" value="" data-space-hook />
+          <button type="submit" class="btn btn--primary space-panel__chat-button">
+            <svg class="space-panel__chat-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+              <path d="M4 12a8 7 0 1 1 3.6 5.9L4 19.5l1.1-3.4A6.7 6.7 0 0 1 4 12Z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
+              <circle cx="8.5" cy="12" r="1.1" fill="currentColor" />
+              <circle cx="12" cy="12" r="1.1" fill="currentColor" />
+              <circle cx="15.5" cy="12" r="1.1" fill="currentColor" />
+            </svg>
+            想聊这个
+          </button>
+        </form>
+        <a class="space-panel__open" href="#" data-space-open>
+          <span data-space-open-label>看看 TA 的页面</span>
+        </a>
+      </div>
+      {intros || ask || portrait ? (
+        <p class={`space-panel__assist${intros || ask ? '' : ' space-panel__assist--portrait'}`} data-space-assist>
+          {intros || ask ? <span class="space-panel__assist-label">不知道找谁？</span> : null}
+          {intros ? <a href="#intros">AI 帮我找人</a> : null}
+          {intros && ask ? <span class="space-panel__assist-sep" aria-hidden="true">·</span> : null}
+          {ask ? <a href="#ask">问问这面墙</a> : null}
+          {/* 手机上标题行放不下“墙的群像”，入口在这里 */}
+          {portrait ? (
+            <span class="space-panel__assist-portrait">
+              {intros || ask ? <span class="space-panel__assist-sep" aria-hidden="true">·</span> : null}
+              <a href="#portrait">墙的群像</a>
+            </span>
+          ) : null}
+        </p>
+      ) : null}
+    </div>
+  </aside>
+);
+
+/** 逛墙空间的操作条：探索进度（只存在本机）、左右翻动、缩放；手机上是操作提示和“回到全墙”。 */
+const SpaceHud: FC<{ total: number }> = ({ total }) => (
+  <div class="wall-space__hud" hidden data-space-hud>
+    <p class="space-hud__explored">
+      <svg class="space-hud__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M7.5 7h9a4.5 4.5 0 0 1 4.4 5.5l-.9 4a2.6 2.6 0 0 1-4.6 1L14 16h-4l-1.4 1.5a2.6 2.6 0 0 1-4.6-1l-.9-4A4.5 4.5 0 0 1 7.5 7Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+        <path d="M8 10v3M6.5 11.5h3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+        <circle cx="15.5" cy="10.5" r="1" fill="currentColor" />
+        <circle cx="17" cy="12.6" r="1" fill="currentColor" />
+      </svg>
+      <span class="space-hud__explored-label">已探索</span> <strong data-space-explored>0</strong> / <span data-space-total>{total}</span>
+      <span class="space-hud__meter" aria-hidden="true">
+        <span class="space-hud__meter-fill" data-space-meter></span>
+      </span>
+    </p>
+    <div class="space-hud__nav">
+      <button type="button" class="space-hud__button" aria-label="往前看" data-space-step="-1">
+        <span aria-hidden="true">←</span>
+      </button>
+      <span class="space-hud__hint">左右拖动逛墙 · 点击认识 TA</span>
+      <button type="button" class="space-hud__button" aria-label="往后看" data-space-step="1">
+        <span aria-hidden="true">→</span>
+      </button>
+    </div>
+    <p class="space-hud__tip">
+      <svg class="space-hud__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M9 11V5.5a1.5 1.5 0 0 1 3 0V10m0-1.5a1.5 1.5 0 0 1 3 0V10m0-.5a1.5 1.5 0 0 1 3 0v4.5a6 6 0 0 1-6 6h-1a6 6 0 0 1-4.8-2.4l-2.4-3.2a1.5 1.5 0 0 1 2.4-1.8L9 14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+      </svg>
+      拖动逛墙 · 双指缩放
+    </p>
+    <button type="button" class="space-hud__overview" data-space-overview>
+      <svg class="space-hud__icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+        <path d="M4 9V5a1 1 0 0 1 1-1h4M15 4h4a1 1 0 0 1 1 1v4M20 15v4a1 1 0 0 1-1 1h-4M9 20H5a1 1 0 0 1-1-1v-4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+        <rect x="9" y="9" width="6" height="6" rx="1" fill="none" stroke="currentColor" stroke-width="2" />
+      </svg>
+      回到全墙
+    </button>
+    <div class="space-hud__zoom">
+      <button type="button" class="space-hud__button" aria-label="缩小" data-space-zoom="-1">
+        <span aria-hidden="true">−</span>
+      </button>
+      <button type="button" class="space-hud__button" aria-label="放大" data-space-zoom="1">
+        <span aria-hidden="true">+</span>
+      </button>
+    </div>
+  </div>
+);
+
+/** 手机上把搜索收成一个图标，点开再展开输入框。 */
+const SearchToggle: FC = () => (
+  <button type="button" class="wall-search-toggle" aria-expanded="false" aria-label="搜索墙上的人" hidden data-space-search-toggle>
+    <svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+      <circle cx="11" cy="11" r="7" fill="none" stroke="currentColor" stroke-width="2.4" />
+      <path d="m20 20-3.6-3.6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" />
+    </svg>
+  </button>
+);
 
 /** 还没上墙时，墙上给自己留的空位。 */
 const WallGhost: FC<{ href: string; withdrawn: boolean }> = ({ href, withdrawn }) => (
@@ -103,81 +254,97 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
 }) => {
   const { wall, myPage, cards } = model;
   const published = myPage.state === 'published';
+  // 墙的群像：有结果时成员都能看；组织者在还没生成时也能看到入口
+  const showPortrait = model.portrait.kind === 'ready' || model.role === 'organizer';
   return (
     <div class="container container--wide">
-      <section class={`wall-head scene--${wall.sceneType}`}>
-        <div class="wall-head__main">
-          <p class="wall-head__meta">
-            <span class="chip">{sceneLabel}</span>
-            <a class="btn btn--accent btn--small" href={`/messages/wall/${wall.id}`}>全员群聊</a>
-            {model.role === 'organizer' ? (
-              <a class="btn btn--ghost btn--small wall-head__admin" href={`/w/${wall.id}/admin`}>
-                组织者后台 <span aria-hidden="true">→</span>
-              </a>
-            ) : null}
-          </p>
-          <h1 class="hero__title">{wall.name}</h1>
-          {wall.description ? <p class="wall-head__desc">{wall.description}</p> : null}
-        </div>
-      </section>
-
       {notice ? <Notice tone="success">{NOTICE_TEXT[notice]}</Notice> : null}
-
-      <section class={`my-page${published ? ' my-page--published' : ''}`} aria-labelledby="my-page-heading">
-        <div class="my-page__info">
-          <div class="my-page__head">
-            <h2 id="my-page-heading">我的页面</h2>
-            <span class={`badge ${published ? 'badge--live' : 'badge--muted'}`}>
-              <span class="dot" aria-hidden="true"></span>
-              {PAGE_STATE_LABEL[myPage.state]}
-            </span>
-          </div>
-        </div>
-        <div class="actions my-page__actions">
-          <a class={`btn ${published ? 'btn--ghost' : 'btn--primary'}`} href={`/w/${wall.id}/me`}>
-            {published ? '去修改我的页面' : '去做我的页面'}
-          </a>
-          {myPage.href ? (
-            <a class="btn btn--ghost" href={myPage.href}>
-              看看我的页面
-            </a>
-          ) : null}
-          {model.questions.length > 0 ? (
-            <a class="btn btn--ghost" href={`/w/${wall.id}/questions`}>
-              我的回答
-            </a>
-          ) : null}
-        </div>
-      </section>
-
-      <section class="wall-members wall-board" aria-labelledby="members-heading" data-wall-board>
-        <div class="section-head wall-board__head">
+      <section class={`wall-members wall-board${cards.length > 0 ? ' wall-board--people' : ''}`} aria-labelledby="wall-title" data-wall-board data-wall-id={wall.id}>
+        {/* 一行：墙名 | 人数，右边是搜索、全员群聊（组织者另有后台入口） */}
+        <div class="wall-board__head">
           <div class="wall-board__heading">
-            <h2 id="members-heading" class="section-title display">墙上的人</h2>
+            <h1 id="wall-title" class="wall-board__title">{wall.name}</h1>
             {cards.length > 0 ? (
-              <span class="wall-board__population">
+              <p class="wall-board__population">
                 <span class="section-head__count" data-wall-count>{cards.length}</span>
                 <span class="section-head__note" data-wall-count-note>位已上墙</span>
-              </span>
+                {model.memberCount > cards.length ? (
+                  <span class="wall-board__meta" data-wall-summary>
+                    共 {model.memberCount} 位成员
+                  </span>
+                ) : null}
+              </p>
             ) : null}
-            {intros || ask ? <div class="wall-board__tools">
-              {intros ? <a class="wall-board__assist-link" href="#intros">AI 帮我找人</a> : null}
-              {ask ? <a class="wall-board__assist-link" href="#ask">问问这面墙</a> : null}
-            </div> : null}
           </div>
-          {cards.length > 0 && model.memberCount > cards.length ? <div class="wall-board__meta section-head__note" data-wall-summary>
-            {model.memberCount > cards.length ? <span>共 {model.memberCount} 位成员</span> : null}
-          </div> : null}
-          {cards.length >= WALL_SEARCH_MIN_CARDS ? (
-            <label class="wall-search">
-              <span class="visually-hidden">在墙上找人</span>
-              <input type="search" class="wall-search__input" placeholder="搜名字或话题，如：设计、后端" autocomplete="off" enterkeyhint="search" data-wall-search />
-            </label>
-          ) : null}
+          <div class="wall-board__tools">
+            {intros ? <a class="wall-board__assist-link" href="#intros">AI 帮我找人</a> : null}
+            {ask ? <a class="wall-board__assist-link" href="#ask">问问这面墙</a> : null}
+            {cards.length >= WALL_SEARCH_MIN_CARDS ? (
+              <label class="wall-search">
+                <span class="visually-hidden">在墙上找人</span>
+                <input type="search" class="wall-search__input" placeholder="搜名字或话题" autocomplete="off" enterkeyhint="search" data-wall-search />
+              </label>
+            ) : null}
+            {cards.length >= WALL_SEARCH_MIN_CARDS ? <SearchToggle /> : null}
+            {showPortrait && cards.length > 0 ? (
+              <a class="btn btn--ghost btn--small wall-board__portrait" href="#portrait">
+                墙的群像
+              </a>
+            ) : null}
+            <a class="btn btn--ghost btn--small wall-board__group" href={`/messages/wall/${wall.id}`}>
+              全员群聊
+            </a>
+            {model.role === 'organizer' ? (
+              <a class="btn btn--ghost btn--small wall-board__admin" href={`/w/${wall.id}/admin`}>
+                组织者后台
+              </a>
+            ) : null}
+          </div>
         </div>
+
+        {/* 场景、简介与“我的页面”：没有脚本（墙是普通网格）时显示；逛墙空间里不显示，自己的空位就在墙上 */}
+        <div class="wall-top" data-wall-top>
+          <section class={`wall-head scene--${wall.sceneType}`} aria-label="这面墙">
+            <p class="wall-head__meta">
+              <span class="chip">{sceneLabel}</span>
+            </p>
+            {wall.description ? <p class="wall-head__desc">{wall.description}</p> : null}
+          </section>
+
+          <section class={`my-page${published ? ' my-page--published' : ''}`} aria-labelledby="my-page-heading">
+            <div class="my-page__info">
+              <div class="my-page__head">
+                <h2 id="my-page-heading">我的页面</h2>
+                <span class={`badge ${published ? 'badge--live' : 'badge--muted'}`}>
+                  <span class="dot" aria-hidden="true"></span>
+                  {PAGE_STATE_LABEL[myPage.state]}
+                </span>
+              </div>
+            </div>
+            <div class="actions my-page__actions">
+              <a class={`btn btn--small ${published ? 'btn--ghost' : 'btn--primary'}`} href={`/w/${wall.id}/me`}>
+                {published ? '去修改我的页面' : '去做我的页面'}
+              </a>
+              {myPage.href ? (
+                <a class="btn btn--small btn--ghost my-page__view" href={myPage.href}>
+                  看看我的页面
+                </a>
+              ) : null}
+              {model.questions.length > 0 ? (
+                <a class="btn btn--small btn--ghost" href={`/w/${wall.id}/questions`}>
+                  我的回答
+                </a>
+              ) : null}
+            </div>
+          </section>
+        </div>
+
         {cards.length > 0 ? <WallFilters questions={model.questions} /> : null}
         {cards.length > 0 ? (
-          <ul class="wall-grid">
+          <div class="wall-space" data-wall-space>
+          <div class="wall-space__stage">
+          <div class="wall-space__viewport" data-space-viewport>
+          <ul class="wall-grid" data-space-track>
             {wall.organizerNote ? (
               <li class="wall-note">
                 <OrganizerNote text={wall.organizerNote} />
@@ -188,6 +355,12 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
               <WallCardItem item={item} />
             ))}
           </ul>
+          </div>
+          <span class="wall-space__light" aria-hidden="true" data-space-light></span>
+          </div>
+          <SpaceHud total={cards.length} />
+          <SpacePanel csrf={csrf} intros={!!intros} ask={!!ask} portrait={showPortrait} />
+          </div>
         ) : null}
         {cards.length > 0 ? <p class="visually-hidden" role="status" data-wall-status></p> : null}
         {cards.length > 0 ? (
@@ -229,6 +402,15 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
         {ask ? <details class="wall-assist__section"><summary>问问这面墙 <span>描述你想找的人</span></summary>{ask}</details> : null}
         <PortraitPanel wall={wall} state={model.portrait} shareText={portraitShare} organizer={model.role === 'organizer'} csrf={csrf} />
       </div>
+      {/* 逛墙空间里页面不滚动，上面几块不在底部出现：从详情里的“AI 帮我找人 / 问问这面墙”、标题行的“墙的群像”打开，显示在这个对话框里 */}
+      {intros || ask || showPortrait ? (
+        <dialog class="space-assist" data-space-assist-dialog>
+          <button type="button" class="space-assist__close" aria-label="关闭" data-space-assist-close>
+            <span aria-hidden="true">×</span>
+          </button>
+          <div class="space-assist__slot" data-space-assist-slot></div>
+        </dialog>
+      ) : null}
     </div>
   );
 };

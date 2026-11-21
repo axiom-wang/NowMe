@@ -20,6 +20,7 @@ import {
   generateInstruction,
   joinWall,
   newUser,
+  openFromWall,
   publishViaUi,
   startProbe,
   submitFiles,
@@ -132,7 +133,7 @@ test.describe('security：沙箱 iframe 浏览器探测', () => {
       const b = await newUser(await browser.newContext(), 'sec-b', '成员B');
       await joinWall(b.page, inviteUrl);
       await b.page.goto(`/w/${wallId}`);
-      await b.page.locator('.wall-card__link').first().click();
+      await openFromWall(b.page, b.page.locator('.wall-card__link').first());
       await expect(b.page.locator('iframe[data-nm-page-frame]')).toHaveAttribute('sandbox', PAGE_IFRAME_SANDBOX);
       const memberUrl = b.page.url();
       await check(b.page);

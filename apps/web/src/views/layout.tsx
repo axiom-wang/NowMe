@@ -157,6 +157,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
           <link rel="icon" type="image/svg+xml" href={assetUrl('favicon.svg')} />
           <title>{title === 'NOWMe' ? title : `${title} · NOWMe`}</title>
           <script src={assetUrl('theme.js')}></script>
+          {bodyClass === 'page--wall' ? <script src={assetUrl('wall-boot.js')}></script> : null}
           {stylesheetsFor(path ?? '', bodyClass, styles).map((name) => (
             <link rel="stylesheet" href={assetUrl(name)} />
           ))}

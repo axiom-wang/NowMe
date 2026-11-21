@@ -113,11 +113,11 @@ export interface PublishedMember extends MemberPage {
 export function publishedMember(
   t: TestWeb,
   wall: Wall,
-  options: { userId?: string; email?: string; name: string; contact?: { channel: string; value: string } | null; cover?: boolean },
+  options: { userId?: string; email?: string; name: string; contact?: { channel: string; value: string } | null; cover?: boolean; card?: Card },
 ): PublishedMember {
   const userId = options.userId ?? createUser(t, options.email ?? `${generateId('usr').slice(4, 14)}@example.com`, options.name);
   const member = seedMember(t, wall, userId);
-  return publishPage(t, member, options.name, { contact: options.contact, cover: options.cover, userId });
+  return publishPage(t, member, options.name, { contact: options.contact, cover: options.cover, userId, card: options.card });
 }
 
 /** 给已有成员的页面提交并发布一个版本。 */
@@ -125,9 +125,9 @@ export function publishPage(
   t: TestWeb,
   member: MemberPage,
   name: string,
-  options: { contact?: { channel: string; value: string } | null; cover?: boolean; userId?: string } = {},
+  options: { contact?: { channel: string; value: string } | null; cover?: boolean; userId?: string; card?: Card } = {},
 ): PublishedMember {
-  const card = makeCard(name);
+  const card = options.card ?? makeCard(name);
   const revisionId = seedRevision(t, member.page, { ...card, tagline: `原始介绍：${name}未确认的草稿` }, { cover: options.cover });
   const publicationId = seedPublication(t, member.page, revisionId, { card, contact: options.contact ?? null });
   return { ...member, userId: options.userId ?? member.membership.userId, revisionId, publicationId, card };

@@ -1910,3 +1910,1493 @@ html.nm-stage-open .member-layout__frame {
 @media (max-width: 639px) {
   .wall-board__tools { flex-basis: 100%; margin-left: 0; }
 }
+
+/* ===========================================================================
+ * 墙的顶部（列表模式）：墙名与“我的页面”压成一条，桌面左右并排
+ * ======================================================================== */
+.wall-top {
+  display: grid;
+  gap: 12px 32px;
+  align-items: end;
+  margin-bottom: 14px;
+}
+
+.wall-top[hidden] {
+  display: none;
+}
+
+.wall-top .wall-head {
+  margin: 0;
+}
+
+.wall-head__meta {
+  justify-content: flex-start;
+}
+
+.wall-top .wall-head__meta {
+  margin: 0 0 8px;
+}
+
+.wall-head__meta .btn {
+  min-height: 32px;
+  padding-block: 4px;
+}
+
+.wall-head__title {
+  margin: 0;
+  font-size: clamp(1.6rem, 1.3rem + 1.2vw, 2.25rem);
+  line-height: 1.15;
+}
+
+.wall-top .wall-head__desc {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-top: 6px;
+  font-size: var(--text-sm);
+  line-height: 1.55;
+  white-space: normal;
+}
+
+.wall-top .my-page,
+.wall-top .my-page--published {
+  flex-wrap: nowrap;
+  gap: 10px 16px;
+  margin: 0;
+  padding: 10px 10px 10px 16px;
+  border-radius: var(--radius);
+}
+
+.wall-top .my-page__info {
+  flex: 0 0 auto;
+}
+
+.wall-top .my-page__head {
+  flex-wrap: nowrap;
+  margin: 0;
+  white-space: nowrap;
+}
+
+.wall-top .my-page__head h2 {
+  font-size: var(--text-sm);
+}
+
+.my-page__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.wall-top .my-page__actions {
+  justify-content: flex-end;
+}
+
+.my-page__actions .btn {
+  min-height: 44px;
+  padding-inline: 14px;
+  font-size: var(--text-sm);
+}
+
+@media (min-width: 900px) {
+  .wall-top {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .wall-top .wall-head__desc {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    max-width: 52em;
+  }
+}
+
+@media (max-width: 639px) {
+  .wall-head__title {
+    font-size: 1.5rem;
+  }
+
+  .wall-head__meta .btn {
+    min-height: 44px;
+  }
+
+  .wall-top {
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+
+  .wall-top .wall-head__meta {
+    margin-bottom: 6px;
+  }
+
+  .wall-top .wall-head__desc {
+    -webkit-line-clamp: 1;
+    line-clamp: 1;
+    margin-top: 2px;
+  }
+
+  .wall-top .my-page,
+  .wall-top .my-page--published {
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 8px 8px 12px;
+  }
+
+  .wall-top .my-page__head {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .wall-top .my-page__head .badge {
+    padding: 1px 8px;
+    font-size: var(--text-xs);
+  }
+
+  .wall-top .my-page__actions {
+    flex-wrap: nowrap;
+  }
+
+  .wall-top .my-page__actions .btn {
+    padding-inline: 12px;
+    white-space: nowrap;
+  }
+
+  /* 手机上自己的海报就在墙上，“看看我的页面”从那里进 */
+  .wall-top .my-page__view {
+    display: none;
+  }
+}
+
+/* 没有脚本时的墙名（逛墙空间里另有样式） */
+.wall-board__title {
+  margin: 0;
+  font-family: var(--font-head);
+  font-size: clamp(1.5rem, 1.25rem + 1vw, 2.1rem);
+  line-height: 1.2;
+}
+
+/* ===========================================================================
+ * 逛墙空间（<html class="nm-wall-space">：wall-boot.js 在绘制前打上，wall.js 负责交互）
+ * 桌面：顶部一行“墙名 | 人数 · 筛选 · 搜索 · 全员群聊”，左边是铺满的墙面（底部三块操作条），
+ *       右边一栏从顶栏下面通到底，一直显示一个人的详情。
+ * 手机：墙名与人数、筛选一行，墙面铺满首屏，底部浮着“拖动逛墙 · 双指缩放”和“回到全墙”；点海报从底部升起资料卡。
+ * 立体感：纸张厚度（错位的纸边）、图钉 / 胶带、随光源方向变化的投影、跟着指针移动的一盏灯。
+ * 没有脚本时这些规则都不生效，墙就是上面的网格。
+ * ======================================================================== */
+
+/* 没有脚本时，空间的容器不参与排版 */
+.wall-space,
+.wall-space__stage,
+.wall-space__viewport {
+  display: contents;
+}
+
+.wall-card__tag,
+.wall-space__light,
+.wall-space__hud,
+.wall-space__panel,
+.wall-search-toggle {
+  display: none;
+}
+
+/* ---- 页面外框：墙铺满整个宽度，正好一屏；页面本身不滚动，只在墙面里拖动 ---- */
+html.nm-wall-space:has(.wall-board--people) {
+  overflow: hidden;
+  overscroll-behavior: none;
+}
+
+.nm-wall-space .site-main:has(.wall-board--people) {
+  max-width: none;
+  padding: 0;
+}
+
+/* 底部的几块（AI 介绍、问墙、群像）改在对话框里打开；页脚也不占位置 */
+.nm-wall-space .container:has(.wall-board--people) > .wall-assist,
+.nm-wall-space .site:has(.wall-board--people) > .site-footer {
+  display: none;
+}
+
+.nm-wall-space .site-main:has(.wall-board--people) > .container > .notice {
+  margin: 12px var(--page-gutter) 0;
+}
+
+.nm-wall-space .wall-board--people {
+  margin: 0;
+  padding: 0;
+  background: none;
+  box-shadow: none;
+  border-radius: 0;
+}
+
+/* 场景、简介与“我的页面”只给没有脚本的网格；墙名已经在标题行，自己的空位就在墙上 */
+.nm-wall-space .wall-board--people > .wall-top,
+.nm-wall-space .wall-board--people .wall-board__assist-link {
+  display: none;
+}
+
+/* ---- 标题行 ---- */
+.nm-wall-space .wall-board--people .wall-board__head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+  margin: 0;
+}
+
+.nm-wall-space .wall-board__heading {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  min-width: 0;
+}
+
+.nm-wall-space .wall-board__title {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  font-family: var(--font-head);
+  font-size: clamp(1.4rem, 1.15rem + 0.8vw, 1.9rem);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.nm-wall-space .wall-board__population {
+  display: inline-flex;
+  flex: none;
+  align-items: baseline;
+  gap: 4px;
+  margin: 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.nm-wall-space .wall-board__population .section-head__count {
+  display: inline;
+  min-width: 0;
+  height: auto;
+  padding: 0;
+  font-size: inherit;
+  font-weight: 700;
+  color: inherit;
+  background: none;
+  border: 0;
+  box-shadow: none;
+  transform: none;
+}
+
+.nm-wall-space .wall-board__population .section-head__note {
+  font-size: inherit;
+  color: inherit;
+}
+
+.nm-wall-space .wall-board__meta::before {
+  content: '·';
+  margin: 0 6px;
+}
+
+.nm-wall-space .wall-board__meta[hidden] {
+  display: none;
+}
+
+.nm-wall-space .wall-board__tools {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.nm-wall-space .wall-board__tools .btn {
+  min-height: 44px;
+  white-space: nowrap;
+}
+
+/* 搜索：平时是一个图标，点开再展开输入框 */
+.nm-wall-space .wall-search-toggle {
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line-strong);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.nm-wall-space .wall-search-toggle svg {
+  width: 18px;
+  height: 18px;
+}
+
+.nm-wall-space .wall-search-toggle[aria-expanded='true'] {
+  color: var(--inverse-fg);
+  background: var(--inverse-bg);
+}
+
+.nm-wall-space .wall-search-toggle[hidden] {
+  display: none;
+}
+
+.nm-wall-space .wall-search-toggle:focus-visible {
+  outline: 2.5px solid var(--text);
+  outline-offset: 2px;
+}
+
+.nm-wall-space .wall-board--people .wall-board__head .wall-search {
+  display: none;
+  min-width: 0;
+  margin: 0;
+}
+
+.nm-wall-space .wall-board.is-searching .wall-board__head .wall-search {
+  display: block;
+}
+
+.nm-wall-space .wall-search__input {
+  min-height: 44px;
+  box-shadow: none;
+}
+
+/* 必答题筛选：一行药丸，放不下时横向滑动，两头淡出 */
+.nm-wall-space .wall-board--people .wall-filters {
+  display: flex;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 6px 18px;
+  min-width: 0;
+  margin: 0;
+  padding: 4px 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 32px), transparent);
+}
+
+.nm-wall-space .wall-filters::-webkit-scrollbar {
+  display: none;
+}
+
+.nm-wall-space .wall-filters__row,
+.nm-wall-space .wall-filters__clear {
+  flex: none;
+  flex-wrap: nowrap;
+}
+
+.nm-wall-space .wall-filters__prompt {
+  white-space: nowrap;
+}
+
+.nm-wall-space .wall-filters .filter-chip {
+  min-height: 40px;
+  white-space: nowrap;
+}
+
+/* 筛选后一个人都没有 */
+.nm-wall-space .wall-board--people > .wall-board__none:not([hidden]) {
+  position: relative;
+  z-index: 2;
+  grid-area: stage;
+  align-self: center;
+  justify-self: center;
+  max-width: 24em;
+  margin: 0 var(--page-gutter);
+  background: var(--surface);
+}
+
+/* ---- 墙面：一整面纸，纸纹随镜头移动 ---- */
+.nm-wall-space .wall-space__stage {
+  --lx: 32%;
+  --ly: 18%;
+  --pan-x: 0px;
+  --pan-y: 0px;
+  --pan-s: 1;
+  grid-area: stage;
+  position: relative;
+  display: block;
+  min-width: 0;
+  height: clamp(360px, calc(100svh - 200px), 980px);
+  overflow: hidden;
+  overflow: clip;
+  background-color: color-mix(in srgb, var(--cork) 45%, var(--bg));
+  background-image:
+    var(--dots),
+    var(--dots-light),
+    linear-gradient(115deg, color-mix(in srgb, var(--surface) 40%, transparent), transparent 45%, color-mix(in srgb, var(--shadow-color) 5%, transparent));
+  background-size:
+    calc(18px * var(--pan-s)) calc(18px * var(--pan-s)),
+    calc(26px * var(--pan-s)) calc(26px * var(--pan-s)),
+    100% 100%;
+  background-position:
+    var(--pan-x) var(--pan-y),
+    calc(var(--pan-x) + 9px) calc(var(--pan-y) + 13px),
+    0 0;
+  isolation: isolate;
+}
+
+.nm-wall-space .wall-space__viewport {
+  position: absolute;
+  inset: 0;
+  display: block;
+  /* clip：不让浏览器为了聚焦或 scrollIntoView 去滚动这个容器，位置只由镜头决定 */
+  overflow: hidden;
+  overflow: clip;
+  cursor: grab;
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  outline: none;
+}
+
+.nm-wall-space .wall-space__viewport:focus-visible {
+  box-shadow: inset 0 0 0 3px var(--text);
+}
+
+.nm-wall-space .wall-space__viewport.is-dragging {
+  cursor: grabbing;
+}
+
+.nm-wall-space .wall-space__viewport img {
+  -webkit-user-drag: none;
+}
+
+/* 海报的排布：按列从上往下、从左往右，镜头负责平移与缩放 */
+.nm-wall-space .wall-grid {
+  --rows: 3;
+  --poster-w: 188px;
+  --sx: 3px;
+  --sway: 0;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: grid;
+  grid-auto-flow: column;
+  grid-template-rows: repeat(var(--rows), auto);
+  grid-template-columns: none;
+  grid-auto-columns: var(--poster-w);
+  gap: 4px 26px;
+  align-items: start;
+  width: max-content;
+  padding: 14px 20px 18px;
+  transform-origin: 0 0;
+  will-change: transform;
+}
+
+/* 一盏跟着指针走的灯：亮处偏暖，叠在墙面上 */
+.nm-wall-space .wall-space__light {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  pointer-events: none;
+  background: radial-gradient(560px circle at var(--lx) var(--ly), color-mix(in srgb, #fff6dc 36%, transparent), transparent 62%);
+  mix-blend-mode: soft-light;
+}
+
+/* ---- 海报 ---- */
+.nm-wall-space .wall-card {
+  content-visibility: visible;
+  contain-intrinsic-size: none;
+  padding: 16px 8px 8px;
+}
+
+.nm-wall-space .wall-card__say,
+.nm-wall-space .wall-card__body {
+  display: none;
+}
+
+.nm-wall-space .wall-note {
+  grid-column: auto;
+  grid-row: span 1;
+  padding: 18px 6px 8px;
+}
+
+.nm-wall-space .wall-ghost {
+  padding: 16px 8px 8px;
+}
+
+.nm-wall-space .wall-ghost__link {
+  min-height: 0;
+  aspect-ratio: 3 / 4;
+}
+
+.nm-wall-space .wall-card__link {
+  cursor: pointer;
+  transition: transform 0.4s var(--ease);
+}
+
+/* 纸张厚度：两层错开的纸边 + 随光源方向偏移的投影 */
+.nm-wall-space .wall-card__print {
+  transform: rotate(calc(var(--tilt) + var(--sway) * 1.6deg));
+  transform-origin: 50% 0;
+  box-shadow:
+    0 0 0 1px color-mix(in srgb, var(--shadow-color) 8%, transparent),
+    1px 1.5px 0 color-mix(in srgb, var(--surface) 82%, var(--shadow-color)),
+    2px 3px 0 color-mix(in srgb, var(--surface) 70%, var(--shadow-color)),
+    var(--sx) 18px 22px -12px color-mix(in srgb, var(--shadow-color) 58%, transparent),
+    calc(var(--sx) * 0.4) 4px 6px -3px color-mix(in srgb, var(--shadow-color) 22%, transparent);
+  transition: box-shadow 0.3s var(--ease), outline-color 0.2s;
+}
+
+/* 海报底下的名字标签：一小条纸 */
+.nm-wall-space .wall-card__tag {
+  position: relative;
+  z-index: 1;
+  display: block;
+  width: fit-content;
+  max-width: calc(100% - 20px);
+  margin: -10px auto 0;
+  padding: 3px 14px 4px;
+  overflow: hidden;
+  font-family: var(--font-head);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: 1.35;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: var(--text);
+  background: var(--surface);
+  border-radius: 4px;
+  box-shadow: 0 6px 10px -6px color-mix(in srgb, var(--shadow-color) 55%, transparent), 0 0 0 1px color-mix(in srgb, var(--shadow-color) 8%, transparent);
+  transform: rotate(calc(var(--say-tilt) * 0.5));
+  transition: background-color 0.25s, color 0.25s;
+}
+
+/* 逛过的海报：标签上一个小勾（只有自己看得到，存在本机） */
+.nm-wall-space .is-explored .wall-card__tag::after {
+  content: ' ✓';
+  color: var(--accent-text);
+}
+
+/* 选中：纸张轻轻抬起、摆正，墨色细边 + 青柠色错位底，名牌变青柠 */
+.nm-wall-space .wall-card.is-selected {
+  z-index: 3;
+}
+
+.nm-wall-space .is-selected .wall-card__link {
+  transform: translateY(calc(var(--drop) - 8px)) rotate(0deg) scale(1.05);
+}
+
+.nm-wall-space .is-selected .wall-card__print {
+  transform: rotate(0deg);
+  outline: 2px solid var(--shadow-color);
+  outline-offset: 0;
+  box-shadow:
+    8px 8px 0 0 var(--lime),
+    8px 8px 0 2px var(--shadow-color),
+    var(--sx) 32px 36px -16px color-mix(in srgb, var(--shadow-color) 70%, transparent);
+}
+
+.nm-wall-space .is-selected .wall-card__tag {
+  color: var(--object-ink);
+  background: var(--lime);
+  box-shadow: 0 0 0 1.5px var(--shadow-color);
+  transform: none;
+}
+
+.nm-wall-space .is-selected .wall-card__tag::after {
+  color: var(--object-ink);
+}
+
+@media (hover: hover) {
+  .nm-wall-space .wall-card:not(.is-selected) .wall-card__link:hover {
+    transform: translateY(calc(var(--drop) - 4px)) rotate(var(--tilt)) scale(1.02);
+  }
+
+  .nm-wall-space .wall-card__link:hover .wall-card__print {
+    box-shadow:
+      0 0 0 1.5px var(--shadow-color),
+      1px 1.5px 0 color-mix(in srgb, var(--surface) 82%, var(--shadow-color)),
+      2px 3px 0 color-mix(in srgb, var(--surface) 70%, var(--shadow-color)),
+      var(--sx) 28px 30px -16px color-mix(in srgb, var(--shadow-color) 70%, transparent);
+  }
+
+  .nm-wall-space .is-selected .wall-card__link:hover .wall-card__print {
+    box-shadow:
+      8px 8px 0 0 var(--lime),
+      8px 8px 0 2px var(--shadow-color),
+      var(--sx) 32px 36px -16px color-mix(in srgb, var(--shadow-color) 70%, transparent);
+  }
+
+  .nm-wall-space .is-dragging .wall-card:not(.is-selected) .wall-card__link:hover {
+    transform: translateY(var(--drop)) rotate(var(--tilt));
+  }
+}
+
+/* ---- 操作条：叠在墙面底部，左中右三块 ---- */
+.nm-wall-space .wall-space__hud:not([hidden]) {
+  position: relative;
+  z-index: 4;
+  grid-area: stage;
+  align-self: end;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 0 20px 16px;
+  pointer-events: none;
+}
+
+.space-hud__explored,
+.space-hud__nav,
+.space-hud__tip,
+.space-hud__overview,
+.space-hud__zoom {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin: 0;
+  pointer-events: auto;
+}
+
+.space-hud__explored,
+.space-hud__nav,
+.space-hud__tip,
+.space-hud__overview {
+  min-height: 48px;
+  padding: 4px 18px;
+  font-size: var(--text-sm);
+  color: var(--text);
+  white-space: nowrap;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border: 1.5px solid var(--text);
+  border-radius: var(--radius-pill);
+  box-shadow: 0 12px 26px -18px color-mix(in srgb, var(--shadow-color) 60%, transparent);
+}
+
+.space-hud__icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+}
+
+.space-hud__explored strong {
+  padding: 0 5px;
+  color: var(--object-ink);
+  background: var(--lime);
+  border-radius: 4px;
+}
+
+/* 进度：一串短格子，填上的部分是绿色 */
+.space-hud__meter {
+  position: relative;
+  display: inline-block;
+  width: 96px;
+  height: 5px;
+  margin-left: 4px;
+  overflow: hidden;
+  background: repeating-linear-gradient(90deg, var(--line) 0 13px, transparent 13px 17px);
+}
+
+.space-hud__meter-fill {
+  --explored: 0;
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(90deg, var(--lime-ink) 0 13px, transparent 13px 17px);
+  clip-path: inset(0 calc((1 - var(--explored)) * 100%) 0 0);
+  transition: clip-path 0.4s var(--ease);
+}
+
+.space-hud__nav {
+  gap: 6px;
+  padding: 2px 4px;
+}
+
+.space-hud__hint {
+  padding: 0 8px;
+  font-weight: 700;
+}
+
+.space-hud__zoom {
+  gap: 10px;
+}
+
+.space-hud__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font: inherit;
+  font-size: var(--text-lg);
+  font-weight: 700;
+  color: var(--text);
+  background: var(--surface);
+  border: 1.5px solid var(--text);
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+.space-hud__nav .space-hud__button {
+  border-color: transparent;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.space-hud__button:hover {
+  background: var(--lime-soft);
+}
+
+.space-hud__button:focus-visible,
+.space-hud__overview:focus-visible {
+  outline: 2.5px solid var(--text);
+  outline-offset: 2px;
+}
+
+.space-hud__tip,
+.space-hud__overview {
+  display: none;
+}
+
+.space-hud__overview {
+  gap: 8px;
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.space-hud__tip .space-hud__icon,
+.space-hud__overview .space-hud__icon {
+  width: 20px;
+  height: 20px;
+}
+
+/* ---- 详情：桌面上是右侧一栏，手机上是底部资料卡 ---- */
+.nm-wall-space .wall-space__panel:not([hidden]) {
+  display: block;
+  min-width: 0;
+}
+
+.space-panel__card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+}
+
+.space-panel__card[hidden] {
+  display: none;
+}
+
+.space-panel__card.is-entering {
+  animation: space-panel-in 0.32s var(--ease) both;
+}
+
+@keyframes space-panel-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+}
+
+.space-panel__grip {
+  display: none;
+}
+
+.space-panel__close {
+  position: absolute;
+  z-index: 3;
+  top: 0;
+  right: 0;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  font: inherit;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--text);
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.space-panel__close:hover {
+  background: var(--bg-subtle);
+}
+
+.space-panel__close:focus-visible {
+  outline: 2.5px solid var(--text);
+  outline-offset: 2px;
+}
+
+/* 封面：一张贴上去的相纸，顶上一段青柠胶带 */
+.space-panel__cover {
+  position: relative;
+  width: min(100%, 210px);
+  margin: 12px 0 20px 8px;
+}
+
+.space-panel__cover:empty {
+  display: none;
+}
+
+.space-panel__cover::before {
+  content: '';
+  position: absolute;
+  z-index: 2;
+  top: -10px;
+  left: -14px;
+  width: 72px;
+  height: 22px;
+  background: color-mix(in srgb, var(--lime) 88%, transparent);
+  clip-path: polygon(0 0, 5% 50%, 0 100%, 100% 100%, 95% 50%, 100% 0);
+  transform: rotate(-24deg);
+}
+
+.space-panel__cover .wall-card__cover {
+  border-radius: 2px;
+  box-shadow:
+    0 0 0 6px var(--surface),
+    0 0 0 7px color-mix(in srgb, var(--shadow-color) 14%, transparent),
+    4px 6px 0 6px color-mix(in srgb, var(--surface) 72%, var(--shadow-color)),
+    6px 22px 26px -10px color-mix(in srgb, var(--shadow-color) 55%, transparent);
+  transform: rotate(-1deg);
+}
+
+.space-detail__name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  line-height: 1.15;
+  outline: none;
+  overflow-wrap: anywhere;
+}
+
+.space-detail__tagline {
+  margin: 8px 0 0;
+  font-size: var(--text-md);
+  line-height: 1.6;
+  color: var(--text-secondary);
+}
+
+.space-panel__detail .wall-card__answers {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.space-panel__detail .answer-tag {
+  padding: 6px 14px;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  color: var(--object-ink);
+  background: var(--lime-soft);
+  border: 0;
+  border-radius: var(--radius-pill);
+}
+
+.space-detail__talk {
+  margin-top: 20px;
+  padding-top: 18px;
+  border-top: 1px solid var(--line);
+}
+
+.space-detail__label {
+  margin: 0 0 12px;
+  font-family: var(--font-head);
+  font-size: var(--text-md);
+  font-weight: 700;
+  color: var(--text);
+}
+
+.space-detail__hooks {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+/* 接话点：一个带引号的框；能选的话题点一下换成这一句 */
+.space-detail__hook {
+  position: relative;
+  display: block;
+  width: 100%;
+  margin: 0;
+  padding: 11px 32px 11px 38px;
+  font: inherit;
+  font-size: var(--text-md);
+  line-height: 1.6;
+  text-align: left;
+  color: var(--text-secondary);
+  background: var(--surface);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  overflow-wrap: anywhere;
+}
+
+.space-detail__hook::before,
+.space-detail__hook::after {
+  position: absolute;
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  line-height: 1;
+  color: var(--lime-ink);
+}
+
+.space-detail__hook::before {
+  content: '“';
+  top: 10px;
+  left: 12px;
+}
+
+.space-detail__hook::after {
+  content: '”';
+  right: 12px;
+  bottom: -2px;
+}
+
+button.space-detail__hook {
+  cursor: pointer;
+  transition: border-color 0.2s, color 0.2s;
+}
+
+button.space-detail__hook:hover {
+  border-color: var(--line-strong);
+}
+
+button.space-detail__hook[aria-pressed='true'],
+p.space-detail__hook {
+  color: var(--text);
+  border-color: var(--text);
+}
+
+button.space-detail__hook[aria-pressed='true'] {
+  font-weight: 700;
+}
+
+button.space-detail__hook:focus-visible {
+  outline: 2.5px solid var(--text);
+  outline-offset: 2px;
+}
+
+.space-detail__none {
+  margin: 18px 0 0;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+}
+
+/* 操作：通栏“想聊这个”，下面一行“看看 TA 的页面 ›” */
+.space-panel__actions {
+  display: grid;
+  gap: 4px;
+  margin-top: 20px;
+}
+
+.space-panel__chat {
+  margin: 0;
+}
+
+.space-panel__chat[hidden] {
+  display: none;
+}
+
+.space-panel__chat-button {
+  gap: 10px;
+  width: 100%;
+  min-height: 56px;
+  font-size: var(--text-md);
+  border-radius: var(--radius-pill);
+}
+
+.space-panel__chat-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.space-panel__open {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 48px;
+  font-weight: 700;
+  color: var(--text);
+  text-decoration: underline;
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 6px;
+}
+
+.space-panel__open::after {
+  content: '›';
+  display: inline-block;
+  font-size: 1.4em;
+  line-height: 1;
+}
+
+.space-panel__open:focus-visible {
+  outline: 2.5px solid var(--text);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* 不能聊（自己的海报、TA 没留话题）时，“看看页面”就是主按钮 */
+.space-panel__chat[hidden] + .space-panel__open {
+  min-height: 56px;
+  color: var(--action-fg);
+  text-decoration: none;
+  background: var(--action-bg);
+  border-radius: var(--radius-pill);
+}
+
+/* 找人的另外两条路：AI 帮我找人 · 问问这面墙 */
+.space-panel__assist {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 6px;
+  margin: 16px 0 0;
+  padding-top: 8px;
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
+  border-top: 1px solid var(--line);
+}
+
+.space-panel__assist a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  font-weight: 700;
+  color: var(--accent-text);
+  text-underline-offset: 4px;
+}
+
+
+
+/* ---- AI 帮我找人 / 问问这面墙：不在页面底部，从详情里打开的对话框 ---- */
+.nm-wall-space .container:has(.wall-board--people) .wall-assist__section {
+  display: none;
+}
+
+.space-assist {
+  width: min(720px, calc(100% - 32px));
+  max-height: min(86svh, 900px);
+  margin: auto;
+  padding: 0;
+  overflow: auto;
+  overscroll-behavior: contain;
+  color: var(--text);
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 30px 60px -24px color-mix(in srgb, var(--shadow-color) 55%, transparent);
+}
+
+.space-assist::backdrop {
+  background: color-mix(in srgb, var(--shadow-color) 45%, transparent);
+}
+
+.space-assist[open] {
+  animation: space-panel-in 0.28s var(--ease) both;
+}
+
+.space-assist__close {
+  position: sticky;
+  z-index: 3;
+  top: 10px;
+  float: right;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  margin: 10px 10px -54px 0;
+  padding: 0;
+  font: inherit;
+  font-size: 1.6rem;
+  line-height: 1;
+  color: var(--text);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  cursor: pointer;
+}
+
+.space-assist__close:focus-visible {
+  outline: 2.5px solid var(--text);
+  outline-offset: 2px;
+}
+
+.space-assist__slot > .intros,
+.space-assist__slot > .portrait {
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+
+@media (max-width: 639px) {
+  .space-assist {
+    width: 100%;
+    max-width: none;
+    max-height: 92svh;
+    margin: auto 0 0;
+    border-radius: 22px 22px 0 0;
+  }
+}
+
+.space-panel__assist-portrait {
+  display: inline-flex;
+  align-items: center;
+  gap: 0 6px;
+}
+
+@media (min-width: 1000px) {
+  .space-panel__assist-portrait,
+  .space-panel__assist--portrait {
+    display: none;
+  }
+}
+
+@media (max-width: 999px) {
+  .nm-wall-space .wall-board--people .wall-board__portrait {
+    display: none;
+  }
+}
+
+/* ===========================================================================
+ * 桌面：标题行 + 铺满的墙 + 右侧详情一栏
+ * ======================================================================== */
+@media (min-width: 1000px) {
+  .nm-wall-space .wall-board--people {
+    /* 墙铺满整个宽度；墙名与顶栏的品牌左边对齐 */
+    --head-inset: calc(max(0px, (100vw - var(--page-max-width) - 2 * var(--page-gutter)) / 2) + var(--page-gutter));
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto 380px;
+    grid-template-rows: auto 1fr;
+    grid-template-areas:
+      'heading filters tools panel'
+      'stage stage stage panel';
+    align-items: center;
+  }
+
+  .nm-wall-space .wall-board--people > .wall-space,
+  .nm-wall-space .wall-board--people .wall-board__head {
+    display: contents;
+  }
+
+  .nm-wall-space .wall-board--people .wall-board__heading {
+    grid-area: heading;
+    padding: 18px 24px 16px var(--head-inset);
+  }
+
+  .nm-wall-space .wall-board--people .wall-board__population {
+    padding-left: 16px;
+    border-left: 1.5px solid var(--line-strong);
+  }
+
+  .nm-wall-space .wall-board--people .wall-filters {
+    grid-area: filters;
+  }
+
+  .nm-wall-space .wall-board--people .wall-board__tools {
+    grid-area: tools;
+    padding: 0 var(--page-gutter) 0 16px;
+  }
+
+  .nm-wall-space .wall-board.is-searching .wall-board__head .wall-search {
+    width: 240px;
+  }
+
+  /* 没有筛选时，工具贴着右边 */
+  .nm-wall-space .wall-board--people:not(:has(.wall-filters)) .wall-board__tools {
+    grid-column: 2 / 4;
+    justify-self: end;
+  }
+
+  .nm-wall-space .wall-space__stage {
+    align-self: stretch;
+    /* 两边的海报淡进墙面里，而不是被边框一刀切开 */
+    -webkit-mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 56px), transparent);
+    mask-image: linear-gradient(90deg, transparent, #000 28px, #000 calc(100% - 56px), transparent);
+    border-top: 1px solid var(--line);
+  }
+
+  .nm-wall-space .wall-space__hud:not([hidden]) {
+    margin-inline: var(--page-gutter) 40px;
+  }
+
+
+  /* 右侧一栏：从顶栏下面通到底，不撑高网格，内容多时自己滚动 */
+  .nm-wall-space .wall-space__panel:not([hidden]) {
+    grid-area: panel;
+    align-self: stretch;
+    height: 0;
+    min-height: 100%;
+    padding: 28px 28px 24px;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    background: var(--surface);
+    border-left: 1px solid var(--line);
+  }
+
+  .nm-wall-space .wall-space__panel .space-detail__hook {
+    background: var(--bg);
+  }
+
+  /* 详情长时操作贴在这一栏底部，不用滚动去找 */
+  .nm-wall-space .wall-space__panel .space-panel__actions {
+    position: sticky;
+    z-index: 2;
+    bottom: -24px;
+    margin: 12px -28px 0;
+    padding: 12px 28px 8px;
+    background: linear-gradient(color-mix(in srgb, var(--surface) 0%, transparent), var(--surface) 14px);
+  }
+}
+
+/* 不太宽的桌面：筛选单独一行 */
+@media (min-width: 1000px) and (max-width: 1599px) {
+  .nm-wall-space .wall-board--people:has(.wall-filters) {
+    grid-template-rows: auto auto 1fr;
+    grid-template-areas:
+      'heading heading tools panel'
+      'filters filters filters panel'
+      'stage stage stage panel';
+  }
+
+  .nm-wall-space .wall-board--people .wall-filters {
+    margin-top: -8px;
+    padding: 0 var(--page-gutter) 10px var(--head-inset);
+  }
+}
+
+@media (min-width: 1000px) and (max-width: 1279px) {
+  .nm-wall-space .wall-board--people {
+    grid-template-columns: auto minmax(0, 1fr) auto 340px;
+  }
+
+  .space-hud__meter {
+    display: none;
+  }
+
+  .space-hud__hint {
+    display: none;
+  }
+}
+
+/* ===========================================================================
+ * 手机与平板：标题 + 筛选，墙面铺满首屏，点海报从底部升起资料卡
+ * ======================================================================== */
+@media (max-width: 999px) {
+  .nm-wall-space .wall-board--people {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas: 'head' 'filters' 'stage';
+  }
+
+  .nm-wall-space .wall-board--people > .wall-space {
+    display: contents;
+  }
+
+  .nm-wall-space .wall-board--people .wall-board__head {
+    grid-area: head;
+    flex-wrap: wrap;
+    padding: 14px var(--page-gutter) 6px;
+  }
+
+  /* 墙名一行，人数小字一行 */
+  .nm-wall-space .wall-board__heading {
+    flex: 1 1 0;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 2px;
+  }
+
+  .nm-wall-space .wall-board__title {
+    max-width: 100%;
+    font-size: 1.35rem;
+  }
+
+  .nm-wall-space .wall-board__meta {
+    display: none;
+  }
+
+  .nm-wall-space .wall-board__tools {
+    gap: 8px;
+  }
+
+  .nm-wall-space .wall-board__tools .btn {
+    padding-inline: 14px;
+  }
+
+  .nm-wall-space .wall-board--people .wall-board__head .wall-search {
+    order: 9;
+    flex: 1 1 100%;
+  }
+
+  .nm-wall-space .wall-board.is-searching .wall-board__head .wall-search {
+    order: 9;
+  }
+
+  /* 工具在标题右边；搜索展开时输入框单独占一行 */
+  .nm-wall-space .wall-board--people .wall-board__tools {
+    display: contents;
+  }
+
+  .nm-wall-space .wall-board--people .wall-search-toggle {
+    margin-left: auto;
+  }
+
+  .nm-wall-space .wall-board--people .wall-filters {
+    grid-area: filters;
+    padding: 4px var(--page-gutter) 10px;
+  }
+
+  .nm-wall-space .wall-space__stage {
+    height: clamp(320px, calc(100svh - 240px), 900px);
+    border-top: 1px solid var(--line);
+  }
+
+  .nm-wall-space .wall-grid {
+    gap: 2px 20px;
+    padding: 12px 14px 18px;
+  }
+
+  /* 底部：操作提示 + 回到全墙 */
+  .nm-wall-space .wall-space__hud:not([hidden]) {
+    justify-content: center;
+    gap: 10px;
+    margin: 0 12px 14px;
+  }
+
+  .nm-wall-space .space-hud__explored,
+  .nm-wall-space .space-hud__nav,
+  .nm-wall-space .space-hud__zoom {
+    display: none;
+  }
+
+  .nm-wall-space .space-hud__tip,
+  .nm-wall-space .space-hud__overview {
+    display: inline-flex;
+    min-height: 44px;
+    padding: 4px 16px;
+  }
+
+  .nm-wall-space .space-hud__tip {
+    pointer-events: none;
+  }
+
+  /* 资料卡：从底部升起，盖住墙面下半截；被选中的海报留在上面 */
+  .nm-wall-space .wall-space__panel:not([hidden]) {
+    position: fixed;
+    z-index: 45;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    max-height: min(52svh, 520px);
+    overflow: auto;
+    overscroll-behavior: contain;
+    padding: 0 20px max(18px, env(safe-area-inset-bottom));
+    background: var(--surface);
+    border-radius: 26px 26px 0 0;
+    box-shadow: 0 -18px 40px -18px color-mix(in srgb, var(--shadow-color) 55%, transparent), 0 0 0 1px var(--line);
+    transform: translateY(105%);
+    visibility: hidden;
+    transition: transform 0.38s var(--ease), visibility 0s 0.38s;
+  }
+
+  .nm-wall-space .wall-space__panel.is-open {
+    transform: none;
+    visibility: visible;
+    transition: transform 0.38s var(--ease);
+  }
+
+  .nm-wall-space .wall-space__panel.is-dragging {
+    transition: none;
+  }
+
+  /* 顶上一条把手：按住往下拖收起 */
+  .space-panel__grip {
+    position: sticky;
+    z-index: 4;
+    top: 0;
+    display: block;
+    height: 28px;
+    margin: 0 -20px;
+    background: var(--surface);
+    touch-action: none;
+    cursor: grab;
+  }
+
+  .space-panel__grip::before {
+    content: '';
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    width: 44px;
+    height: 5px;
+    margin-left: -22px;
+    background: var(--line-strong);
+    border-radius: 3px;
+  }
+
+  .space-panel__close {
+    top: 22px;
+    right: -8px;
+    display: inline-flex;
+  }
+
+  .space-panel__card.is-entering {
+    animation: none;
+  }
+
+  .space-detail__name {
+    padding-right: 44px;
+    font-size: 1.75rem;
+  }
+
+  .space-detail__tagline {
+    font-size: var(--text-sm);
+  }
+
+  .space-detail__label {
+    font-size: var(--text-sm);
+  }
+
+  .space-detail__hook {
+    font-size: var(--text-sm);
+  }
+
+  /* “想聊这个”贴在资料卡底部，拇指够得着 */
+  .space-panel__actions {
+    position: sticky;
+    z-index: 2;
+    bottom: calc(-1 * max(18px, env(safe-area-inset-bottom)));
+    margin-inline: -20px;
+    padding: 14px 20px max(4px, env(safe-area-inset-bottom));
+    background: linear-gradient(color-mix(in srgb, var(--surface) 0%, transparent), var(--surface) 14px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nm-wall-space .wall-card__print,
+  .nm-wall-space .wall-card__link,
+  .space-panel__card,
+  .nm-wall-space .wall-space__panel,
+  .space-hud__meter-fill {
+    animation: none;
+    transition: none;
+  }
+}
+

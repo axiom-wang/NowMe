@@ -1,6 +1,7 @@
 import { sessionCookieName } from '@nowme/contracts';
 /** 维护者显式指定演示地址才运行，使用该演示预置的真实模型，不开启假模型。 */
 import { test, expect } from '@playwright/test';
+import { openFromWall } from './helpers.js';
 const demoOrigin = process.env.NOWME_DEMO_E2E_ORIGIN;
 const cookieName = sessionCookieName(demoOrigin || 'http://localhost:3400');
 test.use({ baseURL: demoOrigin || 'http://localhost:3400' });
@@ -56,7 +57,7 @@ test('黑客松评审：两个入口、浏览、真实采访生成修改、本�
   const firstSession = (await page.context().cookies()).find((cookie) => cookie.name === cookieName)?.value;
   await page.goto(wall);
   expect(await page.locator('.wall-card').count()).toBeGreaterThanOrEqual(5);
-  await page.locator('.wall-card__link').first().click();
+  await openFromWall(page, page.locator('.wall-card__link').first());
   await expect(page.locator('iframe[data-nm-page-frame]')).toHaveAttribute('sandbox', 'allow-scripts');
   await expect(page.frameLocator('iframe[data-nm-page-frame]').locator('h1')).toBeVisible();
   console.log('DEMO_VERIFY 浏览墙与背景人物页面通过');

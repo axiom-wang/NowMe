@@ -6,7 +6,7 @@ import { cpSync, mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { expect, test } from '@playwright/test';
-import { EXAMPLES, PAGES_ORIGIN, WEB_ORIGIN, createWall, generateInstruction, joinWall, newUser, publishViaUi, runCli } from './helpers.js';
+import { EXAMPLES, PAGES_ORIGIN, WEB_ORIGIN, createWall, generateInstruction, joinWall, newUser, openFromWall, publishViaUi, runCli } from './helpers.js';
 
 test('全流程：建墙、CLI 提交、发布确认、浏览与接话、组织者后台、公开链接、撤下', async ({ browser }, testInfo) => {
   const work = mkdtempSync(join(tmpdir(), 'nowme-e2e-'));
@@ -46,30 +46,35 @@ test('全流程：建墙、CLI 提交、发布确认、浏览与接话、组织�
     await joinWall(b.page, inviteUrl);
     await b.page.emulateMedia({ reducedMotion: 'reduce' });
     await b.page.goto(`/w/${wallId}`);
-    const card = b.page.locator('.wall-card', { hasText: newTagline });
-    await expect(card).toHaveCount(1);
+    await expect(b.page.locator('.wall-card', { hasText: newTagline })).toHaveCount(1);
     await expect(b.page.locator('.wall-card')).toHaveCount(1);
-    const cardLink = card.locator('a.wall-card__link');
-    const badge = card.locator('[data-ai-badge]');
-    await expect(badge).toBeVisible();
-    expect((await badge.boundingBox())!.width).toBeLessThan((await card.locator('.wall-card__body').boundingBox())!.width);
-    await expect(cardLink).toHaveCSS('transform', 'none');
-    await expect(card.locator('.wall-card__say')).toHaveCSS('transform', 'none');
-    await expect(card.locator('.wall-card__print')).not.toHaveCSS('transform', 'none');
-    await card.screenshot({ path: testInfo.outputPath('wall-card-1x.png') });
 
-    const retina = await browser.newContext({ storageState: await bContext.storageState(), deviceScaleFactor: 2, reducedMotion: 'reduce' });
-    try {
-      const retinaPage = await retina.newPage();
-      await retinaPage.goto(`${WEB_ORIGIN}/w/${wallId}`);
-      await expect(retinaPage.locator('.wall-card__link')).not.toHaveCSS('transform', 'none');
-      await retinaPage.locator('.wall-card').screenshot({ path: testInfo.outputPath('wall-card-2x.png') });
-    } finally {
-      await retina.close();
+    // 卡片本身的样式在没有脚本时的网格里检查（有脚本时是逛墙空间，见 wall-space.e2e.ts）
+    for (const deviceScaleFactor of [1, 2]) {
+      const plain = await browser.newContext({ storageState: await bContext.storageState(), viewport: { width: 1280, height: 900 }, deviceScaleFactor, reducedMotion: 'reduce', javaScriptEnabled: false });
+      try {
+        const plainPage = await plain.newPage();
+        await plainPage.goto(`${WEB_ORIGIN}/w/${wallId}`);
+        const card = plainPage.locator('.wall-card', { hasText: newTagline });
+        await expect(card).toHaveCount(1);
+        if (deviceScaleFactor === 1) {
+          const badge = card.locator('[data-ai-badge]');
+          await expect(badge).toBeVisible();
+          expect((await badge.boundingBox())!.width).toBeLessThan((await card.locator('.wall-card__body').boundingBox())!.width);
+          await expect(card.locator('a.wall-card__link')).toHaveCSS('transform', 'none');
+          await expect(card.locator('.wall-card__say')).toHaveCSS('transform', 'none');
+          await expect(card.locator('.wall-card__print')).not.toHaveCSS('transform', 'none');
+        } else {
+          await expect(card.locator('a.wall-card__link')).not.toHaveCSS('transform', 'none');
+        }
+        await card.screenshot({ path: testInfo.outputPath(`wall-card-${deviceScaleFactor}x.png`) });
+      } finally {
+        await plain.close();
+      }
     }
 
     // 6. 打开 A 的页面：沙箱 iframe 里页面在运行
-    await cardLink.click();
+    await openFromWall(b.page, b.page.locator('.wall-card', { hasText: newTagline }).locator('a.wall-card__link'));
     const iframe = b.page.locator('iframe[data-nm-page-frame]');
     await expect(iframe).toHaveAttribute('sandbox', 'allow-scripts');
     await expect(iframe).toHaveAttribute('src', new RegExp(`^${PAGES_ORIGIN}/v/`));
