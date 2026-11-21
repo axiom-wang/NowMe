@@ -2754,36 +2754,102 @@ a:hover { text-decoration-color: var(--accent-text); }
 .site-header__inner { grid-template-columns: auto 1fr auto auto; }
 .site-nav { grid-column: 2; grid-row: 1; justify-self: center; }
 .account-menu, .site-header__login, .site-header__actions { grid-column: 4; grid-row: 1; }
-.theme-picker { grid-column: 3; grid-row: 1; }
-.theme-picker select {
-  min-height: 44px;
-  max-width: 108px;
-  padding: 6px 8px;
+
+.theme-picker {
+  position: relative;
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.theme-picker:last-child { grid-column: 4; }
+
+.theme-picker > .theme-picker__trigger {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
   border: 1px solid var(--line);
   border-radius: var(--radius-pill);
   background: var(--surface);
   color: var(--text);
-  font: 500 var(--text-xs)/1.4 var(--font-body);
+  cursor: pointer;
+  list-style: none;
+  transition: border-color var(--dur-fast), background-color var(--dur-fast);
+}
+
+.theme-picker__trigger::-webkit-details-marker { display: none; }
+.theme-picker__trigger:hover,
+.theme-picker[open] > .theme-picker__trigger {
+  border-color: var(--text);
+  background: var(--bg-subtle);
+}
+
+.theme-picker__trigger [data-theme-icon] { display: none; }
+:root[data-theme="system"] .theme-picker__trigger [data-theme-icon="system"],
+:root[data-theme="light"] .theme-picker__trigger [data-theme-icon="light"],
+:root[data-theme="dark"] .theme-picker__trigger [data-theme-icon="dark"] { display: flex; }
+
+.theme-picker__trigger .home-icon { width: 20px; height: 20px; }
+
+.theme-picker__option {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: var(--text-sm);
+  text-align: start;
+  white-space: nowrap;
   cursor: pointer;
 }
+
+.theme-picker__option .home-icon { width: 18px; height: 18px; }
+.theme-picker__option:hover { background: var(--bg-subtle); }
+.theme-picker__option:focus-visible { outline-offset: -2px; }
+.theme-picker__option[aria-pressed="true"] {
+  background: var(--selected-bg);
+  font-weight: 700;
+}
+
+.theme-picker__selection { visibility: hidden; }
+.theme-picker__option[aria-pressed="true"] .theme-picker__selection { visibility: visible; }
+
 .site-header__actions { display: flex; align-items: center; gap: 8px; justify-self: end; }
 .site-header__actions .site-header__login { grid-column: auto; grid-row: auto; }
 .site-nav__demo { opacity: 0.78; }
 .site-nav__demo::after { content: '↗'; margin-left: 3px; font-size: 0.85em; }
 .popover > .account-menu__demo { display: none; }
+
 @media (max-width: 639px) {
   .site-header__inner { gap: 4px; height: 59px; padding-block: 8px; }
   .site-nav__demo { display: none; }
   .popover > .account-menu__demo { display: block; }
   .site-header__actions { gap: 4px; }
-  .site-header__inner:has(.site-nav) { grid-template-columns: auto minmax(0, 1fr) auto; }
-  .site-header__inner:has(.site-nav) .account-menu { grid-column: 3; }
+  .theme-picker:has(+ .site-header__actions .site-header__demo + .site-header__login) > .popover {
+    right: auto;
+    left: 50%;
+    transform: translateX(-50%);
+  }
+  .site-header__inner:has(.site-nav) { grid-template-columns: auto minmax(0, 1fr) auto auto; }
   .site-nav { min-width: 0; width: 100%; justify-content: center; gap: 2px; }
-  .site-nav__link { justify-content: center; min-height: 44px; flex: 1 1 0; min-width: 0; padding-inline: 4px; font-size: var(--text-sm); }
+  .site-nav__link { justify-content: center; min-height: 44px; flex: 1 1 auto; min-width: 44px; padding-inline: 2px; font-size: var(--text-sm); }
   .user-chip__name { display: none; }
   .site-footer, .site-footer__legal { font-size: var(--text-sm); }
   .site-main p, .site-main p a { font-size: max(14px, 1em); }
 }
 
-.account-menu__panel .theme-picker { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 4px 10px 12px; margin-bottom: 4px; border-bottom: 1px solid var(--line); font-size: var(--text-sm); color: var(--text); }
-.account-menu__panel .theme-picker select { min-width: 108px; }
+@media (max-width: 359px) {
+  .site-header__inner:has(.site-nav) { column-gap: 2px; }
+  .site-header__inner:has(.site-nav) .brand { justify-content: center; min-width: 44px; }
+  .site-header__inner:has(.site-nav) .brand__now { display: none; }
+  .site-header__inner:has(.site-nav) .brand__me { margin-left: 0; }
+  .site-nav__link { padding-inline: 1px; }
+}

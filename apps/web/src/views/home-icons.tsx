@@ -1,6 +1,6 @@
 import type { FC } from 'hono/jsx';
 
-export type HomeIconName = 'layers' | 'check' | 'pending' | 'pencil' | 'enter' | 'eye' | 'plus' | 'arrow' | 'chevron';
+export type HomeIconName = 'layers' | 'check' | 'pending' | 'pencil' | 'enter' | 'eye' | 'plus' | 'arrow' | 'chevron' | 'monitor' | 'sun' | 'moon';
 export const HomeIcon: FC<{ name: HomeIconName }> = ({ name }) => (
   <svg class={`home-icon home-icon--${name}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
     {name === 'layers' ? <><path d="m12 3 9 5-9 5-9-5 9-5Z" /><path d="m3 12 9 5 9-5M3 16l9 5 9-5" /></> : null}
@@ -12,5 +12,8 @@ export const HomeIcon: FC<{ name: HomeIconName }> = ({ name }) => (
     {name === 'plus' ? <path d="M12 5v14M5 12h14" /> : null}
     {name === 'arrow' ? <path d="M4 12h16m-6-6 6 6-6 6" /> : null}
     {name === 'chevron' ? <path d="m7 10 5 5 5-5" /> : null}
+    {name === 'monitor' ? <><rect x="3" y="4" width="18" height="12" rx="2" /><path d="M12 16v4m-4 0h8" /></> : null}
+    {name === 'sun' ? <><circle cx="12" cy="12" r="4" /><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5" /></> : null}
+    {name === 'moon' ? <path d="M20.9 13A9 9 0 0 1 11 3.1 9 9 0 1 0 20.9 13Z" /> : null}
   </svg>
 );
