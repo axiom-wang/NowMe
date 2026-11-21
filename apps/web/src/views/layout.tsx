@@ -135,7 +135,6 @@ export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; demoUrl?
           <a class={`site-nav__link${active === 'home' ? ' is-active' : ''}`} href="/" aria-current={active === 'home' ? 'page' : undefined}>墙</a>
           <a class={`site-nav__link${active === 'messages' ? ' is-active' : ''}`} href="/messages" aria-current={active === 'messages' ? 'page' : undefined}><span>消息</span><span class="message-badge" data-message-unread hidden aria-label="未读消息"></span></a>
           <a class={`site-nav__link${active === 'data' ? ' is-active' : ''}`} href="/account/data" aria-current={active === 'data' ? 'page' : undefined}>我的资料</a>
-          {demoHref ? <a class="site-nav__link site-nav__demo" href={demoHref} rel="noopener">Demo</a> : null}
         </nav>
       ) : null}
       <ThemePicker />
@@ -143,7 +142,6 @@ export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; demoUrl?
         <details class="account-menu" data-dismissable>
           <summary class="user-chip" aria-label={`账号菜单：${auth.user.nickname}`}><span class="avatar avatar--sm" aria-hidden="true">{auth.user.avatarVersion ? <img src={`/account/avatar?v=${auth.user.avatarVersion}`} alt="" /> : initialOf(auth.user.nickname ?? '')}</span><span class="user-chip__name">{auth.user.nickname}</span><HomeIcon name="chevron" /></summary>
           <div class="popover account-menu__panel">
-            {demoHref ? <a class="account-menu__demo" href={demoHref} rel="noopener">Demo</a> : null}
             {!demo ? <a href="/account/credits">点数</a> : null}
             {!demo ? <a href="/account/ai">AI 设置</a> : null}
             {demo ? <a href="/login">切换身份</a> : null}

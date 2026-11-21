@@ -2839,14 +2839,9 @@ a:hover { text-decoration-color: var(--accent-text); }
 
 .site-header__actions { display: flex; align-items: center; gap: 8px; justify-self: end; }
 .site-header__actions .site-header__login { grid-column: auto; grid-row: auto; }
-.site-nav__demo { opacity: 0.78; }
-.site-nav__demo::after { content: '↗'; margin-left: 3px; font-size: 0.85em; }
-.popover > .account-menu__demo { display: none; }
 
 @media (max-width: 639px) {
   .site-header__inner { gap: 4px; height: 59px; padding-block: 8px; }
-  .site-nav__demo { display: none; }
-  .popover > .account-menu__demo { display: block; }
   .site-header__actions { gap: 4px; }
   .theme-picker:has(+ .site-header__actions .site-header__demo + .site-header__login) > .popover {
     right: auto;

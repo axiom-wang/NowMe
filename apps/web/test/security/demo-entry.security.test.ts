@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { createTestWeb, get, login, type TestWeb } from '../helpers.js';
+import { createTestWeb, get, type TestWeb } from '../helpers.js';
 
 let t: TestWeb;
 afterEach(async () => { await t?.close(); });
@@ -7,8 +7,7 @@ afterEach(async () => { await t?.close(); });
 describe('顶栏 Demo 外链的安全性', () => {
   it('只是不带用户信息的普通 https 链接：无表单、无 target、rel 含 noopener，不影响 404 与 CSP', async () => {
     t = createTestWeb({ env: { NOWME_DEMO_URL: 'https://demo.example.com:8444' } });
-    const { cookie } = await login(t, 'sec@example.com', '小江');
-    for (const opts of [{}, { cookie }]) {
+    for (const opts of [{}]) {
       const response = await get(t, '/missing-page', opts);
       expect(response.status).toBe(404);
       expect(response.headers.get('content-security-policy')).toBeTruthy();

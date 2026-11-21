@@ -37,24 +37,16 @@ describe('顶栏 Demo 入口（NOWME_DEMO_URL）', () => {
     const home = header(await (await get(t, '/')).text());
     expect(home.indexOf('site-header__demo')).toBeGreaterThan(0);
     expect(home.indexOf('site-header__demo')).toBeLessThan(home.indexOf('site-header__login'));
-    const loginPage = header(await (await get(t, '/login')).text());
-    expect(loginPage).not.toContain('site-header__login');
+    expect(header(await (await get(t, '/login')).text())).not.toContain('site-header__login');
   });
 
-  it('登录用户在主导航里有 Demo，账号菜单里另有窄屏用的入口，且不参与高亮', async () => {
+  it('登录后的顶栏（主导航与账号菜单）不显示 Demo 入口', async () => {
     t = createTestWeb({ env: { NOWME_DEMO_URL: DEMO_URL } });
     const { cookie } = await login(t, 'member@example.com', '小江');
     for (const path of ['/', '/messages', '/account/data', '/missing-page']) {
       const html = await (await get(t, path, { cookie })).text();
-      const head = header(html);
-      expect(demoLinks(html), path).toHaveLength(2);
-      const nav = head.split('<nav class="site-nav"')[1]?.split('</nav>')[0] ?? '';
-      expect(nav).toContain(`href="${DEMO_HREF}"`);
-      expect(nav).toContain('site-nav__demo');
-      expect(nav).not.toMatch(/site-nav__demo[^>]*(is-active|aria-current)/);
-      const menu = head.split('<div class="popover account-menu__panel">')[1] ?? '';
-      expect(menu).toContain('account-menu__demo');
-      expect(menu).not.toContain('action="' + DEMO_HREF);
+      expect(demoLinks(html), path).toHaveLength(0);
+      expect(header(html), path).not.toContain('Demo');
     }
   });
 
