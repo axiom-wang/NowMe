@@ -7,11 +7,9 @@ import { Notice } from './forms.js';
 import { HomeIcon } from './home-icons.js';
 
 export type HomeEntryStatus = 'active' | 'left' | 'removed' | 'closed';
-export type HomeFilter = 'all' | 'pending' | 'published';
 export interface HomeItem {
   wall: Wall;
   role: MembershipRole;
-  sceneLabel: string;
   status: HomeEntryStatus;
   pageId: string | null;
   pageState: PageDisplayState | null;
@@ -51,10 +49,7 @@ const ActiveItem: FC<{ item: HomeItem }> = ({ item }) => {
         <img src={item.coverUrl ?? `/static/home-wall-${defaultWallCover(item.wall)}.svg`} alt="" width="180" height="180" />
       </a>
       <div class="home-wall__copy">
-        <div class="home-wall__labels">
-          <span class="chip chip--scene">{item.sceneLabel}</span>
-          {item.role === 'organizer' ? <a class="home-wall__admin" href={`${base}/admin`}>组织者后台</a> : null}
-        </div>
+        {item.role === 'organizer' ? <div class="home-wall__labels"><a class="home-wall__admin" href={`${base}/admin`}>组织者后台</a></div> : null}
         <h3 class="home-wall__name"><a href={base}>{item.wall.name}</a></h3>
         {item.wall.description ? <p class="home-wall__description">{item.wall.description}</p> : null}
         <span class="visually-hidden">我的页面：{PAGE_STATE_LABEL[item.pageState ?? 'unpublished']}</span>
@@ -80,53 +75,37 @@ const ActiveItem: FC<{ item: HomeItem }> = ({ item }) => {
 const WallGroup: FC<{ published: boolean; items: HomeItem[] }> = ({ published, items }) => (
   <section class={`home-group home-group--${published ? 'published' : 'pending'}`} aria-labelledby={published ? 'published-heading' : 'pending-heading'}>
     <div class="home-group__heading">
-      <h3 id={published ? 'published-heading' : 'pending-heading'}><HomeIcon name={published ? 'check' : 'pending'} />{published ? '已发布的页面' : '待完成的页面'} <span class="home-group__count">{items.length}</span></h3>
+      <h2 id={published ? 'published-heading' : 'pending-heading'}><HomeIcon name={published ? 'check' : 'pending'} />{published ? '已发布的页面' : '待完成的页面'} <span class="home-group__count">{items.length}</span></h2>
       {!published ? <p>这些墙上你的页面还未发布，继续创作吧！</p> : null}
     </div>
     {items.length ? <ul class="home-group__list">{items.map((item) => <ActiveItem item={item} />)}</ul> : (
       <div class="home-group__empty">
-        <h4>{published ? '让你的第一张页面上墙' : '每一页，都已被看见'}</h4>
+        <h3>{published ? '让你的第一张页面上墙' : '每一页，都已被看见'}</h3>
         <p>{published ? '完成创作并确认发布，就能在这里找到它。' : '所有页面都已发布，去墙上认识新朋友吧。'}</p>
       </div>
     )}
   </section>
 );
 
-export const HomeView: FC<{ nickname: string; items: HomeItem[]; notice: HomeNotice | null; filter?: HomeFilter }> = ({ nickname, items, notice, filter = 'all' }) => {
+export const HomeView: FC<{ items: HomeItem[]; notice: HomeNotice | null }> = ({ items, notice }) => {
   const active = items.filter((item) => item.status === 'active');
   const ended = items.filter((item) => item.status !== 'active');
   const pending = active.filter((item) => item.pageState !== 'published');
   const published = active.filter((item) => item.pageState === 'published');
   return (
     <div class="home-dashboard">
-      <section class="home-overview" aria-labelledby="home-heading">
-        <div class="home-welcome">
-          <h1 id="home-heading" class="home-welcome__title">你好，{nickname}！</h1>
-        </div>
-        <aside class={`note ${pending.length ? 'note--yellow' : 'note--lime'} note--right home-reminder`}>
-          <p class="note__label">{pending.length ? '待办' : '小纸条'}</p>
-          <h2>{pending.length ? `你还有 ${pending.length} 个页面未发布` : active.length ? '你的页面，都已闪亮上墙' : '从一面墙，开启新的相遇'}</h2>
-          <p>{pending.length ? '继续完善个人页面，让其他成员认识你。' : active.length ? '去看看圈子里的新朋友，也让灵感继续生长。' : '和 AI 一起，做一页有个性的自己。'}</p>
-          <a class="btn btn--primary btn--small" href={pending[0] ? `/w/${pending[0].wall.id}/me` : active[0] ? `/w/${active[0].wall.id}` : '/walls/new'}>{pending.length ? '继续创作' : active.length ? '去看看墙' : '建一面墙'}<HomeIcon name="arrow" /></a>
-        </aside>
-      </section>
       {notice ? <Notice tone="success">{NOTICE_TEXT[notice]}</Notice> : null}
       <section class="home-walls" aria-labelledby="walls-heading">
         <div class="home-toolbar">
-          <h2 id="walls-heading" class="display">我加入的墙 <span class="home-total" aria-label={`${active.length} 面墙`}>{active.length}</span></h2>
-          <nav class="home-filters" aria-label="按页面状态筛选">
-            {([{ value: 'all', label: '全部', count: active.length }, { value: 'pending', label: '待完成', count: pending.length }, { value: 'published', label: '已发布', count: published.length }] as const).map((tab) => (
-              <a href={tab.value === 'all' ? '/' : `/?filter=${tab.value}`} class={`home-filter${filter === tab.value ? ' is-active' : ''}`} aria-current={filter === tab.value ? 'page' : undefined}>{tab.label} <span>{tab.count}</span></a>
-            ))}
-          </nav>
+          <h1 id="walls-heading" class="display">我加入的墙 <span class="home-total" aria-label={`${active.length} 面墙`}>{active.length}</span></h1>
           <a class="btn btn--ghost home-create" href="/walls/new"><HomeIcon name="plus" />建一面墙</a>
         </div>
         {active.length === 0 ? (
-          <div class="empty-state home-empty"><div class="empty-state__art" aria-hidden="true"><span class="sticker sticker--lime">你</span><span class="sticker sticker--paper">？</span><span class="sticker sticker--orange">墙</span></div><h3>还没有加入任何墙</h3><p class="muted">拿到组织者的邀请链接或二维码，打开就能加入。你也可以自己建一面墙，把邀请发到群里。</p><p class="empty-state__actions"><a class="btn btn--accent" href="/walls/new">自己建一面墙<HomeIcon name="arrow" /></a></p></div>
+          <div class="empty-state home-empty"><div class="empty-state__art" aria-hidden="true"><span class="sticker sticker--lime">你</span><span class="sticker sticker--paper">？</span><span class="sticker sticker--orange">墙</span></div><h2>还没有加入任何墙</h2><p class="muted">拿到组织者的邀请链接或二维码，打开就能加入。你也可以自己建一面墙，把邀请发到群里。</p><p class="empty-state__actions"><a class="btn btn--accent" href="/walls/new">自己建一面墙<HomeIcon name="arrow" /></a></p></div>
         ) : (
-          <div class={`board home-board home-groups${filter !== 'all' ? ' home-groups--single' : ''}`}>
-            {filter !== 'published' ? <WallGroup published={false} items={pending} /> : null}
-            {filter !== 'pending' ? <WallGroup published={true} items={published} /> : null}
+          <div class="board home-board home-groups">
+            <WallGroup published={false} items={pending} />
+            <WallGroup published={true} items={published} />
           </div>
         )}
       </section>

@@ -1,7 +1,6 @@
 import { CHAT_TEXT_MAX_LENGTH, type ChatHistory, type ConversationSummary, type ChatMessage } from '@nowme/contracts';
 import type { FC, PropsWithChildren } from 'hono/jsx';
 import { CsrfField } from './forms.js';
-import { HomeIcon } from './home-icons.js';
 import { ConversationSafety, type SafetyNotice } from './moderation.js';
 
 /** 一对一私聊里“举报 / 拉黑”的状态。`closed`：拉黑（任一方向）或停用后不能再发消息。 */
@@ -58,17 +57,8 @@ const InboxSidebar: FC<InboxModel & { activeId?: string }> = ({ conversations, h
   const emptyCopy = walls.length > 0 ? '去全员群打个招呼，或者在别人的页面点“想聊这个”，聊天就开始了。' : '加入一面墙之后，就能和墙上的人聊天了。';
   return (
     <section class="messages-sidebar" aria-label="聊天列表">
-      <header class="messages-sidebar__head">
-        {activeId ? <p class="messages-sidebar__title">消息</p> : <h1 class="messages-sidebar__title">消息</h1>}
-        <details class="start-chat" data-dismissable>
-          <summary class="btn btn--primary btn--small"><HomeIcon name="plus" />发起聊天</summary>
-          <div class="start-chat__menu">
-            <h2>从共同的墙开始</h2>
-            <p class="muted">先进某面墙的全员群；想私信谁，在群里点 TA 名字旁边的“私聊”。</p>
-            {walls.length ? <ul>{walls.map((wall) => <li><a href={`/messages/wall/${wall.id}`}><span>{wall.name}</span><HomeIcon name="arrow" /></a></li>)}</ul> : <p class="muted">你还没有加入任何一面墙。拿到邀请链接加入后，就能和墙上的人聊天。</p>}
-          </div>
-        </details>
-      </header>
+      {/* 页面标题只给读屏器；会话页的 h1 是会话标题 */}
+      {activeId ? null : <h1 class="visually-hidden">消息</h1>}
       <div class="inbox-filters" role="group" aria-label="筛选会话" data-inbox-filters data-pending>
         <button type="button" class="inbox-filter is-active" aria-pressed="true" data-inbox-filter="all">最近的聊天</button>
         <button type="button" class="inbox-filter" aria-pressed="false" data-inbox-filter="unread">未读消息 <span class="message-badge" data-inbox-unread hidden={!conversations.some((item) => item.unread > 0)}>{conversations.reduce((total, item) => total + item.unread, 0)}</span></button>
@@ -149,8 +139,7 @@ export const ConversationView: FC<{
       <form class="chat-compose" method="post" action={`/messages/${summary.id}/send`} data-chat-form hidden={!!safety?.closed}>
         <CsrfField token={csrf} /><input type="hidden" name="clientId" value={clientId} />
         <label for="message-text">消息内容</label>
-        <textarea id="message-text" name="text" rows={3} required data-max-length={CHAT_TEXT_MAX_LENGTH} placeholder="说点什么吧……" aria-describedby="chat-hint">{draft ?? ''}</textarea>
-        <span id="chat-hint" class="chat-hint muted">Enter 发送 · Shift + Enter 换行</span>
+        <textarea id="message-text" name="text" rows={3} required data-max-length={CHAT_TEXT_MAX_LENGTH} placeholder="说点什么吧……">{draft ?? ''}</textarea>
         <button type="submit" class="btn btn--accent">发送</button>
         <p class="chat-status" role="status" aria-live="polite" data-chat-status>{error ?? ''}</p>
         <a href="/login" data-chat-login hidden>重新登录</a><a href="/messages" data-chat-back hidden>返回消息列表</a>

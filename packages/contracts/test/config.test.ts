@@ -81,6 +81,10 @@ describe('loadConfig', () => {
     expect(loadConfig({}).demoUrl).toBeNull();
     expect(loadConfig({ NOWME_DEMO_URL: '  ' }).demoUrl).toBeNull();
     expect(loadConfig({ NOWME_DEMO_URL: 'https://124.222.53.43:8444' }).demoUrl).toBe('https://124.222.53.43:8444/');
+    // 非生产环境允许本机 http（本地预览指向本地演示）；生产环境与其他主机的 http 仍然拒绝
+    expect(loadConfig({ NOWME_DEMO_URL: 'http://localhost:3000/login' }).demoUrl).toBe('http://localhost:3000/login');
+    expect(loadConfig({ NOWME_DEMO_URL: 'http://127.0.0.1:3000/login' }).demoUrl).toBe('http://127.0.0.1:3000/login');
+    expect(() => loadConfig({ NODE_ENV: 'production', NOWME_DEMO_URL: 'http://localhost:3000/login' })).toThrow(ConfigError);
     for (const bad of ['http://124.222.53.43:8444', 'javascript:alert(1)', 'demo.example.com', 'https://user:pw@demo.example.com', '//demo.example.com']) {
       expect(() => loadConfig({ NOWME_DEMO_URL: bad }), bad).toThrow(ConfigError);
     }

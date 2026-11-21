@@ -24,13 +24,13 @@ test('模型设置页与主页顶栏一致，账号菜单可关闭且没有重�
     await page.locator('.account-menu > summary').click();
     await page.locator('.site-main').click({ position: { x: 4, y: 4 } });
     await expect(page.locator('.account-menu')).not.toHaveAttribute('open');
-    await page.locator('.site-nav').getByRole('link', { name: '我的', exact: true }).click();
+    await page.locator('.site-nav').getByRole('link', { name: '墙', exact: true }).click();
     await expect(page).toHaveURL(/\/$/);
   }
 });
 
 // 不调用模型：验证首页布局、真实封面上传和导航闭环。
-test('首页筛选、账号菜单、封面上传更换与恢复默认，在桌面和手机均可用', async ({ page }) => {
+test('首页分组、账号菜单、封面上传更换与恢复默认，在桌面和手机均可用', async ({ page }) => {
   const errors: string[] = [];
   page.on('pageerror', (error) => errors.push(error.message));
   page.on('console', (message) => { if (message.type() === 'error') errors.push(message.text()); });
@@ -55,12 +55,6 @@ test('首页筛选、账号菜单、封面上传更换与恢复默认，在桌�
   await expect(page.locator('.home-wall__cover img')).toHaveAttribute('src', firstCover!);
   await expect(page.getByRole('heading', { name: /待完成的页面/ })).toBeVisible();
   await expect(page.getByRole('heading', { name: /让你的第一张页面上墙/ })).toBeVisible();
-  await page.getByRole('link', { name: '已发布 0', exact: true }).click();
-  await expect(page.locator('.home-group--pending')).toHaveCount(0);
-  await expect(page.getByRole('heading', { name: /让你的第一张页面上墙/ })).toBeVisible();
-  await page.getByRole('link', { name: '待完成 1', exact: true }).click();
-  await expect(page.locator('.home-wall')).toHaveCount(1);
-  await page.getByRole('link', { name: '全部 1', exact: true }).click();
   await page.locator('.account-menu > summary').click();
   await expect(page.getByRole('link', { name: 'AI 设置' })).toBeVisible();
   await page.keyboard.press('Escape');

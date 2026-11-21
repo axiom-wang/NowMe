@@ -14,10 +14,10 @@ export function renderNotFound(c: Context<AppEnv>, options: { message?: string }
           404
         </p>
         <h1 class="display">这里没有你要找的内容</h1>
-        <p class="muted">{options.message ?? '链接可能抄错了、已经失效，或者内容已经撤下。可以回到“我的”，从你的墙里重新进入。'}</p>
+        <p class="muted">{options.message ?? '链接可能抄错了、已经失效，或者内容已经撤下。可以回到首页，从你的墙里重新进入。'}</p>
         <p>
           <a class="btn btn--primary" href="/">
-            回到“我的”
+            回到首页
           </a>
         </p>
       </section>
@@ -47,7 +47,7 @@ export function renderError(
             </a>
           ) : (
             <a class="btn btn--primary" href={options.back?.href ?? '/'}>
-              {options.back?.label ?? '回到“我的”'}
+              {options.back?.label ?? '回到首页'}
             </a>
           )}
         </p>

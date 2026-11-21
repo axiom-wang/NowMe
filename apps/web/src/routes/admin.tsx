@@ -71,6 +71,11 @@ export function registerAdminRoutes(app: AppHono, deps: AppDeps): void {
     return {
       questions: {
         stats: questionStats(questions, answers, members.map((member) => member.userId)),
+        textAnswers: new Map(
+          questions
+            .filter((question) => question.kind === 'text')
+            .map((question) => [question.id, members.flatMap((member) => answers.get(member.userId)?.get(question.id) ?? [])]),
+        ),
         values: extras.questionValues ?? questionFormValues(questions),
         errors: extras.questionErrors,
       },

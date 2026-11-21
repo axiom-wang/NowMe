@@ -14,7 +14,7 @@ function workspaceHref(wall: Wall): string {
 const Breadcrumb: FC<{ wall: Wall; title: string }> = ({ wall, title }) => (
   <section class="page-intro">
     <nav class="crumbs" aria-label="当前位置">
-      <a href="/">我的</a>
+      <a href="/">首页</a>
       <span aria-hidden="true">/</span>
       <a class="crumbs__wall" href={workspaceHref(wall)} title={wall.name}>{wall.name}</a>
     </nav>
@@ -154,7 +154,7 @@ export const LeftView: FC<{ wallName: string; withdrew: boolean }> = ({ wallName
     </p>
     <p>
       <a class="btn btn--primary" href="/">
-        回到“我的”
+        回到首页
       </a>
     </p>
   </section>

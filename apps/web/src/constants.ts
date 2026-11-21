@@ -57,6 +57,8 @@ export const WALL_QUESTION_LIMITS = {
   prompt: { min: 2, max: 30 },
   options: { min: 2, max: 12 },
   option: { min: 1, max: 12 },
+  /** 填空题的回答：一行文字。 */
+  answer: { min: 1, max: 30 },
 } as const;
 
 /** 一键提醒（contracts 19.2）：同一面墙里，每人 48 小时内最多一封，总共最多 3 封。 */

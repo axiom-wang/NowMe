@@ -105,6 +105,30 @@ describe('S13 回答的可见范围', () => {
   });
 });
 
+describe('S13 填空题的回答', () => {
+  it('墙上只出现已上墙的人写的话；被移出后从后台消失；不能写联系方式；HTML 照文字转义', async () => {
+    const w = await world();
+    saveQuestions(w.t.web.deps, w.wall.id, [{ id: null, index: 0, prompt: '一句话说说你想做的项目', kind: 'text', options: [] }]);
+    const version = questionsVersion(w.t.repos.questions.listForWall(w.wall.id));
+    const say = (session: TestSession, text: string) => post(w.t, session, `/w/${w.wall.id}/questions`, { qv: version, a0: text });
+    const [published, unpublished] = w.members as [HostedOwner, HostedOwner];
+    expect((await say(published.session, '<img src=x onerror=f()>做小游戏')).status).toBe(303);
+    expect((await say(unpublished.session, '还没上墙的秘密想法')).status).toBe(303);
+    expect((await say(w.members[2]!.session, '邮箱 me@example.com')).status).toBe(400);
+    expect(w.t.repos.questions.answersForUser(w.wall.id, w.members[2]!.session.userId)).toEqual([]);
+    publishPage(w.t, published.member, '阿柚');
+    const wallHtml = await (await get(w.t, `/w/${w.wall.id}`, { cookie: published.session.cookie })).text();
+    expect(wallHtml).toContain('&lt;img src=x onerror=f()&gt;做小游戏');
+    expect(wallHtml).not.toContain('<img src=x');
+    expect(wallHtml).not.toContain('还没上墙的秘密想法');
+    expect(await (await get(w.t, `/w/${w.wall.id}`, { cookie: w.outsider.cookie })).text()).not.toContain('做小游戏');
+    const admin = await (await get(w.t, `/w/${w.wall.id}/admin`, { cookie: w.organizer.cookie })).text();
+    expect(admin).toContain('还没上墙的秘密想法');
+    removeMember(w.t.web.deps, w.wall, w.organizer.userId, unpublished.member.membership.id);
+    expect(await (await get(w.t, `/w/${w.wall.id}/admin`, { cookie: w.organizer.cookie })).text()).not.toContain('还没上墙的秘密想法');
+  });
+});
+
 describe('S13 提醒邮件', () => {
   it('固定模板：组织者不能写正文；不含组织者与其他成员的邮箱；拉黑了组织者、停用的账号不收', async () => {
     const w = await world();

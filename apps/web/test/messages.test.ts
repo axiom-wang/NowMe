@@ -197,7 +197,7 @@ describe('墙内聊天', () => {
     expect(await (await read(b, '/messages')).text()).toContain('消息');
   });
 
-  it('消息页输出真实时间、筛选依据和当前导航；没有脚本时仍可进入会话和发起聊天', async () => {
+  it('消息页输出真实时间、筛选依据和当前导航；没有脚本时仍可进入会话；不再有“发起聊天”入口', async () => {
     await send(a, direct, '刚刚发来的问候');
     const html = await (await read(b, '/messages')).text();
     expect(html).toContain('class="site page--messages"');
@@ -206,10 +206,10 @@ describe('墙内聊天', () => {
     expect(html).toContain(`datetime="${t.clock.now().toISOString()}"`);
     expect(html).toContain(formatConversationTime(t.clock.now().toISOString(), t.clock.now()));
     expect(html).toContain('data-inbox-filter="unread"');
-    expect(html).toContain('发起聊天</summary>');
+    expect(html).not.toContain('发起聊天');
+    expect(html).toContain('<h1 class="visually-hidden">消息</h1>');
     expect(html).toContain(`href="/messages/${direct}"`);
     expect(html).toContain(`href="/messages/wall/${wallId}"`);
-    expect(html).toContain('在群里点 TA 名字旁边的“私聊”');
     expect(html).not.toContain('提及我的');
   });
 });

@@ -456,7 +456,7 @@ export function loadSkillMarketConfig(env: Env): SkillMarketConfig | null {
   return { label, command };
 }
 
-/** `NOWME_DEMO_URL`：只接受 https 绝对地址，不带账号口令；空值为 null。 */
+/** `NOWME_DEMO_URL`：只接受 https 地址，不带账号口令；非生产环境另允许本机（localhost / 127.0.0.1）的 http 地址，方便本地预览指向本地演示。空值为 null。 */
 export function loadDemoUrl(env: Env): string | null {
   const raw = nonEmpty(env.NOWME_DEMO_URL);
   if (raw === undefined) return null;
@@ -466,8 +466,10 @@ export function loadDemoUrl(env: Env): string | null {
   } catch {
     throw new ConfigError(`NOWME_DEMO_URL 不是有效的网址：${raw}`);
   }
-  if (url.protocol !== 'https:' || url.username || url.password) {
-    throw new ConfigError('NOWME_DEMO_URL 必须是 https 地址，且不能带账号口令');
+  if (url.username || url.password) throw new ConfigError('NOWME_DEMO_URL 不能带账号口令');
+  const localHttp = url.protocol === 'http:' && env.NODE_ENV !== 'production' && (url.hostname === 'localhost' || url.hostname === '127.0.0.1');
+  if (url.protocol !== 'https:' && !localHttp) {
+    throw new ConfigError('NOWME_DEMO_URL 必须是 https 地址（非生产环境可用本机的 http://localhost 地址）');
   }
   return url.href;
 }

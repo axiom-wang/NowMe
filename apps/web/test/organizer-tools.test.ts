@@ -22,6 +22,7 @@ afterEach(async () => {
 
 const SKILLS: QuestionDraft = { id: null, index: 0, prompt: '你最擅长哪几样？', kind: 'multi', options: ['设计', '前端', '后端'] };
 const TEAM: QuestionDraft = { id: null, index: 1, prompt: '现在的组队情况', kind: 'single', options: ['已有队伍', '在找队伍'] };
+const IDEA: QuestionDraft = { id: null, index: 2, prompt: '一句话说说你想做的项目', kind: 'text', options: [] };
 
 interface World {
   t: HostedTestWeb;
@@ -46,14 +47,16 @@ function questionsOf(w: World): WallQuestion[] {
   return w.t.repos.questions.listForWall(w.wall.id);
 }
 
-/** 按选项文字回答（单选取第一个）。 */
+/** 按选项文字回答（单选取第一个；填空题取第一项作为文字）。 */
 async function answer(w: World, session: TestSession, choices: string[][], next?: string): Promise<Response> {
   const questions = questionsOf(w);
   const fields: Record<string, string> = { qv: questionsVersion(questions) };
   if (next) fields.next = next;
   questions.forEach((question, position) => {
     const chosen = choices[position] ?? [];
-    if (question.kind === 'single') {
+    if (question.kind === 'text') {
+      if (chosen[0] !== undefined) fields[`a${position}`] = chosen[0];
+    } else if (question.kind === 'single') {
       if (chosen[0]) fields[`a${position}`] = String(question.options.indexOf(chosen[0]));
     } else {
       for (const label of chosen) fields[`a${position}_${question.options.indexOf(label)}`] = '1';
@@ -94,6 +97,22 @@ describe('必答题的表单校验（parseQuestionForm）', () => {
   it('只写了选项、没写题目时提示补上题目', () => {
     const parsed = parseQuestionForm({ q0_prompt: '', q0_options: '甲\n乙' });
     expect(parsed.ok).toBe(false);
+  });
+
+  it('填空题：不看选项；只写了选项没写题目的填空题块视为空白', () => {
+    const parsed = parseQuestionForm({ q0_prompt: '一句话说说你想做的项目', q0_kind: 'text', q0_options: '残留的选项\n另一个', q1_prompt: '', q1_kind: 'text', q1_options: '甲\n乙' });
+    expect(parsed.ok).toBe(true);
+    if (!parsed.ok) return;
+    expect(parsed.drafts).toEqual([{ id: null, index: 0, prompt: '一句话说说你想做的项目', kind: 'text', options: [] }]);
+    const unknown = parseQuestionForm({ q0_prompt: '想去哪个部门？', q0_kind: 'essay', q0_options: '甲\n乙' });
+    expect(unknown.ok && unknown.drafts[0]?.kind).toBe('single');
+  });
+
+  it('填空题的回答：第一项非空文字才算数', () => {
+    const question = { id: 'wqn_x', wallId: 'w', position: 0, prompt: 'p', kind: 'text', options: [], createdAt: '', updatedAt: '' } as WallQuestion;
+    expect(effectiveChoices(question, ['做一个记账小程序'])).toEqual(['做一个记账小程序']);
+    expect(effectiveChoices(question, ['  '])).toBeNull();
+    expect(effectiveChoices(question, [])).toBeNull();
   });
 
   it('存下的回答只认现在还有的选项；单选必须正好一个', () => {
@@ -189,6 +208,93 @@ describe('成员回答', () => {
     const member = w.members[0]!;
     expect((await get(w.t, `/w/${w.wall.id}`, { cookie: member.session.cookie })).status).toBe(200);
     saveQuestions(w.t.web.deps, w.wall.id, [TEAM]);
+    expect((await get(w.t, `/w/${w.wall.id}`, { cookie: member.session.cookie })).status).toBe(303);
+  });
+});
+
+describe('填空题', () => {
+  it('建墙时可以设填空题；编辑器有三种题型', async () => {
+    const web = createHostedTestWeb();
+    t = web;
+    const organizer = await login(web, 'org@example.com', '组织者');
+    const page = await html({ t: web } as World, organizer, '/walls/new');
+    expect(page).toContain('name="q0_kind" value="text"');
+    expect(page).toContain('data-question-add');
+    const response = await post(web, organizer, '/walls', { name: '秋季招新', description: '', sceneType: 'club', q0_prompt: '你的专业和年级', q0_kind: 'text', q0_options: '' });
+    expect(response.status).toBe(303);
+    const wallId = /\/w\/(wal_[a-z2-7]+)\/admin/.exec(response.headers.get('location') ?? '')?.[1] ?? '';
+    expect(web.repos.questions.listForWall(wallId).map((question) => [question.prompt, question.kind, question.options])).toEqual([['你的专业和年级', 'text', []]]);
+  });
+
+  it('成员写一句话：空着、太长、联系方式都不保存；合格的保存后回显', async () => {
+    const w = await world({ questions: [TEAM, IDEA], members: 1 });
+    const member = w.members[0]!;
+    const form = await html(w, member.session, `/w/${w.wall.id}/questions`);
+    expect(form).toContain('name="a1"');
+    expect(form).toContain('（填空）');
+    for (const [text, hint] of [
+      ['', '请填一下'],
+      ['长'.repeat(31), '最多 30 个字'],
+      ['加我 wx: https://example.com/me', '不写联系方式和链接'],
+      ['电话 138 0013 8000', '不写联系方式和链接'],
+    ] as const) {
+      const response = await answer(w, member.session, [['已有队伍'], [text]]);
+      expect(response.status, text).toBe(400);
+      expect(await response.text(), text).toContain(hint);
+    }
+    expect(w.t.repos.questions.answersForUser(w.wall.id, member.session.userId)).toEqual([]);
+    const saved = await answer(w, member.session, [['已有队伍'], ['  做一个   帮社团排班的小工具 ']]);
+    expect(saved.status).toBe(303);
+    const stored = w.t.repos.questions.answersForUser(w.wall.id, member.session.userId);
+    expect(stored.find((row) => row.questionId === questionsOf(w)[1]!.id)?.choices).toEqual(['做一个 帮社团排班的小工具']);
+    expect(await html(w, member.session, `/w/${w.wall.id}/questions`)).toContain('value="做一个 帮社团排班的小工具"');
+  });
+
+  it('填空题的回答过内容安全检查：命中 422，不保存', async () => {
+    const w = await world({ questions: [IDEA], members: 1 });
+    const member = w.members[0]!;
+    const response = await answer(w, member.session, [['想搞个六合彩交流群']]);
+    expect(response.status).toBe(422);
+    const body = await response.text();
+    expect(body).toContain('value="想搞个六合彩交流群"');
+    expect(body).toContain('这条回答里有我们没法放行的内容');
+    expect(w.t.repos.questions.answersForUser(w.wall.id, member.session.userId)).toEqual([]);
+  });
+
+  it('墙上：回答是卡片标签、能被搜到，但不进筛选；后台列出回答，CSV 也有', async () => {
+    const w = await world({ questions: [TEAM, IDEA] });
+    const [a, b] = w.members as [HostedOwner, HostedOwner];
+    await answer(w, a.session, [['在找队伍'], ['做一个记账小程序']]);
+    await answer(w, b.session, [['已有队伍'], ['想试试硬件']]);
+    await answer(w, w.organizer, [['已有队伍'], ['组织好这场比赛']]);
+    publishPage(w.t, a.member, '阿柚');
+    publishPage(w.t, b.member, '林舟');
+    const page = await html(w, a.session, `/w/${w.wall.id}`);
+    expect(page).toContain('class="answer-tag answer-tag--text"');
+    expect(page).toContain('做一个记账小程序');
+    expect(page).toMatch(/data-search="[^"]*做一个记账小程序/);
+    expect(page).toContain('data-answers="0:1"');
+    expect(page).not.toContain('data-filter="1:');
+    expect(page).not.toContain('aria-label="一句话说说你想做的项目"');
+
+    const admin = await html(w, w.organizer, `/w/${w.wall.id}/admin`);
+    expect(admin).toContain('填空 · 3 / 4 人答了');
+    expect(admin).toContain('<li>想试试硬件</li>');
+    const csv = await (await get(w.t, `/w/${w.wall.id}/admin/members.csv`, { cookie: w.organizer.cookie })).text();
+    expect(csv).toContain('"一句话说说你想做的项目"');
+    expect(csv).toContain('"做一个记账小程序"');
+  });
+
+  it('选择题改成填空题：这道题的回答作废，大家重新回答', async () => {
+    const w = await world({ questions: [TEAM], members: 1 });
+    const member = w.members[0]!;
+    await answer(w, member.session, [['在找队伍']]);
+    const [team] = questionsOf(w) as [WallQuestion];
+    const response = await post(w.t, w.organizer, `/w/${w.wall.id}/admin/questions`, { q0_id: team.id, q0_prompt: team.prompt, q0_kind: 'text', q0_options: '已有队伍\n在找队伍' });
+    expect(response.status).toBe(303);
+    const [after] = questionsOf(w) as [WallQuestion];
+    expect([after.id, after.kind, after.options]).toEqual([team.id, 'text', []]);
+    expect(w.t.repos.questions.answersForUser(w.wall.id, member.session.userId)).toEqual([]);
     expect((await get(w.t, `/w/${w.wall.id}`, { cookie: member.session.cookie })).status).toBe(303);
   });
 });

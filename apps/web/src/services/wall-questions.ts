@@ -1,5 +1,6 @@
 /**
- * 必答题（contracts 19.1）：组织者给墙设 0–3 道单选 / 多选题，所有成员都要回答；墙上可以按回答筛选。
+ * 必答题（contracts 19.1）：组织者给墙设 0–3 道单选 / 多选 / 填空题，所有成员都要回答；墙上可以按选择题的回答筛选，
+ * 填空题的回答作为标签出现在卡片上、进搜索文字。
  *
  * - 组织者建墙时或在后台编辑（`parseQuestionForm` + `saveQuestions`）；改了题目文字或题型，这道题的回答作废；
  *   只改选项时保留回答，读取时只认仍然存在的选项（`effectiveChoices`）。
@@ -11,6 +12,7 @@
 import { codePointLength, generateId, isId } from '@nowme/contracts';
 import { createHash } from 'node:crypto';
 import { WALL_QUESTION_LIMITS } from '../constants.js';
+import { hasContact } from '../hosted/icebreaker.js';
 import type { AppDeps, FormFields } from '../context.js';
 import { transaction } from '../db/index.js';
 import type { QuestionKind, StoredAnswer, WallQuestion } from '../db/organizer-tools.js';
@@ -29,7 +31,7 @@ export interface QuestionFormValue {
   id: string;
   prompt: string;
   kind: QuestionKind;
-  /** 每行一个选项。 */
+  /** 每行一个选项（填空题不用，回显时保留）。 */
   options: string;
 }
 
@@ -59,7 +61,14 @@ function optionKey(text: string): string {
   return text.normalize('NFKC').toLowerCase().replace(/\s+/g, '');
 }
 
-/** 空白的题目块被忽略；题目、选项、题型都按上限校验。字段：`q<i>_id`、`q<i>_prompt`、`q<i>_kind`、`q<i>_options`（i = 0..2）。 */
+function parseKind(raw: string | undefined): QuestionKind {
+  return raw === 'multi' || raw === 'text' ? raw : 'single';
+}
+
+/**
+ * 空白的题目块被忽略；题目、选项、题型都按上限校验。字段：`q<i>_id`、`q<i>_prompt`、`q<i>_kind`、`q<i>_options`（i = 0..2）。
+ * 填空题（`kind = text`）不看选项：只写了选项没写题目的填空题块也视为空白。
+ */
 export function parseQuestionForm(form: FormFields): ParsedQuestionForm {
   const values: QuestionFormValue[] = [];
   const errors: Record<number, string> = {};
@@ -68,11 +77,11 @@ export function parseQuestionForm(form: FormFields): ParsedQuestionForm {
     const value: QuestionFormValue = {
       id: (form[`q${i}_id`] ?? '').trim(),
       prompt: (form[`q${i}_prompt`] ?? '').trim(),
-      kind: form[`q${i}_kind`] === 'multi' ? 'multi' : 'single',
+      kind: parseKind(form[`q${i}_kind`]),
       options: (form[`q${i}_options`] ?? '').replace(/\r\n?/g, '\n').trim(),
     };
     values.push(value);
-    if (!value.prompt && !value.options) continue;
+    if (!value.prompt && (!value.options || value.kind === 'text')) continue;
     const promptLength = codePointLength(value.prompt);
     if (promptLength < L.prompt.min) {
       errors[i] = value.prompt ? `题目至少 ${L.prompt.min} 个字` : '请写上题目，或者清空这道题的选项';
@@ -84,6 +93,10 @@ export function parseQuestionForm(form: FormFields): ParsedQuestionForm {
     }
     if (CONTROL_CHARS.test(value.prompt)) {
       errors[i] = '题目只能是一行文字';
+      continue;
+    }
+    if (value.kind === 'text') {
+      drafts.push({ id: isId(value.id, 'wqn') ? value.id : null, index: i, prompt: value.prompt, kind: 'text', options: [] });
       continue;
     }
     const options: string[] = [];
@@ -176,8 +189,15 @@ export function saveQuestions(deps: QuestionDeps, wallId: string, drafts: Questi
 // 回答
 // ---------------------------------------------------------------------------
 
-/** 存下的回答在当前题目下还算不算数：只留仍然存在的选项（按题目里的顺序）；单选必须正好一个。无效时为 null。 */
+/**
+ * 存下的回答在当前题目下还算不算数：只留仍然存在的选项（按题目里的顺序）；单选必须正好一个。
+ * 填空题：第一项非空的文字。无效时为 null。
+ */
 export function effectiveChoices(question: WallQuestion, choices: readonly string[]): string[] | null {
+  if (question.kind === 'text') {
+    const text = (choices[0] ?? '').trim();
+    return text ? [text] : null;
+  }
   const chosen = new Set(choices);
   const valid = question.options.filter((option) => chosen.has(option));
   if (valid.length === 0) return null;
@@ -227,12 +247,29 @@ export function questionsVersion(questions: WallQuestion[]): string {
 
 export type ParsedAnswers = { ok: true; answers: Map<string, string[]> } | { ok: false; stale: boolean; errors: Record<string, string>; draft: Map<string, string[]> };
 
-/** 回答表单：单选 `a<位置>=<选项序号>`；多选 `a<位置>_<选项序号>=1`；`qv` 是题目版本号。 */
+/** 填空题的回答：一行文字，空白合并；不合格时返回提示。 */
+export function checkTextAnswer(text: string): string | null {
+  if (!text) return '请填一下';
+  const length = codePointLength(text);
+  if (length > L.answer.max) return `最多 ${L.answer.max} 个字，现在是 ${length} 个`;
+  if (CONTROL_CHARS.test(text)) return '只能是一行文字';
+  if (hasContact(text)) return '这里不写联系方式和链接：回答在墙内公开，想留联系方式可以放在自己的页面上';
+  return null;
+}
+
+/** 回答表单：单选 `a<位置>=<选项序号>`；多选 `a<位置>_<选项序号>=1`；填空 `a<位置>=<文字>`；`qv` 是题目版本号。 */
 export function parseAnswerForm(questions: WallQuestion[], form: FormFields): ParsedAnswers {
   const draft = new Map<string, string[]>();
   const errors: Record<string, string> = {};
   questions.forEach((question, position) => {
     let chosen: string[] = [];
+    if (question.kind === 'text') {
+      const text = (form[`a${position}`] ?? '').replace(/\s+/g, ' ').trim();
+      draft.set(question.id, text ? [text] : []);
+      const problem = checkTextAnswer(text);
+      if (problem) errors[question.id] = problem;
+      return;
+    }
     if (question.kind === 'single') {
       const raw = form[`a${position}`] ?? '';
       const option = /^\d{1,2}$/.test(raw) ? question.options[Number(raw)] : undefined;
@@ -277,7 +314,7 @@ export interface QuestionStats {
   answered: number;
 }
 
-/** 按题目统计：`users` 是统计范围（墙上只算已上墙的人，后台算全部有效成员）。 */
+/** 按题目统计：`users` 是统计范围（墙上只算已上墙的人，后台算全部有效成员）。填空题只有答题人数（`options` 为空）。 */
 export function questionStats(questions: WallQuestion[], answers: Map<string, Map<string, string[]>>, users: Iterable<string>): QuestionStats[] {
   const scope = [...users];
   return questions.map((question, position) => {
@@ -300,19 +337,24 @@ export function questionStats(questions: WallQuestion[], answers: Map<string, Ma
   });
 }
 
-/** 一个人的回答在墙上的样子：每道题选中的选项（带编号，用于筛选）。 */
+/** 一个人的回答在墙上的样子：每道题选中的选项（带编号，用于筛选）；填空题是一项、编号为 -1（不参与筛选）。 */
 export interface CardAnswer {
   position: number;
   prompt: string;
+  kind: QuestionKind;
   choices: { index: number; label: string }[];
 }
 
+/** 填空题的回答在 `CardAnswer.choices` 里的编号：不是选项，不参与筛选。 */
+export const TEXT_ANSWER_INDEX = -1;
+
 export function cardAnswers(questions: WallQuestion[], answers: Map<string, string[]> | undefined): CardAnswer[] {
   if (!answers) return [];
-  return questions.flatMap((question, position) => {
+  return questions.flatMap((question, position): CardAnswer[] => {
     const chosen = answers.get(question.id);
     if (!chosen) return [];
-    return [{ position, prompt: question.prompt, choices: chosen.map((label) => ({ index: question.options.indexOf(label), label })).filter((item) => item.index >= 0) }];
+    if (question.kind === 'text') return [{ position, prompt: question.prompt, kind: question.kind, choices: chosen.slice(0, 1).map((label) => ({ index: TEXT_ANSWER_INDEX, label })) }];
+    return [{ position, prompt: question.prompt, kind: question.kind, choices: chosen.map((label) => ({ index: question.options.indexOf(label), label })).filter((item) => item.index >= 0) }];
   });
 }
 
@@ -323,4 +365,6 @@ export const QUESTION_TEMPLATES: { label: string; prompt: string; kind: Question
   { label: '社团：部门', prompt: '想去哪个部门？', kind: 'single', options: ['宣传部', '技术部', '外联部', '活动部', '还没想好'] },
   { label: '兴趣：程度', prompt: '你玩到什么程度了？', kind: 'single', options: ['刚入门', '玩了一阵', '老玩家'] },
   { label: '通用：来做什么', prompt: '你来这里最想做什么？', kind: 'multi', options: ['认识新朋友', '找人合作', '学点东西', '先随便看看'] },
+  { label: '填空：想做的项目', prompt: '一句话说说你想做的项目', kind: 'text', options: [] },
+  { label: '填空：专业年级', prompt: '你的专业和年级', kind: 'text', options: [] },
 ];

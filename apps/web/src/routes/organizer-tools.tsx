@@ -4,7 +4,7 @@
  * | 路径 | 谁能访问 | 作用 |
  * | --- | --- | --- |
  * | GET /w/:wallId/questions | 墙内有效成员 | 回答 / 修改必答题；墙没有题目时回到墙 |
- * | POST /w/:wallId/questions | 同上 | 保存回答 → 303 `next`（只允许这面墙内的路径） |
+ * | POST /w/:wallId/questions | 同上 | 保存回答 → 303 `next`（只允许这面墙内的路径）；填空题的回答过内容安全检查，命中 422 |
  * | POST /account/notifications | 登录用户 | `reminders=1/0`：接收 / 关闭组织者的提醒邮件；`jobEmail=1/0`：生成完成提醒（contracts 18.3）。只改出现在表单里的那一项 |
  *
  * `questionsGate`：没答完必答题的成员打开墙、成员页、工作区时，先 303 到回答页。
@@ -62,7 +62,7 @@ export function registerOrganizerToolRoutes(app: AppHono, deps: AppDeps): void {
     });
   });
 
-  app.post('/w/:wallId/questions', form, (c) => {
+  app.post('/w/:wallId/questions', form, async (c) => {
     const auth = authOf(c);
     const member = findMemberWall(deps.repos, auth.user.id, c.req.param('wallId'));
     if (!member) return renderNotFound(c);
@@ -71,11 +71,22 @@ export function registerOrganizerToolRoutes(app: AppHono, deps: AppDeps): void {
     const questions = deps.repos.questions.listForWall(member.wall.id);
     if (questions.length === 0) return c.redirect(next, 303);
     const parsed = parseAnswerForm(questions, fields);
-    if (!parsed.ok) {
+    // 填空题的回答在墙内公开：保存前过内容安全检查（contracts 16.1）
+    const blocked: Record<string, string> = {};
+    if (parsed.ok) {
+      for (const question of questions) {
+        const text = question.kind === 'text' ? parsed.answers.get(question.id)?.[0] : undefined;
+        if (!text) continue;
+        const verdict = await deps.contentSafety.checkText('answer', text);
+        if (!verdict.ok) blocked[question.id] = verdict.message;
+      }
+    }
+    if (!parsed.ok || Object.keys(blocked).length > 0) {
       const previous = answersOf(questions, deps.repos.questions.answersForUser(member.wall.id, auth.user.id));
+      const failed = parsed.ok ? { stale: false, errors: blocked, draft: parsed.answers } : parsed;
       return renderPage(c, {
         title: `必答题 · ${member.wall.name}`,
-        status: 400,
+        status: parsed.ok ? 422 : 400,
         body: (
           <AnswerView
             wall={member.wall}
@@ -83,9 +94,9 @@ export function registerOrganizerToolRoutes(app: AppHono, deps: AppDeps): void {
             version={questionsVersion(questions)}
             csrf={auth.session.csrfToken}
             next={next}
-            selected={parsed.stale ? previous : parsed.draft}
-            errors={parsed.stale ? {} : parsed.errors}
-            stale={parsed.stale}
+            selected={failed.stale ? previous : failed.draft}
+            errors={failed.stale ? {} : failed.errors}
+            stale={failed.stale}
             editing={previous.size === questions.length}
           />
         ),

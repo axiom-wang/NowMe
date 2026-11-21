@@ -4,6 +4,7 @@ import type { AppDeps } from '../context.js';
 import type { ProfileEntry } from '../db/hosted.js';
 import type { OwnPage } from '../services/access.js';
 import { loadPortrait } from '../services/portrait.js';
+import { effectiveChoices } from '../services/wall-questions.js';
 import { choiceLabel, type InterviewAnswers } from './brief.js';
 
 export function relevantProfile(entries: ProfileEntry[], scene: string, wallId: string): ProfileEntry[] {
@@ -41,7 +42,7 @@ export function knownContext(repos: AppDeps['repos'], own: OwnPage, userId: stri
   const profile = relevantProfile(repos.profileEntries.listForUser(userId), scene.id, own.wall.id);
   const stored = repos.questions.answersForUser(own.wall.id, userId);
   const knownAnswers = repos.questions.listForWall(own.wall.id).map((q) => ({
-    question: q.prompt, answers: (stored.find((a) => a.questionId === q.id)?.choices ?? []).filter((a) => q.options.includes(a)),
+    question: q.prompt, answers: effectiveChoices(q, stored.find((a) => a.questionId === q.id)?.choices ?? []) ?? [],
   })).filter((q) => q.answers.length > 0);
   const nickname = repos.users.findById(userId)?.nickname;
   const choices: InterviewAnswers['choices'] = {};

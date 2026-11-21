@@ -6,20 +6,99 @@
  */
 import type { FC } from 'hono/jsx';
 import { WALL_QUESTION_LIMITS } from '../constants.js';
-import type { WallQuestion } from '../db/organizer-tools.js';
+import type { QuestionKind, WallQuestion } from '../db/organizer-tools.js';
 import type { Wall } from '../db/walls.js';
 import { formatDateTime } from '../format.js';
 import { PORTRAIT_LIMITS } from '../constants.js';
 import type { PortraitState } from '../services/portrait.js';
 import type { WallProgress } from '../services/reminders.js';
-import { QUESTION_TEMPLATES, type CardAnswer, type QuestionFormValue, type QuestionStats } from '../services/wall-questions.js';
+import { QUESTION_TEMPLATES, TEXT_ANSWER_INDEX, type CardAnswer, type QuestionFormValue, type QuestionStats } from '../services/wall-questions.js';
 import { CsrfField, Notice } from './forms.js';
 
 const L = WALL_QUESTION_LIMITS;
 
+/** 后台每道填空题直接列出的回答条数。 */
+const ADMIN_TEXT_ANSWERS_SHOWN = 30;
+
 // ---------------------------------------------------------------------------
 // 必答题编辑（建墙页与后台共用）
 // ---------------------------------------------------------------------------
+
+const KIND_LABEL: Record<QuestionKind, string> = { single: '单选', multi: '多选', text: '填空' };
+
+/** 题型的说明（编辑器里题型按钮下的一行小字）。 */
+const KIND_HINT: Record<QuestionKind, string> = {
+  single: '只能选一个',
+  multi: '可以选几个',
+  text: '写一句话',
+};
+
+/**
+ * 一道题的编辑块。没有脚本时：题目、题型、选项文本框（每行一个）都能直接用，按题型显示 / 隐藏选项用 CSS `:has()`。
+ * 有脚本时（static/app.js）：选项文本框换成一行一个的选项列表（回车加下一个、可删除、粘贴多行自动拆开），
+ * 列表的内容同步回文本框，提交的字段不变。
+ */
+const QuestionItem: FC<{ value: QuestionFormValue; index: number; error?: string }> = ({ value, index, error }) => {
+  const errorId = error ? `q${index}-error` : undefined;
+  return (
+    <div class={`question-editor__item${error ? ' field--invalid' : ''}`} data-question-item>
+      <input type="hidden" name={`q${index}_id`} value={value.id} />
+      <div class="question-editor__head">
+        <span class="question-editor__num" aria-hidden="true">
+          {index + 1}
+        </span>
+        <label class="question-editor__prompt">
+          <span class="visually-hidden">第 {index + 1} 题的题目</span>
+          <input
+            type="text"
+            name={`q${index}_prompt`}
+            value={value.prompt}
+            maxlength={L.prompt.max}
+            placeholder={index === 0 ? '题目，例如：你最擅长哪几样？' : '题目（留空就不加这道题）'}
+            aria-invalid={error ? 'true' : undefined}
+            aria-describedby={errorId}
+          />
+        </label>
+        <button type="button" class="question-editor__remove" hidden data-question-remove aria-label={`删除第 ${index + 1} 题`} title="删除这道题">
+          ×
+        </button>
+      </div>
+      <div class="question-editor__kinds" role="radiogroup" aria-label={`第 ${index + 1} 题的题型`}>
+        {(['single', 'multi', 'text'] as const).map((kind) => (
+          <label class={`kind-option kind-option--${kind}`}>
+            <input type="radio" name={`q${index}_kind`} value={kind} checked={value.kind === kind} />
+            <span class="kind-option__icon" aria-hidden="true"></span>
+            <span class="kind-option__text">
+              <span class="kind-option__label">{KIND_LABEL[kind]}</span>
+              <span class="kind-option__hint">{KIND_HINT[kind]}</span>
+            </span>
+          </label>
+        ))}
+      </div>
+      <div class="question-editor__choices" data-question-choices>
+        <label class="field">
+          <span class="field__label">
+            选项 <span class="muted">（{L.options.min}–{L.options.max} 个，每个最多 {L.option.max} 字；每行一个）</span>
+          </span>
+          <textarea name={`q${index}_options`} rows={4} placeholder={index === 0 ? '设计\n前端\n后端' : ''} aria-invalid={error ? 'true' : undefined} aria-describedby={errorId} data-question-options>
+            {value.options}
+          </textarea>
+        </label>
+      </div>
+      <p class="question-editor__text-preview" data-question-text>
+        <span class="question-editor__fake-input" aria-hidden="true">
+          成员在这里写一句话……
+        </span>
+        <span class="muted">每人写一句（最多 {L.answer.max} 字），显示在 TA 的卡片上、能被搜到，不参与筛选。不能写联系方式和链接。</span>
+      </p>
+      {error ? (
+        <span class="field__error" id={errorId}>
+          {error}
+        </span>
+      ) : null}
+    </div>
+  );
+};
 
 export const QuestionEditor: FC<{ values: QuestionFormValue[]; errors?: Record<number, string>; intro?: boolean }> = ({ values, errors = {}, intro = true }) => (
   <fieldset class="field question-editor" data-question-editor>
@@ -28,55 +107,23 @@ export const QuestionEditor: FC<{ values: QuestionFormValue[]; errors?: Record<n
     </legend>
     {intro ? (
       <p class="field__hint muted">
-        每个加入的人都要先答完才能进墙，墙上可以按回答筛选人；你在后台能看到每个人的回答，不用再发接龙和问卷。比如比赛问“技能”和“是否有队”，社团问“想去哪个部门”。
+        每个加入的人都要先答完才能进墙，墙上可以按选择题的回答筛选人；你在后台能看到每个人的回答，不用再发接龙和问卷。比如比赛问“技能”和“是否有队”，社团问“想去哪个部门”，也可以用填空题请大家写一句“想做的项目”。
       </p>
     ) : null}
-    <p class="question-editor__templates" hidden data-question-templates>
+    <div class="question-editor__templates" hidden data-question-templates>
       <span class="muted">用例子填：</span>
       {QUESTION_TEMPLATES.map((template) => (
         <button type="button" class="btn btn--ghost btn--small" data-question-template={JSON.stringify({ prompt: template.prompt, kind: template.kind, options: template.options.join('\n') })}>
           {template.label}
         </button>
       ))}
-    </p>
+    </div>
     {values.map((value, index) => (
-      <div class={`question-editor__item${errors[index] ? ' field--invalid' : ''}`} data-question-item>
-        <input type="hidden" name={`q${index}_id`} value={value.id} />
-        <label class="field">
-          <span class="field__label">第 {index + 1} 题</span>
-          <input
-            type="text"
-            name={`q${index}_prompt`}
-            value={value.prompt}
-            maxlength={L.prompt.max}
-            placeholder={index === 0 ? '例如：你最擅长哪几样？' : '留空就不加这道题'}
-            aria-invalid={errors[index] ? 'true' : undefined}
-            aria-describedby={errors[index] ? `q${index}-error` : undefined}
-          />
-        </label>
-        <div class="question-editor__kind" role="radiogroup" aria-label={`第 ${index + 1} 题的题型`}>
-          <label class="check">
-            <input type="radio" name={`q${index}_kind`} value="single" checked={value.kind !== 'multi'} />
-            <span>单选</span>
-          </label>
-          <label class="check">
-            <input type="radio" name={`q${index}_kind`} value="multi" checked={value.kind === 'multi'} />
-            <span>多选</span>
-          </label>
-        </div>
-        <label class="field">
-          <span class="field__label">选项（每行一个，{L.options.min}–{L.options.max} 个）</span>
-          <textarea name={`q${index}_options`} rows={4} placeholder={index === 0 ? '设计\n前端\n后端' : ''} aria-invalid={errors[index] ? 'true' : undefined}>
-            {value.options}
-          </textarea>
-        </label>
-        {errors[index] ? (
-          <span class="field__error" id={`q${index}-error`}>
-            {errors[index]}
-          </span>
-        ) : null}
-      </div>
+      <QuestionItem value={value} index={index} error={errors[index]} />
     ))}
+    <button type="button" class="question-editor__add" hidden data-question-add>
+      + 再加一道题
+    </button>
   </fieldset>
 );
 
@@ -116,8 +163,27 @@ export const AnswerView: FC<AnswerViewProps> = ({ wall, questions, version, csrf
           return (
             <fieldset class={`field answer-question${error ? ' field--invalid' : ''}`} aria-describedby={error ? `a${position}-error` : undefined}>
               <legend class="field__label">
-                {position + 1}. {question.prompt} <span class="muted">（{question.kind === 'multi' ? '可多选' : '单选'}）</span>
+                {position + 1}. {question.prompt} <span class="muted">（{question.kind === 'multi' ? '可多选' : question.kind === 'text' ? '填空' : '单选'}）</span>
               </legend>
+              {question.kind === 'text' ? (
+                <div class="answer-text">
+                  <input
+                    type="text"
+                    name={`a${position}`}
+                    value={selected.get(question.id)?.[0] ?? ''}
+                    maxlength={L.answer.max}
+                    required
+                    autocomplete="off"
+                    placeholder="写一句话"
+                    aria-label={question.prompt}
+                    aria-invalid={error ? 'true' : undefined}
+                    aria-describedby={error ? `a${position}-error` : `a${position}-hint`}
+                  />
+                  <span class="field__hint muted" id={`a${position}-hint`}>
+                    最多 {L.answer.max} 字，会显示在你的卡片上；不写联系方式和链接。
+                  </span>
+                </div>
+              ) : (
               <div class="answer-options">
                 {question.options.map((option, index) => (
                   <label class="answer-option">
@@ -130,6 +196,7 @@ export const AnswerView: FC<AnswerViewProps> = ({ wall, questions, version, csrf
                   </label>
                 ))}
               </div>
+              )}
               {error ? (
                 <span class="field__error" id={`a${position}-error`}>
                   {error}
@@ -150,29 +217,42 @@ export const AnswerView: FC<AnswerViewProps> = ({ wall, questions, version, csrf
 // 墙上：卡片的回答标签与筛选
 // ---------------------------------------------------------------------------
 
-/** 卡片的筛选编号：`<题目位置>:<选项编号>`，空格分隔。 */
+/** 卡片的筛选编号：`<题目位置>:<选项编号>`，空格分隔（填空题不参与筛选）。 */
 export function answerKeys(answers: CardAnswer[]): string {
-  return answers.flatMap((answer) => answer.choices.map((choice) => `${answer.position}:${choice.index}`)).join(' ');
+  return answers
+    .flatMap((answer) => answer.choices.filter((choice) => choice.index !== TEXT_ANSWER_INDEX).map((choice) => `${answer.position}:${choice.index}`))
+    .join(' ');
 }
 
 export const CardAnswerTags: FC<{ answers: CardAnswer[] }> = ({ answers }) =>
   answers.length > 0 ? (
     <span class="wall-card__answers">
       {answers.flatMap((answer) =>
-        answer.choices.map((choice) => (
-          <span class="answer-tag" title={answer.prompt}>
-            {choice.label}
-          </span>
-        )),
+        answer.choices.map((choice) =>
+          answer.kind === 'text' ? (
+            <span class="answer-tag answer-tag--text" title={`${answer.prompt}：${choice.label}`}>
+              {choice.label}
+            </span>
+          ) : (
+            <span class="answer-tag" title={answer.prompt}>
+              {choice.label}
+            </span>
+          ),
+        ),
       )}
     </span>
   ) : null;
 
-/** 筛选条：每道题一行，点选项筛选（同一题内“或”，不同题之间“且”）。需要脚本，没有脚本时只是一张统计。 */
+/** 墙上有人选了的选择题（填空题没有可筛选的选项）。 */
+function filterable(questions: QuestionStats[]): QuestionStats[] {
+  return questions.filter((question) => question.kind !== 'text' && question.options.some((option) => option.count > 0));
+}
+
+/** 筛选条：每道选择题一行，点选项筛选（同一题内“或”，不同题之间“且”）。需要脚本，没有脚本时只是一张统计。 */
 export const WallFilters: FC<{ questions: QuestionStats[] }> = ({ questions }) =>
-  questions.some((question) => question.answered > 0) ? (
+  filterable(questions).length > 0 ? (
     <div class="wall-filters" data-wall-filters>
-      {questions.map((question) => (
+      {filterable(questions).map((question) => (
         <div class="wall-filters__row" role="group" aria-label={question.prompt}>
           <span class="wall-filters__prompt">{question.prompt}</span>
           {question.options
@@ -226,7 +306,7 @@ export const PortraitPanel: FC<{ wall: Wall; state: PortraitState; shareText: st
             </div>
           ) : null}
           {state.view.stats
-            .filter((stat) => stat.answered > 0)
+            .filter((stat) => stat.answered > 0 && stat.kind !== 'text' && stat.options.length > 0)
             .map((stat) => (
               <div class="portrait__block">
                 <h3 class="portrait__label">{stat.prompt}</h3>
@@ -357,9 +437,20 @@ export const ProgressPanel: FC<{ wall: Wall; progress: WallProgress; groupText: 
 };
 
 /** 后台的必答题区块：当前题目的回答统计 + 编辑表单。 */
-export const AdminQuestions: FC<{ wall: Wall; stats: QuestionStats[]; total: number; values: QuestionFormValue[]; errors?: Record<number, string>; csrf: string; notice?: string | null }> = ({
+export const AdminQuestions: FC<{
+  wall: Wall;
+  stats: QuestionStats[];
+  /** 填空题：题目 ID → 有效成员写的回答（后台展示，最多 `ADMIN_TEXT_ANSWERS_SHOWN` 条）。 */
+  textAnswers: Map<string, string[]>;
+  total: number;
+  values: QuestionFormValue[];
+  errors?: Record<number, string>;
+  csrf: string;
+  notice?: string | null;
+}> = ({
   wall,
   stats,
+  textAnswers,
   total,
   values,
   errors,
@@ -374,15 +465,26 @@ export const AdminQuestions: FC<{ wall: Wall; stats: QuestionStats[]; total: num
         {stats.map((stat) => (
           <div class="admin-questions__stat">
             <h3>
-              {stat.prompt} <span class="muted">（{stat.answered} / {total} 人答了）</span>
+              {stat.prompt} <span class="muted">（{KIND_LABEL[stat.kind]} · {stat.answered} / {total} 人答了）</span>
             </h3>
-            <p class="name-chips">
-              {stat.options.map((option) => (
-                <span class="name-chip">
-                  {option.label} <strong>{option.count}</strong>
-                </span>
-              ))}
-            </p>
+            {stat.kind === 'text' ? (
+              (textAnswers.get(stat.questionId) ?? []).length > 0 ? (
+                <ul class="admin-questions__texts">
+                  {(textAnswers.get(stat.questionId) ?? []).slice(0, ADMIN_TEXT_ANSWERS_SHOWN).map((text) => (
+                    <li>{text}</li>
+                  ))}
+                  {(textAnswers.get(stat.questionId) ?? []).length > ADMIN_TEXT_ANSWERS_SHOWN ? <li class="muted">……其余见成员列表与 CSV</li> : null}
+                </ul>
+              ) : null
+            ) : (
+              <p class="name-chips">
+                {stat.options.map((option) => (
+                  <span class="name-chip">
+                    {option.label} <strong>{option.count}</strong>
+                  </span>
+                ))}
+              </p>
+            )}
           </div>
         ))}
         <p class="muted">
@@ -397,7 +499,7 @@ export const AdminQuestions: FC<{ wall: Wall; stats: QuestionStats[]; total: num
       <form method="post" action={`/w/${wall.id}/admin/questions`} class="stack">
         <CsrfField token={csrf} />
         <QuestionEditor values={values} errors={errors} intro={false} />
-        <p class="field-help">改了题目文字或单选 / 多选，这道题的回答会清空，大家需要重新回答；只增删选项时保留原来的回答（选了被删除选项的人需要重新选）。</p>
+        <p class="field-help">改了题目文字或题型（单选 / 多选 / 填空），这道题的回答会清空，大家需要重新回答；只增删选项时保留原来的回答（选了被删除选项的人需要重新选）。</p>
         <button type="submit" class="btn btn--primary">
           保存必答题
         </button>

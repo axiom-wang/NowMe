@@ -1,6 +1,6 @@
 /*
  * 功能包 home：登录后的“我的”——自己的一块软木板。（views/layout.tsx 按页加载，在 app.css 之后）
- * 左边打招呼，右边一张待办便签；下面的软木板分两栏：待完成 / 已发布，每面墙是一张用胶带贴上去的小卡片。
+ * 顶部是标题与建墙按钮；下面的软木板分两栏：待完成 / 已发布，每面墙是一张小卡片。
  * 只用 app.css 的令牌与组件（.board / .note / .chip / .btn / .empty-state）。
  */
 
@@ -11,47 +11,7 @@
 }
 
 /* ------------------------------------------------------------------ */
-/* 打招呼 + 待办便签 */
-
-.home-overview {
-  display: grid;
-  gap: var(--space-8);
-  align-items: center;
-  margin-bottom: var(--space-10);
-}
-
-.home-welcome {
-  min-width: 0;
-}
-
-.home-welcome__title {
-  margin: 0 0 var(--space-3);
-  font-size: var(--text-3xl);
-  line-height: 1.1;
-  letter-spacing: -0.035em;
-  overflow-wrap: anywhere;
-}
-
-
-.home-reminder {
-  max-width: 420px;
-  margin: var(--space-2) 0 0;
-}
-
-.home-reminder h2 {
-  margin: 0 0 6px;
-  font-size: var(--text-lg);
-  line-height: 1.35;
-}
-
-.home-reminder > p:not(.note__label) {
-  margin: 0 0 var(--space-4);
-  color: var(--text-secondary);
-  font-size: var(--text-sm);
-}
-
-/* ------------------------------------------------------------------ */
-/* 工具条：标题、筛选、建墙 */
+/* 工具条：标题、建墙 */
 
 .home-toolbar {
   display: flex;
@@ -61,7 +21,7 @@
   margin-bottom: var(--space-5);
 }
 
-.home-toolbar h2 {
+.home-toolbar h1 {
   display: flex;
   align-items: center;
   gap: var(--space-3);
@@ -84,47 +44,6 @@
   background: var(--lime);
   font: 700 1rem/1 var(--font-head);
   transform: rotate(-4deg);
-}
-
-.home-filters {
-  display: inline-flex;
-  align-items: center;
-  padding: 3px;
-  border: 1px solid var(--line-strong);
-  border-radius: var(--radius-pill);
-  background: var(--surface);
-}
-
-.home-filter {
-  display: inline-flex;
-  gap: 5px;
-  align-items: center;
-  justify-content: center;
-  min-height: 36px;
-  padding: 0 var(--space-4);
-  border-radius: var(--radius-pill);
-  font-weight: 700;
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background-color var(--dur-fast);
-}
-
-.home-filter span {
-  font-family: var(--font-head);
-  color: var(--muted);
-}
-
-.home-filter:not(.is-active):hover {
-  background: var(--bg-subtle);
-}
-
-.home-filter.is-active {
-  background: var(--inverse-bg);
-  color: var(--inverse-fg);
-}
-
-.home-filter.is-active span {
-  color: var(--lime);
 }
 
 .home-create {
@@ -150,7 +69,7 @@
 }
 
 /* 栏目名：一张墨色标签贴 */
-.home-group__heading h3 {
+.home-group__heading h2 {
   display: inline-flex;
   align-items: center;
   gap: var(--space-2);
@@ -164,7 +83,7 @@
   transform: rotate(-1.5deg);
 }
 
-.home-group--published .home-group__heading h3 {
+.home-group--published .home-group__heading h2 {
   --text: var(--object-ink);
   --text-secondary: var(--object-muted);
   --muted: var(--object-muted);
@@ -235,28 +154,6 @@
   --tilt: 0.7deg;
 }
 
-.home-wall::before {
-  content: '';
-  position: absolute;
-  top: -9px;
-  left: 50%;
-  width: 70px;
-  height: 20px;
-  margin-left: -35px;
-  background: var(--tape);
-  border: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
-  transform: rotate(-2deg);
-}
-
-.home-wall:nth-child(3n + 2)::before {
-  background: color-mix(in srgb, var(--orange) 70%, transparent);
-  transform: rotate(3deg);
-}
-
-.home-wall:nth-child(3n)::before {
-  background: color-mix(in srgb, var(--note) 92%, transparent);
-}
-
 @media (hover: hover) {
   .home-wall:hover {
     transform: rotate(0deg) translateY(-2px);
@@ -264,13 +161,12 @@
   }
 }
 
-/* 胶带保留角度，卡片正文和栏目名在普通屏幕上保持水平。 */
+/* 卡片正文和栏目名在普通屏幕上保持水平。 */
 @media (resolution < 2dppx) {
   .home-wall,
   .home-wall:hover,
-  .home-reminder,
-  .home-group__heading h3,
-  .home-group--published .home-group__heading h3 {
+  .home-group__heading h2,
+  .home-group--published .home-group__heading h2 {
     transform: none;
   }
 }
@@ -301,12 +197,6 @@
   align-items: center;
   gap: 5px 10px;
   margin: 0 0 6px;
-}
-
-.home-wall__labels .chip {
-  min-height: 24px;
-  padding: 1px 10px;
-  font-size: var(--text-xs);
 }
 
 .home-wall__admin {
@@ -373,7 +263,7 @@
   text-align: center;
 }
 
-.home-group__empty h4 {
+.home-group__empty h3 {
   margin: 0 0 6px;
   font-size: var(--text-md);
 }
@@ -435,21 +325,6 @@
     gap: var(--space-3);
   }
 
-  .home-create {
-    margin-left: 0;
-  }
-
-  .home-filters {
-    order: 3;
-    width: 100%;
-  }
-
-  .home-filter {
-    flex: 1;
-    min-height: 44px;
-    padding-inline: var(--space-2);
-  }
-
   .home-wall__admin {
     display: inline-flex;
     align-items: center;
@@ -466,18 +341,6 @@
   }
 }
 
-@media (min-width: 760px) {
-  .home-overview {
-    grid-template-columns: minmax(0, 1fr) minmax(280px, 380px);
-    gap: var(--space-10);
-  }
-
-  .home-reminder {
-    justify-self: end;
-    width: 100%;
-  }
-}
-
 @media (min-width: 1000px) {
   .home-groups {
     grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -485,24 +348,13 @@
     padding: var(--space-8) var(--space-8) var(--space-10);
   }
 
-  .home-groups--single {
-    grid-template-columns: minmax(0, 1fr);
-  }
-
-  .home-groups--single .home-group__list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-
   .home-wall {
     grid-template-columns: 104px minmax(0, 1fr);
   }
 }
 
-.home-filters { border-color: var(--line); }
-.home-filter.is-active { background: var(--selected-bg); color: var(--text); }
-.home-filter.is-active span { color: var(--muted); }
 .home-total { border: 0; color: var(--object-ink); box-shadow: none; }
-.home-group--published .home-group__heading h3 { box-shadow: var(--shadow-note); }
+.home-group--published .home-group__heading h2 { box-shadow: var(--shadow-note); }
 @media (max-width: 639px) {
   .home-wall__admin { font-size: var(--text-sm); }
   .home-empty a { display: inline-flex; align-items: center; min-height: 44px; }
@@ -513,5 +365,5 @@
 @media (max-width: 639px) {
   .home-wall h3 a { display: flex; align-items: center; min-height: 44px; }
 }
-.home-toolbar h2 { white-space: nowrap; }
+.home-toolbar h1 { white-space: nowrap; }
 .home-total, .home-group__count, .home-group__heading .home-icon { flex-shrink: 0; white-space: nowrap; }

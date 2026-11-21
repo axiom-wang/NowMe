@@ -21,16 +21,276 @@
 
 .question-editor__item {
   display: grid;
-  gap: 8px;
+  gap: 12px;
   padding: 14px;
   border: 1px solid var(--line);
   border-radius: var(--radius-sm);
   background: var(--surface);
 }
 
-.question-editor__kind {
+.question-editor__item.field--invalid {
+  border-color: var(--bad-line);
+}
+
+.question-editor__head {
   display: flex;
-  gap: 16px;
+  align-items: center;
+  gap: 10px;
+}
+
+.question-editor__num {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--inverse-bg);
+  color: var(--inverse-fg);
+  font-size: var(--text-sm);
+  font-weight: 700;
+}
+
+.question-editor__prompt {
+  flex: 1;
+  min-width: 0;
+}
+
+.question-editor__prompt input {
+  font-weight: 700;
+}
+
+.question-editor__remove {
+  flex: none;
+  width: 40px;
+  height: 40px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.question-editor__remove:hover,
+.question-editor__remove:focus-visible {
+  background: var(--bg-subtle);
+  color: var(--text);
+}
+
+/* 题型：三个并排的按钮（本身是单选框，没有脚本也能用） */
+.question-editor__kinds {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.kind-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 48px;
+  padding: 8px 10px;
+  border: 1.5px solid var(--line);
+  border-radius: var(--radius-sm);
+  background: var(--input-bg);
+  cursor: pointer;
+}
+
+.kind-option input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.kind-option:hover {
+  border-color: var(--line-strong);
+}
+
+.kind-option:has(input:checked) {
+  border-color: var(--text);
+  background: var(--lime-soft);
+}
+
+.kind-option:has(input:focus-visible) {
+  box-shadow: var(--focus-ring);
+}
+
+.kind-option__icon {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid currentColor;
+  color: var(--text-secondary);
+}
+
+.kind-option--single .kind-option__icon {
+  border-radius: 50%;
+}
+
+.kind-option--multi .kind-option__icon {
+  border-radius: 4px;
+}
+
+.kind-option--text .kind-option__icon {
+  height: 0;
+  border-width: 0 0 2px;
+  border-radius: 0;
+}
+
+.kind-option__text {
+  display: grid;
+  min-width: 0;
+  line-height: 1.25;
+}
+
+.kind-option__label {
+  font-weight: 700;
+  font-size: var(--text-sm);
+}
+
+.kind-option__hint {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* 按题型显示选项或填空的预览（:has 让没有脚本时也能切换） */
+.question-editor__text-preview {
+  display: none;
+  margin: 0;
+  gap: 6px;
+  font-size: var(--text-sm);
+}
+
+.question-editor__item:has(input[value='text']:checked) .question-editor__choices {
+  display: none;
+}
+
+.question-editor__item:has(input[value='text']:checked) .question-editor__text-preview {
+  display: grid;
+}
+
+.question-editor__fake-input {
+  display: block;
+  padding: 10px 14px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius);
+  color: var(--placeholder);
+}
+
+/* 有脚本时：一行一个选项 */
+.option-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.option-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.option-row__marker {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  border: 2px solid var(--line-strong);
+  border-radius: 50%;
+}
+
+.question-editor__item:has(input[value='multi']:checked) .option-row__marker {
+  border-radius: 4px;
+}
+
+.option-row input[type='text'] {
+  flex: 1;
+  min-width: 0;
+  min-height: 44px;
+  padding: 8px 12px;
+}
+
+.option-row__remove {
+  flex: none;
+  width: 36px;
+  height: 36px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.option-row__remove:hover,
+.option-row__remove:focus-visible {
+  background: var(--bg-subtle);
+  color: var(--text);
+}
+
+.option-row__remove:disabled {
+  visibility: hidden;
+}
+
+.option-list__foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.option-list__add {
+  border: 0;
+  padding: 8px 4px;
+  background: transparent;
+  color: var(--accent-text);
+  font: inherit;
+  font-size: var(--text-sm);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.option-list__add:disabled {
+  color: var(--faint);
+  cursor: default;
+}
+
+.option-list__count {
+  color: var(--muted);
+  font-size: var(--text-xs);
+  font-variant-numeric: tabular-nums;
+}
+
+.question-editor__add {
+  justify-self: start;
+  min-height: 44px;
+  padding: 10px 16px;
+  border: 1.5px dashed var(--line-strong);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.question-editor__add:hover {
+  border-color: var(--text);
+}
+
+@media (max-width: 480px) {
+  .kind-option__hint {
+    display: none;
+  }
 }
 
 .answer-question {
@@ -72,6 +332,29 @@
   color: var(--text-secondary);
   font-size: var(--text-xs);
   line-height: 1.5;
+}
+
+.answer-tag--text {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  background: var(--blue-soft);
+  color: var(--blue-ink);
+}
+
+.answer-text {
+  display: grid;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.admin-questions__texts {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: var(--text-sm);
 }
 
 .wall-card__answers {

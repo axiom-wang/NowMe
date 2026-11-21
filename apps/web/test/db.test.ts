@@ -1,10 +1,10 @@
 /** 数据库迁移（contracts 第 3 节）：全部表、字段、约束、索引；迁移可重复执行。 */
-import { mkdtempSync, rmSync } from 'node:fs';
+import { copyFileSync, mkdtempSync, readdirSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import { generateId, generateToken } from '@nowme/contracts';
-import { createRepos, migrate, openDatabase, transaction, type Database } from '../src/db/index.js';
+import { createRepos, migrate, MIGRATIONS_DIR, openDatabase, transaction, type Database } from '../src/db/index.js';
 
 const NOW = '2026-11-06T08:00:00.000Z';
 
@@ -165,7 +165,7 @@ describe('数据库迁移', () => {
     expect(migrate(db)).toEqual([]);
     db.close();
     const again = open(file);
-    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }, { version: '004_user_models.sql' }, { version: '005_chat.sql' }, { version: '006_wall_covers.sql' }, { version: '007_user_avatar.sql' }, { version: '008_icebreakers.sql' }, { version: '009_credits.sql' }, { version: '010_job_queue.sql' }, { version: '011_account_deletion.sql' }, { version: '012_moderation.sql' }, { version: '013_consent.sql' }, { version: '014_deletion_evidence.sql' }, { version: '015_notify_prefs.sql' }, { version: '020_organizer_tools.sql' }, { version: '021_intros.sql' }, { version: '022_wall_asks.sql' }, { version: '023_interview_context.sql' }, { version: '024_owner_edit.sql' }]);
+    expect(again.prepare('SELECT version FROM schema_migrations').all()).toEqual([{ version: '001_init.sql' }, { version: '002_hosted.sql' }, { version: '003_skill_client.sql' }, { version: '004_user_models.sql' }, { version: '005_chat.sql' }, { version: '006_wall_covers.sql' }, { version: '007_user_avatar.sql' }, { version: '008_icebreakers.sql' }, { version: '009_credits.sql' }, { version: '010_job_queue.sql' }, { version: '011_account_deletion.sql' }, { version: '012_moderation.sql' }, { version: '013_consent.sql' }, { version: '014_deletion_evidence.sql' }, { version: '015_notify_prefs.sql' }, { version: '020_organizer_tools.sql' }, { version: '021_intros.sql' }, { version: '022_wall_asks.sql' }, { version: '023_interview_context.sql' }, { version: '024_owner_edit.sql' }, { version: '025_text_questions.sql' }]);
   });
 
   it('从旧数据库增量升级保留用户、页面、brief、版本、发布与历史任务', () => {
@@ -182,6 +182,27 @@ describe('数据库迁移', () => {
     expect(migrate(db)).toEqual(['004_user_models.sql']);
     expect(snapshot()).toEqual(before);
     expect(migrate(db)).toEqual([]);
+  });
+
+  it('025 加填空题：重建 wall_questions 时保留题目与回答（外键级联没有删掉回答）', () => {
+    const dir = mkdtempSync(join(tmpdir(), 'nowme-mig-'));
+    dirs.push(dir);
+    for (const file of readdirSync(MIGRATIONS_DIR)) if (file < '025_') copyFileSync(join(MIGRATIONS_DIR, file), join(dir, file));
+    const db = openDatabase(':memory:', { migrationsDir: dir });
+    dbs.push(db);
+    const data = seed(db);
+    const question = generateId('wqn');
+    db.prepare("INSERT INTO wall_questions (id, wall_id, position, prompt, kind, options_json, created_at, updated_at) VALUES (?, ?, 0, '组队了吗？', 'single', '[\"有\",\"没有\"]', ?, ?)").run(question, data.wall, NOW, NOW);
+    db.prepare("INSERT INTO wall_answers (question_id, user_id, wall_id, choices_json, updated_at) VALUES (?, ?, ?, '[\"有\"]', ?)").run(question, data.user, data.wall, NOW);
+    expect(() => db.prepare("INSERT INTO wall_questions (id, wall_id, position, prompt, kind, options_json, created_at, updated_at) VALUES (?, ?, 1, '一句话', 'text', '[]', ?, ?)").run(generateId('wqn'), data.wall, NOW, NOW)).toThrow();
+    const before = [db.prepare('SELECT * FROM wall_questions').all(), db.prepare('SELECT * FROM wall_answers').all()];
+    expect(migrate(db)).toEqual(['025_text_questions.sql']);
+    expect([db.prepare('SELECT * FROM wall_questions').all(), db.prepare('SELECT * FROM wall_answers').all()]).toEqual(before);
+    db.prepare("INSERT INTO wall_questions (id, wall_id, position, prompt, kind, options_json, created_at, updated_at) VALUES (?, ?, 1, '一句话', 'text', '[]', ?, ?)").run(generateId('wqn'), data.wall, NOW, NOW);
+    // 外键与级联照旧
+    db.prepare('DELETE FROM wall_questions WHERE id = ?').run(question);
+    expect(db.prepare('SELECT COUNT(*) AS n FROM wall_answers').get()).toEqual({ n: 0 });
+    expect(db.prepare('PRAGMA foreign_key_check').all()).toEqual([]);
   });
 
   it('关键索引存在（部分唯一索引：每页一个有效凭证、一个活跃发布）', () => {

@@ -529,7 +529,7 @@ export const CreateView: FC<{ model: CreateViewModel }> = ({ model }) => {
   return (
     <div class="container create-page" data-step={status}>
       <nav class="crumbs create-crumbs" aria-label="当前位置">
-        <a href="/">我的</a><span aria-hidden="true">/</span>
+        <a href="/">首页</a><span aria-hidden="true">/</span>
         <a class="crumbs__wall" href={`/w/${model.wall.id}`} title={model.wall.name}>{model.wall.name}</a><span aria-hidden="true">/</span>
         <a href={base(model.wall)}>我的页面</a>
       </nav>
@@ -750,9 +750,7 @@ const ProfileRow: FC<{ entry: ProfileEntry; csrf: string; entries: ProfileEntry[
 
 export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVersion?: string | null | undefined; nicknameDraft?: string; error?: string; csrf: string; profile: ProfileEntry[]; briefs: OwnBriefListItem[]; notice: string | null; blocked?: BlockedUserRow[]; remindersOn?: boolean; notifyEmail?: boolean }> = ({ accountLinks, nickname, avatarVersion, nicknameDraft, error, csrf, profile, briefs, notice, blocked = [], remindersOn = true, notifyEmail = true }) => (
   <div class="profile-page">
-    <header class="profile-intro">
-      <h1>我的资料</h1>
-    </header>
+    <h1 class="visually-hidden">我的资料</h1>
     {notice ? <Notice tone="success">{notice}</Notice> : null}
     <section class="card profile-card profile-identity" aria-label="个人资料">
       <span class="profile-avatar" aria-hidden="true">{avatarVersion ? <img src={`/account/avatar?v=${avatarVersion}`} alt="" /> : initialOf(nickname)}</span>
@@ -779,7 +777,7 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
         <h2 id="profile-heading">长期画像（{profile.length} 条）</h2>
         <details class="profile-help" data-dismissable>
           <summary><HomeIcon name="plus" />如何添加</summary>
-          <div class="popover profile-help__panel">在墙里完成一次采访，确认资料时勾选“记住这些”，就能保存新的画像。<a href="/">前往我的墙 <span aria-hidden="true">→</span></a></div>
+          <div class="popover profile-help__panel">在墙里完成一次采访，确认资料时勾选“记住这些”，就能保存新的画像。<a href="/">前往首页 <span aria-hidden="true">→</span></a></div>
         </details>
       </div>
       <details class="card card--quiet"><summary>手动添加一条画像</summary><ProfileEntryForm csrf={csrf} /></details>

@@ -7,7 +7,7 @@ import { loadSceneGuide } from '@nowme/skill';
 import { SCENE_TYPES, type SceneType } from '@nowme/contracts';
 import type { AppDeps, AppHono } from '../context.js';
 import { authOf, requireUser } from '../security/session.js';
-import { HomeView, type HomeEntryStatus, type HomeFilter, type HomeItem, type HomeNotice } from '../views/home.js';
+import { HomeView, type HomeEntryStatus, type HomeItem, type HomeNotice } from '../views/home.js';
 import { LandingView } from '../views/home-landing.js';
 import { renderPage } from '../views/layout.js';
 
@@ -19,8 +19,6 @@ export function sceneLabels(): Record<SceneType, string> {
 const NOTICES: ReadonlySet<string> = new Set<HomeNotice>(['wall-closed']);
 
 export function registerHomeRoutes(app: AppHono, deps: AppDeps): void {
-  const labels = sceneLabels();
-
   app.get('/', async (c, next) => {
     if (!c.get('auth')) {
       return renderPage(c, { title: '给你的圈子建一面墙', bodyClass: 'page--landing', body: <LandingView demo={!!deps.demo} /> });
@@ -33,7 +31,6 @@ export function registerHomeRoutes(app: AppHono, deps: AppDeps): void {
       return {
         wall,
         role: membership.role,
-        sceneLabel: labels[wall.sceneType],
         status,
         pageId: status === 'active' ? pageId : null,
         coverUrl: status === 'active' ? deps.repos.walls.coverUrl(wall.id) : null,
@@ -41,16 +38,12 @@ export function registerHomeRoutes(app: AppHono, deps: AppDeps): void {
       };
     });
     const notice = c.req.query('notice');
-    const queryFilter = c.req.query('filter');
-    const filter: HomeFilter = queryFilter === 'pending' || queryFilter === 'published' ? queryFilter : 'all';
     return renderPage(c, {
       title: 'NOWMe',
       bodyClass: 'page--home',
       body: (
         <HomeView
-          nickname={auth.user.nickname ?? ''}
           items={items}
-          filter={filter}
           notice={notice && NOTICES.has(notice) ? (notice as HomeNotice) : null}
         />
       ),

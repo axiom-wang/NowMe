@@ -23,8 +23,9 @@ describe('首页创作工作台（登录后）', () => {
     seedMember(t, closed, me.userId);
     t.repos.walls.close(closed.id, t.clock.now().toISOString());
     const html = await (await get(t, '/', { cookie: me.cookie })).text();
-    expect(html).toContain('你好，江予安！');
-    expect(html).toContain('你还有 2 个页面未发布');
+    expect(html).not.toContain('你好，江予安');
+    expect(html).toMatch(/<h1 id="walls-heading"[^>]*>我加入的墙/);
+    expect(html).not.toContain('home-reminder');
     expect(html).toContain('aria-label="3 面墙"');
     expect(group(html, 'pending')).toContain(pending.name);
     expect(group(html, 'pending')).toContain(withdrawn.name);
@@ -40,36 +41,16 @@ describe('首页创作工作台（登录后）', () => {
     expect(elements(html).some((el) => 'style' in el.attrs || Object.keys(el.attrs).some((name) => name.startsWith('on')))).toBe(false);
   });
 
-  it('筛选只改变可见分组，统计仍为所有有效墙；未知筛选回到全部', async () => {
-    const me = await login(t, 'filter@example.com');
-    seedWall(t, me.userId, '未完成墙');
-    const live = seedWall(t, me.userId, '已发布墙');
-    publishPage(t, live, '测试用户');
-    for (const filter of ['pending', 'published']) {
-      const html = await (await get(t, `/?filter=${filter}`, { cookie: me.cookie })).text();
-      expect(group(html, filter as 'pending' | 'published')).not.toBe('');
-      expect(group(html, filter === 'pending' ? 'published' : 'pending')).toBe('');
-      expect(html).toContain('aria-label="2 面墙"');
-      expect(elements(html).find((el) => el.attrs.class?.includes('home-filter is-active'))?.attrs.href).toBe(`/?filter=${filter}`);
-    }
-    const html = await (await get(t, '/?filter=unknown', { cookie: me.cookie })).text();
-    expect(group(html, 'pending')).not.toBe('');
-    expect(group(html, 'published')).not.toBe('');
-  });
-
   it('零面墙、只有待完成、全部发布时都有可用入口与准确的空状态', async () => {
     const me = await login(t, 'empty@example.com');
     let html = await (await get(t, '/', { cookie: me.cookie })).text();
     expect(html).toContain('还没有加入任何墙');
-    expect(html).toContain('从一面墙，开启新的相遇');
     const created = seedWall(t, me.userId);
     html = await (await get(t, '/', { cookie: me.cookie })).text();
     expect(group(html, 'published')).toContain('让你的第一张页面上墙');
     publishPage(t, created, '测试用户');
     html = await (await get(t, '/', { cookie: me.cookie })).text();
-    expect(html).toContain('你的页面，都已闪亮上墙');
     expect(group(html, 'pending')).toContain('每一页，都已被看见');
-    expect(html).not.toContain('你还有 0 个页面未发布');
   });
 });
 

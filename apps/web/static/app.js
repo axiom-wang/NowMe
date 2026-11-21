@@ -204,11 +204,222 @@ document.querySelectorAll('form[data-demo-login]').forEach(function (form) {
 });
 
 /*
- * 必答题编辑（contracts 19.1）：“用例子填”按钮把模板填进第一道还空着的题。没有脚本时按钮不显示。
+ * 必答题编辑（contracts 19.1）。没有脚本时编辑器照样能用（选项是每行一个的文本框）；有脚本时：
+ * - 选项文本框换成一行一个的选项列表：回车加下一个、空行退格删除、粘贴多行自动拆开、可单独删除，
+ *   列表内容实时写回文本框，所以提交的字段不变；
+ * - 只显示有内容的题和一道空题，“再加一道题”展开下一道；每道题可以一键清空（不在表单里的旧题保存时删除）；
+ * - “用例子填”把模板填进第一道还空着的题。
  */
 (function () {
   'use strict';
+  var MAX_OPTIONS = 12;
+  var MAX_OPTION_LENGTH = 12;
+  var SPLIT = /[\n\r,，、;；]+/;
+
+  function splitOptions(text) {
+    return String(text || '')
+      .split(SPLIT)
+      .map(function (item) { return item.trim().replace(/\s+/g, ' '); })
+      .filter(Boolean);
+  }
+
   Array.prototype.slice.call(document.querySelectorAll('[data-question-editor]')).forEach(function (editor) {
+    var items = Array.prototype.slice.call(editor.querySelectorAll('[data-question-item]'));
+    var addQuestion = editor.querySelector('[data-question-add]');
+
+    function promptOf(item) { return item.querySelector('input[name$="_prompt"]'); }
+    function textareaOf(item) { return item.querySelector('[data-question-options]'); }
+    function isEmpty(item) {
+      return !promptOf(item).value.trim() && !textareaOf(item).value.trim();
+    }
+
+    function enhanceOptions(item) {
+      var textarea = textareaOf(item);
+      var label = textarea.closest('label');
+      var list = document.createElement('ol');
+      list.className = 'option-list';
+      var foot = document.createElement('div');
+      foot.className = 'option-list__foot';
+      var add = document.createElement('button');
+      add.type = 'button';
+      add.className = 'option-list__add';
+      add.textContent = '+ 添加选项';
+      var count = document.createElement('span');
+      count.className = 'option-list__count';
+      count.setAttribute('aria-live', 'polite');
+      foot.appendChild(add);
+      foot.appendChild(count);
+      // 文本框留在表单里（隐藏）负责提交；读屏用列表
+      textarea.hidden = true;
+      textarea.setAttribute('aria-hidden', 'true');
+      textarea.tabIndex = -1;
+      label.parentNode.insertBefore(list, label.nextSibling);
+      list.parentNode.insertBefore(foot, list.nextSibling);
+      var invalid = textarea.getAttribute('aria-invalid');
+      var describedBy = textarea.getAttribute('aria-describedby');
+
+      function rows() { return Array.prototype.slice.call(list.querySelectorAll('input')); }
+      function sync() {
+        var values = rows().map(function (input) { return input.value.trim(); }).filter(Boolean);
+        textarea.value = values.join('\n');
+        count.textContent = values.length + ' / ' + MAX_OPTIONS;
+        add.disabled = rows().length >= MAX_OPTIONS;
+        var many = rows().length > 2;
+        Array.prototype.slice.call(list.querySelectorAll('.option-row__remove')).forEach(function (button) { button.disabled = !many; });
+      }
+      function renumber() {
+        rows().forEach(function (input, index) { input.setAttribute('aria-label', '选项 ' + (index + 1)); });
+      }
+      function makeRow(value, after) {
+        var row = document.createElement('li');
+        row.className = 'option-row';
+        var marker = document.createElement('span');
+        marker.className = 'option-row__marker';
+        marker.setAttribute('aria-hidden', 'true');
+        var input = document.createElement('input');
+        input.type = 'text';
+        input.maxLength = MAX_OPTION_LENGTH;
+        input.value = value || '';
+        input.placeholder = '选项';
+        input.autocomplete = 'off';
+        if (invalid) input.setAttribute('aria-invalid', invalid);
+        if (describedBy) input.setAttribute('aria-describedby', describedBy);
+        var remove = document.createElement('button');
+        remove.type = 'button';
+        remove.className = 'option-row__remove';
+        remove.textContent = '×';
+        remove.setAttribute('aria-label', '删除这个选项');
+        row.appendChild(marker);
+        row.appendChild(input);
+        row.appendChild(remove);
+        if (after && after.nextSibling) list.insertBefore(row, after.nextSibling);
+        else if (after) list.appendChild(row);
+        else list.appendChild(row);
+        return input;
+      }
+      function setValues(values) {
+        list.innerHTML = '';
+        values.slice(0, MAX_OPTIONS).forEach(function (value) { makeRow(value); });
+        while (rows().length < 2) makeRow('');
+        renumber();
+        sync();
+      }
+
+      list.addEventListener('input', sync);
+      list.addEventListener('keydown', function (event) {
+        var input = event.target;
+        if (!(input instanceof HTMLInputElement)) return;
+        var row = input.closest('.option-row');
+        if (event.key === 'Enter') {
+          event.preventDefault();
+          if (event.isComposing) return;
+          var next = row.nextElementSibling;
+          if (next) { next.querySelector('input').focus(); return; }
+          if (rows().length >= MAX_OPTIONS) return;
+          makeRow('', row).focus();
+          renumber();
+          sync();
+        } else if (event.key === 'Backspace' && !input.value && rows().length > 2) {
+          event.preventDefault();
+          var previous = row.previousElementSibling || row.nextElementSibling;
+          row.remove();
+          if (previous) previous.querySelector('input').focus();
+          renumber();
+          sync();
+        }
+      });
+      list.addEventListener('paste', function (event) {
+        var input = event.target;
+        if (!(input instanceof HTMLInputElement) || !event.clipboardData) return;
+        var parts = splitOptions(event.clipboardData.getData('text'));
+        if (parts.length < 2) return;
+        event.preventDefault();
+        var row = input.closest('.option-row');
+        var current = input.value.trim();
+        input.value = current ? current : parts.shift();
+        var last = row;
+        parts.forEach(function (part) {
+          if (rows().length >= MAX_OPTIONS) return;
+          last = makeRow(part, last).closest('.option-row');
+        });
+        renumber();
+        sync();
+        last.querySelector('input').focus();
+      });
+      list.addEventListener('click', function (event) {
+        var target = event.target;
+        var button = target instanceof Element ? target.closest('.option-row__remove') : null;
+        if (!button || button.disabled) return;
+        var row = button.closest('.option-row');
+        var focus = row.nextElementSibling || row.previousElementSibling;
+        row.remove();
+        if (focus) focus.querySelector('input').focus();
+        renumber();
+        sync();
+      });
+      add.addEventListener('click', function () {
+        if (rows().length >= MAX_OPTIONS) return;
+        var empty = rows().filter(function (input) { return !input.value.trim(); })[0];
+        (empty || makeRow('')).focus();
+        renumber();
+        sync();
+      });
+
+      setValues(splitOptions(textarea.value));
+      item.nmSetOptions = setValues;
+    }
+
+    function refreshAdd() {
+      if (!addQuestion) return;
+      addQuestion.hidden = !items.some(function (item) { return item.hidden; });
+    }
+
+    function clearItem(item) {
+      promptOf(item).value = '';
+      item.nmSetOptions([]);
+      var single = item.querySelector('input[name$="_kind"][value="single"]');
+      if (single) single.checked = true;
+    }
+
+    items.forEach(function (item) {
+      enhanceOptions(item);
+      var remove = item.querySelector('[data-question-remove]');
+      if (remove) {
+        remove.hidden = false;
+        remove.addEventListener('click', function () {
+          clearItem(item);
+          // 至少留一道题可填
+          var visible = items.filter(function (candidate) { return !candidate.hidden; });
+          if (visible.length > 1) {
+            item.hidden = true;
+            var focusTarget = visible.filter(function (candidate) { return candidate !== item; })[0];
+            if (focusTarget) promptOf(focusTarget).focus();
+          } else {
+            promptOf(item).focus();
+          }
+          refreshAdd();
+        });
+      }
+    });
+
+    // 只显示有内容的题（含有错误提示的）和第一道空题
+    var shownEmpty = false;
+    items.forEach(function (item) {
+      if (!isEmpty(item) || item.classList.contains('field--invalid')) return;
+      if (shownEmpty) item.hidden = true;
+      shownEmpty = true;
+    });
+    if (addQuestion) {
+      addQuestion.addEventListener('click', function () {
+        var next = items.filter(function (item) { return item.hidden; })[0];
+        if (!next) return;
+        next.hidden = false;
+        promptOf(next).focus();
+        refreshAdd();
+      });
+    }
+    refreshAdd();
+
     var templates = editor.querySelector('[data-question-templates]');
     if (!templates) return;
     templates.hidden = false;
@@ -222,18 +433,16 @@ document.querySelectorAll('form[data-demo-login]').forEach(function (form) {
       } catch (error) {
         return;
       }
-      var items = Array.prototype.slice.call(editor.querySelectorAll('[data-question-item]'));
-      var item = items.filter(function (candidate) {
-        var prompt = candidate.querySelector('input[name$="_prompt"]');
-        var options = candidate.querySelector('textarea[name$="_options"]');
-        return prompt && options && !prompt.value.trim() && !options.value.trim();
-      })[0];
+      var item = items.filter(isEmpty)[0];
       if (!item) return;
-      item.querySelector('input[name$="_prompt"]').value = template.prompt || '';
-      item.querySelector('textarea[name$="_options"]').value = template.options || '';
-      var kind = item.querySelector('input[name$="_kind"][value="' + (template.kind === 'multi' ? 'multi' : 'single') + '"]');
+      item.hidden = false;
+      promptOf(item).value = template.prompt || '';
+      item.nmSetOptions(splitOptions(template.options || ''));
+      var kindValue = template.kind === 'multi' || template.kind === 'text' ? template.kind : 'single';
+      var kind = item.querySelector('input[name$="_kind"][value="' + kindValue + '"]');
       if (kind) kind.checked = true;
-      item.querySelector('input[name$="_prompt"]').focus();
+      promptOf(item).focus();
+      refreshAdd();
     });
   });
 })();

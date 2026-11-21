@@ -25,7 +25,7 @@
 | `NOWME_SIGNUP_CREDITS` | `0` | 注册赠送点数，0–10000 |
 | `NOWME_PLATFORM_FREE_DAILY_CALLS` | `3000` | 平台 AI 免费调用的全站每日上限，1–1 000 000 |
 | `NOWME_SKILL_MARKET_LABEL` / `NOWME_SKILL_MARKET_COMMAND` | 空 | 4.5，同时设置或都不设 |
-| `NOWME_DEMO_URL` | 空 | 演示环境入口，https 绝对地址、不带账号口令，非法值启动报错。设置后正式站顶栏对访客和登录用户都显示“Demo”外链（`rel="noopener"`，窄屏登录用户收进账号菜单）；演示模式自身与未设置时不显示。只在正式环境设置，演示环境不设 |
+| `NOWME_DEMO_URL` | 空 | 演示环境入口，https 绝对地址、不带账号口令（非生产环境另允许 `http://localhost` / `http://127.0.0.1`，本地预览指向本地 `pnpm demo`），非法值启动报错。设置后正式站顶栏对访客和登录用户都显示“Demo”外链（`rel="noopener"`，窄屏登录用户收进账号菜单）；演示模式自身与未设置时不显示。只在正式环境设置，演示环境不设 |
 
 密钥类变量（`NOWME_SMTP_URL`、`NOWME_AI_ENCRYPTION_KEY`、`NOWME_PLATFORM_API_KEY`）**不进配置对象**：主站入口只把它们作为 `secretEnv` 交给需要的模块；配置错误信息与日志里不出现它们的值。
 

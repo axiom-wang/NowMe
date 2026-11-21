@@ -51,7 +51,7 @@ export const RemovedFromWallView: FC<{ wall: Wall }> = ({ wall }) => (
       <p>组织者把你移出了「{wall.name}」，所以这个邀请链接现在对你不管用。如果觉得是误会，可以直接找组织者说一声。</p>
       <p>
         <a class="btn btn--primary" href="/">
-          回到“我的”
+          回到首页
         </a>
       </p>
     </section>

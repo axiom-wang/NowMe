@@ -735,7 +735,7 @@ export const WorkspaceView: FC<{ model: WorkspaceModel; ownerName: string }> = (
     <div class="container container--wide">
       <section class="ws-hero">
         <nav class="crumbs" aria-label="当前位置">
-          <a href="/">我的</a>
+          <a href="/">首页</a>
           <span aria-hidden="true">/</span>
           <a class="crumbs__wall" href={`/w/${model.wall.id}`} title={model.wall.name}>{model.wall.name}</a>
         </nav>

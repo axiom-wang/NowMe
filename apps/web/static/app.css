@@ -499,6 +499,14 @@ strong {
   box-shadow: inset 0 0 0 1.5px var(--shadow-color);
 }
 
+/* 未读角标：脱离文档流，轮询出结果后出现 / 消失都不能改变导航宽度，否则顶栏会跟着抖。 */
+.site-nav .message-badge {
+  position: absolute;
+  top: 1px;
+  inset-inline-end: -8px;
+  pointer-events: none;
+}
+
 .message-badge {
   display: inline-flex;
   align-items: center;
@@ -2751,17 +2759,24 @@ a:hover { text-decoration-color: var(--accent-text); }
   --muted: var(--object-muted);
   color: var(--object-ink);
 }
-.site-header__inner { grid-template-columns: auto 1fr auto auto; }
+/* 导航左右两侧各占等宽的 1fr：字标的字体加载完换宽度时，导航不跟着挪。 */
+.site-header__inner { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr) auto auto; }
 .site-nav { grid-column: 2; grid-row: 1; justify-self: center; }
-.account-menu, .site-header__login, .site-header__actions { grid-column: 4; grid-row: 1; }
+.account-menu, .site-header__login, .site-header__actions { grid-column: 5; grid-row: 1; }
 
 .theme-picker {
   position: relative;
-  grid-column: 3;
+  grid-column: 4;
   grid-row: 1;
 }
 
-.theme-picker:last-child { grid-column: 4; }
+.theme-picker:last-child { grid-column: 5; }
+
+/* 外观按钮在脚本里才解除 hidden：先占住位置（只是不可见），否则它出现的那一刻会把居中的导航推开。 */
+.theme-picker[hidden] {
+  display: block !important;
+  visibility: hidden;
+}
 
 .theme-picker > .theme-picker__trigger {
   display: grid;

@@ -6,7 +6,8 @@
  */
 import type { Database } from './database.js';
 
-export type QuestionKind = 'single' | 'multi';
+/** 单选、多选、填空（填空题没有选项，回答是成员写的一行文字）。 */
+export type QuestionKind = 'single' | 'multi' | 'text';
 
 export interface WallQuestion {
   id: string;
@@ -22,7 +23,7 @@ export interface WallQuestion {
 export interface StoredAnswer {
   questionId: string;
   userId: string;
-  /** 存的选项文字（可能包含组织者后来删掉的选项，读取时过滤）。 */
+  /** 存的选项文字（可能包含组织者后来删掉的选项，读取时过滤）；填空题是只有一项的数组。 */
   choices: string[];
   updatedAt: string;
 }
@@ -54,7 +55,7 @@ function toQuestion(row: Record<string, unknown>): WallQuestion {
     wallId: row.wall_id as string,
     position: Number(row.position),
     prompt: row.prompt as string,
-    kind: row.kind === 'multi' ? 'multi' : 'single',
+    kind: row.kind === 'multi' || row.kind === 'text' ? row.kind : 'single',
     options: stringArray(row.options_json as string),
     createdAt: row.created_at as string,
     updatedAt: row.updated_at as string,

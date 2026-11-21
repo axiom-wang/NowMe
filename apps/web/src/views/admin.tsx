@@ -62,7 +62,7 @@ export interface AdminModel {
   /** 待处理举报（contracts 15、S12）：只有页面、原因与次数。 */
   reports: OrganizerReport[];
   /** 必答题（contracts 19.1）：统计范围是全部有效成员。 */
-  questions: { stats: QuestionStats[]; values: QuestionFormValue[]; errors?: Record<number, string> };
+  questions: { stats: QuestionStats[]; textAnswers: Map<string, string[]>; values: QuestionFormValue[]; errors?: Record<number, string> };
   /** 成员关系 ID → 这个人的回答（成员列表里展示）。 */
   memberAnswers: Map<string, CardAnswer[]>;
   /** 完成度与一键提醒（contracts 19.2）。 */
@@ -171,7 +171,7 @@ export const AdminView: FC<AdminViewProps> = ({ model, csrf, notice, closeError,
 
           <OrganizerReports wallId={wall.id} csrf={csrf} reports={model.reports} />
 
-          <AdminQuestions wall={wall} stats={model.questions.stats} total={model.progress.total} values={model.questions.values} errors={model.questions.errors} csrf={csrf} />
+          <AdminQuestions wall={wall} stats={model.questions.stats} textAnswers={model.questions.textAnswers} total={model.progress.total} values={model.questions.values} errors={model.questions.errors} csrf={csrf} />
 
           <PortraitPanel wall={wall} state={model.portrait.state} shareText={model.portrait.shareText} organizer={true} csrf={csrf} error={model.portrait.error} />
 

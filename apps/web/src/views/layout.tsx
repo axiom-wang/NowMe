@@ -132,7 +132,7 @@ export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; demoUrl?
       <Brand />
       {auth?.user.nickname ? (
         <nav class="site-nav" aria-label="主导航">
-          <a class={`site-nav__link${active === 'home' ? ' is-active' : ''}`} href="/" aria-current={active === 'home' ? 'page' : undefined}>我的</a>
+          <a class={`site-nav__link${active === 'home' ? ' is-active' : ''}`} href="/" aria-current={active === 'home' ? 'page' : undefined}>墙</a>
           <a class={`site-nav__link${active === 'messages' ? ' is-active' : ''}`} href="/messages" aria-current={active === 'messages' ? 'page' : undefined}><span>消息</span><span class="message-badge" data-message-unread hidden aria-label="未读消息"></span></a>
           <a class={`site-nav__link${active === 'data' ? ' is-active' : ''}`} href="/account/data" aria-current={active === 'data' ? 'page' : undefined}>我的资料</a>
           {demoHref ? <a class="site-nav__link site-nav__demo" href={demoHref} rel="noopener">Demo</a> : null}
@@ -182,6 +182,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
           <meta property="og:image:height" content="630" />
           <link rel="icon" type="image/svg+xml" href={assetUrl('favicon.svg')} />
           <title>{title === 'NOWMe' ? title : `${title} · NOWMe`}</title>
+          <link rel="preload" href={assetUrl('font-grotesk-700.woff2')} as="font" type="font/woff2" crossorigin="" />
           <script src={assetUrl('theme.js')}></script>
           {bodyClass === 'page--wall' ? <script src={assetUrl('wall-boot.js')}></script> : null}
           {stylesheetsFor(path ?? '', bodyClass, styles).map((name) => (

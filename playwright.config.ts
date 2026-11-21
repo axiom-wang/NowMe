@@ -14,6 +14,8 @@ const env = {
   NOWME_DATA_DIR: '.data/e2e',
   NOWME_TICKET_SECRET: 'e2e-ticket-secret-not-for-production-use',
   NODE_ENV: 'test',
+  // 不让本机 .env 里的演示入口地址影响 e2e（它必须是 https，写成 http 会让服务起不来）
+  NOWME_DEMO_URL: '',
   // 平台托管路线用确定性的假模型客户端（contracts 9 / hosted-route D8）；工具循环、校验、渲染都是真实的
   NOWME_MODEL_FAKE: '1',
   NOWME_AI_ENCRYPTION_KEY: 'ab'.repeat(32),

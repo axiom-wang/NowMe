@@ -66,7 +66,8 @@ describe('主站基础', () => {
     const response = await get(t, '/', { cookie: session.cookie });
     expect(response.status).toBe(200);
     const html = await response.text();
-    expect(html).toContain('你好，阿柚');
+    expect(html).not.toContain('你好，阿柚');
+    expect(html).toContain('我加入的墙');
     expect(html).toContain('周末黑客松');
     expect(html).toContain(`href="/w/${wall.id}/me"`);
     expect(html).toContain('未发布');

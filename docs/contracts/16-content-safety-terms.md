@@ -12,6 +12,7 @@
 | `edit` | 修改要求 | `POST /me/edit` | 400，提示页，不建任务 |
 | `message` | 站内消息（群聊与私聊） | `POST /messages/:id/send`（会话可见且没被限流才检查） | 400（JSON 或页面），消息不入库 |
 | `page` | 发布时版本的渲染文字（`revisions.rendered_text`）加确认表单里的名字、一行介绍、接话点、开场白 | `POST /me/publish` | 400，提示页，不发布 |
+| `answer` | 必答题里填空题的回答（contracts 19.1） | `POST /w/:wallId/questions` | 422，回到回答页并保留填写，不保存 |
 
 规则按顺序：
 

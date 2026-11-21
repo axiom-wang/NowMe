@@ -62,6 +62,7 @@ export function blockedMessage(kind: ContentKind, rule: string): string {
     edit: '这条修改要求里',
     message: '这条消息里',
     page: '页面里的文字',
+    answer: '这条回答里',
   };
   const next: Record<ContentKind, string> = {
     wall: '换个说法再试试吧。',
@@ -70,6 +71,7 @@ export function blockedMessage(kind: ContentKind, rule: string): string {
     edit: '换个说法再试试吧。',
     message: '换个说法再发一次吧。',
     page: '请回到修改页调整后再发布。',
+    answer: '换个说法再试试吧。',
   };
   return `${where[kind]}有我们没法放行的内容，${next[kind]}（提示编号 ${rule}；如果觉得是误判，改写后再提交即可。）`;
 }

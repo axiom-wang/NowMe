@@ -91,7 +91,7 @@ test('顶栏没有未读徽标空位，有新消息时才显示未读数', async
   } finally { await context.close(); }
 });
 
-test('消息页：筛选与轮询保持同步，发起聊天入口和窄屏布局可用', async ({ browser }, testInfo) => {
+test('消息页：筛选与轮询保持同步，双栏与窄屏布局可用', async ({ browser }, testInfo) => {
   const aContext = await browser.newContext();
   const bContext = await browser.newContext();
   try {
@@ -139,10 +139,10 @@ test('消息页：筛选与轮询保持同步，发起聊天入口和窄屏布�
     await b.page.getByRole('button', { name: '最近的聊天', exact: true }).click();
     await expect(b.page.locator('.conversation-item:visible')).toHaveCount(2);
 
-    await b.page.getByText('发起聊天', { exact: true }).click();
-    await expect(b.page.locator('.start-chat__menu')).toBeVisible();
-    await b.page.locator('.start-chat summary').press('Escape');
-    await expect(b.page.locator('.start-chat__menu')).toBeHidden();
+    // 没有“发起聊天”入口，左栏也没有“消息”标题文字（页面标题只给读屏器）
+    await expect(b.page.getByText('发起聊天')).toHaveCount(0);
+    await expect(b.page.getByRole('heading', { level: 1, name: '消息' })).toHaveClass(/visually-hidden/);
+    await expect(b.page.locator('.messages-sidebar').getByText('消息', { exact: true })).toHaveCount(1); // 只有那个读屏用的标题
     for (const width of [1440, 562, 375]) {
       await b.page.setViewportSize({ width, height: 941 });
       expect(await b.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -157,9 +157,8 @@ test('消息页：筛选与轮询保持同步，发起聊天入口和窄屏布�
       }
       await b.page.screenshot({ path: testInfo.outputPath(`inbox-${width}.png`), fullPage: true });
     }
-    await b.page.getByText('发起聊天', { exact: true }).click();
-    await b.page.locator('.start-chat__menu a').click();
-    await expect(b.page).toHaveURL(new RegExp(groupPath + '$'));
+    await b.page.locator('.conversation-item[data-kind="group"] a').click();
+    await expect(b.page).toHaveURL(new RegExp(groupPath + '(#.*)?$'));
   } finally { await Promise.all([aContext.close(), bContext.close()]); }
 });
 

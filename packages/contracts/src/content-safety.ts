@@ -5,7 +5,7 @@
 import { readFileSync } from 'node:fs';
 
 /** 检查点：用户写给平台或别人看的文字出现在哪里。 */
-export const CONTENT_KINDS = ['wall', 'nickname', 'interview', 'edit', 'message', 'page'] as const;
+export const CONTENT_KINDS = ['wall', 'nickname', 'interview', 'edit', 'message', 'page', 'answer'] as const;
 export type ContentKind = (typeof CONTENT_KINDS)[number];
 
 /** 外部审核接口失败（超时、非 2xx、返回格式不对）时：放行并记日志，或拦截。 */
