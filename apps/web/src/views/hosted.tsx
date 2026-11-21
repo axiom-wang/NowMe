@@ -752,7 +752,6 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
   <div class="profile-page">
     <header class="profile-intro">
       <h1>我的资料</h1>
-      <p>在 NOWMe 上采访时保存的长期画像与各面墙的采访资料都在这里。<br />只有你自己能看到；组织者和其他成员都看不到。</p>
     </header>
     {notice ? <Notice tone="success">{notice}</Notice> : null}
     <section class="card profile-card profile-identity" aria-label="个人资料">
@@ -814,7 +813,6 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
     <BlockedList csrf={csrf} blocked={blocked} />
     <section class="card profile-card" id="notifications" aria-labelledby="notifications-heading">
       <h2 id="notifications-heading">提醒邮件</h2>
-      <p class="muted">提醒都发到你的登录邮箱，只有一句话和链接，不含页面内容（组织者看不到你的邮箱）。</p>
       <form method="post" action="/account/notifications" class="stack">
         <CsrfField token={csrf} />
         <input type="hidden" name="jobEmail" value="0" />

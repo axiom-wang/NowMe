@@ -53,7 +53,7 @@ export const MessagesView: FC<{
   const emptyCopy = walls.length > 0 ? '去全员群打个招呼，或者在别人的页面点“想聊这个”，聊天就开始了。' : '加入一面墙之后，就能和墙上的人聊天了。';
   return (
   <div class="container messages-page" data-messages-page>
-    <header class="messages-heading"><p class="eyebrow">和同一面墙上的人聊天</p><h1>消息</h1><p class="muted">私信和全员群都在这里，只有墙上的成员能看到和参与。</p></header>
+    <header class="messages-heading"><p class="eyebrow">和同一面墙上的人聊天</p><h1>消息</h1></header>
     <div class="messages-toolbar">
       <div class="inbox-filters" role="group" aria-label="筛选会话" data-inbox-filters hidden>
         <button type="button" class="inbox-filter is-active" aria-pressed="true" data-inbox-filter="all">最近的聊天</button>
