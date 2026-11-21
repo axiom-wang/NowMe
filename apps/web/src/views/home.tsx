@@ -101,7 +101,6 @@ export const HomeView: FC<{ nickname: string; items: HomeItem[]; notice: HomeNot
     <div class="home-dashboard">
       <section class="home-overview" aria-labelledby="home-heading">
         <div class="home-welcome">
-          <p class="eyebrow">我的软木板</p>
           <h1 id="home-heading" class="home-welcome__title">你好，{nickname}！</h1>
           <p class="home-welcome__lead">在 NOWMe，为自己做一页，挂在不同的墙上，和同好相遇。</p>
         </div>
