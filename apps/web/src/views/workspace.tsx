@@ -1,5 +1,5 @@
 import { PROFILE_ENRICHMENT_QUESTIONS } from '@nowme/contracts';
-import { DEMO_MODEL_READY, DEMO_MODEL_MISSING, demoModelError } from '../demo-access.js';
+import { DEMO_MODEL_MISSING, demoModelError } from '../demo-access.js';
 /**
  * 我的页面（创作工作区，`GET /w/:wallId/me`）。按主人现在所处的阶段只突出一件事（contracts 18.1，阶段见
  * services/workspace-stage.ts）：还没开始 → 开始采访；采访中 → 继续；资料待确认 → 确认资料；资料已确认 → 生成；
@@ -295,7 +295,7 @@ const AiLine: FC<{ model: WorkspaceModel }> = ({ model }) => {
   const hosted = model.hosted;
   if (!hosted) return null;
   const { overview } = hosted;
-  if (hosted.demo) return <p class="muted next-step__ai">{overview.modelReady ? DEMO_MODEL_READY : DEMO_MODEL_MISSING}</p>;
+  if (hosted.demo) return overview.modelReady ? null : <p class="muted next-step__ai">{DEMO_MODEL_MISSING}</p>;
   if (hosted.route === 'platform' || hosted.route === 'credits') {
     return (
       <p class="muted next-step__ai">

@@ -52,7 +52,7 @@ test('黑客松评审：两个入口、浏览、真实采访生成修改、本�
   await expect(page).toHaveURL(/\/w\/wal_.*\/me$/);
   const workspace = new URL(page.url()).pathname;
   const wall = workspace.replace(/\/me$/, '');
-  await expect(page.getByText('演示模型已配置，无需填写 API Key。')).toBeVisible();
+  await expect(page.getByText('演示模型已配置，无需填写 API Key。', { exact: false })).toHaveCount(0);
   const firstSession = (await page.context().cookies()).find((cookie) => cookie.name === cookieName)?.value;
   await page.goto(wall);
   expect(await page.locator('.wall-card').count()).toBeGreaterThanOrEqual(5);
