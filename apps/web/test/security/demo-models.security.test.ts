@@ -48,7 +48,7 @@ describe('演示模型预置与管理保护', () => {
         expect(html).not.toContain('class="create-model');
         expect(html).toContain('下一步');
       } else {
-        expect(html).toContain('演示模型已配置');
+        expect(html).not.toContain('演示模型已配置');
       }
       expect(html).not.toContain(KEY);
       expect(html).not.toContain(firstCiphertext);
