@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>谷雨 · 节气日历 · 山野轻徒步</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+:root{--gu-paper:#f5eedc;--gu-card:#fbf7ea;--gu-ink:#2b2118;--gu-red:#b5322a;--gu-muted:#7a6a55;--gu-line:#b9a883;--nm-font-body:var(--nm-font-noto-serif-sc);--nm-font-display:var(--nm-font-noto-serif-sc)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--gu-paper);color:var(--gu-ink)}
+body{font:400 15px/1.85 var(--nm-font-body)}
+h1,h2,p{margin:0}
+h1,h2{font-weight:900}
+main{max-width:980px;margin:0 auto;padding:18px 14px 26px}
+.gu-frame{border:2px solid var(--gu-ink);padding:4px}
+.gu-inner{border:1px solid var(--gu-ink);padding:0 0 4px}
+.gu-bar{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.14em;color:var(--gu-muted);padding:8px 12px;border-bottom:1px solid var(--gu-line)}
+.gu-cover{display:grid;grid-template-columns:auto 1fr;gap:14px;padding:18px 14px 20px;border-bottom:1px solid var(--gu-ink)}
+.gu-term{writing-mode:vertical-rl;font-size:58px;line-height:1.1;font-weight:900;letter-spacing:.12em;padding-right:4px;border-right:1px solid var(--gu-line);padding-right:12px}
+.gu-cover-text h1{font-size:30px;line-height:1.3;letter-spacing:.04em}
+.gu-role{font-size:13px;color:var(--gu-muted);margin-top:6px}
+.gu-tag{font-size:16px;margin-top:12px;line-height:1.7}
+.seal{display:inline-flex;align-items:center;justify-content:center;width:44px;height:44px;margin-top:12px;background:var(--gu-red);color:#fbf1e1;font-size:13px;font-weight:900;border-radius:3px;transform:rotate(-4deg);box-shadow:inset 0 0 0 2px var(--gu-red),inset 0 0 0 3px #fbf1e1}
+.yi-ji{display:grid;grid-template-columns:1fr 1fr;border-bottom:1px solid var(--gu-ink)}
+.yi-ji>div{padding:14px 14px 16px}
+.yi-ji>div+div{border-left:1px solid var(--gu-ink)}
+.yi-mark{font-size:30px;font-weight:900;line-height:1.1}
+.yi-ji .yi .yi-mark{color:var(--gu-red)}
+.yi-ji p:not(.yi-mark){margin-top:8px;font-size:15px;line-height:1.8}
+.gu-block{padding:18px 14px 20px;border-bottom:1px solid var(--gu-line)}
+.gu-block:last-child{border-bottom:0}
+.gu-kicker{font-size:12px;color:var(--gu-red);letter-spacing:.12em;font-weight:400}
+.gu-block h2{font-size:23px;line-height:1.4;margin:8px 0 10px}
+.gu-block p{font-size:15px;color:var(--gu-ink)}
+.gu-list{margin:12px 0 0;padding:0;list-style:none;display:grid;gap:6px;font-size:14px;color:var(--gu-muted)}
+.gu-list li::before{content:"· ";color:var(--gu-red)}
+.gu-note{margin-top:12px;padding:10px 12px;background:var(--gu-card);border:1px dashed var(--gu-line);font-size:14px}
+.gu-diary{position:relative;background:var(--gu-card)}
+.gu-diary .gu-date{font-size:12px;color:var(--gu-muted);letter-spacing:.06em}
+.gu-diary blockquote{margin:10px 0 0;padding:0 0 0 12px;border-left:3px solid var(--gu-red);font-size:15px;line-height:1.9}
+.gu-foot{padding:14px 14px 18px;font-size:12.5px;line-height:1.8;color:var(--gu-muted);text-align:center}
+.gu-foot strong{font-weight:900;color:var(--gu-ink)}
+@media (min-width:700px){
+  main{padding:40px 40px 44px}
+  .gu-bar{font-size:12px;padding:10px 22px}
+  .gu-cover{grid-template-columns:auto 1fr auto;gap:30px;padding:34px 30px 36px;align-items:center}
+  .gu-term{font-size:120px;padding-right:22px}
+  .gu-cover-text h1{font-size:46px}
+  .gu-tag{font-size:19px;max-width:20em}
+  .gu-cover-aside{text-align:center}
+  .yi-ji>div{padding:22px 28px 26px}
+  .yi-mark{font-size:44px}
+  .yi-ji p:not(.yi-mark){font-size:17px}
+  .gu-grid{display:grid;grid-template-columns:1fr 1fr}
+  .gu-grid>.gu-block:nth-child(odd){border-right:1px solid var(--gu-line)}
+  .gu-block{padding:28px 30px 30px}
+  .gu-block h2{font-size:30px}
+  .gu-block p{font-size:16px}
+  .gu-diary{grid-column:1/-1;display:grid;grid-template-columns:1fr 1.2fr;gap:0 34px;border-right:0}
+  .gu-diary>*{grid-column:auto}
+  .gu-foot{font-size:14px;padding:20px 30px 24px;display:flex;justify-content:space-between;text-align:left;gap:20px}
+}
+</style>
+</head>
+<body>
+<main>
+<div class="gu-frame"><div class="gu-inner">
+  <div class="gu-bar"><span>山野轻徒步 · 节气日历</span><span>按节气出门</span></div>
+
+  <header class="gu-cover" data-nm-id="jieqi-cover">
+    <p class="gu-term" aria-hidden="true">谷雨</p>
+    <div class="gu-cover-text">
+      <h1>谷雨</h1>
+      <p class="gu-role">中文系大三 · 按节气走路的人</p>
+      <p class="gu-tag">把春天最后一场雨，走成一条慢路。</p>
+      <span class="seal">节气<br>已走</span>
+    </div>
+  </header>
+
+  <section class="yi-ji" data-nm-id="yi-ji" aria-label="宜与忌">
+    <div class="yi"><p class="yi-mark">宜</p><p>慢走，停下来看一朵花。</p></div>
+    <div class="ji"><p class="yi-mark">忌</p><p>赶路，催着下一站。</p></div>
+  </section>
+
+  <div class="gu-grid">
+    <section class="gu-block" data-nm-id="flower-by-road">
+      <p class="gu-kicker">宜 · 路边的花</p>
+      <h2>这个节气路边会开什么花</h2>
+      <p>谷雨前后，山脚的草边常有蔷薇和野豌豆，走得慢才看得见。我会在本子上记下花名、颜色和它开在哪一段路。</p>
+      <ul class="gu-list"><li>可以来问我，怎么认节气里的花</li><li>带一本小册子，边走边填</li></ul>
+    </section>
+
+    <section class="gu-block" data-nm-id="once-per-jieqi">
+      <p class="gu-kicker">忌 · 赶路</p>
+      <h2>想试一次“一个节气走一次”</h2>
+      <p>一年二十四个节气，每个走一条路。不追求远，只求这一次和上一次不一样。</p>
+      <p class="gu-note">我也想试，先从这一个节气开始。</p>
+    </section>
+
+    <section class="gu-block gu-diary" data-nm-id="walk-diary">
+      <div>
+        <p class="gu-kicker">谷雨 · 行走日记</p>
+        <h2>沉迷写行走日记</h2>
+      </div>
+      <div>
+        <p class="gu-date">谷雨前一日 · 晴转阴，山风微凉</p>
+        <blockquote>走到亭子下面，雨丝刚起。先不急着赶路，把鞋上的泥擦干净，抄下路边那几个字的读音。</blockquote>
+      </div>
+    </section>
+
+    <footer class="gu-block gu-foot" data-nm-id="almanac-footer">
+      <span><strong>谷雨</strong> · 山野轻徒步</span>
+      <span>在页面外点「想聊这个」，从这个节气路边的花开始。</span>
+    </footer>
+  </div>
+</div></div>
+</main>
+</body>
+</html>

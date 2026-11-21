@@ -1,0 +1,90 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>石头 · 山野轻徒步</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+:root{--nm-font-body:var(--nm-font-noto-sans-sc);--nm-font-display:var(--nm-font-noto-sans-sc)}
+body{margin:0;background:#1f2427;color:#241f1a;font:16px/1.85 var(--nm-font-body);overflow-x:hidden}
+h1,p,svg{margin:0}
+h1{font-family:var(--nm-font-display);font-weight:700;font-size:58px;line-height:1.1;letter-spacing:.06em}
+.strata{max-width:1000px;margin:0 auto}
+.layer{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:10px;padding:24px 20px 28px 50px;border-bottom:2px solid rgba(0,0,0,.35)}
+.layer::before{content:attr(data-depth);position:absolute;left:12px;top:16px;font-family:var(--nm-font-space-grotesk);font-size:12px;line-height:1;opacity:.85}
+.kicker{font-family:var(--nm-font-space-grotesk);font-size:13px;letter-spacing:.1em}
+.era{font-size:13px;letter-spacing:.08em;opacity:.9}
+.role{font-size:18px}
+.lead{font-size:16px;margin-top:6px}
+.hook{font-size:21px;line-height:1.5;font-weight:700}
+.body{font-size:16px;line-height:1.85}
+.layer-top{padding-top:34px;background:radial-gradient(circle at 18% 30%,rgba(90,60,30,.28) 0 1px,transparent 2px) 0 0/9px 9px,radial-gradient(circle at 70% 70%,rgba(255,255,255,.25) 0 1px,transparent 2px) 0 0/13px 13px,#d9c7a4;color:#241f1a}
+.layer-limestone{background:repeating-linear-gradient(176deg,rgba(120,100,70,.12) 0 2px,transparent 2px 15px),#e6dcc4;color:#241f1a}
+.layer-pebble{background:repeating-linear-gradient(90deg,rgba(60,30,20,.16) 0 3px,transparent 3px 22px),#7a5b44;color:#fbf3e6}
+.layer-shale{background:repeating-linear-gradient(0deg,rgba(255,255,255,.09) 0 1px,transparent 1px 7px),#4b565b;color:#f2efe6}
+.layer-bedrock{background:radial-gradient(rgba(255,255,255,.2) 0 1px,transparent 1.5px) 0 0/7px 7px,#2a3236;color:#d8dcd6}
+.fossil{display:block;width:100%;max-width:300px;height:auto;margin-top:6px}
+.pebbles{display:flex;flex-wrap:wrap;gap:12px;margin-top:6px}
+.pebbles span{width:38px;height:26px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#f7e5c8,#c49a6c 60%,#6f4a30);box-shadow:inset -3px -4px 0 rgba(0,0,0,.18)}
+.pebbles span:nth-child(2){background:radial-gradient(circle at 35% 35%,#e88f72,#b5523b 60%,#6e2c1c)}
+.pebbles span:nth-child(3){background:radial-gradient(circle at 35% 35%,#ffffff,#e4ddd0 60%,#9b9385)}
+.pebbles span:nth-child(4){background:radial-gradient(circle at 35% 35%,#b8c0c2,#7c8688 60%,#434b4d)}
+.sign{font-family:var(--nm-font-space-grotesk);font-size:13px;letter-spacing:.06em}
+.note{font-size:13px;opacity:.85}
+@media (min-width:700px){
+  .layer{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.5fr);column-gap:56px;row-gap:12px;align-items:center;padding:40px 64px 44px 120px}
+  .layer::before{left:24px;top:20px}
+  .layer>*{grid-column:2}
+  .layer>.era,.layer>.kicker{grid-column:1;grid-row:1}
+  .layer>.hook{grid-row:1}
+  .layer>.body{grid-row:2}
+  .layer>.pebbles,.layer>.fossil{grid-row:3}
+  h1{font-size:128px;grid-column:1;grid-row:2}
+  .layer-top{grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding-top:48px}
+  .layer-top>.kicker{grid-column:1;grid-row:1}
+  .layer-top>.role{grid-column:1;grid-row:3}
+  .layer-top>.lead{grid-column:2;grid-row:1 / span 3;align-self:center;font-size:20px}
+  .layer-bedrock>.body{grid-column:1;grid-row:1}
+  .layer-bedrock>.sign{grid-column:1;grid-row:2}
+  .layer-bedrock>.note{grid-column:2;grid-row:1 / span 2}
+  .hook{font-size:26px}
+}
+</style>
+</head>
+<body>
+<main class="strata">
+  <header class="layer layer-top" data-nm-id="surface-soil">
+    <p class="kicker">山野轻徒步 · 地质专业研一</p>
+    <h1>石头</h1>
+    <p class="role">路边一块石头，我能跟你讲很久。</p>
+    <p class="lead">每一层颜色不同，都是很长一段时间留下的。</p>
+  </header>
+  <section class="layer layer-limestone" data-nm-id="roadside-stones" data-depth="2 m">
+    <p class="era">年代：大二纪</p>
+    <p class="hook">可以来问我：路边的石头是怎么来的</p>
+    <p class="body">路边随手一块灰白的石头，里面可能藏着很久以前的海底沙泥。你指给我看哪一块，我大概能猜出它从哪儿来。</p>
+    <svg class="fossil" viewBox="0 0 160 44" role="img" aria-label="石灰岩里的贝壳化石纹样，示意">
+      <g fill="none" stroke="#8a7a5c" stroke-width="1.6"><path d="M14 30C14 16 30 10 40 18C48 24 42 34 30 34C22 34 14 33 14 30Z"/><path d="M62 26C62 14 80 8 92 16C104 24 98 36 84 36C72 36 62 34 62 26Z"/><path d="M116 32C116 20 128 14 138 20C148 26 144 36 132 36Z"/></g>
+      <g fill="#8a7a5c" opacity=".6"><circle cx="30" cy="24" r="2"/><circle cx="84" cy="26" r="2"/><circle cx="132" cy="28" r="1.5"/></g>
+    </svg>
+  </section>
+  <section class="layer layer-pebble" data-nm-id="pebble-collection" data-depth="4 m">
+    <p class="era">年代：研一纪</p>
+    <p class="hook">我在沉迷：捡不同颜色的小石子</p>
+    <p class="body">口袋里常年放着三五块：红的、带白线的、表面像糖霜的。拿在手里转一转，就知道它们在河里滚了多久。</p>
+    <div class="pebbles" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+  </section>
+  <section class="layer layer-shale" data-nm-id="ridge-path" data-depth="6 m">
+    <p class="era">年代：待考</p>
+    <p class="hook">我也想试：一条能看到岩层的山路</p>
+    <p class="body">山路被切开的那一面，一层层颜色不一样，像翻开的书。想找一条不陡、路边有断面能停下来看的路线，边走边讲给你听。</p>
+  </section>
+  <footer class="layer layer-bedrock" data-nm-id="bedrock-line" data-depth="8 m">
+    <p class="body">在页面外点「想聊这个」，从路边一块石头开始。</p>
+    <p class="sign">石头 · 山野轻徒步</p>
+    <p class="note">年代名是玩笑，岩层与图示为示意。</p>
+  </footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "阿杰",
+  "tagline": "不拼海拔，只看剖面线够不够平",
+  "hooks": [
+    {
+      "id": "flat-route-advice",
+      "kind": "ask-me",
+      "text": "怎么挑坡度平缓的路",
+      "opener": "你好！在山野轻徒步墙上看到你会看海拔图挑平路，想问问你是怎么挑坡度平缓的路的？"
+    },
+    {
+      "id": "lake-loop",
+      "kind": "want-to-try",
+      "text": "想试一次全程平路的湖边环线",
+      "opener": "嗨，我也想试试全程平路的湖边环线，你觉得哪一段最适合慢慢走？"
+    },
+    {
+      "id": "elevation-map",
+      "kind": "obsessed",
+      "text": "沉迷看路线的海拔图",
+      "opener": "看到你沉迷看路线的海拔图，你一般是先看剖面还是先看地图？我也想学你的看法。"
+    }
+  ]
+}

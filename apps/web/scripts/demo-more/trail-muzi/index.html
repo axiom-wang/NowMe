@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>木子 · 手绘路线地图 · 山野轻徒步</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+:root{--muzi-paper:#f3ead3;--muzi-ink:#3a3026;--muzi-green:#4d6b47;--muzi-blue:#3f6f8c;--muzi-red:#c0533a;--muzi-muted:#7d6e58;--muzi-rule:#c9b993;--nm-font-body:var(--nm-font-lxgw-wenkai);--nm-font-display:var(--nm-font-space-grotesk)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--muzi-paper);color:var(--muzi-ink)}
+body{font:400 16px/1.9 var(--nm-font-body)}
+h1,h2,p{margin:0;font-weight:400}
+main{position:relative;max-width:1000px;margin:0 auto;padding:22px 22px 30px;overflow:hidden}
+.muzi-route{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none}
+.muzi-route path{fill:none;stroke:var(--muzi-blue);stroke-width:1.6;stroke-dasharray:7 7;stroke-linecap:round;vector-effect:non-scaling-stroke;opacity:.7}
+.muzi-route .p-desk{display:none}
+.muzi-head,.stop,.muzi-legend{position:relative;z-index:1}
+.muzi-kicker{font-size:12px;letter-spacing:.08em;color:var(--muzi-muted)}
+.muzi-head{padding:18px 0 22px;border-bottom:1px solid var(--muzi-rule)}
+.muzi-head h1{font-family:var(--nm-font-display);font-size:58px;line-height:1.05;font-weight:700;letter-spacing:-.02em;margin-top:6px}
+.muzi-tag{font-size:17px;margin-top:10px;color:var(--muzi-green)}
+.muzi-compass{position:absolute;right:0;top:20px;width:64px;height:64px}
+.muzi-head p.muzi-intro{font-size:14px;color:var(--muzi-muted);margin-top:14px;max-width:24em}
+.stop{display:grid;grid-template-columns:72px 1fr;gap:4px 16px;align-items:start;padding:26px 0 24px;margin-left:0}
+.stop-icon{width:72px;height:72px;stroke:var(--muzi-ink);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.stop-no{grid-column:2;font-family:var(--nm-font-display);font-size:12px;letter-spacing:.06em;color:var(--muzi-red);font-weight:500}
+.stop h2{grid-column:2;font-size:24px;line-height:1.45;margin:2px 0 8px;color:var(--muzi-ink)}
+.stop-body{grid-column:2;font-size:15px;line-height:1.85;color:var(--muzi-ink)}
+.stop-note{grid-column:2;margin-top:10px;font-size:13px;color:var(--muzi-muted)}
+.stop-sign{grid-column:2;justify-self:start;margin-top:12px;border:1.5px solid var(--muzi-blue);color:var(--muzi-blue);padding:2px 10px;font-size:13px;border-radius:3px;transform:rotate(-1deg)}
+.stop-hand{grid-column:2;margin-top:10px;font-size:13px;color:var(--muzi-green)}
+.muzi-legend{margin-top:8px;padding:22px 0 26px;border-top:2px dashed var(--muzi-blue)}
+.muzi-legend h2{font-family:var(--nm-font-display);font-size:13px;letter-spacing:.08em;color:var(--muzi-blue);font-weight:500;margin-bottom:12px}
+.muzi-legend ul{margin:0;padding:0;list-style:none;display:grid;gap:8px;font-size:14px}
+.muzi-legend li{display:flex;gap:10px;align-items:center}
+.muzi-legend li i{display:inline-block;width:26px;height:0;border-top:1.6px dashed var(--muzi-blue);flex:none}
+.muzi-legend li i.sq{width:14px;height:14px;border:1.5px solid var(--muzi-ink);border-top-width:1.5px;flex:none}
+.muzi-legend li i.dot{width:10px;height:10px;border-radius:50%;background:var(--muzi-red);border:0;flex:none}
+.muzi-foot{position:relative;z-index:1;margin-top:18px;font-size:13px;line-height:1.8;color:var(--muzi-muted)}
+.stop:nth-of-type(odd){margin-left:0}
+@media (min-width:700px){
+  main{padding:44px 56px 40px}
+  .muzi-route .p-mobile{display:none}
+  .muzi-route .p-desk{display:inline}
+  .muzi-route path{opacity:.45}
+  .muzi-head{display:grid;grid-template-columns:1.1fr .9fr;gap:6px 40px;padding:26px 0 34px;align-items:end}
+  .muzi-head h1{font-size:96px;grid-column:1}
+  .muzi-tag{grid-column:1;margin-top:0;font-size:22px}
+  .muzi-head p.muzi-intro{grid-column:2;grid-row:1/3;align-self:center;font-size:15px}
+  .muzi-compass{top:26px;right:0;width:84px;height:84px}
+  .stop{width:46%;padding:34px 0 30px;grid-template-columns:96px 1fr;gap:6px 22px}
+  .stop-icon{width:96px;height:96px}
+  .stop h2{font-size:30px}
+  .stop:nth-of-type(even){margin-left:50%}
+  .muzi-legend{display:grid;grid-template-columns:1fr 1fr;gap:0 40px;margin-top:20px}
+  .muzi-legend h2{grid-column:1/-1}
+  .muzi-legend ul{grid-column:1/-1;grid-template-columns:repeat(3,1fr)}
+  .muzi-foot{display:flex;justify-content:space-between;gap:20px}
+}
+</style>
+</head>
+<body>
+<main>
+  <svg class="muzi-route" viewBox="0 0 400 1400" preserveAspectRatio="none" aria-hidden="true">
+    <path class="p-mobile" d="M24 0C8 120 2 220 10 340S26 520 8 680S0 900 16 1060S24 1300 10 1400"/>
+    <path class="p-desk" d="M350 0C280 120 70 150 100 300S320 430 270 580S70 720 130 880S330 1030 300 1180S120 1300 150 1400"/>
+  </svg>
+
+  <header class="muzi-head" data-nm-id="trailhead">
+    <p class="muzi-kicker">山野轻徒步 · 手绘路线</p>
+    <h1>木子</h1>
+    <p class="muzi-tag">把走过的路画成地图，路牌上的地名都收着</p>
+    <p class="muzi-intro">建筑系大二，手绘地图爱好者。走一段路，就在纸上描一段；路口、台阶、拐弯都标得清清楚楚。</p>
+    <svg class="muzi-compass" viewBox="0 0 84 84" role="img" aria-label="指北针，指向北方">
+      <circle cx="42" cy="42" r="36" fill="none" stroke="#3a3026" stroke-width="1.4"/>
+      <circle cx="42" cy="42" r="28" fill="none" stroke="#c9b993" stroke-width="1" stroke-dasharray="2 4"/>
+      <path d="M42 10L50 42L42 38L34 42Z" fill="#c0533a"/>
+      <path d="M42 74L50 42L42 46L34 42Z" fill="#3a3026" opacity=".5"/>
+      <text x="42" y="8" text-anchor="middle" font-size="10" font-family="Space Grotesk, sans-serif" fill="#3a3026">N</text>
+    </svg>
+  </header>
+
+  <section class="stop" data-nm-id="old-tree">
+    <svg class="stop-icon" viewBox="0 0 72 72" aria-hidden="true">
+      <circle cx="36" cy="28" r="18"/>
+      <path d="M26 24q4-6 10 0t10 0"/>
+      <path d="M36 46V64M30 64h12"/>
+      <path d="M22 40q6 4 14 0"/>
+    </svg>
+    <p class="stop-no">第一站 · 一棵大树</p>
+    <h2>怎么把走过的路画成地图</h2>
+    <p class="stop-body">我先在草稿纸上标出路口和高低差，再把路牌、台阶、拐弯一个个记下来。比例尺画得太满，就删掉一半，留给路本身。</p>
+    <p class="stop-note">可以来问我，从哪一步开始画最省事。</p>
+  </section>
+
+  <section class="stop" data-nm-id="pavilion">
+    <svg class="stop-icon" viewBox="0 0 72 72" aria-hidden="true">
+      <path d="M8 26Q36 12 64 26"/>
+      <path d="M14 26h44v4H14z"/>
+      <path d="M22 30v26M36 30v26M50 30v26M14 56h44"/>
+      <path d="M12 56v6h48v-6"/>
+    </svg>
+    <p class="stop-no">第二站 · 一座小亭</p>
+    <h2>想试一次边走边画</h2>
+    <p class="stop-body">不停下来，只用几笔把路线描出来，回家再补细节。歪一点、慢一点都没关系，画出来的那条线，就是那天的步子。</p>
+    <p class="stop-sign">边走，边画</p>
+  </section>
+
+  <section class="stop" data-nm-id="small-bridge">
+    <svg class="stop-icon" viewBox="0 0 72 72" aria-hidden="true">
+      <path d="M6 44Q36 22 66 44"/>
+      <path d="M14 44v14M58 44v14M6 58h60"/>
+      <path d="M22 38l6 6M34 33l6 6M46 38l6 6" stroke-width="1.2"/>
+      <rect x="44" y="8" width="14" height="10" rx="1"/>
+      <path d="M51 18v8" />
+    </svg>
+    <p class="stop-no">第三站 · 一座小桥</p>
+    <h2>沉迷收集路牌上的地名</h2>
+    <p class="stop-body">路牌上的地名像一条条小注释。我把它们抄进地图的空白处，写得很小，像给山路配上名字，走的人才认得出它。</p>
+    <p class="stop-hand">已经攒了一小本，还在继续。</p>
+  </section>
+
+  <section class="muzi-legend" data-nm-id="map-legend">
+    <h2>图例 · 这张地图</h2>
+    <ul>
+      <li><i></i>走过的路，虚线</li>
+      <li><i class="dot"></i>停下来拍照的地方</li>
+      <li><i class="sq"></i>还没走过的路口</li>
+    </ul>
+  </section>
+
+  <footer class="muzi-foot">木子 · 山野轻徒步 · 手绘路线<br>在页面外点「想聊这个」，从一条绿道的路牌开始。</footer>
+</main>
+</body>
+</html>

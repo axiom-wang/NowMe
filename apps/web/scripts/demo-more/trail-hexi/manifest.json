@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "medium",
+  "fonts": [
+    { "id": "lxgw-wenkai", "weights": [400] },
+    { "id": "inter", "weights": [400, 700] }
+  ],
+  "extraChars": "",
+  "blocks": ["card-cover", "pose-hamstring", "pose-grass", "breath-count", "card-footer"],
+  "generator": { "agent": "nowme-demo" }
+}

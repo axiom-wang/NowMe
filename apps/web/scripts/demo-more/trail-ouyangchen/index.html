@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>欧阳晨 · 山野轻徒步</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+:root{--nm-font-body:var(--nm-font-noto-serif-sc);--nm-font-display:var(--nm-font-noto-serif-sc)}
+body{margin:0;background:#0b1123;color:#eef0fb;font:16px/1.9 var(--nm-font-body);overflow-x:hidden}
+h1,p,svg{margin:0}
+h1{font-family:var(--nm-font-display);font-weight:700;font-size:44px;line-height:1.25;letter-spacing:.06em}
+.dawn{position:relative;overflow:hidden;display:flex;flex-direction:column;gap:12px;padding:30px 22px 32px}
+.time{font-family:var(--nm-font-instrument-serif);font-size:76px;line-height:.95;letter-spacing:-.01em}
+.kicker{font-size:13px;letter-spacing:.08em;opacity:.9}
+.role{font-size:17px}
+.hook{font-size:20px;line-height:1.5;font-weight:700}
+.body{font-size:16px}
+.dawn-0530{background:#17213f;color:#eef0fb;margin-left:0}
+.dawn-0550{background:#2e3a6b;color:#eef0fb;margin-left:8px}
+.dawn-0610{background:#6d4f7e;color:#fbf1f5;margin-left:16px}
+.dawn-0625{background:#e0826a;color:#1f1410;margin-left:24px}
+.dawn-0640{background:#f6c35b;color:#2a1c08;margin-left:32px;padding-bottom:0}
+.sun{display:block;width:100%;max-width:300px;height:auto;margin-top:8px}
+.closing{font-size:17px}
+.sign{font-size:13px;letter-spacing:.06em}
+@media (min-width:700px){
+  .dawn{display:grid;grid-template-columns:260px minmax(0,1fr);column-gap:48px;align-items:center;padding:40px 56px 44px}
+  .time{grid-column:1;grid-row:1 / span 4;font-size:132px}
+  .dawn>*:not(.time){grid-column:2}
+  h1{font-size:76px}
+  .hook{font-size:24px}
+  .dawn-0550{margin-left:70px}
+  .dawn-0610{margin-left:140px}
+  .dawn-0625{margin-left:210px}
+  .dawn-0640{margin-left:280px}
+  .dawn-0640 .sun{max-width:340px}
+}
+</style>
+</head>
+<body>
+<main>
+  <header class="dawn dawn-0530" data-nm-id="dawn-0530">
+    <p class="time">05:30</p>
+    <p class="kicker">山野轻徒步 · 天还没亮</p>
+    <h1>欧阳晨</h1>
+    <p class="role">早起派，喜欢看日出，每次出门都比太阳早到一点。</p>
+  </header>
+  <section class="dawn dawn-0550" data-nm-id="sunrise-route">
+    <p class="time">05:50</p>
+    <p class="hook">可以来问我：哪条路线适合看日出</p>
+    <p class="body">离城区一小时以内、路边有台阶和小亭子的山脚路线我都走过。哪条适合看日出、哪里风大、哪段要早点上，我都记在本子里。</p>
+  </section>
+  <section class="dawn dawn-0610" data-nm-id="sky-colors">
+    <p class="time">06:10</p>
+    <p class="hook">我在沉迷：记录天空的颜色</p>
+    <p class="body">小本子上记着：群青、藕荷、橘粉、奶油黄。每一次都是一种新的天空，颜色的名字是我自己起的。</p>
+  </section>
+  <section class="dawn dawn-0625" data-nm-id="thermos-walk">
+    <p class="time">06:25</p>
+    <p class="hook">我也想试：带热豆浆的日出慢走</p>
+    <p class="body">想在天亮前买一杯热豆浆，边走边喝，看着天一点点亮起来。不赶时间，走到哪儿算哪儿。</p>
+  </section>
+  <footer class="dawn dawn-0640" data-nm-id="gold-finish">
+    <p class="time">06:40</p>
+    <p class="closing">太阳出来了，颜色也就散了。在页面外点「想聊这个」，从一次慢慢的日出开始。</p>
+    <p class="sign">欧阳晨 · 山野轻徒步</p>
+    <svg class="sun" viewBox="0 0 300 80" role="img" aria-label="地平线上刚露出一半的太阳，示意">
+      <circle cx="150" cy="80" r="62" fill="#fff0bd"/>
+      <path d="M0 80H300" stroke="#2a1c08" stroke-width="2"/>
+    </svg>
+  </footer>
+</main>
+</body>
+</html>

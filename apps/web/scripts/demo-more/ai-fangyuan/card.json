@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "方圆",
+  "tagline": "家里有片果园，想用手机拍叶子认出病虫害",
+  "hooks": [
+    {
+      "id": "give-leaf-photos",
+      "kind": "can-help",
+      "text": "我能提供真实的果园叶片照片",
+      "opener": "方圆你好！我在墙上看到你有一片真实的果园，能提供叶片照片和病害记录，我们正需要真实数据，想聊聊吗？"
+    },
+    {
+      "id": "find-vision",
+      "kind": "looking-for",
+      "text": "找会做图像识别的队友",
+      "opener": "方圆你好！我做过一点图像分类，看到你在找会做图像识别的队友，要不要一起试试叶片分类？"
+    },
+    {
+      "id": "leaf-doctor",
+      "kind": "want-to-build",
+      "text": "想做拍叶子认病虫害的小工具",
+      "opener": "方圆你好！拍一片叶子就知道生没生病，这个点子很具体，你想先从哪种果树开始？"
+    }
+  ]
+}

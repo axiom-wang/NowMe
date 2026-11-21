@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "白露",
+  "tagline": "先听人说，再把话理成能做的事，找愿意被追问的开发",
+  "hooks": [
+    {
+      "id": "can-help-interview",
+      "kind": "can-help",
+      "text": "我能帮你把访谈理成结论",
+      "opener": "你那个帮新生找社团的想法，我可以先陪你做几个访谈，把反馈理成结论。"
+    },
+    {
+      "id": "find-builder",
+      "kind": "looking-for",
+      "text": "找愿意被我追问的开发",
+      "opener": "我习惯一直追问“为什么”，想找个愿意被我追问、又能把东西做出来的开发。"
+    },
+    {
+      "id": "build-club-finder",
+      "kind": "want-to-build",
+      "text": "想做帮新生找对口社团的小工具",
+      "opener": "帮新生找社团这件事，你想先验证哪一个假设？我们可以先用访谈试一试。"
+    }
+  ]
+}

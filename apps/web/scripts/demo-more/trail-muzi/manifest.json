@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "lxgw-wenkai", "weights": [400] },
+    { "id": "space-grotesk", "weights": [400, 500, 700] }
+  ],
+  "extraChars": "",
+  "blocks": ["trailhead", "old-tree", "pavilion", "small-bridge", "map-legend"],
+  "generator": { "agent": "nowme-demo" }
+}

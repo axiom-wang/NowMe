@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "noto-serif-sc", "weights": [400, 700] },
+    { "id": "instrument-serif", "weights": [400] }
+  ],
+  "extraChars": "",
+  "blocks": ["star-trail-hero", "exposure-log", "ask-me", "night-watch", "say-hi"],
+  "generator": { "agent": "nowme-demo" }
+}

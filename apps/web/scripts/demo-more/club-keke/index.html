@@ -1,0 +1,229 @@
+<!doctype html>
+<html lang="zh-CN" data-nm-motion="calm">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>柯柯 · 大头贴</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+  :root {
+    --cream: #fff4dc;
+    --cream-2: #fbe7c4;
+    --magenta: #e0307a;
+    --magenta-2: #b8205f;
+    --ink: #3a1d2c;
+    --ink-2: #6b3d52;
+    --display: var(--nm-font-smiley-sans);
+    --hand: var(--nm-font-lxgw-wenkai);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--cream); color: var(--ink);
+    font-family: var(--hand); font-size: 15.5px; line-height: 1.75;
+    overflow-x: hidden;
+  }
+  h1, h2, h3, p, ol, ul, li, figure { margin: 0; }
+  h1, h2 { font-family: var(--display); font-weight: 400; }
+  .label { font-family: var(--hand); font-size: 12px; letter-spacing: 0.08em; color: var(--magenta-2); }
+
+  .wrap { max-width: 440px; margin: 0 auto; padding: 0 0 22px; }
+
+  /* ---------- 首屏：大头贴条 ---------- */
+  .booth {
+    position: relative; padding: 16px 16px 20px;
+    background: var(--magenta); color: var(--cream);
+  }
+  .booth__row { display: flex; gap: 14px; align-items: flex-start; }
+  .strip {
+    position: relative; flex: 0 0 128px;
+    padding: 8px 8px 6px; background: #fffaf0;
+    box-shadow: 0 6px 14px -8px rgba(58, 10, 36, 0.6);
+    transform: rotate(-2deg);
+  }
+  .strip__frame { display: block; width: 112px; height: 88px; margin-bottom: 6px; border-radius: 2px; }
+  .strip__frame:last-of-type { margin-bottom: 0; }
+  .strip__foot {
+    display: flex; justify-content: space-between; align-items: center; margin-top: 6px;
+    font-family: var(--hand); font-size: 11px; color: var(--magenta-2);
+  }
+  .booth__text { flex: 1; min-width: 0; padding-top: 4px; }
+  .booth__kicker { font-size: 13px; color: var(--cream-2); letter-spacing: 0.04em; }
+  .booth h1 { margin-top: 6px; font-size: 76px; line-height: 0.95; color: #fff; }
+  .booth__tag { margin-top: 10px; font-size: 15px; line-height: 1.7; color: var(--cream); }
+  .booth__meta { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; }
+  .booth__meta span { padding: 1px 8px; border: 1.5px solid var(--cream); border-radius: 999px; font-size: 12.5px; }
+
+  /* 手写贴纸 */
+  .sticker {
+    position: absolute; padding: 4px 9px; background: #fff7a8; color: var(--ink);
+    font-family: var(--hand); font-size: 13px; line-height: 1.4;
+    box-shadow: 0 3px 6px -3px rgba(58, 10, 36, 0.5);
+  }
+  .booth__meta .sticker--a { position: static; margin-left: 4px; transform: rotate(5deg); font-size: 14px; }
+  .sticker--b { left: 118px; bottom: 6px; transform: rotate(-4deg); background: #ffd0e2; }
+  .booth__cap { margin-top: 14px; color: var(--cream-2); font-size: 12px; }
+
+  /* ---------- 通用区块 ---------- */
+  .sec { position: relative; margin: 18px 14px 0; padding: 16px 16px 18px; background: #fffaf0; border: 2px dashed var(--magenta); border-radius: 14px; }
+  .sec__tag { position: absolute; top: -11px; left: 14px; padding: 0 8px; background: var(--cream); font-family: var(--hand); font-size: 12px; color: var(--magenta-2); letter-spacing: 0.06em; }
+  .sec h2 { font-size: 26px; line-height: 1.25; color: var(--magenta); }
+  .sec__sub { margin-top: 6px; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+
+  /* 问：问题做成便签 */
+  .ask__q { margin-top: 12px; padding: 12px 14px; background: var(--magenta); color: #fff; border-radius: 10px; font-size: 18px; line-height: 1.55; }
+  .notes { margin-top: 14px; display: grid; gap: 10px; list-style: none; padding: 0; }
+  .note { padding: 10px 12px 11px; background: #fff7a8; box-shadow: 0 4px 8px -5px rgba(58, 10, 36, 0.5); font-size: 14.5px; line-height: 1.65; }
+  .note:nth-child(1) { transform: rotate(-1deg); }
+  .note:nth-child(2) { transform: rotate(0.8deg); background: #ffd9e7; }
+  .note:nth-child(3) { transform: rotate(-0.5deg); background: #fde6b2; }
+  .note b { display: block; font-family: var(--display); font-weight: 400; font-size: 17px; color: var(--magenta-2); }
+
+  /* 想试：窗光示意图 */
+  .light { margin-top: 12px; }
+  .light svg { display: block; width: 100%; height: auto; border: 1.5px solid var(--ink); border-radius: 8px; background: #fff; }
+  .light figcaption { margin-top: 6px; font-size: 12.5px; color: var(--ink-2); }
+  .want__big { margin-top: 10px; font-size: 20px; line-height: 1.5; color: var(--ink); }
+  .want__list { margin-top: 10px; padding-left: 1.2em; font-size: 14.5px; line-height: 1.75; color: var(--ink-2); }
+
+  /* 最爱：不摆拍 */
+  .love__big { margin-top: 10px; font-size: 20px; line-height: 1.5; color: var(--ink); }
+  .love__text { margin-top: 10px; font-size: 14.5px; line-height: 1.8; color: var(--ink-2); }
+  .love__pill { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .love__pill span { padding: 2px 10px; background: var(--cream-2); border-radius: 999px; font-size: 13px; color: var(--ink); }
+
+  .foot { margin: 18px 14px 0; padding: 14px 16px 6px; border-top: 2px solid var(--magenta); }
+  .foot p { font-size: 15px; line-height: 1.75; color: var(--ink); }
+  .foot .label { display: block; margin-top: 8px; }
+
+  @media (min-width: 700px) {
+    .wrap { max-width: 720px; padding-bottom: 36px; }
+    .booth { padding: 34px 40px 40px; }
+    .booth__row { gap: 36px; }
+    .strip { flex-basis: 170px; padding: 12px 12px 8px; }
+    .strip__frame { width: 146px; height: 114px; }
+    .booth h1 { font-size: 128px; }
+    .booth__tag { font-size: 17px; max-width: 26em; }
+    .sticker--b { left: 180px; bottom: 30px; }
+    .booth__cap { font-size: 13px; }
+    .sec, .foot { margin-left: 24px; margin-right: 24px; }
+    .notes { grid-template-columns: 1fr 1fr 1fr; }
+    .note { font-size: 15px; }
+    .light-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: center; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <header class="booth" data-nm-id="booth">
+    <div class="booth__row">
+      <div class="strip" aria-label="插画：四格大头贴">
+        <svg class="strip__frame" viewBox="0 0 120 90" role="img" aria-label="插画：闭眼微笑，放松的样子">
+          <rect width="120" height="90" fill="#fff0cf"/>
+          <path d="M22 90 Q28 60 60 58 Q92 60 98 90 Z" fill="#e0307a"/>
+          <ellipse cx="60" cy="40" rx="19" ry="22" fill="#f6c7a1"/>
+          <path d="M40 36 Q42 18 60 17 Q78 18 80 36 Q74 26 60 26 Q46 26 40 36 Z" fill="#3a1d2c"/>
+          <path d="M48 42 Q51 45 54 42 M66 42 Q69 45 72 42" fill="none" stroke="#3a1d2c" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M54 51 Q60 55 66 51" fill="none" stroke="#3a1d2c" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <svg class="strip__frame" viewBox="0 0 120 90" role="img" aria-label="插画：大笑，嘴巴张开">
+          <rect width="120" height="90" fill="#ffe2b8"/>
+          <path d="M20 90 Q26 60 60 58 Q94 60 100 90 Z" fill="#b8205f"/>
+          <ellipse cx="60" cy="40" rx="19" ry="22" fill="#f6c7a1"/>
+          <path d="M40 36 Q42 18 60 17 Q78 18 80 36 Q74 26 60 26 Q46 26 40 36 Z" fill="#3a1d2c"/>
+          <path d="M46 43 Q50 39 54 43 M66 43 Q70 39 74 43" fill="none" stroke="#3a1d2c" stroke-width="1.8" stroke-linecap="round"/>
+          <path d="M51 49 Q60 62 69 49 Z" fill="#3a1d2c"/>
+          <rect x="51" y="49" width="18" height="4" fill="#fff"/>
+        </svg>
+        <svg class="strip__frame" viewBox="0 0 120 90" role="img" aria-label="插画：眼睛看向一旁，若有所思">
+          <rect width="120" height="90" fill="#fff4dc"/>
+          <path d="M22 90 Q28 60 60 58 Q92 60 98 90 Z" fill="#e0307a"/>
+          <ellipse cx="60" cy="40" rx="19" ry="22" fill="#f6c7a1"/>
+          <path d="M40 36 Q42 18 60 17 Q78 18 80 36 Q74 26 60 26 Q46 26 40 36 Z" fill="#3a1d2c"/>
+          <circle cx="50" cy="42" r="2.2" fill="#3a1d2c"/>
+          <circle cx="68" cy="42" r="2.2" fill="#3a1d2c"/>
+          <path d="M55 53 Q60 51 65 53" fill="none" stroke="#3a1d2c" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="82" cy="60" r="7" fill="#f6c7a1"/>
+        </svg>
+        <svg class="strip__frame" viewBox="0 0 120 90" role="img" aria-label="插画：认真看镜头，表情安静">
+          <rect width="120" height="90" fill="#ffecc9"/>
+          <path d="M22 90 Q28 60 60 58 Q92 60 98 90 Z" fill="#b8205f"/>
+          <ellipse cx="60" cy="40" rx="19" ry="22" fill="#f6c7a1"/>
+          <path d="M40 36 Q42 18 60 17 Q78 18 80 36 Q74 26 60 26 Q46 26 40 36 Z" fill="#3a1d2c"/>
+          <circle cx="51" cy="42" r="2" fill="#3a1d2c"/>
+          <circle cx="69" cy="42" r="2" fill="#3a1d2c"/>
+          <path d="M54 53 L66 53" fill="none" stroke="#3a1d2c" stroke-width="1.8" stroke-linecap="round"/>
+        </svg>
+        <div class="strip__foot"><span>01 放松</span><span>02 大笑</span></div>
+        <div class="strip__foot"><span>03 走神</span><span>04 安静</span></div>
+      </div>
+
+      <div class="booth__text">
+        <p class="booth__kicker">山海摄影社 · 2026 秋 · 人像</p>
+        <h1>柯柯</h1>
+        <p class="booth__tag">英语系大二。最爱给朋友拍不摆拍的人像，按下快门前，先让对方忘了镜头。</p>
+        <div class="booth__meta"><span>人像</span><span>朋友</span><span>窗边</span><span class="sticker sticker--a">别看镜头！</span></div>
+        <p class="label booth__cap">大头贴四格为插画示意，标“插画”。</p>
+      </div>
+    </div>
+    <p class="sticker sticker--b">这格笑出声了</p>
+  </header>
+
+  <section class="sec" data-nm-id="ask-me">
+    <span class="sec__tag">问我 · ASK</span>
+    <h2>我能教的一件事</h2>
+    <p class="ask__q">怎么让被拍的人放松，可以来问我</p>
+    <ul class="notes">
+      <li class="note"><b>先聊十分钟</b>不急着举相机，聊到对方不再盯着镜头，再开始拍。</li>
+      <li class="note"><b>给一件小事做</b>让对方剥橘子、看窗外、转头说句话，手和眼睛有去处，身体就松了。</li>
+      <li class="note"><b>别喊“笑一下”</b>喊了就是摆拍。我更愿意逗笑他，等那一下出来再按。</li>
+    </ul>
+  </section>
+
+  <section class="sec" data-nm-id="window-light">
+    <span class="sec__tag">想试 · TRY</span>
+    <div class="light-row">
+      <div>
+        <h2>下一次的拍法</h2>
+        <p class="want__big">想试一次室内窗光人像</p>
+        <ul class="want__list">
+          <li>找一扇朝北的窗，不要正午的直射光</li>
+          <li>被拍的人坐在窗边，光从侧面来</li>
+          <li>白纸或白墙做反光板，补一点阴影</li>
+        </ul>
+      </div>
+      <figure class="light">
+        <svg viewBox="0 0 240 150" role="img" aria-label="示意：窗户从左侧射入光线，人物坐在窗光中，右侧一块反光板">
+          <rect width="240" height="150" fill="#fff"/>
+          <rect x="12" y="20" width="44" height="78" fill="#ffe9a8" stroke="#3a1d2c" stroke-width="2"/>
+          <path d="M34 20 V98 M12 59 H56" stroke="#3a1d2c" stroke-width="1.5"/>
+          <path d="M56 36 L150 60 L150 100 L56 90 Z" fill="#ffe9a8" fill-opacity="0.55"/>
+          <circle cx="170" cy="62" r="9" fill="#f6c7a1" stroke="#3a1d2c" stroke-width="1.5"/>
+          <path d="M156 78 Q170 70 184 78 L190 118 L150 118 Z" fill="#e0307a"/>
+          <rect x="206" y="40" width="22" height="70" fill="#fff" stroke="#3a1d2c" stroke-width="1.5"/>
+          <text x="12" y="140" font-family="sans-serif" font-size="11" fill="#3a1d2c">窗</text>
+          <text x="193" y="30" font-family="sans-serif" font-size="11" fill="#3a1d2c">反光板</text>
+          <text x="150" y="20" font-family="sans-serif" font-size="11" fill="#b8205f">示意</text>
+        </svg>
+        <figcaption>窗光示意图，示意而非实拍。</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <section class="sec" data-nm-id="obsessed">
+    <span class="sec__tag">沉迷 · OBSESSED</span>
+    <h2>不摆拍的那一下</h2>
+    <p class="love__big">我最爱给朋友拍不摆拍的人像</p>
+    <p class="love__text">我最在意的是快门落下前的那几秒。朋友们说话、吃东西、发呆，我就在旁边等。最好的一张，通常是他们以为我已经收起相机的时候。</p>
+    <div class="love__pill"><span>朋友</span><span>窗边</span><span>不摆拍</span><span>一边聊一边拍</span></div>
+  </section>
+
+  <footer class="foot" data-nm-id="foot">
+    <p>在页面外点「想聊这个」，从怎么让人放松开始。</p>
+    <span class="label">山海摄影社 · 2026 秋 · 人像 柯柯</span>
+  </footer>
+
+</main>
+</body>
+</html>

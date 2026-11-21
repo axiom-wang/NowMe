@@ -25,15 +25,15 @@ async function freePort(): Promise<number> {
   return port;
 }
 
-async function waitForWallCovers(tab: import('playwright').Page): Promise<void> {
+async function waitForWallCovers(tab: import('playwright').Page, expected: number): Promise<void> {
   const covers = await tab.evaluate<{ width: number; height: number }[]>(`(async () => {
     const images = Array.from(document.querySelectorAll('.wall-card__cover img'));
     for (const image of images) image.loading = 'eager';
     await Promise.all(images.map(image => image.decode()));
     return images.map(image => ({ width: image.naturalWidth, height: image.naturalHeight }));
   })()`);
-  if (covers.length !== 6 || covers.some((cover) => cover.width !== COVER_WIDTH || cover.height !== COVER_HEIGHT)) {
-    throw new Error('墙上的六张封面没有全部正常加载');
+  if (covers.length !== expected || covers.some((cover) => cover.width !== COVER_WIDTH || cover.height !== COVER_HEIGHT)) {
+    throw new Error(`墙上的 ${expected} 张封面没有全部正常加载`);
   }
 }
 
@@ -96,8 +96,10 @@ export async function runDemoWallReview(wallSlug: 'ai' | 'trail'): Promise<void>
     await tab.getByRole('button', { name: '以成员身份体验', exact: true }).click();
     await tab.waitForURL(`${config.webOrigin}/`);
     await tab.goto(`${config.webOrigin}/w/${selected.wall.id}`);
-    if (await tab.locator('.wall-card').count() !== 6) throw new Error('墙上可见卡片应为 6 个');
-    await waitForWallCovers(tab);
+    // 第二批人物（demo-more）也在这面墙上，由 demo-more-review.ts 单独逐页验收；这里只验收原有六页。
+    const wallCards = 6 + seed.additions[wallSlug].length;
+    if (await tab.locator('.wall-card').count() !== wallCards) throw new Error(`墙上可见卡片应为 ${wallCards} 个`);
+    await waitForWallCovers(tab, wallCards);
     await tab.screenshot({ path: join(artifacts, 'wall-desktop.png'), fullPage: true });
     const measurements: unknown[] = [];
     const pages: { name: string; url: string; cover: string }[] = [];
@@ -155,14 +157,14 @@ export async function runDemoWallReview(wallSlug: 'ai' | 'trail'): Promise<void>
     }
     await tab.setViewportSize({ width: 375, height: 812 });
     await tab.goto(`${config.webOrigin}/w/${selected.wall.id}`);
-    await waitForWallCovers(tab);
+    await waitForWallCovers(tab, wallCards);
     await tab.screenshot({ path: join(artifacts, 'wall-mobile.png'), fullPage: true });
     await tab.goto(`${config.webOrigin}/w/${selected.wall.id}/me`);
     if (!await tab.getByRole('link', { name: '开始采访', exact: true }).isVisible()) throw new Error('体验成员的空白工作区未保留');
     await tab.screenshot({ path: join(artifacts, 'empty-workspace.png'), fullPage: true });
     if (errors.length || external.length) throw new Error(`浏览器错误或外部请求：${JSON.stringify({ errors, external })}`);
     const report = { dataDir, origin: config.webOrigin, wallUrl: `${config.webOrigin}/w/${selected.wall.id}`,
-      wallSlug, members: selected.members.length, wallCoversLoaded: 6, published: pages.length, chat: seed.chat, measurements, pages, errors, external };
+      wallSlug, members: selected.members.length, wallCoversLoaded: wallCards, published: pages.length, chat: seed.chat, measurements, pages, errors, external };
     writeFileSync(join(artifacts, 'report.json'), JSON.stringify(report, null, 2));
     const cells = pages.map((page) => `<figure><img src="${page.cover}"><figcaption>${page.name}</figcaption></figure>`).join('');
     writeFileSync(join(artifacts, 'index.html'), `<!doctype html><html lang="zh-CN"><meta charset="utf-8"><title>${wallTitle}视觉验收</title><style>body{margin:0;padding:28px;background:#eee;font:16px sans-serif}h1{font-size:24px}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:24px}figure{margin:0}img{width:100%;display:block}figcaption{padding:10px 0}</style><h1>${wallTitle} · 六个不同的人</h1><div class="grid">${cells}</div></html>`);

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "孟川",
+  "tagline": "烙铁不离桌，板子能亮就行，缺一个会写小程序界面的人",
+  "hooks": [
+    {
+      "id": "can-help-wiring",
+      "kind": "can-help",
+      "text": "我能帮你把传感器和板子接起来",
+      "opener": "你们的硬件如果卡在传感器接线，我做过门口的提醒盒，可以先帮你看一下。"
+    },
+    {
+      "id": "find-miniapp",
+      "kind": "looking-for",
+      "text": "找会写小程序界面的队友",
+      "opener": "硬件和固件我这边能跑通，就差一个会写小程序界面的人，你有兴趣吗？"
+    },
+    {
+      "id": "build-parcel-box",
+      "kind": "want-to-build",
+      "text": "想把快递提醒盒接进校园小程序",
+      "opener": "把快递提醒盒接进小程序很适合宿舍楼，你觉得应该先接哪一路数据？"
+    }
+  ]
+}

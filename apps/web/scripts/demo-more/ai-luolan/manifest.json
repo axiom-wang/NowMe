@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "instrument-serif", "weights": [400] },
+    { "id": "noto-sans-sc", "weights": [400, 700] }
+  ],
+  "extraChars": "",
+  "blocks": ["chip-cover", "chip-saturday-dawn", "chip-noon-tea", "chip-night-ink", "chip-blank-card", "chip-notes", "chip-closing"],
+  "generator": { "agent": "nowme-demo" }
+}

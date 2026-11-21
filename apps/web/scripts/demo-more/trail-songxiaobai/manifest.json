@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "smiley-sans", "weights": [400] },
+    { "id": "lxgw-wenkai", "weights": [400] }
+  ],
+  "extraChars": "",
+  "blocks": ["dog-tag", "leash-ask", "creek-route", "photo-roll", "bone-tags"],
+  "generator": { "agent": "nowme-demo" }
+}

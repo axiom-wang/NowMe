@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>夏天 · 大一 · 便利店小票 · AI 共创实验室</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+  :root {
+    --nm-bg: #d9d2c4;
+    --paper: #fbfaf5;
+    --ink: #2b2b29;
+    --muted: #6e6c66;
+    --rule: #9b978d;
+    --hi: #e4572e;
+    --nm-font-body: var(--nm-font-noto-sans-sc);
+    --nm-font-code: var(--nm-font-jetbrains-mono);
+  }
+  *, *::before, *::after { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--nm-bg); color: var(--ink);
+    font: 14px/1.7 var(--nm-font-code);
+    -webkit-text-size-adjust: 100%;
+  }
+  p, h1, h2, ol, ul, dl, dd, dt { margin: 0; }
+  ol, ul { padding: 0; list-style: none; }
+  .wrap { padding: 26px 14px 40px; }
+
+  /* 小票纸：连续一张，底部锯齿 */
+  .roll {
+    position: relative; max-width: 340px; margin: 0 auto; background: var(--paper);
+    padding: 20px 20px 0; box-shadow: 0 12px 26px rgba(43, 43, 41, .18);
+  }
+  .cut { border-top: 1px dashed var(--rule); margin: 16px 0; }
+
+  .head { text-align: center; }
+  .shop { font: 700 12px/1.4 var(--nm-font-code); letter-spacing: .24em; color: var(--muted); }
+  .head h1 { margin-top: 10px; font-size: 40px; line-height: 1.2; font-weight: 700; letter-spacing: .08em; }
+  .role { margin-top: 6px; font-size: 13px; color: var(--muted); }
+  .meta-line { margin-top: 10px; display: flex; justify-content: space-between; font-size: 11.5px; color: var(--muted); }
+  .headline {
+    margin-top: 16px; font-family: var(--nm-font-body); font-size: 19px; line-height: 1.55; font-weight: 700;
+    padding: 10px 12px; border: 2px solid var(--ink); text-align: left;
+  }
+
+  .row { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 6px 0; font-size: 14px; }
+  .row small { grid-column: 1 / -1; font-size: 11.5px; color: var(--muted); font-family: var(--nm-font-body); line-height: 1.5; }
+  .row b { font-weight: 400; white-space: nowrap; }
+  .head-row { display: flex; justify-content: space-between; font-size: 11.5px; font-weight: 700; letter-spacing: .06em; color: var(--muted); }
+  .item-name { font-family: var(--nm-font-body); font-size: 15px; line-height: 1.5; }
+  .item-name em { font-style: normal; font-family: var(--nm-font-code); color: var(--muted); font-size: 12px; margin-left: 4px; }
+  .hi { color: var(--hi); font-weight: 700; }
+
+  .sum { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; margin-top: 4px; margin-bottom: 10px; }
+  .sum strong { font: 700 22px/1.2 var(--nm-font-code); }
+  .sum span { font-family: var(--nm-font-body); font-size: 15px; font-weight: 700; }
+
+  .bag-line { font-family: var(--nm-font-body); font-size: 14.5px; line-height: 1.7; }
+  .bag-line + .bag-line { margin-top: 8px; }
+  .todo { margin-top: 12px; display: grid; gap: 8px; }
+  .todo li {
+    padding: 9px 10px 9px 30px; position: relative; border: 1px solid var(--ink);
+    font-family: var(--nm-font-body); font-size: 15px; font-weight: 700; line-height: 1.5;
+  }
+  .todo li::before {
+    content: ""; position: absolute; left: 10px; top: 13px; width: 11px; height: 11px;
+    border: 1.5px solid var(--ink);
+  }
+  .todo li.done::before { background: var(--ink); }
+
+  .tail { margin-top: 22px; text-align: center; padding-bottom: 26px; }
+  .barcode { display: block; width: 210px; height: 52px; margin: 0 auto; }
+  .num { margin-top: 6px; font-size: 11px; letter-spacing: .3em; color: var(--muted); }
+  .thanks { margin-top: 14px; font-family: var(--nm-font-body); font-size: 14.5px; line-height: 1.7; }
+  .tail .foot { margin-top: 10px; font-size: 11px; color: var(--muted); }
+
+  @media (min-width: 700px) {
+    .wrap { padding: 44px 24px 60px; }
+    .roll { max-width: 440px; padding: 26px 28px 0; }
+    .roll::after { margin: 0 -28px; }
+    .head h1 { font-size: 58px; }
+    .headline { font-size: 23px; }
+    .row { font-size: 15px; }
+    .item-name { font-size: 17px; }
+    .bag-line { font-size: 16px; }
+    .todo li { font-size: 17px; }
+    .sum strong { font-size: 28px; }
+    .barcode { width: 260px; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+  <article class="roll">
+    <section class="head" data-nm-id="receipt-head">
+      <p class="shop">周末便利店 · 小票</p>
+      <h1>夏天</h1>
+      <p class="role">大一新生 · 什么都想学</p>
+      <p class="meta-line"><span>NO. 0001</span><span>周六 · 第一天</span></p>
+      <p class="headline">今天买的：<br>一个周末的好奇心。</p>
+    </section>
+
+    <div class="cut"></div>
+
+    <section data-nm-id="item-list">
+      <div class="head-row"><span>品名</span><span>数量 / 金额</span></div>
+      <div class="row"><span class="item-name">好奇心<em>@新</em></span><b>×1　∞</b><small>什么都想学，第一次就想都试一遍。</small></div>
+      <div class="row"><span class="item-name">我能帮大家买饭、试玩、记问题</span><b>×1　¥0</b><small>服务项：大家需要的时候，我先去。</small></div>
+      <div class="row"><span class="item-name">零食（可分享）</span><b>×5</b><small>书包里永远有，分给大家。</small></div>
+    </section>
+
+    <div class="cut"></div>
+
+    <section data-nm-id="in-bag">
+      <p class="bag-line">书包里的东西：零食五包、充电宝一个、写满问题的笔记本两本。</p>
+      <p class="bag-line">我不太会做东西，但愿意从第一步开始，一天一点点学。</p>
+    </section>
+
+    <div class="cut"></div>
+
+    <section data-nm-id="total">
+      <div class="sum"><span>待办</span><strong class="hi">合计</strong></div>
+      <ul class="todo">
+        <li>想第一次完整做出一个 Demo</li>
+        <li>找愿意边做边教的队友</li>
+      </ul>
+      <div class="sum"><span>一个周末</span><strong>¥0.00</strong></div>
+    </section>
+
+    <footer class="tail" data-nm-id="barcode-tail">
+      <svg class="barcode" viewBox="0 0 210 52" role="img" aria-label="装饰用条形码">
+        <g fill="#2b2b29">
+          <rect x="0" y="0" width="3" height="52"/><rect x="6" y="0" width="1.5" height="52"/><rect x="11" y="0" width="4" height="52"/>
+          <rect x="19" y="0" width="2" height="52"/><rect x="25" y="0" width="5" height="52"/><rect x="34" y="0" width="1.5" height="52"/>
+          <rect x="39" y="0" width="3" height="52"/><rect x="46" y="0" width="6" height="52"/><rect x="56" y="0" width="2" height="52"/>
+          <rect x="62" y="0" width="1.5" height="52"/><rect x="67" y="0" width="4" height="52"/><rect x="75" y="0" width="2" height="52"/>
+          <rect x="81" y="0" width="5" height="52"/><rect x="90" y="0" width="1.5" height="52"/><rect x="95" y="0" width="3" height="52"/>
+          <rect x="102" y="0" width="2" height="52"/><rect x="108" y="0" width="6" height="52"/><rect x="118" y="0" width="1.5" height="52"/>
+          <rect x="123" y="0" width="4" height="52"/><rect x="131" y="0" width="2" height="52"/><rect x="137" y="0" width="3" height="52"/>
+          <rect x="144" y="0" width="5" height="52"/><rect x="153" y="0" width="1.5" height="52"/><rect x="158" y="0" width="4" height="52"/>
+          <rect x="166" y="0" width="2" height="52"/><rect x="172" y="0" width="6" height="52"/><rect x="182" y="0" width="1.5" height="52"/>
+          <rect x="187" y="0" width="3" height="52"/><rect x="194" y="0" width="2" height="52"/><rect x="200" y="0" width="4" height="52"/>
+          <rect x="207" y="0" width="3" height="52"/>
+        </g>
+      </svg>
+      <p class="num">0 2 6 1 1 2 1 0 0 0 1</p>
+      <p class="thanks">在页面外点「想聊这个」，从一个你没听过的词开始。<br>欢迎下次再来。</p>
+      <p class="foot">夏天 / 大一 · AI 共创实验室</p>
+    </footer>
+  </article>
+</main>
+</body>
+</html>

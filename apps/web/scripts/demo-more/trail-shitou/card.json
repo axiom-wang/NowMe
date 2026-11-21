@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "石头",
+  "tagline": "路边的石头都有故事，我在慢慢读",
+  "hooks": [
+    {
+      "id": "ask-stones",
+      "kind": "ask-me",
+      "text": "可以来问我：路边的石头是怎么来的",
+      "opener": "你好，你也对路边的石头好奇吗？我可以讲讲它们大概是怎么一层层形成的。"
+    },
+    {
+      "id": "pebble-hunt",
+      "kind": "obsessed",
+      "text": "我在沉迷：捡不同颜色的小石子",
+      "opener": "你好，我也常捡小石子，你口袋里现在有几块了？说说你最喜欢哪一块吧。"
+    },
+    {
+      "id": "ridge-path",
+      "kind": "want-to-try",
+      "text": "我也想试：一条能看到岩层的山路",
+      "opener": "你好，你走过能看到岩层断面的山路吗？我想找一条这样的路线，一起去看看？"
+    }
+  ]
+}

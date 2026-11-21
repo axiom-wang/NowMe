@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "smiley-sans", "weights": [400] },
+    { "id": "noto-sans-sc", "weights": [400] }
+  ],
+  "extraChars": "",
+  "blocks": ["print-cover", "mascot-cast", "pomodoro-flow", "anim-sheet", "ping-note"],
+  "generator": { "agent": "nowme-demo" }
+}

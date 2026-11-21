@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="zh-CN" data-nm-motion="calm">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>宁远 · 器材借用登记簿</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+  :root {
+    --paper: #f4edd8;
+    --paper-2: #ebe2c6;
+    --cream-bg: #e2d8bc;
+    --green: #1f4d3a;
+    --green-2: #3c6b56;
+    --ink: #1c2a22;
+    --ink-2: #4a5a50;
+    --ink-3: #6e7a70;
+    --seal: #a8402f;
+    --rule: rgba(31, 77, 58, 0.55);
+    --serif: var(--nm-font-noto-serif-sc);
+    --mono: var(--nm-font-jetbrains-mono);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--cream-bg); color: var(--ink);
+    font-family: var(--serif); font-size: 15px; line-height: 1.75;
+    overflow-x: hidden;
+  }
+  h1, h2, h3, p, ol, dl, dd, table { margin: 0; }
+  .mono { font-family: var(--mono); font-size: 11px; letter-spacing: 0.08em; color: var(--ink-3); }
+
+  /* 整张登记簿：一张纸，四周留出桌面的边 */
+  .ledger {
+    max-width: 440px; margin: 0 auto; padding: 14px 12px 22px;
+    min-height: 100vh;
+  }
+  .sheet {
+    position: relative; background: var(--paper);
+    border: 1.5px solid var(--green); border-radius: 4px;
+    box-shadow: 0 1px 0 rgba(31, 77, 58, 0.12), 0 10px 22px -14px rgba(31, 77, 58, 0.45);
+    overflow: hidden;
+  }
+  .sheet + .sheet { margin-top: 14px; }
+
+  /* ---------- 抬头 ---------- */
+  .head { padding: 12px 14px 0; }
+  .head__row { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+  .head__title { font-size: 15px; font-weight: 700; letter-spacing: 0.04em; color: var(--green); }
+  .head__no { font-family: var(--mono); font-size: 11px; color: var(--seal); letter-spacing: 0.06em; }
+  .name {
+    margin-top: 14px; font-size: 68px; font-weight: 700; line-height: 1; letter-spacing: 0.02em; color: var(--green);
+  }
+  .role { margin-top: 10px; font-size: 15px; line-height: 1.7; color: var(--ink); }
+
+  /* 表头 + 一行登记：用表格线画出登记簿 */
+  .grid { margin-top: 14px; border-top: 1.5px solid var(--green); }
+  .grid__row { display: grid; grid-template-columns: 74px 1fr 64px; border-bottom: 1px solid var(--rule); }
+  .grid__row > * { padding: 7px 8px; border-right: 1px solid var(--rule); font-size: 13px; line-height: 1.5; }
+  .grid__row > *:last-child { border-right: 0; }
+  .grid__row--head > * { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.08em; color: var(--green-2); background: var(--paper-2); }
+  .grid__row--me > * { color: var(--ink); }
+  .grid__row--me b { font-weight: 700; color: var(--green); }
+
+  /* ---------- 镜头柜：借用卡 ---------- */
+  .cab { padding: 14px 14px 16px; }
+  .cab__head { display: flex; align-items: baseline; gap: 10px; padding-bottom: 6px; border-bottom: 1.5px solid var(--green); }
+  .cab__head h2 { font-size: 20px; font-weight: 700; color: var(--green); }
+  .cab__head .mono { margin-left: auto; }
+  .cab__desc { margin-top: 8px; font-size: 14px; line-height: 1.7; color: var(--ink-2); }
+
+  .cards { display: grid; gap: 10px; margin-top: 12px; }
+  .card {
+    position: relative; padding: 10px 12px 11px; background: #fbf7ea;
+    border: 1px solid var(--green); border-radius: 3px;
+    box-shadow: inset 0 0 0 3px #fbf7ea, inset 0 0 0 4px rgba(31, 77, 58, 0.35);
+  }
+  .card__top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .card__no { font-family: var(--mono); font-size: 11px; letter-spacing: 0.06em; color: var(--green-2); }
+  .card__name { margin-top: 3px; font-size: 16px; font-weight: 700; color: var(--ink); }
+  .card__meta { margin-top: 6px; display: grid; grid-template-columns: 60px 1fr; row-gap: 3px; font-size: 13px; line-height: 1.5; color: var(--ink-2); }
+  .card__meta dt { font-family: var(--mono); font-size: 10.5px; color: var(--ink-3); padding-top: 2px; }
+  .card__meta dd { margin: 0; }
+  .card__sign { margin-top: 8px; display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--ink-3); }
+  .card__sign span { flex: 1; border-bottom: 1px solid var(--ink-3); height: 18px; }
+  .card__sign b { font-family: var(--serif); font-style: normal; font-size: 13px; color: var(--ink); }
+
+  /* 印章：圆形，朱红 */
+  .seal {
+    position: absolute; right: 10px; top: 10px; width: 46px; height: 46px; border-radius: 50%;
+    border: 2px solid var(--seal); color: var(--seal);
+    display: flex; align-items: center; justify-content: center; text-align: center;
+    font-size: 11px; font-weight: 700; line-height: 1.2; transform: rotate(-8deg);
+    opacity: 0.88;
+  }
+  .seal--ok { color: var(--green); border-color: var(--green); }
+
+  /* ---------- 问我：借用须知 ---------- */
+  .ask { padding: 14px; }
+  .ask__q {
+    font-size: 17px; font-weight: 700; line-height: 1.55; color: var(--green);
+    padding: 10px 12px; border: 1.5px dashed var(--green-2); border-radius: 3px; background: #fbf7ea;
+  }
+  .ask__list { margin-top: 12px; padding: 0; list-style: none; }
+  .ask__list li { display: grid; grid-template-columns: 30px 1fr; gap: 8px; padding: 8px 0; border-bottom: 1px solid var(--rule); font-size: 14px; line-height: 1.65; }
+  .ask__list li:last-child { border-bottom: 0; }
+  .ask__list .n { font-family: var(--mono); font-size: 11px; color: var(--seal); padding-top: 3px; }
+
+  /* ---------- 想试：大画幅 ---------- */
+  .want { padding: 14px; }
+  .want__big { margin-top: 10px; font-size: 19px; font-weight: 700; line-height: 1.5; color: var(--green); }
+  .want__box { margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; border: 1px solid var(--green); }
+  .want__box > div { padding: 8px 10px; border-right: 1px solid var(--rule); border-bottom: 1px solid var(--rule); }
+  .want__box > div:nth-child(2n) { border-right: 0; }
+  .want__box > div:nth-last-child(-n+2) { border-bottom: 0; }
+  .want__box .mono { display: block; margin-bottom: 2px; }
+  .want__box p { font-size: 14px; line-height: 1.55; color: var(--ink); }
+  .want__note { margin-top: 10px; font-size: 13.5px; line-height: 1.7; color: var(--ink-2); }
+
+  /* ---------- 拆镜头 ---------- */
+  .obs { padding: 14px; }
+  .obs__big { margin-top: 10px; font-size: 19px; font-weight: 700; line-height: 1.5; color: var(--green); }
+  .obs__text { margin-top: 10px; font-size: 14px; line-height: 1.8; color: var(--ink-2); }
+  .obs__sig { margin-top: 12px; padding-top: 8px; border-top: 1px dashed var(--ink-3); font-size: 13px; color: var(--ink-3); }
+
+  /* ---------- 页脚 ---------- */
+  .foot { padding: 14px 14px 16px; }
+  .foot p { font-size: 14px; line-height: 1.75; color: var(--ink); }
+  .foot .mono { display: block; margin-top: 10px; }
+
+  @media (min-width: 700px) {
+    .ledger { max-width: 720px; padding: 28px 22px 40px; }
+    .name { font-size: 104px; }
+    .head { padding: 18px 22px 0; }
+    .grid__row { grid-template-columns: 110px 1fr 90px; }
+    .grid__row > * { padding: 9px 12px; font-size: 14px; }
+    .cab, .ask, .want, .obs, .foot { padding-left: 22px; padding-right: 22px; }
+    .cards { grid-template-columns: 1fr 1fr; }
+    .ask__list li { font-size: 15px; }
+  }
+</style>
+</head>
+<body>
+<div class="ledger">
+
+  <header class="sheet" data-nm-id="ledger-head">
+    <div class="head">
+      <div class="head__row">
+        <span class="head__title">器材借用登记簿</span>
+        <span class="head__no">NO. 0042</span>
+      </div>
+      <h1 class="name">宁远</h1>
+      <p class="role">机械工程大四，山海摄影社器材管理员。管着镜头柜，借镜头、清传感器、选二手机，都找我登记。</p>
+    </div>
+    <div class="grid">
+      <div class="grid__row grid__row--head"><span>编号</span><span>经手人</span><span>状态</span></div>
+      <div class="grid__row grid__row--me"><span>0042</span><span><b>宁远</b> · 器材柜 · 镜头 / 传感器 / 选机</span><span>在柜</span></div>
+    </div>
+  </header>
+
+  <section class="sheet cab" data-nm-id="cabinet">
+    <div class="cab__head"><h2>镜头柜</h2><span class="mono">CABINET</span></div>
+    <p class="cab__desc">柜子里的东西都有借用卡。借之前来问一声，我把状态和注意事项讲清楚再交给你。</p>
+    <div class="cards">
+      <div class="card">
+        <div class="seal seal--ok">已清洁</div>
+        <div class="card__top"><span class="card__no">LENS-07</span></div>
+        <p class="card__name">定焦镜头</p>
+        <dl class="card__meta">
+          <dt>状态</dt><dd>在柜，镜片刚擦过</dd>
+          <dt>借期</dt><dd>一周内归还</dd>
+        </dl>
+        <div class="card__sign"><span></span><b>宁远</b></div>
+      </div>
+      <div class="card">
+        <div class="seal">已核</div>
+        <div class="card__top"><span class="card__no">SENSOR-02</span></div>
+        <p class="card__name">传感器清理</p>
+        <dl class="card__meta">
+          <dt>服务</dt><dd>来问我，当场看着做</dd>
+          <dt>时间</dt><dd>周末下午</dd>
+        </dl>
+        <div class="card__sign"><span></span><b>宁远</b></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="sheet ask" data-nm-id="ask-me">
+    <p class="mono">02 · 可以来问我</p>
+    <p class="ask__q" style="margin-top:8px">借镜头、清传感器、选二手机，可以来问我</p>
+    <ol class="ask__list">
+      <li><span class="n">01</span><span>借镜头：先说拍什么、拍几天，我按柜子里的状态推荐。</span></li>
+      <li><span class="n">02</span><span>清传感器：把相机带来，我教你一次自己做，不替你做完。</span></li>
+      <li><span class="n">03</span><span>选二手机：预算和用途告诉我，我帮你看看机身有没有坑。</span></li>
+    </ol>
+  </section>
+
+  <section class="sheet want" data-nm-id="want-to-try">
+    <p class="mono">03 · 想试的事</p>
+    <p class="want__big">想试一次大画幅，拍一整卷慢慢来</p>
+    <div class="want__box">
+      <div><span class="mono">拟借</span><p>大画幅机身</p></div>
+      <div><span class="mono">状态</span><p>待排期</p></div>
+      <div><span class="mono">用途</span><p>一条老街，一卷胶片</p></div>
+      <div><span class="mono">节奏</span><p>一张一张慢慢按</p></div>
+    </div>
+    <p class="want__note">这台机器还没在柜子里，想试的人可以一起排期。</p>
+  </section>
+
+  <section class="sheet obs" data-nm-id="obsessed">
+    <p class="mono">04 · 沉迷的事</p>
+    <p class="obs__big">我沉迷把镜头拆开看光圈叶片</p>
+    <p class="obs__text">拆之前先拍照、标好螺丝的位置，拆完一片一片看，装回去再用纸擦一遍。机械这一行的习惯，带到了相机上。</p>
+    <p class="obs__sig">拆装记录：每次都写在登记簿背面，签名：宁远</p>
+  </section>
+
+  <footer class="sheet foot" data-nm-id="foot">
+    <p>在页面外点「想聊这个」，从借一支镜头开始。</p>
+    <span class="mono">山海摄影社 · 器材室 · 2026 秋 · 宁远</span>
+  </footer>
+
+</div>
+</body>
+</html>

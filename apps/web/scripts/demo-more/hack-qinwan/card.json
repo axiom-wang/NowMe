@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "秦宛",
+  "tagline": "想让每张地图都能被每个人读懂，先从量坡道开始",
+  "hooks": [
+    {
+      "id": "can-help-screen-check",
+      "kind": "can-help",
+      "text": "我能帮你做读屏和键盘可用性检查",
+      "opener": "你好！看到你说能帮做读屏和键盘可用性检查，我们的页面正想找人测一遍，方便聊聊吗？"
+    },
+    {
+      "id": "find-map-mate",
+      "kind": "looking-for",
+      "text": "找会做地图或路线的队友",
+      "opener": "嗨，我会画地图和标路线，看到你在找这样的队友，我们可以先聊聊轮椅能走的路线怎么标。"
+    },
+    {
+      "id": "build-wheelchair-map",
+      "kind": "want-to-build",
+      "text": "想做轮椅也能走完的校园地图",
+      "opener": "你好，你想做轮椅也能走完的校园地图，我手上有几段坡道数据，要不要对一下？"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "欧阳晨",
+  "tagline": "5:30 出门，只为把天空的颜色记下来",
+  "hooks": [
+    {
+      "id": "sunrise-route",
+      "kind": "ask-me",
+      "text": "可以来问我：哪条路线适合看日出",
+      "opener": "你好，你也喜欢看日出吗？我可以把几条适合早起的路线讲给你听。"
+    },
+    {
+      "id": "sky-colors",
+      "kind": "obsessed",
+      "text": "我在沉迷：记录天空的颜色",
+      "opener": "你好，我在本子里记了很多天空的颜色，你看过最特别的一次日出是什么颜色？"
+    },
+    {
+      "id": "thermos-walk",
+      "kind": "want-to-try",
+      "text": "我也想试：带热豆浆的日出慢走",
+      "opener": "你好，我想试一次带热豆浆的日出慢走，你要不要一起？我会早点到。"
+    }
+  ]
+}

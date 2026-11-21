@@ -1,6 +1,6 @@
 # 演示用户头像
 
-44 位虚构演示人物的本地 WebP 头像，每张 256 × 256。包含当前演示种子及保留的历史演示账号。
+78 位虚构演示人物的本地 WebP 头像，每张 256 × 256。包含当前演示种子及保留的历史演示账号。
 
 - 画风：DiceBear 9.x `notionists-neutral`，基于 Zoish 的 Notionists。
 - 来源与许可：https://www.dicebear.com/styles/notionists-neutral/ ，CC0 1.0。

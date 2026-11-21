@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "欧阳乐",
+  "tagline": "第一次参加黑客松，跑腿、测试、整理文档都愿意做",
+  "hooks": [
+    {
+      "id": "can-help-errands",
+      "kind": "can-help",
+      "text": "我能跑腿、做测试、整理文档",
+      "opener": "你好！我在墙上看到你说能跑腿、做测试、整理文档，我们队正好缺人手，想聊聊吗？"
+    },
+    {
+      "id": "find-mentor",
+      "kind": "looking-for",
+      "text": "找愿意带新人的队长",
+      "opener": "嗨，我是有经验的开发，看到你在找愿意带新人的队长，我可以带一带你。"
+    },
+    {
+      "id": "build-useful-thing",
+      "kind": "want-to-build",
+      "text": "想和大家做一个真能用的东西",
+      "opener": "你好，看到你想做一个真能用的东西，我们也在做类似的小工具，要不要一起看看第一步？"
+    }
+  ]
+}

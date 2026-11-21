@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "木子",
+  "tagline": "把走过的路画成地图，路牌上的地名都收着",
+  "hooks": [
+    {
+      "id": "draw-route-map",
+      "kind": "ask-me",
+      "text": "怎么把走过的路画成地图",
+      "opener": "你好！在山野轻徒步墙上看到你说能教大家把走过的路画成地图，我一直想学，能聊聊从哪一步开始吗？"
+    },
+    {
+      "id": "draw-while-walking",
+      "kind": "want-to-try",
+      "text": "想试一次边走边画",
+      "opener": "嗨，我也想试试边走边画，要不要找一段短一点的步道一起？"
+    },
+    {
+      "id": "street-names",
+      "kind": "obsessed",
+      "text": "沉迷收集路牌上的地名",
+      "opener": "看到你在收集路牌上的地名，你一般是把它们记在哪里的？我也想看看你的小本子。"
+    }
+  ]
+}

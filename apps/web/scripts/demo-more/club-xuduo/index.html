@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>许多 · 山海摄影社</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+  :root {
+    --paper: #ffffff;
+    --ink: #111111;
+    --red: #e4002b;
+    --rule: 2px solid #111111;
+    --sans: var(--nm-font-noto-sans-sc);
+    --grotesk: var(--nm-font-inter);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: var(--sans);
+    font-weight: 400;
+    font-size: 15px;
+    line-height: 1.7;
+  }
+  .poster { max-width: 560px; margin: 0 auto; border-left: 2px solid var(--ink); border-right: 2px solid var(--ink); }
+  .cell { border-bottom: var(--rule); padding: 16px 18px 20px; }
+  .cell:last-child { border-bottom: 0; }
+
+  /* 顶栏：海报的页眉 */
+  .bar {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 10px 18px; border-bottom: var(--rule); background: var(--ink); color: #ffffff;
+    font-family: var(--grotesk); font-weight: 700; font-size: 12px; letter-spacing: 0.06em; text-transform: uppercase;
+  }
+
+  /* 首屏：超大的名字与数字 */
+  .poster-head { padding: 0; border-bottom: var(--rule); }
+  .poster-head__top { display: grid; grid-template-columns: 1fr auto; border-bottom: var(--rule); }
+  .kicker { margin: 0; padding: 12px 18px; font-size: 13px; font-weight: 700; border-right: var(--rule); }
+  .num-big { margin: 0; padding: 4px 14px 0; font-family: var(--grotesk); font-weight: 900; font-size: 54px; line-height: 1; color: var(--red); }
+  .name {
+    margin: 0; padding: 14px 18px 22px;
+    font-family: var(--sans); font-weight: 900; font-size: 104px; line-height: 1.2; letter-spacing: -0.02em;
+  }
+  .poster-head__bottom { display: grid; grid-template-columns: 1fr 1fr; border-top: var(--rule); }
+  .poster-head__bottom > div { padding: 12px 18px 16px; }
+  .poster-head__bottom > div + div { border-left: var(--rule); }
+  .label { display: block; font-family: var(--grotesk); font-weight: 700; font-size: 11px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--red); }
+  .fact { margin: 4px 0 0; font-weight: 900; font-size: 19px; line-height: 1.35; }
+  .lede { margin: 0; padding: 14px 18px 18px; font-size: 16px; line-height: 1.6; border-top: var(--rule); }
+
+  /* 区块标题：栅格里的一个信息栏 */
+  .head { display: flex; align-items: flex-end; gap: 12px; margin: 0 0 14px; }
+  .head__no { font-family: var(--grotesk); font-weight: 900; font-size: 44px; line-height: 0.9; color: var(--red); }
+  .head h2 { margin: 0; font-weight: 900; font-size: 22px; line-height: 1.3; }
+
+  /* 负责的事：三列数字 */
+  .duties { display: grid; grid-template-columns: 1fr; border-top: 0; }
+  .duty { padding: 12px 0; border-top: 1px solid var(--ink); }
+  .duty:first-child { border-top: 0; }
+  .duty__num { font-family: var(--grotesk); font-weight: 900; font-size: 30px; line-height: 1; }
+  .duty h3 { margin: 4px 0 0; font-size: 17px; font-weight: 900; line-height: 1.35; }
+  .duty p { margin: 2px 0 0; font-size: 14px; color: #3b3b3b; }
+  .obsess { margin: 16px -18px -20px; padding: 14px 18px; background: var(--red); color: #ffffff; font-weight: 900; font-size: 18px; line-height: 1.4; }
+
+  /* 问我：示意图 + 三条 */
+  .diagram { margin: 0 0 14px; border: var(--rule); background: #fff; }
+  .diagram svg { display: block; width: 100%; height: auto; }
+  .caption { margin: 6px 0 0; font-family: var(--grotesk); font-size: 11px; color: #555555; letter-spacing: 0.04em; text-transform: uppercase; }
+  .tips { margin: 0; padding: 0; list-style: none; }
+  .tips li { display: grid; grid-template-columns: 34px 52px 1fr; gap: 6px; align-items: baseline; padding: 10px 0; border-top: 1px solid var(--ink); font-size: 14.5px; }
+  .tips li:first-child { border-top: 0; }
+  .tips b { font-weight: 900; }
+  .tips p { margin: 0; color: #2b2b2b; }
+  .tips span { font-family: var(--grotesk); font-weight: 900; color: var(--red); }
+
+  /* 小册子 */
+  .spread { margin: 0 0 14px; display: grid; grid-template-columns: 1fr 1fr; border: var(--rule); }
+  .spread svg { display: block; width: 100%; height: auto; }
+  .spread > div + div { border-left: var(--rule); }
+  .specs { display: grid; grid-template-columns: 1fr 1fr; border-top: var(--rule); }
+  .specs div { padding: 8px 0; font-size: 14px; }
+  .specs div:nth-child(odd) { padding-right: 10px; }
+  .specs div:nth-child(even) { padding-left: 10px; border-left: 1px solid var(--ink); }
+  .specs dt { font-family: var(--grotesk); font-size: 11px; font-weight: 700; text-transform: uppercase; color: #555555; letter-spacing: 0.06em; }
+  .specs dd { margin: 0; font-weight: 900; font-size: 17px; }
+
+  /* 结尾 */
+  .closing { padding: 0; }
+  .closing p { margin: 0; padding: 18px; font-weight: 900; font-size: 18px; line-height: 1.5; }
+  .closing__sign { display: flex; justify-content: space-between; border-top: var(--rule); font-family: var(--grotesk); font-weight: 700; font-size: 12px; text-transform: uppercase; letter-spacing: 0.06em; }
+  .closing__sign span { padding: 10px 18px; }
+  .closing__sign span + span { border-left: var(--rule); }
+
+  @media (min-width: 700px) {
+    .poster { max-width: 880px; border-left: 3px solid var(--ink); border-right: 3px solid var(--ink); }
+    .name { font-size: 176px; padding: 18px 22px 30px; }
+    .poster-head__top { grid-template-columns: 1fr 2fr; }
+    .kicker { padding: 16px 22px; }
+    .num-big { font-size: 96px; padding: 4px 22px 0; }
+    .poster-head__bottom { grid-template-columns: 1fr 1fr 1fr; }
+    .poster-head__bottom > div + div { border-left: var(--rule); }
+    .lede { font-size: 18px; padding: 18px 22px 22px; }
+    .cell { padding: 22px 24px 26px; }
+    .bar { padding: 12px 24px; font-size: 13px; }
+    .head h2 { font-size: 30px; }
+    .head__no { font-size: 64px; }
+    .duties { grid-template-columns: 1fr 1fr 1fr; }
+    .duty { border-top: 0; border-left: 1px solid var(--ink); padding: 14px 18px 18px; }
+    .duty:first-child { border-left: 0; padding-left: 0; }
+    .duty:last-child { padding-right: 0; }
+    .duty__num { font-size: 56px; }
+    .duty h3 { font-size: 20px; }
+    .obsess { margin: 22px -24px -26px; padding: 18px 24px; font-size: 22px; }
+    .duties-wrap { padding: 0; }
+    .ask-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; align-items: start; }
+    .spread-wrap { display: grid; grid-template-columns: 1fr 1fr; gap: 0 28px; align-items: start; }
+    .closing p { font-size: 26px; padding: 24px 24px; }
+    .closing__sign span { padding: 12px 24px; }
+  }
+</style>
+</head>
+<body>
+<div class="poster">
+
+  <div class="bar" aria-hidden="true">
+    <span>山海摄影社</span>
+    <span>秋季小展 · 海报</span>
+    <span>No.04</span>
+  </div>
+
+  <header class="poster-head" data-nm-id="poster-head">
+    <div class="poster-head__top">
+      <p class="kicker">视觉传达 · 大三<br>社团宣传</p>
+      <p class="num-big" aria-hidden="true">04</p>
+    </div>
+    <h1 class="name">许多</h1>
+    <div class="poster-head__bottom">
+      <div>
+        <span class="label">负责</span>
+        <p class="fact">公众号排版</p>
+      </div>
+      <div>
+        <span class="label">负责</span>
+        <p class="fact">月底小展海报</p>
+      </div>
+    </div>
+    <p class="lede">一个社团的所有字，我都想排进同一套格子里。</p>
+  </header>
+
+  <section class="cell" data-nm-id="duties">
+    <div class="head">
+      <span class="head__no">01</span>
+      <h2>我在做的事</h2>
+    </div>
+    <div class="duties">
+      <div class="duty">
+        <span class="duty__num">A</span>
+        <h3>公众号长图排版</h3>
+        <p>每周推文的版式、配图的裁切与字距，都在我这里。</p>
+      </div>
+      <div class="duty">
+        <span class="duty__num">B</span>
+        <h3>月底小展海报</h3>
+        <p>一张纸讲清楚时间、地点和这一期拍了什么。</p>
+      </div>
+      <div class="duty">
+        <span class="duty__num">C</span>
+        <h3>社团的字体与颜色</h3>
+        <p>红与黑两色，统一所有宣传物料的一个底子。</p>
+      </div>
+    </div>
+    <p class="obsess">我在沉迷用一根网格线决定整张海报</p>
+  </section>
+
+  <section class="cell" data-nm-id="ask-me">
+    <div class="ask-grid">
+      <div>
+        <div class="head">
+          <span class="head__no">02</span>
+          <h2>可以来问我怎么选片和排版</h2>
+        </div>
+        <ul class="tips">
+          <li><span>01</span><b>选片</b><p>先挑五张，再按情绪删到三张，留下的每张都要能一句话说清为什么。</p></li>
+          <li><span>02</span><b>排版</b><p>先定一条主线，所有文字都靠它对齐，不靠感觉挪位置。</p></li>
+          <li><span>03</span><b>留白</b><p>字太多就删字，别把图缩小去凑。</p></li>
+        </ul>
+      </div>
+      <div>
+        <figure class="diagram">
+          <svg viewBox="0 0 300 200" role="img" aria-label="海报栅格示意">
+            <rect x="0" y="0" width="300" height="200" fill="#ffffff"/>
+            <line x1="100" y1="0" x2="100" y2="200" stroke="#e4002b" stroke-width="1"/>
+            <line x1="200" y1="0" x2="200" y2="200" stroke="#e4002b" stroke-width="1"/>
+            <line x1="0" y1="50" x2="300" y2="50" stroke="#e4002b" stroke-width="1"/>
+            <line x1="0" y1="150" x2="300" y2="150" stroke="#e4002b" stroke-width="1"/>
+            <rect x="12" y="62" width="176" height="126" fill="#111111"/>
+            <rect x="206" y="62" width="82" height="58" fill="#e4002b"/>
+            <rect x="206" y="128" width="82" height="60" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+            <rect x="20" y="16" width="120" height="22" fill="#111111"/>
+            <rect x="214" y="16" width="70" height="22" fill="#111111"/>
+          </svg>
+        </figure>
+        <p class="caption">示意：一张主图、一个红色信息栏、一条标题线</p>
+      </div>
+    </div>
+  </section>
+
+  <section class="cell" data-nm-id="booklet">
+    <div class="head">
+      <span class="head__no">03</span>
+      <h2>想试做一本社员合集小册子</h2>
+    </div>
+    <div class="spread-wrap">
+      <div>
+        <div class="spread">
+          <div>
+            <svg viewBox="0 0 120 150" role="img" aria-label="小册子左页示意">
+              <rect width="120" height="150" fill="#ffffff"/>
+              <rect x="10" y="10" width="100" height="62" fill="#111111"/>
+              <rect x="10" y="82" width="46" height="58" fill="#e4002b"/>
+              <rect x="62" y="82" width="48" height="26" fill="#111111"/>
+              <rect x="62" y="114" width="48" height="26" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+            </svg>
+          </div>
+          <div>
+            <svg viewBox="0 0 120 150" role="img" aria-label="小册子右页示意">
+              <rect width="120" height="150" fill="#ffffff"/>
+              <rect x="10" y="10" width="46" height="46" fill="#e4002b"/>
+              <rect x="62" y="10" width="48" height="46" fill="#111111"/>
+              <rect x="10" y="62" width="100" height="36" fill="#ffffff" stroke="#111111" stroke-width="2"/>
+              <rect x="10" y="104" width="100" height="36" fill="#111111"/>
+            </svg>
+          </div>
+        </div>
+        <p class="caption">示意：一个跨页，一人一页，网格不变</p>
+      </div>
+      <div>
+        <dl class="specs" style="margin:0">
+          <div><dt>开本</dt><dd>A5 横版</dd></div>
+          <div><dt>每人</dt><dd>一页</dd></div>
+          <div><dt>封面</dt><dd>红黑两色</dd></div>
+          <div><dt>内容</dt><dd>照片 + 一句话</dd></div>
+        </dl>
+      </div>
+    </div>
+  </section>
+
+  <footer class="cell closing" data-nm-id="closing">
+    <p>在页面外点「想聊这个」，从网格开始。</p>
+    <div class="closing__sign">
+      <span>许多</span>
+      <span>视觉传达 · 大三</span>
+    </div>
+  </footer>
+
+</div>
+</body>
+</html>

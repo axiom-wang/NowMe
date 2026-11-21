@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "季白",
+  "tagline": "爱试着“骗”AI 说出不该说的话，再帮它补漏洞",
+  "hooks": [
+    {
+      "id": "injection-test",
+      "kind": "can-help",
+      "text": "我能帮你做一轮提示词注入测试",
+      "opener": "季白你好！你能帮队伍做提示词注入测试，我们的应用上线前正想找人过一遍漏洞，能帮忙看看吗？"
+    },
+    {
+      "id": "find-builder",
+      "kind": "looking-for",
+      "text": "找愿意一起补漏洞的开发",
+      "opener": "季白你好！我是做应用开发的，“骗 AI 说真话再补漏洞”很有意思，能带我们做一次自查吗？"
+    },
+    {
+      "id": "safety-checklist",
+      "kind": "want-to-build",
+      "text": "想做给小团队用的 AI 安全自查清单",
+      "opener": "季白你好！小团队用 AI 最容易忽略的是哪几处？这份安全自查清单，你想先列哪几条？"
+    }
+  ]
+}

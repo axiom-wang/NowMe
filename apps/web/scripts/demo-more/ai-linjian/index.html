@@ -1,0 +1,111 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>林间 · AI 共创实验室</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+:root{--paper:#f6eed6;--red:#c0463a;--red-soft:rgba(192,70,58,.22);--ink:#2d2a22;--muted:#78705c;--nm-font-body:var(--nm-font-lxgw-wenkai)}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{min-height:100vh;background-color:var(--paper);background-image:linear-gradient(to bottom,var(--red-soft) 1px,transparent 1px),linear-gradient(to right,transparent 43px,rgba(192,70,58,.55) 43px,rgba(192,70,58,.55) 44px,transparent 44px);background-size:100% 26px,100% 100%;color:var(--ink);font:400 16px/26px var(--nm-font-body);overflow-x:hidden}
+p,h1,ol,figure{margin:0}
+main{max-width:720px;margin:0 auto;padding:0 18px 0 56px}
+.sheet-head{display:flex;justify-content:space-between;align-items:flex-end;height:52px;padding-top:12px;font:400 13px/26px var(--nm-font-body);color:var(--muted);border-bottom:1px solid var(--red-soft)}
+.sheet-head b{font-weight:500;color:var(--red)}
+.title-block{padding:22px 0 8px}
+.name{display:flex;flex-wrap:wrap;margin-bottom:6px}
+.cell{display:inline-block;width:52px;height:52px;border:1px solid var(--red);line-height:50px;text-align:center;font-size:34px;font-weight:500;color:var(--ink);background:rgba(255,255,255,.18)}
+.name .cell+.cell{border-left:none}
+.role{font-size:14px;color:var(--muted);margin-top:4px}
+.headline{font-size:24px;line-height:52px;font-weight:500;margin-top:14px}
+.doodle{color:var(--red);font-size:14px;line-height:26px;margin-top:4px;padding-left:8px;border-left:2px solid var(--red)}
+.sec-label{font-size:13px;color:var(--red);margin:0 0 4px;letter-spacing:.04em}
+.swap{padding:20px 0 6px}
+.draft{position:relative;padding:10px 0 12px;border-bottom:1px dashed var(--red-soft)}
+.draft-old{font-size:17px;color:var(--muted)}
+.draft-old s{text-decoration:line-through;text-decoration-color:var(--red);text-decoration-thickness:2px}
+.draft-new{font-size:18px;margin-top:0}
+.draft-new ins{text-decoration:none;color:var(--red);font-weight:500;background:linear-gradient(transparent 62%,rgba(192,70,58,.14) 62%)}
+.pen{font-size:14px;color:var(--red);margin-top:0;transform:rotate(-1deg);transform-origin:left}
+.pen::before{content:"← ";}
+.desk{padding:20px 0 6px;border-top:1px solid var(--red-soft)}
+.about{font-size:16px;line-height:26px;margin-top:4px}
+.work{font-size:15px;line-height:26px;color:var(--muted);margin-top:0;text-indent:2em}
+.margin{padding:20px 0 6px;border-top:1px solid var(--red-soft)}
+.notes{list-style:none;padding:0;margin:4px 0 0}
+.notes li{display:grid;grid-template-columns:28px 1fr;gap:4px;align-items:start;min-height:52px;padding:8px 0;border-bottom:1px dotted var(--red-soft)}
+.notes .no{font-size:18px;color:var(--red);line-height:26px}
+.notes p{font-size:18px;line-height:26px}
+.cta{font-size:14px;color:var(--muted);margin-top:8px;padding-bottom:18px}
+.end{display:flex;justify-content:space-between;border-top:1px solid var(--red-soft);height:40px;align-items:center;font-size:13px;color:var(--muted)}
+@media (min-width:700px){
+  main{padding:0 40px 0 72px}
+  body{background-image:linear-gradient(to bottom,var(--red-soft) 1px,transparent 1px),linear-gradient(to right,transparent 63px,rgba(192,70,58,.55) 63px,rgba(192,70,58,.55) 64px,transparent 64px);background-size:100% 26px,100% 100%}
+  .sheet-head{height:58px}
+  .title-block{display:grid;grid-template-columns:1fr 1fr;column-gap:36px;align-items:end;padding:36px 0 14px}
+  .name{grid-column:1/-1}
+  .cell{width:72px;height:72px;line-height:70px;font-size:48px}
+  .headline{font-size:32px;line-height:52px;margin-top:0}
+  .swap{display:grid;grid-template-columns:1fr 1fr;column-gap:34px;padding-top:26px}
+  .swap>.sec-label{grid-column:1/-1}
+  .draft-old{font-size:18px}
+  .draft-new{font-size:20px}
+  .desk{display:grid;grid-template-columns:1fr 1fr;column-gap:34px;padding-top:26px}
+  .desk>.sec-label{grid-column:1/-1}
+  .margin{padding-top:26px}
+  .notes li{grid-template-columns:36px 1fr}
+  .notes p{font-size:20px}
+}
+</style>
+</head>
+<body>
+<main>
+<header class="sheet-head"><span>稿纸 · 第 1 页</span><b>AI 共创实验室</b></header>
+<section class="title-block" data-nm-id="manuscript-title">
+  <h1 class="name" aria-label="林间"><span class="cell">林</span><span class="cell">间</span></h1>
+  <div>
+    <p class="role">中文系研一 · 写作者 · 做提示词实验</p>
+    <p class="headline">先把套话划掉，<br>再说人话。</p>
+    <p class="doodle">（这一句我改了三遍）</p>
+  </div>
+</section>
+<section class="swap" data-nm-id="cliche-to-plain">
+  <p class="sec-label">01 · 套话 → 人话</p>
+  <article class="draft">
+    <p class="draft-old"><s>您的问题非常重要，我们将竭诚为您服务。</s></p>
+    <p class="draft-new"><ins>你的问题我记下了，明天上午给你回。</ins></p>
+    <p class="pen">少说“竭诚”，多说“明天上午”。</p>
+  </article>
+  <article class="draft">
+    <p class="draft-old"><s>当然可以！这是一个非常好的问题呢～</s></p>
+    <p class="draft-new"><ins>可以。先说结论：这个按钮该放在右下角。</ins></p>
+    <p class="pen">感叹号去掉，结论放前面。</p>
+  </article>
+  <article class="draft">
+    <p class="draft-old"><s>感谢您的耐心等待，请您稍后再试。</s></p>
+    <p class="draft-new"><ins>刚才服务器卡了，等一分钟再点一次就行。</ins></p>
+    <p class="pen">告诉对方卡在哪儿，别只说“稍后”。</p>
+  </article>
+</section>
+<section class="desk" data-nm-id="writing-desk">
+  <p class="sec-label">02 · 关于我</p>
+  <div>
+    <p class="about">我在中文系读研，平时写短篇和影评。做提示词实验时最烦 AI 开口就说“当然可以！”，于是想试试：能不能让它先像一个会写字的人，再去做事。</p>
+    <p class="work">这一阵每次只改一个指令，记下哪里少了套话、哪里多了能直接拿去用的句子，攒成一份“人话手册”。</p>
+  </div>
+</section>
+<section class="margin" data-nm-id="margin-hooks">
+  <p class="sec-label">03 · 页边批注</p>
+  <ol class="notes">
+    <li><span class="no">①</span><p>我能帮你把界面文案改成人话</p></li>
+    <li><span class="no">②</span><p>找会做对话界面的队友</p></li>
+    <li><span class="no">③</span><p>想做帮你把吐槽改成好好说话的小助手</p></li>
+  </ol>
+  <p class="cta">在页面外点「想聊这个」，从一句你最讨厌的 AI 套话开始。</p>
+</section>
+<footer class="end"><span>提示词 · 文案 · 对话语气</span><span>林间 / NOWMe</span></footer>
+</main>
+</body>
+</html>

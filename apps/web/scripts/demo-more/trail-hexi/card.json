@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "何夕",
+  "tagline": "走完，再伸一伸，每个动作配一次呼吸",
+  "hooks": [
+    {
+      "id": "stretch-after-hike",
+      "kind": "ask-me",
+      "text": "走完怎么拉伸不酸痛",
+      "opener": "你好！在山野轻徒步墙上看到你是瑜伽老师，想问问走完山路怎么拉伸才能不酸痛？"
+    },
+    {
+      "id": "grass-stretch-class",
+      "kind": "want-to-try",
+      "text": "想试一次山脚草坪的拉伸小课",
+      "opener": "嗨，我也想试试山脚草坪的拉伸小课，你一般会选哪一块草地？"
+    },
+    {
+      "id": "slow-breathing",
+      "kind": "obsessed",
+      "text": "慢慢呼吸",
+      "opener": "看到你说沉迷慢慢呼吸，你平时是怎么数的？我也想跟你学一套节奏。"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "苏墨",
+  "tagline": "数字媒体大三，用代码画会动的几何，想把一段话变成小城",
+  "hooks": [
+    {
+      "id": "help-opening",
+      "kind": "can-help",
+      "text": "我能帮你做一段酷炫的 Demo 开场动效",
+      "opener": "你好！我在墙上看到你们的 Demo 还缺开场，我能做一段几秒钟的动效，不抢戏，想聊聊吗？"
+    },
+    {
+      "id": "build-city",
+      "kind": "want-to-build",
+      "text": "想做把一段话变成小城的生成艺术",
+      "opener": "嗨，你写的那句“城市是一群人的路线”我很喜欢，我想把这种句子变成一座小城，想一起看看吗？"
+    },
+    {
+      "id": "find-frontend",
+      "kind": "looking-for",
+      "text": "找愿意把动效接进前端的队友",
+      "opener": "你好！看到你在找做前端的队友，我的动效需要有人接进页面，要不要试一试？"
+    }
+  ]
+}

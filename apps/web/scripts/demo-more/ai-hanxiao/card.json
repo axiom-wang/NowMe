@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "韩笑",
+  "tagline": "音乐学院作曲系大二，用 AI 生成伴奏再自己改",
+  "hooks": [
+    {
+      "id": "help-score",
+      "kind": "can-help",
+      "text": "我能帮 Demo 配一段原创背景音乐和音效",
+      "opener": "你好！你们 Demo 还缺背景音乐的话，我能配一段原创的，也能做几个音效，想听听看吗？"
+    },
+    {
+      "id": "build-chords",
+      "kind": "want-to-build",
+      "text": "想做哼一段旋律就生成和弦的工具",
+      "opener": "嗨，我想做一个哼一段旋律就生成和弦的工具，你平时会怎么给旋律配和弦？"
+    },
+    {
+      "id": "find-audio-dev",
+      "kind": "looking-for",
+      "text": "找会做音频接口的开发",
+      "opener": "你好！看到你在找能做音频接口的开发，我这边有一段旋律想接进网页，要不要聊聊？"
+    }
+  ]
+}

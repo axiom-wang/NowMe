@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>阿杰 · 海拔剖面 · 山野轻徒步</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+:root{--aj-bg:#eef2ee;--aj-card:#fbfcfa;--aj-ink:#1e2a2c;--aj-green:#2f7a5c;--aj-soft:#cfe3d6;--aj-warn:#c7741f;--aj-muted:#5d6d68;--aj-rule:#b7c6bf;--nm-font-body:var(--nm-font-noto-sans-sc);--nm-font-display:var(--nm-font-space-grotesk)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--aj-bg);color:var(--aj-ink)}
+body{font:400 15px/1.8 var(--nm-font-body)}
+h1,h2,p{margin:0}
+h1,h2{font-weight:700}
+main{max-width:1000px;margin:0 auto;padding:20px 20px 28px}
+.aj-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;font-family:var(--nm-font-display);font-size:12px;letter-spacing:.06em;color:var(--aj-muted)}
+.aj-head{padding:18px 0 14px}
+.aj-head h1{font-family:var(--nm-font-display);font-size:50px;line-height:1.05;letter-spacing:-.02em}
+.aj-head .aj-role{font-size:14px;color:var(--aj-green);margin-top:8px}
+.aj-head .aj-tag{font-size:17px;margin-top:10px;max-width:20em;line-height:1.6}
+.aj-profile{position:relative;background:var(--aj-card);border:1px solid var(--aj-rule);border-radius:6px;padding:14px 12px 10px;margin-top:18px}
+.aj-profile svg{display:block;width:100%;height:auto}
+.aj-profile text{font-family:var(--nm-font-display);font-size:11px;fill:var(--aj-muted)}
+.aj-profile .slope{font-family:var(--nm-font-display);font-size:12px;font-weight:700;fill:var(--aj-warn)}
+.aj-profile figcaption{display:flex;justify-content:space-between;gap:10px;font-family:var(--nm-font-display);font-size:11px;color:var(--aj-muted);margin-top:6px}
+.aj-route{position:relative;margin:26px 0 0 4px;padding-left:20px;border-left:2px dashed var(--aj-rule)}
+.aj-km{position:relative;background:var(--aj-card);border:1px solid var(--aj-rule);border-radius:6px;padding:14px 16px 16px;margin-bottom:14px}
+.aj-km::before{content:"";position:absolute;left:-27px;top:20px;width:12px;height:12px;border-radius:50%;background:var(--aj-green);box-shadow:0 0 0 3px var(--aj-bg)}
+.aj-km-mark{display:inline-block;font-family:var(--nm-font-display);font-size:12px;font-weight:700;color:#fff;background:var(--aj-green);padding:2px 8px;border-radius:3px}
+.aj-km h2{font-size:19px;line-height:1.5;margin:10px 0 8px}
+.aj-km p{font-size:14px;color:var(--aj-ink)}
+.aj-slope{margin-top:10px;display:flex;flex-wrap:wrap;gap:6px 12px;font-family:var(--nm-font-display);font-size:12px;color:var(--aj-muted)}
+.aj-slope b{color:var(--aj-green);font-weight:700}
+.aj-km.is-note{background:var(--aj-soft);border-color:var(--aj-soft)}
+.aj-foot{margin-top:18px;padding-top:14px;border-top:1px dashed var(--aj-rule);font-size:13px;line-height:1.8;color:var(--aj-muted)}
+@media (min-width:700px){
+  main{padding:34px 40px 40px}
+  .aj-head{display:grid;grid-template-columns:1.1fr .9fr;gap:6px 36px;align-items:end;padding:26px 0 20px}
+  .aj-head h1{font-size:84px;grid-column:1}
+  .aj-head .aj-role,.aj-head .aj-tag{grid-column:1}
+  .aj-head .aj-tag{font-size:20px}
+  .aj-profile{grid-column:2;grid-row:1/4;margin-top:0}
+  .aj-profile svg{height:auto}
+  .aj-route{display:grid;grid-template-columns:repeat(3,1fr);gap:0 18px;margin:30px 0 0;padding-left:0;border-left:0}
+  .aj-km{margin-bottom:0;padding:22px 20px 24px;border-top:4px solid var(--aj-green)}
+  .aj-km::before{display:none}
+  .aj-km h2{font-size:24px}
+  .aj-foot{display:flex;justify-content:space-between;gap:20px;font-size:14px}
+}
+</style>
+</head>
+<body>
+<main>
+  <div class="aj-top"><span>山野轻徒步 · 海拔剖面</span><span>平缓优先</span></div>
+
+  <header class="aj-head" data-nm-id="profile-header">
+    <h1>阿杰</h1>
+    <p class="aj-role">体育康复专业 · 膝伤恢复中，走平路</p>
+    <p class="aj-tag">不拼海拔，只看剖面线够不够平。这一条线，是我每次出门前先看的东西。</p>
+    <figure class="aj-profile">
+      <svg viewBox="-8 0 376 150" role="img" aria-label="一条平缓的海拔折线，从左到右只缓慢抬升，标注坡度不超过百分之五，示意">
+        <path d="M0 26H360V150H0Z" fill="none"/>
+        <line x1="0" y1="36" x2="360" y2="36" stroke="#b7c6bf" stroke-dasharray="3 4"/>
+        <line x1="0" y1="72" x2="360" y2="72" stroke="#b7c6bf" stroke-dasharray="3 4"/>
+        <path d="M0 112L60 107L120 103L180 99L240 95L300 91L360 87V132H0Z" fill="#cfe3d6"/>
+        <path d="M0 112L60 107L120 103L180 99L240 95L300 91L360 87" fill="none" stroke="#2f7a5c" stroke-width="3" stroke-linejoin="round"/>
+        <g fill="#2f7a5c"><circle cx="0" cy="112" r="4"/><circle cx="120" cy="103" r="4"/><circle cx="240" cy="95" r="4"/><circle cx="360" cy="87" r="4"/></g>
+        <text x="4" y="146">0.0 km</text>
+        <text x="110" y="146">1.2 km</text>
+        <text x="230" y="146">2.4 km</text>
+        <text x="312" y="146">3.6 km</text>
+        <text x="8" y="22" class="slope">坡度 ≤ 5%</text>
+      </svg>
+      <figcaption><span>湖边环线 · 示意剖面</span><span>起伏很小</span></figcaption>
+    </figure>
+  </header>
+
+  <div class="aj-route">
+    <section class="aj-km" data-nm-id="km-0-ask">
+      <span class="aj-km-mark">0.0 km</span>
+      <h2>怎么挑坡度平缓的路</h2>
+      <p>出发前先看海拔图，找连续几公里都贴着水平线的路，再看路面是不是石阶。可以来问我，我把常用的几条线都标好了。</p>
+      <div class="aj-slope"><span>坡度 <b>≤ 5%</b></span><span>路面：平整绿道</span></div>
+    </section>
+
+    <section class="aj-km" data-nm-id="km-2-lake">
+      <span class="aj-km-mark">2.4 km</span>
+      <h2>想试一次全程平路的湖边环线</h2>
+      <p>湖边一圈几乎没有起伏，适合慢慢走，停下来看水。膝盖不舒服就原路返回，不用硬撑。</p>
+      <div class="aj-slope"><span>里程 <b>3.6 km</b></span><span>全程平路</span></div>
+    </section>
+
+    <section class="aj-km is-note" data-nm-id="km-4-profile">
+      <span class="aj-km-mark">4.8 km</span>
+      <h2>沉迷看路线的海拔图</h2>
+      <p>每条路线我都会先画一张剖面，标出里程、坡度和休息点。看着线平不平，比看风景还让我安心。</p>
+    </section>
+  </div>
+
+  <footer class="aj-foot" data-nm-id="profile-footer">
+    <span>阿杰 · 山野轻徒步 · 坡度 ≤ 5%</span>
+    <span>在页面外点「想聊这个」，从一段山脚缓坡开始。</span>
+  </footer>
+</main>
+</body>
+</html>

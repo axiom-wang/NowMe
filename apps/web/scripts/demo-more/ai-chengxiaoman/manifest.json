@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "smiley-sans", "weights": [400] },
+    { "id": "lxgw-wenkai", "weights": [400] }
+  ],
+  "extraChars": "",
+  "blocks": ["board-title", "chalk-lesson", "kid-quiz", "duty-corner"],
+  "generator": { "agent": "nowme-demo" }
+}

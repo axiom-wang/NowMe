@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>唐小果 · 插画动效 · 双色孔版印刷小志</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+  :root {
+    --paper: #f6f1e4;
+    --pink: #ff5fa2;
+    --blue: #3b3fd0;
+    --ink: #1d1f57;
+    --font-display: var(--nm-font-smiley-sans);
+    --font-cn: var(--nm-font-noto-sans-sc);
+  }
+  html, body { background: var(--paper); color: var(--blue); }
+  body {
+    font-family: var(--font-cn); font-weight: 400; font-size: 15px; line-height: 1.75;
+    background-image: radial-gradient(rgba(59, 63, 208, 0.10) 0.7px, transparent 1px);
+    background-size: 4px 4px;
+  }
+  h1, h2, p, ul, figure { margin: 0; }
+  ul { padding: 0; list-style: none; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 20px 60px; }
+
+  /* 错版：蓝色主版，粉色副版偏移一点，像两张网版没有对齐 */
+  .misreg { position: relative; display: inline-block; white-space: nowrap; }
+  .misreg::before { content: attr(data-text); position: absolute; left: 3px; top: 2px; white-space: nowrap; color: var(--pink); mix-blend-mode: multiply; z-index: 0; }
+  .misreg > span { position: relative; z-index: 1; }
+
+  /* 叠印块：粉色底、蓝色字，在交界处 multiply */
+  .sheet { position: relative; border: 2px solid var(--blue); background: var(--paper); }
+  .sheet::after { content: ""; position: absolute; inset: 0; pointer-events: none; background-image: radial-gradient(rgba(29, 31, 87, 0.14) 0.6px, transparent 1px); background-size: 4px 4px; }
+
+  /* ---- 封面 ---- */
+  .cover { margin-top: 26px; padding: 26px 20px 22px; overflow: hidden; box-shadow: 6px 5px 0 var(--pink); }
+  .cover__tag { display: inline-block; padding: 2px 10px; background: var(--blue); color: var(--paper); font-size: 13px; }
+  .cover__name { margin-top: 14px; font-family: var(--font-display); font-size: 64px; font-weight: 400; line-height: 1.1; letter-spacing: 0.04em; color: var(--blue); text-shadow: 3px 2px 0 var(--pink); }
+  .cover__role { margin-top: 12px; font-size: 14px; color: var(--ink); }
+  .cover__lead { margin-top: 16px; font-size: 17px; line-height: 1.7; color: var(--ink); }
+  .cover__art { position: relative; margin: 14px auto 0; width: 210px; height: 210px; }
+  .cover__art svg { display: block; width: 100%; height: 100%; }
+  .cover__cap { position: absolute; right: 0; bottom: 6px; font-size: 12px; color: var(--blue); background: var(--paper); padding: 0 6px; }
+
+  /* ---- 吉祥物三个表情 ---- */
+  .cast { margin-top: 48px; }
+  .cast__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .cast__head h2 { font-family: var(--font-display); font-size: 28px; font-weight: 400; color: var(--blue); }
+  .cast__head span { font-size: 12px; color: var(--ink); }
+  .cast__grid { display: grid; gap: 14px; margin-top: 16px; }
+  .cast__card { padding: 14px 12px 12px; background: var(--paper); border: 2px solid var(--blue); box-shadow: 4px 4px 0 var(--pink); text-align: center; }
+  .cast__card svg { display: block; width: 100%; max-width: 110px; height: auto; margin: 0 auto; }
+  .cast__card b { display: block; margin-top: 8px; font-family: var(--font-display); font-size: 18px; font-weight: 400; color: var(--blue); }
+  .cast__card p { margin-top: 4px; font-size: 13px; line-height: 1.6; color: var(--ink); }
+
+  /* ---- 番茄钟流程 ---- */
+  .flow { margin-top: 50px; }
+  .flow h2 { font-family: var(--font-display); font-size: 28px; font-weight: 400; color: var(--blue); }
+  .flow > p { margin-top: 6px; font-size: 14px; color: var(--ink); }
+  .flow__steps { display: grid; gap: 12px; margin-top: 18px; }
+  .step { position: relative; display: grid; grid-template-columns: 74px 1fr; gap: 12px; align-items: center; padding: 14px 14px 14px 12px; background: var(--paper); border: 2px solid var(--blue); }
+  .step--pink { background: var(--pink); }
+  .step--pink .step__time, .step--pink p { color: var(--ink); }
+  .step__time { font-family: var(--font-display); font-size: 30px; line-height: 1; color: var(--blue); }
+  .step__time small { display: block; margin-top: 4px; font-family: var(--font-cn); font-size: 12px; color: var(--ink); }
+  .step p { font-size: 16px; line-height: 1.6; color: var(--blue); }
+  .step p small { display: block; margin-top: 2px; font-size: 13px; color: var(--ink); }
+  .flow__down { font-family: var(--font-display); font-size: 22px; text-align: center; color: var(--blue); line-height: 1.2; }
+
+  /* ---- 分镜：小动画 ---- */
+  .frames { margin-top: 50px; }
+  .frames h2 { font-family: var(--font-display); font-size: 28px; font-weight: 400; color: var(--blue); }
+  .frames > p { margin-top: 6px; font-size: 14px; color: var(--ink); }
+  .frames__strip { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-top: 16px; padding: 12px 8px 10px; border: 2px solid var(--blue); background: var(--paper); }
+  .frame { text-align: center; }
+  .frame svg { display: block; width: 100%; height: auto; }
+  .frame span { display: block; margin-top: 4px; font-family: var(--font-display); font-size: 14px; color: var(--blue); }
+  .frames__note { margin-top: 8px; font-size: 12px; color: var(--ink); text-align: right; }
+  .bounce { transform-origin: 50% 100%; animation: squish 1.6s ease-in-out infinite; }
+  @keyframes squish {
+    0%, 100% { transform: scale(1, 1); }
+    40% { transform: scale(1.06, 0.92); }
+    60% { transform: scale(0.96, 1.05); }
+  }
+
+  /* ---- 收尾 ---- */
+  .ping { margin-top: 52px; padding: 18px 18px 20px; background: var(--blue); color: var(--paper); box-shadow: 5px 5px 0 var(--pink); }
+  .ping p { font-size: 16px; line-height: 1.8; color: var(--paper); }
+  .ping small { display: block; margin-top: 10px; font-size: 12px; color: var(--pink); }
+
+  @media (min-width: 700px) {
+    .wrap { max-width: 880px; }
+    .cover { display: grid; grid-template-columns: 1fr 260px; gap: 24px; align-items: center; }
+    .cover__art { margin: 0; width: 260px; height: 260px; }
+    .cover__name { font-size: 96px; }
+    .cast__grid { grid-template-columns: repeat(3, 1fr); }
+    .frames__strip { grid-template-columns: repeat(4, 1fr); }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="sheet cover" data-nm-id="print-cover">
+    <div>
+      <span class="cover__tag">番茄钟 · 原创吉祥物 · 印刷小志</span>
+      <h1 class="cover__name misreg" data-text="唐小果"><span>唐小果</span></h1>
+      <p class="cover__role">插画 / 动效设计 · 美院大二</p>
+      <p class="cover__lead">我能一晚上画完一套吉祥物，也想做一个会安慰人的番茄钟。</p>
+    </div>
+    <figure class="cover__art">
+      <svg viewBox="0 0 200 200" role="img" aria-label="番茄角色（原创）">
+        <defs>
+          <pattern id="dots-main" width="6" height="6" patternUnits="userSpaceOnUse">
+            <circle cx="3" cy="3" r="1.4" fill="#3b3fd0"/>
+          </pattern>
+          <clipPath id="body-clip"><path d="M100 52 C 52 40, 16 84, 24 124 C 32 166, 72 178, 100 164 C 128 178, 168 166, 176 124 C 184 84, 148 40, 100 52 Z"/></clipPath>
+        </defs>
+        <path d="M100 52 C 52 40, 16 84, 24 124 C 32 166, 72 178, 100 164 C 128 178, 168 166, 176 124 C 184 84, 148 40, 100 52 Z" fill="#ff5fa2"/>
+        <rect x="0" y="120" width="200" height="80" fill="url(#dots-main)" clip-path="url(#body-clip)"/>
+        <path d="M74 50 Q84 26 100 38 Q116 26 126 50 Q100 60 74 50 Z" fill="#3b3fd0"/>
+        <path d="M100 38 Q102 24 116 20" fill="none" stroke="#3b3fd0" stroke-width="6" stroke-linecap="round"/>
+        <circle cx="78" cy="112" r="6" fill="#3b3fd0"/>
+        <circle cx="122" cy="112" r="6" fill="#3b3fd0"/>
+        <path d="M86 132 Q100 144 114 132" fill="none" stroke="#3b3fd0" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="62" cy="128" r="7" fill="#fff" opacity="0.5"/>
+        <circle cx="138" cy="128" r="7" fill="#fff" opacity="0.5"/>
+      </svg>
+      <figcaption class="cover__cap">原创角色 · 双色印刷示意</figcaption>
+    </figure>
+  </header>
+
+  <section class="cast" data-nm-id="mascot-cast">
+    <div class="cast__head">
+      <h2>番茄的三种表情</h2>
+      <span>同一个角色，换一句话</span>
+    </div>
+    <div class="cast__grid">
+      <figure class="cast__card">
+        <svg viewBox="0 0 120 120" role="img" aria-label="安慰的表情">
+          <path d="M60 30 C 26 24, 10 56, 16 82 C 22 108, 44 112, 60 106 C 76 112, 98 108, 104 82 C 110 56, 94 24, 60 30 Z" fill="#ff5fa2"/>
+          <path d="M46 32 Q52 18 60 24 Q68 18 74 32 Q60 38 46 32 Z" fill="#3b3fd0"/>
+          <path d="M40 66 Q46 60 52 66" fill="none" stroke="#3b3fd0" stroke-width="3" stroke-linecap="round"/>
+          <path d="M68 66 Q74 60 80 66" fill="none" stroke="#3b3fd0" stroke-width="3" stroke-linecap="round"/>
+          <path d="M50 84 Q60 80 70 84" fill="none" stroke="#3b3fd0" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="32" cy="80" r="5" fill="#3b3fd0" opacity="0.35"/>
+          <circle cx="88" cy="80" r="5" fill="#3b3fd0" opacity="0.35"/>
+        </svg>
+        <b>安慰</b>
+        <p>“今天也可以只完成一半。”</p>
+      </figure>
+      <figure class="cast__card">
+        <svg viewBox="0 0 120 120" role="img" aria-label="鼓励的表情">
+          <path d="M60 30 C 26 24, 10 56, 16 82 C 22 108, 44 112, 60 106 C 76 112, 98 108, 104 82 C 110 56, 94 24, 60 30 Z" fill="#ff5fa2"/>
+          <path d="M46 32 Q52 18 60 24 Q68 18 74 32 Q60 38 46 32 Z" fill="#3b3fd0"/>
+          <circle cx="44" cy="68" r="5" fill="#3b3fd0"/>
+          <circle cx="76" cy="68" r="5" fill="#3b3fd0"/>
+          <path d="M44 82 Q60 98 76 82" fill="none" stroke="#3b3fd0" stroke-width="4" stroke-linecap="round"/>
+          <path d="M22 44 L28 50 M98 44 L92 50" stroke="#3b3fd0" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+        <b>鼓励</b>
+        <p>“这一格不算失败，再来一格。”</p>
+      </figure>
+      <figure class="cast__card">
+        <svg viewBox="0 0 120 120" role="img" aria-label="发呆的表情">
+          <path d="M60 30 C 26 24, 10 56, 16 82 C 22 108, 44 112, 60 106 C 76 112, 98 108, 104 82 C 110 56, 94 24, 60 30 Z" fill="#ff5fa2"/>
+          <path d="M46 32 Q52 18 60 24 Q68 18 74 32 Q60 38 46 32 Z" fill="#3b3fd0"/>
+          <path d="M40 68 L52 68" stroke="#3b3fd0" stroke-width="3" stroke-linecap="round"/>
+          <path d="M68 68 L80 68" stroke="#3b3fd0" stroke-width="3" stroke-linecap="round"/>
+          <circle cx="60" cy="88" r="4" fill="#3b3fd0"/>
+          <path d="M92 40 Q98 34 96 28" fill="none" stroke="#3b3fd0" stroke-width="2" stroke-linecap="round" stroke-dasharray="2 4"/>
+        </svg>
+        <b>发呆</b>
+        <p>“先喝口水，我陪你等。”</p>
+      </figure>
+    </div>
+  </section>
+
+  <section class="flow" data-nm-id="pomodoro-flow">
+    <h2>想做一个会安慰人的番茄钟</h2>
+    <p>不催你，只陪你。每一格结束，它说一句话。</p>
+    <div class="flow__steps">
+      <div class="step">
+        <div class="step__time">25<small>分钟</small></div>
+        <p>专注做一件小事<small>只看眼前这一行</small></p>
+      </div>
+      <div class="flow__down" aria-hidden="true">↓</div>
+      <div class="step step--pink">
+        <div class="step__time">5<small>分钟</small></div>
+        <p>站起来伸个懒腰<small>番茄替你说：“这一格不算失败。”</small></p>
+      </div>
+      <div class="flow__down" aria-hidden="true">↓</div>
+      <div class="step">
+        <div class="step__time">?</div>
+        <p>没完成也没关系<small>“今天也可以只完成一半。”</small></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="frames" data-nm-id="anim-sheet">
+    <h2>小动画分镜</h2>
+    <p>番茄跳一下的四个画格，接进网页里就会动（CSS 循环，减少动效时自动停）。</p>
+    <div class="frames__strip">
+      <div class="frame"><svg viewBox="0 0 120 120" aria-hidden="true"><ellipse cx="60" cy="110" rx="34" ry="5" fill="#3b3fd0" opacity="0.3"/><g transform="translate(0 8) scale(1 0.92)"><path d="M60 30 C 26 24, 10 56, 16 82 C 22 108, 44 112, 60 106 C 76 112, 98 108, 104 82 C 110 56, 94 24, 60 30 Z" fill="#ff5fa2"/><path d="M46 32 Q52 18 60 24 Q68 18 74 32 Q60 38 46 32 Z" fill="#3b3fd0"/></g></svg><span>1 蓄力</span></div>
+      <div class="frame"><svg viewBox="0 0 120 120" aria-hidden="true"><ellipse cx="60" cy="110" rx="22" ry="3" fill="#3b3fd0" opacity="0.2"/><g transform="translate(0 -12) scale(0.96 1.05)"><path d="M60 30 C 26 24, 10 56, 16 82 C 22 108, 44 112, 60 106 C 76 112, 98 108, 104 82 C 110 56, 94 24, 60 30 Z" fill="#ff5fa2"/><path d="M46 32 Q52 18 60 24 Q68 18 74 32 Q60 38 46 32 Z" fill="#3b3fd0"/></g></svg><span>2 弹起</span></div>
+      <div class="frame"><svg viewBox="0 0 120 120" aria-hidden="true"><ellipse cx="60" cy="110" rx="30" ry="4" fill="#3b3fd0" opacity="0.25"/><g transform="translate(0 4) scale(1.04 0.96)"><path d="M60 30 C 26 24, 10 56, 16 82 C 22 108, 44 112, 60 106 C 76 112, 98 108, 104 82 C 110 56, 94 24, 60 30 Z" fill="#ff5fa2"/><path d="M46 32 Q52 18 60 24 Q68 18 74 32 Q60 38 46 32 Z" fill="#3b3fd0"/></g></svg><span>3 落下</span></div>
+      <div class="frame"><svg viewBox="0 0 120 120" aria-hidden="true"><ellipse cx="60" cy="110" rx="34" ry="5" fill="#3b3fd0" opacity="0.3"/><g class="bounce"><path d="M60 30 C 26 24, 10 56, 16 82 C 22 108, 44 112, 60 106 C 76 112, 98 108, 104 82 C 110 56, 94 24, 60 30 Z" fill="#ff5fa2"/><path d="M46 32 Q52 18 60 24 Q68 18 74 32 Q60 38 46 32 Z" fill="#3b3fd0"/></g></svg><span>4 回弹</span></div>
+    </div>
+    <p class="frames__note">示意，原创 SVG</p>
+  </section>
+
+  <footer class="ping" data-nm-id="ping-note">
+    <p>想一起做这个番茄钟？找愿意把动画接进前端的开发，在页面外点「想聊这个」，从一句安慰的话开始。</p>
+    <small>唐小果 · NOWMe 演示黑客松 · 页面不放联系方式</small>
+  </footer>
+
+</div>
+</body>
+</html>

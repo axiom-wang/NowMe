@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "inter", "weights": [400, 900] },
+    { "id": "noto-sans-sc", "weights": [400, 900] }
+  ],
+  "extraChars": "",
+  "blocks": ["poster-head", "duties", "ask-me", "booklet", "closing"],
+  "generator": { "agent": "nowme-demo" }
+}

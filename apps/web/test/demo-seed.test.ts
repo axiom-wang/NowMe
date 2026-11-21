@@ -5,7 +5,8 @@ import { CHAT_PAGE_SIZE } from '@nowme/contracts';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
-import { ensureDemoClubPages, seedDemo, type DemoSeed } from '../scripts/demo-seed.js';
+import { ensureDemoClubPages, ensureDemoWallAdditions, seedDemo, type DemoSeed } from '../scripts/demo-seed.js';
+import { DEMO_ADDITIONS, type DemoAdditionWall } from '../scripts/demo-more.js';
 import { DEMO_TEST_NAME } from '../scripts/demo-content.js';
 import { DEMO_TEST_PROFILE } from '../scripts/demo-persona.js';
 import { DEMO_ANSWERS, DEMO_QUESTIONS } from '../scripts/demo-organizer.js';
@@ -24,7 +25,7 @@ afterAll(async () => { await t.close(); });
 describe('demo 种子', () => {
   it('全部演示用户有不同的本地头像；重复补齐不覆盖用户头像', async () => {
     const users = t.db.prepare('SELECT id, avatar_version AS version FROM users').all() as { id: string; version: string }[];
-    expect(users).toHaveLength(30);
+    expect(users).toHaveLength(64);
     expect(new Set(users.map((user) => user.version)).size).toBe(users.length);
     for (const user of users) {
       const image = t.repos.users.avatarForUser(user.id);
@@ -44,9 +45,9 @@ describe('demo 种子', () => {
     expect(seed.members.some((m) => m.published && !m.contactPublic)).toBe(true);
     expect(seed.members.some((m) => m.published && m.contactPublic)).toBe(true);
     const active = t.db.prepare('SELECT COUNT(*) AS n FROM publications WHERE ended_at IS NULL').get() as { n: number };
-    expect(active.n).toBe(5 + 5 + 12);
+    expect(active.n).toBe(5 + 5 + 12 + 34);
     const revisions = t.db.prepare("SELECT COUNT(*) AS n FROM revisions WHERE status = 'accepted'").get() as { n: number };
-    expect(revisions.n).toBe(6 + 5 + 12);
+    expect(revisions.n).toBe(6 + 5 + 12 + 34);
     expect(seed.newcomer.instruction.command).toContain('/nowme-page');
     expect(seed.inviteUrl).toContain('/join/');
   });
@@ -65,14 +66,14 @@ describe('demo 种子', () => {
     const questions = t.repos.questions.listForWall(seed.wall.id);
     expect(questions.map((question) => [question.prompt, question.kind])).toEqual(DEMO_QUESTIONS.map((question) => [question.prompt, question.kind]));
     const answered = t.db.prepare('SELECT COUNT(DISTINCT user_id) AS n FROM wall_answers WHERE wall_id = ?').get(seed.wall.id) as { n: number };
-    expect(answered.n).toBe(Object.keys(DEMO_ANSWERS).length);
+    expect(answered.n).toBe(Object.keys(DEMO_ANSWERS).length + DEMO_ADDITIONS.filter((person) => person.answers).length);
     const unpublished = seed.members.find((member) => !member.published)!;
     expect(t.db.prepare('SELECT COUNT(*) AS n FROM wall_answers WHERE user_id = ?').get(unpublished.userId)).toEqual({ n: 0 });
     const portrait = loadPortrait(t.web.deps, seed.wall.id);
     expect(portrait.kind).toBe('ready');
     if (portrait.kind !== 'ready') return;
-    expect(portrait.view.pageCount).toBe(5);
-    expect(portrait.view.stats.map((stat) => stat.answered)).toEqual([5, 5]);
+    expect(portrait.view.pageCount).toBe(13);
+    expect(portrait.view.stats.map((stat) => stat.answered)).toEqual([12, 12]);
     // S13：群像里不出现名字、链接和数字人数
     const text = [portrait.view.summary, ...portrait.view.themes.flatMap((theme) => [theme.title, theme.detail])].join('\n');
     for (const member of seed.members) expect(text).not.toContain(member.nickname);
@@ -109,12 +110,12 @@ describe('demo 种子', () => {
     const clubActive = t.db
       .prepare('SELECT COUNT(*) AS n FROM publications pb JOIN pages p ON p.id = pb.page_id WHERE p.wall_id = ? AND pb.ended_at IS NULL')
       .get(seed.club.wall.id) as { n: number };
-    expect(clubActive.n).toBe(5);
+    expect(clubActive.n).toBe(11);
     expect(t.repos.memberships.findByWallAndUser(seed.club.wall.id, seed.newcomer.userId)?.status).toBe('active');
     expect(seed.club.inviteUrl).toContain('/join/');
   });
 
-  it('仅保留 AI 与山野两面新墙，各 10 位成员、6 页，未创建者没有版本和发布', () => {
+  it('仅保留 AI 与山野两面新墙，原有 10 位成员、6 页，未创建者没有版本和发布', () => {
     expect(seed.extraWalls).toHaveLength(2);
     expect(t.db.prepare("SELECT count(*) AS n FROM walls").get()).toEqual({ n: 4 });
     expect(t.db.prepare("SELECT count(*) AS n FROM walls WHERE name LIKE '%城市漫游%' OR name LIKE '%独立创作者%'").get()).toEqual({ n: 0 });
@@ -122,12 +123,12 @@ describe('demo 种子', () => {
     const contents = new Set<string>();
     for (const entry of seed.extraWalls) {
       const publishedCount = 6;
-      expect(t.repos.memberships.countActiveForWall(entry.wall.id)).toBe(10);
+      expect(t.repos.memberships.countActiveForWall(entry.wall.id)).toBe(20);
       expect(entry.members).toHaveLength(10);
       expect(new Set(entry.members.map((member) => member.userId)).size).toBe(10);
-      expect(t.db.prepare('SELECT count(*) AS n FROM pages WHERE wall_id = ?').get(entry.wall.id)).toEqual({ n: 10 });
+      expect(t.db.prepare('SELECT count(*) AS n FROM pages WHERE wall_id = ?').get(entry.wall.id)).toEqual({ n: 20 });
       expect(t.db.prepare(`SELECT count(*) AS n FROM publications pb JOIN pages p ON p.id = pb.page_id
-        WHERE p.wall_id = ? AND pb.ended_at IS NULL`).get(entry.wall.id)).toEqual({ n: publishedCount });
+        WHERE p.wall_id = ? AND pb.ended_at IS NULL`).get(entry.wall.id)).toEqual({ n: publishedCount + 10 });
       expect(entry.members.filter((member) => member.published)).toHaveLength(publishedCount);
       expect(entry.members[9]?.userId).toBe(entry.wall.organizerId);
       expect(t.repos.memberships.findByWallAndUser(entry.wall.id, seed.tester.userId)?.role).toBe('member');
@@ -154,6 +155,29 @@ describe('demo 种子', () => {
       .toEqual(['许知远', '唐可', '周野', '顾言', '宋雨', '陈默']);
     expect(seed.extraWalls[1]!.members.filter((member) => member.published).map((member) => member.nickname))
       .toEqual(['江川', '周晴', '高远', '安宁', '麦子', '赵森']);
+  });
+
+  it('第二批人物：四面墙人数各翻倍，每人一页已发布；重复补齐不新增版本', async () => {
+    const members = (wallId: string) => t.repos.memberships.countActiveForWall(wallId);
+    expect(members(seed.wall.id)).toBe(16);
+    expect(members(seed.club.wall.id)).toBe(12);
+    for (const entry of seed.extraWalls) expect(members(entry.wall.id)).toBe(20);
+    const walls: Record<DemoAdditionWall, string> = { hackathon: seed.wall.id, club: seed.club.wall.id, ai: seed.extraWalls[0]!.wall.id, trail: seed.extraWalls[1]!.wall.id };
+    for (const person of DEMO_ADDITIONS) {
+      const member = seed.additions[person.wall].find((entry) => entry.exampleDir === person.dir)!;
+      expect(member.nickname).toBe(person.name);
+      expect(member.contactPublic).toBe(person.contactPublic);
+      const page = t.repos.pages.findById(member.pageId)!;
+      expect(page.wallId).toBe(walls[person.wall]);
+      expect(t.repos.publications.findActiveForPage(member.pageId)).not.toBeNull();
+    }
+    expect(Object.values(seed.additions).flat()).toHaveLength(DEMO_ADDITIONS.length);
+    const before = t.db.prepare('SELECT count(*) AS n FROM revisions').get();
+    expect(Object.values(await ensureDemoWallAdditions(t.web)).flat()).toEqual([]);
+    expect(t.db.prepare('SELECT count(*) AS n FROM revisions').get()).toEqual(before);
+    // 秦宛没有答必答题：组织者后台“还没答完”里多一个可以提醒的人
+    const qinwan = t.repos.users.findByEmail(DEMO_ADDITIONS.find((person) => person.name === '秦宛')!.email)!;
+    expect(t.db.prepare('SELECT COUNT(*) AS n FROM wall_answers WHERE user_id = ?').get(qinwan.id)).toEqual({ n: 0 });
   });
 
   it('接入现有体验成员：登录后可以访问四面墙、全部成员页与已有聊天', async () => {
@@ -186,7 +210,7 @@ describe('demo 种子', () => {
     const cookie = `nowme_session=${sessionTokenFrom(response)}`;
     const club = await (await t.request(`/w/${seed.club.wall.id}`, { headers: { cookie } })).text();
     expect(club).toContain('id="intros"');
-    expect(club).toContain('墙上 4 位成员');
+    expect(club).toContain('墙上 10 位成员');
     // 这个测试没有配置演示模型：区块如实说明，不显示 AI 设置入口
     expect(club).toContain('体验账号暂时用不了这个功能');
     const ai = await (await t.request(`/w/${seed.extraWalls[0]!.wall.id}`, { headers: { cookie } })).text();

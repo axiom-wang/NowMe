@@ -1,0 +1,83 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>林小溪 · 山野轻徒步</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+:root{--ink:#14212b;--cream:#fbf6e4;--nm-font-body:var(--nm-font-lxgw-wenkai);--nm-font-display:var(--nm-font-lxgw-wenkai)}
+body{margin:0;background:#26333d;color:var(--ink);font:16px/1.85 var(--nm-font-body);overflow-x:hidden}
+h1,p,figure{margin:0}
+h1{font-family:var(--nm-font-display);font-weight:400;font-size:56px;line-height:1.15;letter-spacing:.08em}
+.window{position:relative;overflow:hidden;max-width:1000px;margin:12px auto;min-height:calc(100vh - 24px);padding:26px 22px;display:flex;flex-direction:column;gap:26px;background:linear-gradient(176deg,#d3e0e8 0%,#a6bac7 45%,#8198a7 100%);border:10px solid #e9eef1;border-radius:4px;box-shadow:inset 0 0 0 2px #b9c8d1,0 0 0 1px rgba(0,0,0,.2)}
+.window::before{content:"";position:absolute;inset:0;pointer-events:none;background-image:radial-gradient(circle at 18% 22%,rgba(255,255,255,.7) 0 2.5px,transparent 3.5px),radial-gradient(circle at 64% 12%,rgba(255,255,255,.6) 0 3.5px,transparent 4.5px),radial-gradient(circle at 86% 40%,rgba(255,255,255,.6) 0 2.5px,transparent 3.5px),radial-gradient(circle at 36% 58%,rgba(255,255,255,.65) 0 3.5px,transparent 4.5px),radial-gradient(circle at 74% 74%,rgba(255,255,255,.55) 0 2.5px,transparent 3.5px),radial-gradient(circle at 12% 88%,rgba(255,255,255,.6) 0 3.5px,transparent 4.5px),radial-gradient(circle at 52% 90%,rgba(255,255,255,.5) 0 2.5px,transparent 3.5px)}
+.streaks{position:absolute;inset:0;pointer-events:none}
+.streaks span{position:absolute;top:0;width:3px;border-radius:3px;background:linear-gradient(rgba(255,255,255,0),rgba(255,255,255,.7) 25%,rgba(255,255,255,.35) 80%,rgba(255,255,255,0))}
+.streaks span:nth-child(1){left:9%;height:34%}
+.streaks span:nth-child(2){left:31%;height:22%}
+.streaks span:nth-child(3){left:58%;height:46%}
+.streaks span:nth-child(4){left:83%;height:28%}
+.sill,.note,.glass-foot{position:relative;z-index:1}
+.kicker{font-family:var(--nm-font-inter);font-size:13px;letter-spacing:.12em;margin-bottom:8px}
+.role{font-size:18px;margin-top:10px}
+.rain-line{font-size:16px;margin-top:14px;padding-left:12px;border-left:3px solid var(--ink)}
+.note{background:var(--cream);padding:20px 20px 22px;border-radius:2px;box-shadow:0 12px 20px rgba(10,22,30,.28),0 1px 0 rgba(0,0,0,.06)}
+.note::before{content:"";position:absolute;top:-11px;left:50%;width:76px;height:22px;margin-left:-38px;background:rgba(255,255,255,.6);transform:rotate(-3deg);box-shadow:0 1px 2px rgba(0,0,0,.08)}
+.note-hook{font-size:19px;line-height:1.5;padding-bottom:10px;margin-bottom:10px;border-bottom:1px dashed #b3a687}
+.note-a{transform:rotate(-1.2deg)}
+.note-b{transform:rotate(.8deg);margin-left:14px}
+.note-c{transform:rotate(-.6deg);margin-left:4px}
+.umbrella{width:128px;margin:0 auto 14px}
+.umbrella svg{display:block;width:100%;height:auto}
+.umbrella figcaption{font-size:14px;color:#3b4c57;margin-top:2px}
+.glass-foot{margin-top:auto;padding-top:16px;border-top:1px solid rgba(20,33,43,.45)}
+.sign{font-family:var(--nm-font-inter);font-size:13px;margin-top:6px;letter-spacing:.06em}
+@media (min-width:700px){
+  .window{display:grid;grid-template-columns:1fr 1fr;gap:34px 56px;align-content:start;padding:56px 64px 40px}
+  .window::after{content:"";position:absolute;top:0;bottom:0;left:50%;width:6px;margin-left:-3px;background:#e9eef1;opacity:.8}
+  h1{font-size:104px}
+  .sill{grid-column:1;grid-row:1}
+  .note-a{grid-column:2;grid-row:1;margin-top:120px}
+  .note-b{grid-column:1;grid-row:2;margin-left:70px;margin-right:30px}
+  .note-c{grid-column:2;grid-row:2;margin-top:60px;margin-left:0}
+  .glass-foot{grid-column:1/-1;grid-row:3}
+}
+</style>
+</head>
+<body>
+<main class="window">
+  <div class="streaks" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+  <header class="sill" data-nm-id="window-sill">
+    <p class="kicker">山野轻徒步 · 同行的人</p>
+    <h1>林小溪</h1>
+    <p class="role">雨天也想出门，研究轻便雨具。</p>
+    <p class="rain-line">下雨了，正好去走走。</p>
+  </header>
+  <section class="note note-a" data-nm-id="rain-question">
+    <p class="note-hook">可以来问我：雨天走路怎么不湿鞋</p>
+    <p>鞋面、裤脚和伞该怎么搭，我这两年在学校和山里换了好几套，有的真管用，有的白买了。你来问，我把踩过的坑都讲给你听。</p>
+  </section>
+  <section class="note note-b" data-nm-id="bamboo-trail">
+    <p class="note-hook">我也想试：小雨里的竹林步道</p>
+    <p>竹叶上的水会一滴一滴落下来，石板被打湿以后颜色变深，脚步声很轻。我想找一个不急着赶路、愿意跟我慢慢走的人。</p>
+  </section>
+  <section class="note note-c" data-nm-id="umbrella-sound">
+    <p class="note-hook">我在沉迷：听雨打在伞上的声音</p>
+    <figure class="umbrella">
+      <svg viewBox="0 0 120 100" role="img" aria-label="一把撑开的伞，伞面上落着雨点，示意">
+        <path d="M12 46C12 22 34 8 60 8S108 22 108 46Q102 54 96 46Q90 54 84 46Q78 54 72 46Q66 54 60 46Q54 54 48 46Q42 54 36 46Q30 54 24 46Q18 54 12 46Z" fill="#3f6375"/>
+        <path d="M60 50V90Q60 98 52 96" fill="none" stroke="#14212b" stroke-width="3" stroke-linecap="round"/>
+        <g fill="#3f6375"><circle cx="14" cy="72" r="2.5"/><circle cx="106" cy="66" r="2.5"/><circle cx="24" cy="90" r="2"/><circle cx="100" cy="92" r="2"/><circle cx="110" cy="20" r="2"/></g>
+      </svg>
+      <figcaption>伞面上的雨声 · 示意</figcaption>
+    </figure>
+    <p>雨点落在伞面上，远近高低不一样，像有人在敲一面小鼓。我常常收了伞还想再走一段，把那段声音听完。</p>
+  </section>
+  <footer class="glass-foot" data-nm-id="glass-footer">
+    <p>在页面外点「想聊这个」，从一把轻便的伞开始。</p>
+    <p class="sign">林小溪 · 山野轻徒步</p>
+  </footer>
+</main>
+</body>
+</html>

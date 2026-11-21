@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "林间",
+  "tagline": "中文系研一，做提示词实验，想让 AI 少说套话",
+  "hooks": [
+    {
+      "id": "help-copy",
+      "kind": "can-help",
+      "text": "我能帮你把界面文案改成人话",
+      "opener": "你好！我在墙上看到你们的界面还在打磨，我能帮忙把文案和对话语气改得更像人话，要不要聊聊？"
+    },
+    {
+      "id": "find-chat-ui",
+      "kind": "looking-for",
+      "text": "找会做对话界面的队友",
+      "opener": "嗨，我在做一个帮人把吐槽改成好话的小助手，看到你在找会做对话界面的队友，想一起试试吗？"
+    },
+    {
+      "id": "build-softener",
+      "kind": "want-to-build",
+      "text": "想做帮你把吐槽改成好好说话的小助手",
+      "opener": "你好！你做过对话界面吗？我想做一个帮人把吐槽改成好好说话的小助手，想听听你的看法。"
+    }
+  ]
+}
