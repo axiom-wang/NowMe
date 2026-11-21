@@ -5,7 +5,7 @@
  */
 import { join } from 'node:path';
 import { expect, test, type Page } from '@playwright/test';
-import { EXAMPLES, PAGES_ORIGIN, createWall, joinWall, newUser, publishViaUi } from './helpers.js';
+import { EXAMPLES, PAGES_ORIGIN, createWall, joinWall, newUser, openFromWall, publishViaUi } from './helpers.js';
 
 const SECRET = '凌晨四点去菜市场拍摊主的手';
 
@@ -142,7 +142,7 @@ test('平台托管：采访、生成、预览、修改、发布', async ({ brows
   await b.page.goto(`/w/${wallId}`);
   const card = b.page.locator('.wall-card', { hasText: '阿柚' });
   await expect(card).toHaveCount(1);
-  await card.locator('a.wall-card__link').click();
+  await openFromWall(b.page, card.locator('a.wall-card__link'));
   await expect(b.page.frameLocator('iframe[data-nm-page-frame]').locator('[data-nm-id="about"]')).toContainText('校赛二等奖');
   expect(await b.page.content()).not.toContain('/create/assets/');
 

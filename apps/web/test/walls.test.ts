@@ -26,7 +26,7 @@ import {
   type TestSession,
   type TestWeb,
 } from './helpers.js';
-import { publishedMember, publishPage, withdraw } from './wall-helpers.js';
+import { makeCard, publishedMember, publishPage, withdraw } from './wall-helpers.js';
 
 const CONTACT = { channel: 'wechat', value: 'ayou_2026' };
 
@@ -328,6 +328,59 @@ describe('墙（W13）、成员页与想聊这个（W14）', () => {
     // 检索文字 = 名字 + 一行介绍 + 全部接话点；便签之外的接话点也能被搜到
     expect(search).toContain('阿柚在找设计队友');
     expect(html).not.toContain('wall-card__hook"');
+  });
+
+  it('逛墙空间：每张卡附 <template> 详情（发布快照里的全部接话点，经过转义），面板里的“想聊这个”是带 CSRF 的同一个表单', async () => {
+    const ayou = publishedMember(t, wall, {
+      name: '阿柚',
+      card: makeCard('阿柚', {
+        hooks: [
+          { id: 'can-help', kind: 'can-help', text: '<img src=x onerror=alert(1)>能帮你做前端', opener: '你好' },
+          { id: 'looking-for', kind: 'looking-for', text: '阿柚在找设计队友', opener: '嗨' },
+        ],
+      }),
+    });
+    const mine = t.repos.memberships.findByWallAndUser(wall.id, viewer.userId);
+    const myPage = t.repos.pages.findByMembership(mine?.id ?? '');
+    if (!mine || !myPage) throw new Error('缺少成员关系');
+    publishPage(t, { membership: mine, page: myPage }, '小白');
+
+    const html = await (await get(t, `/w/${wall.id}`, { cookie: viewer.cookie })).text();
+    expect(html).toContain(`data-wall-id="${wall.id}"`);
+    // 顶栏与其他页面相同（没有面包屑）；绘制前同步加载 wall-boot.js；墙名是标题行里唯一的 h1；场景与“我的页面”在 data-wall-top 里（逛墙空间不显示）
+    expect(html).not.toContain('site-crumb');
+    expect(html).toMatch(/<head>[\s\S]*src="\/static\/wall-boot\.[0-9a-f]{10}\.js"[\s\S]*<\/head>/);
+    expect(html).toContain('data-wall-top');
+    expect(html).toMatch(/<h1 id="wall-title" class="wall-board__title">周末黑客松<\/h1>/);
+    expect(html.match(/<h1\b/g)).toHaveLength(1);
+    expect(html).not.toContain('data-space-info');
+    expect(html).not.toContain('<img src=x');
+    expect(html).toContain('&lt;img src=x onerror=alert(1)&gt;能帮你做前端');
+
+    const all = elements(html);
+    // 操作条、面板默认隐藏；没有“列表”切换；服务端输出的就是网格，<html> 上的空间标记由 wall-boot.js 在浏览器里加
+    expect(html).not.toContain('data-wall-view');
+    expect(html).not.toMatch(/<html[^>]*nm-wall-space/);
+    for (const marker of ['data-space-hud', 'data-space-panel']) {
+      expect(all.find((element) => element.attrs[marker] !== undefined)?.attrs.hidden).toBeDefined();
+    }
+    const cards = all.filter((element) => element.attrs['data-wall-card'] !== undefined);
+    expect(cards.map((card) => card.attrs['data-page-id']).sort()).toEqual([ayou.page.id, myPage.id].sort());
+    expect(cards.find((card) => card.attrs['data-page-id'] === myPage.id)?.attrs['data-own']).toBe('1');
+    expect(cards.find((card) => card.attrs['data-page-id'] === ayou.page.id)?.attrs['data-own']).toBeUndefined();
+    expect(all.filter((element) => element.tag === 'template' && element.attrs['data-card-detail'] !== undefined)).toHaveLength(2);
+    // 别人的接话点是可选的按钮；自己的只展示文字，没有按钮
+    expect(all.filter((element) => element.attrs['data-hook-id'] !== undefined).map((element) => element.attrs['data-hook-id'])).toEqual(['can-help', 'looking-for']);
+
+    const chat = all.find((element) => element.tag === 'form' && element.attrs['data-space-chat'] !== undefined);
+    expect(chat?.attrs.method).toBe('post');
+    expect(chat?.attrs.action).toBeUndefined();
+    expect(html).toMatch(/data-space-chat[^>]*>\s*<input type="hidden" name="_csrf" value="[^"]+"/);
+
+    // 面板提交的就是成员页上的同一个路由：选中的接话点 → 站内私聊并预填
+    const response = await postForm(t, `/w/${wall.id}/p/${ayou.page.id}/chat`, { _csrf: viewer.csrf, hookId: 'looking-for' }, { cookie: viewer.cookie });
+    expect(response.status).toBe(303);
+    expect(response.headers.get('location')).toMatch(/^\/messages\/cnv_[a-z2-7]+\?pageId=.*&hookId=looking-for$/);
   });
 
   it('还没上墙时墙上给自己留一个空位（不算卡片）；发布后空位消失', async () => {
