@@ -33,10 +33,10 @@ function searchText(item: WallCard): string {
 
 /**
  * 墙上的一张“海报”：封面像被胶带贴在墙上，下面压着一张写着接话点的便签。
- * 便签只放第一个接话点的完整文字（不截成省略号），其余的写“还想聊 N 个话题”。
+ * 便签展示第一个接话点，其余话题在成员页查看。
  */
 const WallCardItem: FC<{ item: WallCard }> = ({ item }) => {
-  const [first, ...rest] = item.card.hooks;
+  const [first] = item.card.hooks;
   return (
     <li class="wall-card" data-wall-card data-search={searchText(item)} data-answers={answerKeys(item.answers)}>
       <a class="wall-card__link" href={item.href}>
@@ -65,7 +65,6 @@ const WallCardItem: FC<{ item: WallCard }> = ({ item }) => {
           <span class="wall-card__name">{item.card.displayName}</span>
           {item.card.tagline ? <span class="wall-card__tagline">{item.card.tagline}</span> : null}
           <CardAnswerTags answers={item.answers} />
-          {rest.length > 0 ? <span class="wall-card__more">还想聊 {rest.length} 个话题</span> : null}
         </span>
       </a>
     </li>

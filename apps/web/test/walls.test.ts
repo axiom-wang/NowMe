@@ -314,7 +314,7 @@ describe('墙（W13）、成员页与想聊这个（W14）', () => {
     expect(orders.size).toBeGreaterThan(1);
   });
 
-  it('卡片上的便签完整写出第一个接话点，其余的只写数量；全部接话点进检索文字', async () => {
+  it('卡片便签展示第一个接话点，不显示其他话题数量；全部接话点仍可检索', async () => {
     publishedMember(t, wall, { name: '阿柚' });
     const html = await (await get(t, `/w/${wall.id}`, { cookie: viewer.cookie })).text();
     const card = elements(html).find((element) => element.attrs['data-wall-card'] !== undefined);
@@ -322,10 +322,11 @@ describe('墙（W13）、成员页与想聊这个（W14）', () => {
     expect(hooks).toHaveLength(1);
     expect(card?.attrs['data-search']).toContain('阿柚'.toLowerCase());
     expect(card?.attrs['data-search']).toContain(hooks[0]?.toLowerCase());
-    const more = /还想聊 (\d+) 个话题/.exec(html);
+    expect(html).not.toContain('还想聊');
+    expect(html).not.toContain('wall-card__more');
     const search = card?.attrs['data-search'] ?? '';
     // 检索文字 = 名字 + 一行介绍 + 全部接话点；便签之外的接话点也能被搜到
-    expect(search.split(' ').length).toBeGreaterThanOrEqual(2 + Number(more?.[1] ?? 0));
+    expect(search).toContain('阿柚在找设计队友');
     expect(html).not.toContain('wall-card__hook"');
   });
 
