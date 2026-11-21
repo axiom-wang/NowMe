@@ -33,6 +33,9 @@ test('各页面与顶栏共用内容边界，桌面限制最大宽度，手机�
       await expect(page.locator('.site-header__nav')).toHaveCount(0);
       await page.evaluate(() => document.fonts.ready);
       const headerBox = await page.locator('.site-header').boundingBox();
+      const navBox = (await page.locator('.site-nav').boundingBox())!;
+      expect(navBox.y, `${label} 导航位于顶栏内`).toBeGreaterThanOrEqual(headerBox!.y);
+      expect(navBox.y + navBox.height, `${label} 导航不落到页面底部`).toBeLessThanOrEqual(headerBox!.y + headerBox!.height);
       headerBaseline ??= headerBox!;
       expect(headerBox, label).toEqual(headerBaseline);
       await page.locator('.account-menu > summary').click();

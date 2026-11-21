@@ -2767,20 +2767,11 @@ a:hover { text-decoration-color: var(--accent-text); }
   cursor: pointer;
 }
 @media (max-width: 639px) {
-  /* A fixed bottom navigation must not inherit a backdrop-filter containing block. */
-  .site-header { -webkit-backdrop-filter: none; backdrop-filter: none; }
-  .site-header__inner { gap: 8px; height: 59px; padding-block: 8px; }
-  .site-nav {
-    position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
-    width: 100%; justify-self: stretch;
-    padding: 8px 12px max(8px, env(safe-area-inset-bottom));
-    background: var(--surface); border-top: 1px solid var(--line);
-    justify-content: space-around; gap: 4px;
-  }
-  .site:has(.site-nav) .site-footer { padding-bottom: 84px; }
-  .page--conversation .chat-compose { margin-bottom: calc(60px + env(safe-area-inset-bottom)); }
-  .site-nav__link { justify-content: center; min-height: 44px; flex: 1 1 0; min-width: 0; font-size: var(--text-sm); }
-  .site-nav .message-badge { position: static; }
+  .site-header__inner { gap: 4px; height: 59px; padding-block: 8px; }
+  .site-header__inner:has(.site-nav) { grid-template-columns: auto minmax(0, 1fr) auto; }
+  .site-header__inner:has(.site-nav) .account-menu { grid-column: 3; }
+  .site-nav { min-width: 0; width: 100%; justify-content: center; gap: 2px; }
+  .site-nav__link { justify-content: center; min-height: 44px; flex: 1 1 0; min-width: 0; padding-inline: 4px; font-size: var(--text-sm); }
   .user-chip__name { display: none; }
   .site-footer, .site-footer__legal { font-size: var(--text-sm); }
   .site-main p, .site-main p a { font-size: max(14px, 1em); }
