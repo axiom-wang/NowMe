@@ -369,13 +369,39 @@ document.querySelectorAll('form[data-demo-login]').forEach(function (form) {
       item.nmSetOptions = setValues;
     }
 
-    function refreshAdd() {
-      if (!addQuestion) return;
-      addQuestion.hidden = !items.some(function (item) { return item.hidden; });
+    /*
+     * 题目的位置按页面上的顺序：删掉的题移到最后并隐藏，所以每次变动后按顺序重排字段名（q<i>_*，
+     * 先改成临时名，避免两组单选框短暂同名时互相取消选中），并按显示出来的题重新编号。
+     */
+    function refresh() {
+      items = Array.prototype.slice.call(editor.querySelectorAll('[data-question-item]'));
+      var fields = function (item) { return Array.prototype.slice.call(item.querySelectorAll('[name^="q"], [name^="nmtmp"]')); };
+      items.forEach(function (item, index) {
+        fields(item).forEach(function (field) { field.name = field.name.replace(/^(?:q\d+|nmtmp\d+)_/, 'nmtmp' + index + '_'); });
+      });
+      var shown = 0;
+      items.forEach(function (item, index) {
+        fields(item).forEach(function (field) { field.name = field.name.replace(/^nmtmp\d+_/, 'q' + index + '_'); });
+        if (item.hidden) return;
+        shown += 1;
+        var num = item.querySelector('.question-editor__num');
+        if (num) num.textContent = String(shown);
+        var label = item.querySelector('.question-editor__prompt .visually-hidden');
+        if (label) label.textContent = '第 ' + shown + ' 题的题目';
+        var group = item.querySelector('.question-editor__kinds');
+        if (group) group.setAttribute('aria-label', '第 ' + shown + ' 题的题型');
+        var remove = item.querySelector('[data-question-remove]');
+        if (remove) remove.setAttribute('aria-label', '删除第 ' + shown + ' 题');
+        promptOf(item).placeholder = shown === 1 ? '题目，例如：你最擅长哪几样？' : '题目（留空就不加这道题）';
+      });
+      if (addQuestion) addQuestion.hidden = !items.some(function (item) { return item.hidden; });
     }
 
     function clearItem(item) {
       promptOf(item).value = '';
+      // 清空的题保存时删除；之后在这一格新写的题是新题，不沿用旧题的 ID 与回答
+      var id = item.querySelector('input[name$="_id"]');
+      if (id) id.value = '';
       item.nmSetOptions([]);
       var single = item.querySelector('input[name$="_kind"][value="single"]');
       if (single) single.checked = true;
@@ -392,12 +418,15 @@ document.querySelectorAll('form[data-demo-login]').forEach(function (form) {
           var visible = items.filter(function (candidate) { return !candidate.hidden; });
           if (visible.length > 1) {
             item.hidden = true;
+            // 移到最后：“再加一道题”总是加在已有的题后面
+            var last = items[items.length - 1];
+            if (last !== item) last.parentNode.insertBefore(item, last.nextSibling);
             var focusTarget = visible.filter(function (candidate) { return candidate !== item; })[0];
             if (focusTarget) promptOf(focusTarget).focus();
           } else {
             promptOf(item).focus();
           }
-          refreshAdd();
+          refresh();
         });
       }
     });
@@ -415,10 +444,10 @@ document.querySelectorAll('form[data-demo-login]').forEach(function (form) {
         if (!next) return;
         next.hidden = false;
         promptOf(next).focus();
-        refreshAdd();
+        refresh();
       });
     }
-    refreshAdd();
+    refresh();
 
     var templates = editor.querySelector('[data-question-templates]');
     if (!templates) return;
@@ -433,7 +462,7 @@ document.querySelectorAll('form[data-demo-login]').forEach(function (form) {
       } catch (error) {
         return;
       }
-      var item = items.filter(isEmpty)[0];
+      var item = items.filter(function (candidate) { return !candidate.hidden && isEmpty(candidate); })[0] || items.filter(isEmpty)[0];
       if (!item) return;
       item.hidden = false;
       promptOf(item).value = template.prompt || '';
@@ -442,7 +471,7 @@ document.querySelectorAll('form[data-demo-login]').forEach(function (form) {
       var kind = item.querySelector('input[name$="_kind"][value="' + kindValue + '"]');
       if (kind) kind.checked = true;
       promptOf(item).focus();
-      refreshAdd();
+      refresh();
     });
   });
 })();
