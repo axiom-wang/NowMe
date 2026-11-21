@@ -32,12 +32,6 @@
   overflow-wrap: anywhere;
 }
 
-.home-welcome__lead {
-  margin: 0;
-  max-width: 32em;
-  color: var(--text-secondary);
-  font-size: var(--text-md);
-}
 
 .home-reminder {
   max-width: 420px;

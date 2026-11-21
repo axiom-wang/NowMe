@@ -6,7 +6,7 @@ test('各页面与顶栏共用内容边界，桌面限制最大宽度，手机�
   const wallName = '布局检查墙'.repeat(8);
   const { wallId } = await createWall(page, wallName);
   const paths = ['/', '/messages', '/account/data', '/account/ai', '/walls/new', '/skill', `/w/${wallId}`, `/w/${wallId}/me`, `/w/${wallId}/me/create`, `/w/${wallId}/admin`, `/messages/wall/${wallId}`];
-  for (const width of [1920, 1440, 1024, 768, 375, 320]) {
+  for (const width of [1920, 1440, 1024, 768, 640, 639, 375, 320]) {
     await page.setViewportSize({ width, height: 1000 });
     let baseline: { x: number; width: number } | undefined;
     let headerBaseline: { x: number; y: number; width: number; height: number } | undefined;
@@ -34,8 +34,17 @@ test('各页面与顶栏共用内容边界，桌面限制最大宽度，手机�
       await page.evaluate(() => document.fonts.ready);
       const headerBox = await page.locator('.site-header').boundingBox();
       const navBox = (await page.locator('.site-nav').boundingBox())!;
-      expect(navBox.y, `${label} 导航位于顶栏内`).toBeGreaterThanOrEqual(headerBox!.y);
-      expect(navBox.y + navBox.height, `${label} 导航不落到页面底部`).toBeLessThanOrEqual(headerBox!.y + headerBox!.height);
+      if (width <= 639) {
+        await expect(page.locator('.site-nav')).toHaveCSS('position', 'fixed');
+        expect(navBox.y + navBox.height, `${label} 导航固定在视口底部`).toBeCloseTo(1000, 0);
+        if (path.startsWith('/messages/wall/')) {
+          const send = await page.getByRole('button', { name: '发送', exact: true }).boundingBox();
+          expect(send!.y + send!.height, `${label} 发送按钮不被导航遮挡`).toBeLessThanOrEqual(navBox.y);
+        }
+      } else {
+        expect(navBox.y, `${label} 导航位于顶栏内`).toBeGreaterThanOrEqual(headerBox!.y);
+        expect(navBox.y + navBox.height, `${label} 导航不落到页面底部`).toBeLessThanOrEqual(headerBox!.y + headerBox!.height);
+      }
       headerBaseline ??= headerBox!;
       expect(headerBox, label).toEqual(headerBaseline);
       await page.locator('.account-menu > summary').click();

@@ -1,6 +1,6 @@
 import { randomUUID } from 'node:crypto';
 import type { MiddlewareHandler } from 'hono';
-import { isId } from '@nowme/contracts';
+import { CHAT_PAGE_SIZE, isId } from '@nowme/contracts';
 import type { AppDeps, AppEnv, AppHono } from '../context.js';
 import { requireForm } from '../security/forms.js';
 import { authOf, onboardingStep, requireUser } from '../security/session.js';
@@ -28,6 +28,16 @@ function listCursor(raw: string | undefined) {
   return sequence !== undefined && isId(id, 'cnv') && raw === `${seq}:${id}` ? { sequence, id } : null;
 }
 
+/** 左栏一次最多带多少个会话：客户端“加载更早的会话”后轮询要覆盖已展开的部分。 */
+const LIST_LIMIT_MAX = 500;
+
+/** `limit`：缺省取一页；给了就必须是不小于一页、不超过上限的整数。 */
+function listLimit(raw: string | undefined): number | null {
+  if (raw === undefined) return CHAT_PAGE_SIZE;
+  const value = integer(raw);
+  return value !== undefined && value >= CHAT_PAGE_SIZE && value <= LIST_LIMIT_MAX ? value : null;
+}
+
 /** 限流提示里的等待时间：不到 1 分钟说秒，否则向上取整到分钟。 */
 function waitText(seconds: number): string {
   if (seconds <= 1) return '稍等一下';
@@ -37,13 +47,26 @@ function waitText(seconds: number): string {
 
 export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
   // 首屏与轮询使用同一份头像；群聊沿用墙的自定义封面或默认插画。
-  const listWithAvatars = (userId: string, cursor?: { sequence: number; id: string }) => {
-    const list = deps.repos.chat.list(userId, cursor);
+  const listWithAvatars = (userId: string, cursor?: { sequence: number; id: string }, limit = CHAT_PAGE_SIZE) => {
+    const list = deps.repos.chat.list(userId, cursor, limit);
     return { ...list, conversations: list.conversations.map((item) => {
       if (item.kind !== 'group') return item;
       const wall = deps.repos.walls.findById(item.wallId);
       return wall ? { ...item, avatarUrl: deps.repos.walls.coverUrl(wall.id) ?? `/static/home-wall-${defaultWallCover(wall)}.svg` } : item;
     }) };
+  };
+  // 左栏会话列表：/messages 与每个会话页共用，保证双栏布局两侧一致。
+  const inboxOf = (userId: string, cursor?: { sequence: number; id: string }, activeId?: string) => {
+    // 会话页：当前会话排在前 50 之外时，多取几页，保证它在左栏里并高亮
+    let limit = CHAT_PAGE_SIZE;
+    let list = listWithAvatars(userId, cursor, limit);
+    while (activeId && list.hasMore && limit < LIST_LIMIT_MAX && !list.conversations.some((item) => item.id === activeId)) list = listWithAvatars(userId, cursor, limit += CHAT_PAGE_SIZE);
+    return {
+      ...list,
+      paged: !!cursor,
+      now: deps.now(),
+      walls: deps.repos.memberships.listActiveForUser(userId).map((m) => ({ id: m.wall.id, name: m.wall.name })),
+    };
   };
   const user = requireUser(deps);
   const form = requireForm(deps);
@@ -57,14 +80,13 @@ export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
   app.get('/messages', user, (c) => {
     const cursor = listCursor(c.req.query('before'));
     if (cursor === null) return renderNotFound(c);
-    const userId = authOf(c).user.id;
-    const list = listWithAvatars(userId, cursor);
-    return renderPage(c, { title: '消息', bodyClass: 'page--messages', body: <MessagesView {...list} now={deps.now()} paged={!!cursor} walls={deps.repos.memberships.listActiveForUser(userId).map((m) => ({ id: m.wall.id, name: m.wall.name }))} /> });
+    return renderPage(c, { title: '消息', bodyClass: 'page--messages', body: <MessagesView {...inboxOf(authOf(c).user.id, cursor)} /> });
   });
   app.get('/messages/list', jsonUser, (c) => {
     const cursor = listCursor(c.req.query('before'));
-    if (cursor === null) return c.json({ error: '翻页参数不对，刷新页面再试。' }, 400);
-    return c.json(listWithAvatars(authOf(c).user.id, cursor));
+    const limit = listLimit(c.req.query('limit'));
+    if (cursor === null || limit === null) return c.json({ error: '翻页参数不对，刷新页面再试。' }, 400);
+    return c.json(listWithAvatars(authOf(c).user.id, cursor, limit));
   });
   app.get('/messages/unread', jsonUser, (c) => c.json({ unread: deps.repos.chat.unread(authOf(c).user.id) }));
   app.get('/messages/wall/:wallId', user, (c) => {
@@ -91,7 +113,7 @@ export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
       const opener = /^[0-2]$/.test(c.req.query('o') ?? '') ? icebreakerOpener(deps, source, auth.user.id, c.req.query('ice') ?? '', Number(c.req.query('o'))) : null;
       if (opener) draft = opener;
     }
-    return renderPage(c, { title: summary.title, bodyClass: 'page--conversation', body: <ConversationView summary={summary} history={deps.repos.chat.history(summary.id)} userId={auth.user.id} csrf={auth.session.csrfToken} clientId={randomUUID()} draft={draft} members={summary.kind === 'group' ? deps.repos.chat.members(summary.wallId) : []} safety={conversationSafetyModel(deps, summary, auth.user.id, c.req.query('safety'))} /> });
+    return renderPage(c, { title: summary.title, bodyClass: 'page--conversation', body: <ConversationView summary={summary} history={deps.repos.chat.history(summary.id)} userId={auth.user.id} csrf={auth.session.csrfToken} clientId={randomUUID()} draft={draft} members={summary.kind === 'group' ? deps.repos.chat.members(summary.wallId) : []} safety={conversationSafetyModel(deps, summary, auth.user.id, c.req.query('safety'))} inbox={inboxOf(auth.user.id, undefined, summary.id)} /> });
   });
   app.get('/messages/:id/items', jsonUser, (c) => {
     const id = c.req.param('id');
@@ -123,7 +145,7 @@ export function registerMessageRoutes(app: AppHono, deps: AppDeps): void {
     if (result.ok) return c.redirect(`/messages/${id}`, 303);
     if (result.status === 404) return renderNotFound(c);
     const summary = deps.repos.chat.summary(id, auth.user.id)!;
-    return renderPage(c, { title: summary.title, bodyClass: 'page--conversation', status: result.status, body: <ConversationView summary={summary} history={deps.repos.chat.history(id)} userId={auth.user.id} csrf={auth.session.csrfToken} clientId={fields.clientId ?? randomUUID()} draft={fields.text} error={result.error} members={summary.kind === 'group' ? deps.repos.chat.members(summary.wallId) : []} safety={conversationSafetyModel(deps, summary, auth.user.id, undefined)} /> });
+    return renderPage(c, { title: summary.title, bodyClass: 'page--conversation', status: result.status, body: <ConversationView summary={summary} history={deps.repos.chat.history(id)} userId={auth.user.id} csrf={auth.session.csrfToken} clientId={fields.clientId ?? randomUUID()} draft={fields.text} error={result.error} members={summary.kind === 'group' ? deps.repos.chat.members(summary.wallId) : []} safety={conversationSafetyModel(deps, summary, auth.user.id, undefined)} inbox={inboxOf(auth.user.id, undefined, summary.id)} /> });
   });
   app.post('/messages/:id/read', form, (c) => {
     const id = c.req.param('id');

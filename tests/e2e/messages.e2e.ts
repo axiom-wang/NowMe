@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test, type Page } from '@playwright/test';
 import { createWall, joinWall, newUser } from './helpers.js';
 
 test('群头像与墙封面一致，首屏、轮询、更换和恢复默认均显示正确图片', async ({ browser }) => {
@@ -146,10 +146,15 @@ test('消息页：筛选与轮询保持同步，发起聊天入口和窄屏布�
     for (const width of [1440, 562, 375]) {
       await b.page.setViewportSize({ width, height: 941 });
       expect(await b.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
-      const inboxBox = await b.page.locator('.inbox').boundingBox();
-      const wallsBox = await b.page.locator('.inbox-walls').boundingBox();
-      if (width >= 640) expect(wallsBox!.x).toBeGreaterThan(inboxBox!.x + inboxBox!.width);
-      else expect(wallsBox!.y).toBeGreaterThan(inboxBox!.y);
+      // 宽屏：左栏会话列表 + 右侧聊天窗口占位（微信电脑端布局）；窄屏只显示列表
+      const sidebarBox = await b.page.locator('.messages-sidebar').boundingBox();
+      if (width >= 760) {
+        const mainBox = await b.page.locator('.messages-main').boundingBox();
+        expect(mainBox!.x).toBeGreaterThanOrEqual(sidebarBox!.x + sidebarBox!.width - 1);
+        await expect(b.page.locator('.messages-placeholder')).toBeVisible();
+      } else {
+        await expect(b.page.locator('.messages-main')).toBeHidden();
+      }
       await b.page.screenshot({ path: testInfo.outputPath(`inbox-${width}.png`), fullPage: true });
     }
     await b.page.getByText('发起聊天', { exact: true }).click();
@@ -176,6 +181,18 @@ test('群聊与私聊：多人收发、未读、断网重试去重、历史、�
     await b.page.getByRole('link', { name: '全员群聊', exact: true }).click();
     await expect(b.page.locator('.conversation-heading .eyebrow')).toHaveText('全员群聊');
     await expect(b.page.getByRole('heading', { level: 1 })).toHaveText('一起聊的墙');
+    for (const width of [320, 375, 768, 1440]) {
+      await b.page.setViewportSize({ width, height: 800 });
+      const heading = b.page.locator('.conversation-heading');
+      const back = heading.locator('a[href="/messages"]');
+      await expect(back).toHaveText('← 消息列表');
+      if (width < 760) await expect(back).toBeVisible();
+      await expect(heading.getByRole('link', { name: '回到墙上', exact: true })).toHaveAttribute('href', `/w/${wallId}`);
+      expect(await b.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+      await expect(b.page.getByText('最多 2000 字', { exact: false })).toHaveCount(0);
+      await expect(b.page.getByText('开场白已经填好了，改成你自己的话再发送。', { exact: true })).toHaveCount(0);
+    }
+    await b.page.setViewportSize({ width: 375, height: 667 });
     await expect(b.page.getByLabel('消息内容')).toBeInViewport({ ratio: 1 });
     await expect(b.page.getByRole('button', { name: '发送', exact: true })).toBeInViewport({ ratio: 1 });
     const groupPath = new URL(a.page.url()).pathname;
@@ -295,5 +312,323 @@ test('历史消息分页与阅读位置：收到新消息不打断阅读，隐�
     await b.page.evaluate(() => { Object.defineProperty(document, 'hidden', { configurable: true, value: false }); document.dispatchEvent(new Event('visibilitychange')); });
     await expect(b.page.locator('.message-text').last()).toHaveText('恢复后补齐的消息', { timeout: 8000 });
     await expect(b.page.locator('.message')).toHaveCount(67);
+  } finally { await Promise.all([aContext.close(), bContext.close()]); }
+});
+
+test('宽屏双栏：左栏列出私聊与群聊，点开某个聊天后右侧是聊天窗口，左栏高亮当前会话', async ({ browser }) => {
+  const aContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const bContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  try {
+    const a = await newUser(aContext, 'pane-a', '高远');
+    const b = await newUser(bContext, 'pane-b', '江予安');
+    const { wallId, inviteUrl } = await createWall(a.page, '双栏测试墙');
+    await joinWall(b.page, inviteUrl);
+    await a.page.goto(`/messages/wall/${wallId}`);
+    await a.page.getByLabel('消息内容').fill('群里的第一句');
+    await a.page.getByRole('button', { name: '发送', exact: true }).click();
+    await a.page.locator('.chat-members summary').click();
+    await a.page.getByRole('button', { name: '和江予安私聊', exact: true }).click();
+    await a.page.getByLabel('消息内容').fill('私聊的第一句');
+    await a.page.getByRole('button', { name: '发送', exact: true }).click();
+    await expect(a.page.locator('.message-text')).toHaveCount(1);
+
+    await b.page.goto('/messages');
+    await expect(b.page.locator('.conversation-item')).toHaveCount(2);
+    await expect(b.page.locator('.messages-placeholder')).toBeVisible();
+    await b.page.locator('.conversation-item[data-kind="direct"] a').click();
+    await expect(b.page.locator('.message-text')).toHaveText(['私聊的第一句']);
+    // 左栏仍在，两类会话都能看到，当前会话高亮且没有未读角标
+    await expect(b.page.locator('.conversation-item')).toHaveCount(2);
+    const active = b.page.locator('.conversation-item[data-active="true"]');
+    await expect(active).toHaveAttribute('data-kind', 'direct');
+    await b.page.bringToFront();
+    // 读到最新后，当前会话的未读角标消失；另一个会话的未读如实保留
+    await expect(active.locator('.message-badge')).toHaveCount(0, { timeout: 8000 });
+    await expect(b.page.locator('.conversation-item[data-kind="group"] .message-badge')).toHaveText('1');
+    // 宽屏整页不滚动：聊天窗口在左栏右侧，发送框始终在视口内
+    const sidebar = await b.page.locator('.messages-sidebar').boundingBox();
+    const chat = await b.page.locator('.conversation-page').boundingBox();
+    expect(chat!.x).toBeGreaterThanOrEqual(sidebar!.x + sidebar!.width - 1);
+    await expect(b.page.getByLabel('消息内容')).toBeInViewport({ ratio: 1 });
+    expect(await b.page.evaluate(() => document.documentElement.scrollHeight <= innerHeight)).toBe(true);
+    // 在左栏切到群聊
+    await b.page.locator('.conversation-item[data-kind="group"] a').click();
+    await expect(b.page.locator('.message-text')).toHaveText(['群里的第一句']);
+    await expect(b.page.locator('.conversation-item[data-active="true"]')).toHaveAttribute('data-kind', 'group');
+  } finally { await Promise.all([aContext.close(), bContext.close()]); }
+});
+
+const compose = (page: Page) => page.getByLabel('消息内容');
+const sendButton = (page: Page) => page.getByRole('button', { name: '发送', exact: true });
+
+test('矮窗口：展开举报表单或成员列表后，输入框仍固定在窗口内、可以发送', async ({ browser }) => {
+  const aContext = await browser.newContext({ viewport: { width: 1280, height: 560 } });
+  const bContext = await browser.newContext({ viewport: { width: 1280, height: 560 } });
+  try {
+    const a = await newUser(aContext, 'short-a', '高远');
+    const b = await newUser(bContext, 'short-b', '江予安');
+    const { wallId, inviteUrl } = await createWall(a.page, '矮窗口测试墙');
+    await joinWall(b.page, inviteUrl);
+    await a.page.goto(`/messages/wall/${wallId}`);
+    await a.page.locator('.chat-members summary').click();
+    await a.page.getByRole('button', { name: '和江予安私聊', exact: true }).click();
+    await compose(a.page).fill('先打个招呼');
+    await sendButton(a.page).click();
+    await expect(a.page.locator('.message-text')).toHaveCount(1);
+
+    await b.page.goto(a.page.url());
+    await b.page.locator('.safety--chat summary').click();
+    // 举报表单展开：聊天记录仍有保底高度，输入框与发送按钮都在窗口内
+    expect(await b.page.locator('.chat-history').evaluate((el) => el.clientHeight)).toBeGreaterThanOrEqual(150);
+    await expect(compose(b.page)).toBeInViewport({ ratio: 1 });
+    await expect(sendButton(b.page)).toBeInViewport({ ratio: 1 });
+    await compose(b.page).fill('举报栏打开时也能回复');
+    await sendButton(b.page).click();
+    await expect(b.page.locator('.message-text').last()).toHaveText('举报栏打开时也能回复');
+
+    await b.page.goto(`/messages/wall/${wallId}`);
+    await b.page.locator('.chat-members summary').click();
+    expect(await b.page.locator('.chat-history').evaluate((el) => el.clientHeight)).toBeGreaterThanOrEqual(150);
+    await expect(sendButton(b.page)).toBeInViewport({ ratio: 1 });
+  } finally { await Promise.all([aContext.close(), bContext.close()]); }
+});
+
+test('窄一点的宽屏：长墙名只在眉题里省略，不压住“回到墙上”，昵称与时间不重叠', async ({ browser }) => {
+  const aContext = await browser.newContext({ viewport: { width: 760, height: 800 } });
+  const bContext = await browser.newContext({ viewport: { width: 760, height: 800 } });
+  try {
+    const a = await newUser(aContext, 'wide-a', '高远');
+    const b = await newUser(bContext, 'wide-b', '一个非常非常非常长的昵称用来测试');
+    const { wallId, inviteUrl } = await createWall(a.page, '山野轻徒步 · 一起去透气 · 这是一个很长很长的墙名用来测试截断');
+    await joinWall(b.page, inviteUrl);
+    await b.page.goto(`/messages/wall/${wallId}`);
+    await b.page.locator('.chat-members summary').click();
+    await b.page.getByRole('button', { name: '和高远私聊', exact: true }).click();
+    await compose(b.page).fill('你好');
+    await sendButton(b.page).click();
+    await expect(b.page.locator('.message-text')).toHaveCount(1);
+
+    await a.page.goto('/messages');
+    const direct = a.page.locator('.conversation-item[data-kind="direct"]');
+    await expect(direct).toHaveCount(1);
+    const name = await direct.locator('strong').boundingBox();
+    const time = await direct.locator('.conversation-time').boundingBox();
+    expect(name!.x + name!.width).toBeLessThanOrEqual(time!.x);
+    await direct.locator('a').click();
+    const eyebrow = await a.page.locator('.conversation-heading .eyebrow').boundingBox();
+    const wallLink = await a.page.locator('.conversation-heading__nav a:visible').boundingBox();
+    expect(eyebrow!.x + eyebrow!.width).toBeLessThanOrEqual(wallLink!.x);
+    expect(await a.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  } finally { await Promise.all([aContext.close(), bContext.close()]); }
+});
+
+test('切换会话：筛选保持、草稿不丢、Enter 发送 / Shift+Enter 换行，后退不会逐个退回看过的聊天', async ({ browser }) => {
+  const aContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  const bContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  try {
+    const a = await newUser(aContext, 'switch-a', '高远');
+    const b = await newUser(bContext, 'switch-b', '江予安');
+    const { wallId, inviteUrl } = await createWall(a.page, '切换测试墙');
+    await joinWall(b.page, inviteUrl);
+    await a.page.goto(`/messages/wall/${wallId}`);
+    await compose(a.page).fill('群里一句');
+    await sendButton(a.page).click();
+    await a.page.locator('.chat-members summary').click();
+    await a.page.getByRole('button', { name: '和江予安私聊', exact: true }).click();
+    await compose(a.page).fill('私聊一句');
+    await sendButton(a.page).click();
+    await expect(a.page.locator('.message-text')).toHaveCount(1);
+
+    // 筛选条在脚本运行前就占好位置（不再从 hidden 弹出）；“全部”筛选下点进私聊
+    await b.page.goto('/messages#group');
+    await expect(b.page.getByRole('button', { name: '墙内群聊', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(b.page.locator('.conversation-item:visible')).toHaveCount(1);
+    await b.page.locator('.conversation-item:visible a').click();
+    await expect(b.page).toHaveURL(/\/messages\/cnv_[^#]+#group$/);
+    await expect(b.page.getByRole('button', { name: '墙内群聊', exact: true })).toHaveAttribute('aria-pressed', 'true');
+    await expect(b.page.locator('.conversation-item[data-active="true"]')).toHaveAttribute('data-kind', 'group');
+    // 当前会话在任何筛选下都可见
+    await b.page.getByRole('button', { name: '未读消息' }).click();
+    await expect(b.page.locator('.conversation-item[data-active="true"]')).toBeVisible();
+    await b.page.getByRole('button', { name: '最近的聊天', exact: true }).click();
+
+    // 草稿：切到私聊再切回群聊，还在；发送成功后清掉
+    await compose(b.page).fill('写了一半');
+    await b.page.locator('.conversation-item[data-kind="direct"] a').click();
+    await expect(b.page.locator('.message-text')).toHaveText(['私聊一句']);
+    await expect(compose(b.page)).toHaveValue('');
+    await b.page.locator('.conversation-item[data-kind="group"] a').click();
+    await expect(compose(b.page)).toHaveValue('写了一半');
+    // 宽屏切换聊天用“替换”历史：后退直接回到 /messages，而不是上一个聊天
+    await b.page.goBack();
+    await expect(b.page).toHaveURL(/\/messages(#.*)?$/);
+
+    await b.page.goto(`/messages/wall/${wallId}`);
+    await compose(b.page).fill('第一行');
+    await compose(b.page).press('Shift+Enter');
+    await compose(b.page).pressSequentially('第二行');
+    await expect(compose(b.page)).toHaveValue('第一行\n第二行');
+    await compose(b.page).press('Enter');
+    await expect(b.page.locator('.message-text').last()).toHaveText('第一行 第二行'.replace(' ', '\n'));
+    await expect(compose(b.page)).toHaveValue('');
+    await b.page.reload();
+    await expect(compose(b.page)).toHaveValue('');
+  } finally { await Promise.all([aContext.close(), bContext.close()]); }
+});
+
+test('未读：读到最新后左栏与顶栏同时清零；页面没有焦点时角标不会被藏掉', async ({ browser }) => {
+  const aContext = await browser.newContext();
+  const bContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  try {
+    const a = await newUser(aContext, 'unread-a', '高远');
+    const b = await newUser(bContext, 'unread-b', '江予安');
+    const { wallId, inviteUrl } = await createWall(a.page, '未读测试墙');
+    await joinWall(b.page, inviteUrl);
+    await a.page.goto(`/messages/wall/${wallId}`);
+    await compose(a.page).fill('第一条');
+    await sendButton(a.page).click();
+    await compose(a.page).fill('第二条');
+    await sendButton(a.page).click();
+    await expect(a.page.locator('.message-text')).toHaveCount(2);
+
+    // 页面没有焦点：不会标记已读，左栏角标必须如实保留
+    await b.page.addInitScript(() => { Document.prototype.hasFocus = () => false; });
+    await b.page.goto(a.page.url());
+    await expect(b.page.locator('.conversation-item[data-active="true"] .message-badge')).toHaveText('2');
+    await expect(b.page.locator('[data-message-unread]')).toHaveText('2', { timeout: 8000 });
+
+    // 有焦点：读到最新后左栏、顶栏一起清零
+    const focused = await bContext.newPage();
+    await focused.goto(a.page.url());
+    await focused.bringToFront();
+    await expect(focused.locator('.conversation-item[data-active="true"] .message-badge')).toHaveCount(0, { timeout: 8000 });
+    await expect(focused.locator('[data-message-unread]')).toBeHidden({ timeout: 8000 });
+  } finally { await Promise.all([aContext.close(), bContext.close()]); }
+});
+
+test('没有任何聊天时右侧提示与左栏一致；左栏滚动位置不会从别处误恢复', async ({ browser }) => {
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  try {
+    const { page } = await newUser(context, 'empty-pane', '空空');
+    await page.goto('/messages');
+    await expect(page.locator('.messages-placeholder')).toContainText('加入一面墙之后');
+    await expect(page.locator('.messages-placeholder')).not.toContainText('选择左侧的聊天');
+    await page.evaluate(() => sessionStorage.setItem('nowme:inbox-scroll', JSON.stringify({ top: 500, at: Date.now() - 60_000 })));
+    await page.goto('/messages');
+    expect(await page.locator('.inbox').evaluate((el) => el.scrollTop)).toBe(0);
+    expect(await page.evaluate(() => sessionStorage.getItem('nowme:inbox-scroll'))).toBeNull();
+  } finally { await context.close(); }
+});
+
+test('聊天打不开（404）只停聊天窗口，左栏仍继续更新', async ({ browser }) => {
+  const aContext = await browser.newContext();
+  const bContext = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  try {
+    const a = await newUser(aContext, 'err-a', '高远');
+    const b = await newUser(bContext, 'err-b', '江予安');
+    const { wallId, inviteUrl } = await createWall(a.page, '出错测试墙');
+    await joinWall(b.page, inviteUrl);
+    await a.page.goto(`/messages/wall/${wallId}`);
+    await a.page.locator('.chat-members summary').click();
+    await a.page.getByRole('button', { name: '和江予安私聊', exact: true }).click();
+    await compose(a.page).fill('私聊');
+    await sendButton(a.page).click();
+    await expect(a.page.locator('.message-text')).toHaveCount(1);
+    const directUrl = a.page.url();
+
+    await b.page.route(/\/messages\/cnv_[^/]+\/items/, (route) => route.fulfill({ status: 404, json: { error: '这段对话打不开了。' } }));
+    await b.page.goto(`/messages/wall/${wallId}`);
+    await expect(b.page.locator('[data-chat-status]')).toContainText('打不开', { timeout: 8000 });
+    // 左栏继续轮询：另一个会话来了新消息，预览会更新
+    await a.page.goto(directUrl);
+    await compose(a.page).fill('左栏还活着');
+    await sendButton(a.page).click();
+    await expect(b.page.locator('.conversation-item[data-kind="direct"] .conversation-preview')).toHaveText('左栏还活着', { timeout: 8000 });
+  } finally { await Promise.all([aContext.close(), bContext.close()]); }
+});
+
+test('时间按浏览器所在时区显示', async ({ browser }) => {
+  const aContext = await browser.newContext();
+  const bContext = await browser.newContext({ timezoneId: 'America/Los_Angeles', viewport: { width: 1280, height: 800 } });
+  try {
+    const a = await newUser(aContext, 'tz-a', '高远');
+    const b = await newUser(bContext, 'tz-b', '江予安');
+    const { wallId, inviteUrl } = await createWall(a.page, '时区测试墙');
+    await joinWall(b.page, inviteUrl);
+    await a.page.goto(`/messages/wall/${wallId}`);
+    await compose(a.page).fill('看看几点');
+    await sendButton(a.page).click();
+    await expect(a.page.locator('.message-text')).toHaveCount(1);
+    await b.page.goto(`/messages/wall/${wallId}`);
+    const iso = (await b.page.locator('.conversation-time').getAttribute('datetime'))!;
+    const expected = new Date(iso).toLocaleTimeString('zh-CN', { timeZone: 'America/Los_Angeles', hour: '2-digit', minute: '2-digit', hour12: false });
+    await expect(b.page.locator('.conversation-time')).toHaveText(expected);
+    await expect(b.page.locator('.message-meta time').first()).toContainText(expected);
+  } finally { await Promise.all([aContext.close(), bContext.close()]); }
+});
+
+test('会话超过一页：当前会话在左栏里高亮，“更早的会话”原地加载，轮询不把已展开的缩回', async ({ browser }) => {
+  test.setTimeout(180_000);
+  const context = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+  try {
+    const { page } = await newUser(context, 'many', '多多');
+    const walls: string[] = [];
+    for (let i = 0; i < 53; i++) walls.push((await createWall(page, `多墙${i}`)).wallId);
+    // 没有消息的群按会话 ID 倒序排：ID 最小的排在最后，一定在第一页（50 个）之外
+    const oldest = [...walls].sort((x, y) => x.slice(4).localeCompare(y.slice(4)))[0]!;
+    await page.goto(`/messages/wall/${oldest}`);
+    await expect(page.locator('.conversation-item')).toHaveCount(53);
+    await expect(page.locator('.conversation-item[data-active="true"]')).toHaveCount(1);
+    await expect(page.locator('.conversation-item[data-active="true"]')).toBeInViewport();
+    // 回到最新一页：只有 50 个，点“更早的会话”原地追加，地址不变
+    await page.goto('/messages');
+    await expect(page.locator('.conversation-item')).toHaveCount(50);
+    const url = page.url();
+    await page.locator('[data-conversation-next]').click();
+    await expect(page.locator('.conversation-item')).toHaveCount(53);
+    expect(page.url()).toBe(url);
+    await expect(page.locator('[data-conversation-next]')).toBeHidden();
+    await page.waitForTimeout(6000);
+    await expect(page.locator('.conversation-item')).toHaveCount(53);
+  } finally { await context.close(); }
+});
+
+test('滚动能从聊天记录传给外层：矮窗口 / 手机展开举报表单后，在聊天区也能滑动页面', async ({ browser }) => {
+  const aContext = await browser.newContext();
+  const bContext = await browser.newContext({ viewport: { width: 1280, height: 560 } });
+  try {
+    const a = await newUser(aContext, 'scroll-a', '高远');
+    const b = await newUser(bContext, 'scroll-b', '江予安');
+    const { wallId, inviteUrl } = await createWall(a.page, '滚动测试墙');
+    await joinWall(b.page, inviteUrl);
+    await a.page.goto(`/messages/wall/${wallId}`);
+    await a.page.locator('.chat-members summary').click();
+    await a.page.getByRole('button', { name: '和江予安私聊', exact: true }).click();
+    await compose(a.page).fill('私聊一句');
+    await sendButton(a.page).click();
+    await expect(a.page.locator('.message-text')).toHaveCount(1);
+    const direct = a.page.url();
+    const wheelOver = async (page: Page, selector: string, dy: number) => {
+      const box = (await page.locator(selector).boundingBox())!;
+      await page.mouse.move(box.x + box.width / 2, box.y + Math.min(box.height / 2, 40));
+      await page.mouse.wheel(0, dy);
+      await page.waitForTimeout(250);
+    };
+
+    // 宽屏矮窗口：聊天记录本身没有可滚内容时，滚轮停在记录上要能滚动聊天窗口
+    await b.page.goto(direct);
+    await b.page.locator('.safety--chat summary').click();
+    const panel = b.page.locator('.conversation-panel');
+    expect(await panel.evaluate((el) => el.scrollHeight > el.clientHeight)).toBe(true);
+    await wheelOver(b.page, '.chat-history', 300);
+    expect(await panel.evaluate((el) => el.scrollTop)).toBeGreaterThan(0);
+
+    // 手机：展开举报表单后整页变长，手指停在聊天区（再次滑动时）也要能滑动整页
+    await b.page.setViewportSize({ width: 375, height: 667 });
+    await b.page.goto(direct);
+    await b.page.locator('.safety--chat summary').click();
+    expect(await b.page.evaluate(() => document.documentElement.scrollHeight > innerHeight)).toBe(true);
+    for (let i = 0; i < 3; i++) await wheelOver(b.page, '.chat-history', 400);
+    expect(await b.page.evaluate(() => window.scrollY)).toBeGreaterThan(0);
   } finally { await Promise.all([aContext.close(), bContext.close()]); }
 });

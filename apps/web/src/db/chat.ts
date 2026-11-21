@@ -56,11 +56,11 @@ export function createChatRepo(db: Database) {
     summary(id: string, userId: string): ConversationSummary | null {
       return db.prepare(`${SUMMARY} AND c.id = $id`).get({ $user: userId, $id: id }) as unknown as ConversationSummary | undefined ?? null;
     },
-    list(userId: string, before?: { sequence: number; id: string }) {
+    list(userId: string, before?: { sequence: number; id: string }, limit = CHAT_PAGE_SIZE) {
       const rows = db.prepare(`${SUMMARY} ${before ? 'AND (lastSequence < $sequence OR (lastSequence = $sequence AND c.id < $id))' : ''}
-        ORDER BY lastSequence DESC, c.id DESC LIMIT ${CHAT_PAGE_SIZE + 1}`)
+        ORDER BY lastSequence DESC, c.id DESC LIMIT ${limit + 1}`)
         .all(before ? { $user: userId, $sequence: before.sequence, $id: before.id } : { $user: userId }) as unknown as ConversationSummary[];
-      return { conversations: rows.slice(0, CHAT_PAGE_SIZE), hasMore: rows.length > CHAT_PAGE_SIZE };
+      return { conversations: rows.slice(0, limit), hasMore: rows.length > limit };
     },
     unread(userId: string): number {
       return (db.prepare(`SELECT COALESCE(SUM(unread), 0) AS total FROM (${SUMMARY})`).get({ $user: userId }) as { total: number }).total;

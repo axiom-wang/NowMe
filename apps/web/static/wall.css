@@ -2112,9 +2112,8 @@ html.nm-wall-space:has(.wall-board--people) {
   padding: 0;
 }
 
-/* 底部的几块（AI 介绍、问墙、群像）改在对话框里打开；页脚也不占位置 */
-.nm-wall-space .container:has(.wall-board--people) > .wall-assist,
-.nm-wall-space .site:has(.wall-board--people) > .site-footer {
+/* 底部的几块（AI 介绍、问墙、群像）改在对话框里打开 */
+.nm-wall-space .container:has(.wall-board--people) > .wall-assist {
   display: none;
 }
 
@@ -2958,29 +2957,105 @@ button.space-detail__hook:focus-visible {
   border-radius: var(--radius-pill);
 }
 
-/* 找人的另外两条路：AI 帮我找人 · 问问这面墙 */
+/* 详情底部：还想认识更多人？——AI 帮我找人、问问这面墙（手机上另有墙的群像），两张并排的入口卡 */
 .space-panel__assist {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 0 6px;
-  margin: 16px 0 0;
-  padding-top: 8px;
-  font-size: var(--text-sm);
-  color: var(--text-secondary);
+  margin: 18px 0 0;
+  padding-top: 18px;
   border-top: 1px solid var(--line);
 }
 
-.space-panel__assist a {
-  display: inline-flex;
-  align-items: center;
-  min-height: 44px;
+.space-panel__assist-title {
+  margin: 0 0 10px;
+  font-family: var(--font-head);
+  font-size: var(--text-sm);
   font-weight: 700;
-  color: var(--accent-text);
-  text-underline-offset: 4px;
+  color: var(--text);
 }
 
+.space-panel__assist-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
 
+/* 只有一张卡时占满一行 */
+.space-assist-card:only-child {
+  grid-column: 1 / -1;
+}
+
+.space-assist-card__link {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-areas:
+    'icon title'
+    'note note';
+  align-items: center;
+  gap: 8px 10px;
+  height: 100%;
+  min-height: 44px;
+  padding: 12px 12px 12px;
+  color: var(--text);
+  text-decoration: none;
+  background: var(--bg);
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  transition: border-color 0.2s, transform 0.2s var(--ease), box-shadow 0.2s;
+}
+
+.space-assist-card__link:hover {
+  border-color: var(--text);
+  box-shadow: 3px 3px 0 var(--lime);
+  transform: translate(-1px, -1px);
+}
+
+.space-assist-card__link:focus-visible {
+  outline: 2.5px solid var(--text);
+  outline-offset: 2px;
+}
+
+.space-assist-card__icon {
+  grid-area: icon;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  color: var(--object-ink);
+  background: var(--lime);
+  border-radius: 10px;
+}
+
+.space-assist-card__icon svg {
+  width: 20px;
+  height: 20px;
+}
+
+.space-assist-card:nth-child(2) .space-assist-card__icon {
+  background: var(--note);
+}
+
+.space-assist-card:nth-child(3) .space-assist-card__icon {
+  background: var(--lime-soft);
+}
+
+.space-assist-card__title {
+  grid-area: title;
+  font-family: var(--font-head);
+  font-size: var(--text-sm);
+  font-weight: 700;
+  line-height: 1.3;
+}
+
+.space-assist-card__note {
+  grid-area: note;
+  font-size: var(--text-sm);
+  line-height: 1.45;
+  color: var(--text-secondary);
+}
 
 /* ---- AI 帮我找人 / 问问这面墙：不在页面底部，从详情里打开的对话框 ---- */
 .nm-wall-space .container:has(.wall-board--people) .wall-assist__section {
@@ -3054,16 +3129,23 @@ button.space-detail__hook:focus-visible {
   }
 }
 
-.space-panel__assist-portrait {
-  display: inline-flex;
-  align-items: center;
-  gap: 0 6px;
-}
-
+/* 墙的群像在桌面上的标题行里，详情底部只在手机上放 */
 @media (min-width: 1000px) {
-  .space-panel__assist-portrait,
+  .space-assist-card--mobile,
   .space-panel__assist--portrait {
     display: none;
+  }
+
+  /* 只有一张（另一张是手机才有的群像）时占满一行 */
+  .space-assist-card:first-child:nth-last-child(2):has(+ .space-assist-card--mobile) {
+    grid-column: 1 / -1;
+  }
+}
+
+/* 手机上三张：群像那张占满一行 */
+@media (max-width: 999px) {
+  .space-assist-card--mobile:nth-child(3) {
+    grid-column: 1 / -1;
   }
 }
 

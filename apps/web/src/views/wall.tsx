@@ -113,6 +113,23 @@ const CardDetail: FC<{ item: WallCard }> = ({ item }) => (
   </template>
 );
 
+/** 详情底部“还想认识更多人？”里的一张入口卡：图标、名字、一句说明。说明只是补充，不算进链接名字。 */
+const AssistCard: FC<{ href: string; title: string; note: string; mobileOnly?: boolean; children: Child }> = ({ href, title, note, mobileOnly = false, children }) => (
+  <li class={`space-assist-card${mobileOnly ? ' space-assist-card--mobile' : ''}`}>
+    <a class="space-assist-card__link" href={href}>
+      <span class="space-assist-card__icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" focusable="false">
+          {children}
+        </svg>
+      </span>
+      <span class="space-assist-card__title">{title}</span>
+      <span class="space-assist-card__note" aria-hidden="true">
+        {note}
+      </span>
+    </a>
+  </li>
+);
+
 /**
  * 逛墙空间里这个人的详情：桌面上是墙右侧一直开着的一栏（默认是第一位成员），手机上是点海报后从底部升起的资料卡。
  * 内容：封面（只在桌面）、名字、一句话介绍、回答、接话点、“想聊这个”、成员页入口；有 AI 找人 / 问墙时最下面一行入口。
@@ -146,19 +163,32 @@ const SpacePanel: FC<{ csrf: string; intros: boolean; ask: boolean; portrait: bo
         </a>
       </div>
       {intros || ask || portrait ? (
-        <p class={`space-panel__assist${intros || ask ? '' : ' space-panel__assist--portrait'}`} data-space-assist>
-          {intros || ask ? <span class="space-panel__assist-label">不知道找谁？</span> : null}
-          {intros ? <a href="#intros">AI 帮我找人</a> : null}
-          {intros && ask ? <span class="space-panel__assist-sep" aria-hidden="true">·</span> : null}
-          {ask ? <a href="#ask">问问这面墙</a> : null}
-          {/* 手机上标题行放不下“墙的群像”，入口在这里 */}
-          {portrait ? (
-            <span class="space-panel__assist-portrait">
-              {intros || ask ? <span class="space-panel__assist-sep" aria-hidden="true">·</span> : null}
-              <a href="#portrait">墙的群像</a>
-            </span>
-          ) : null}
-        </p>
+        <section class={`space-panel__assist${intros || ask ? '' : ' space-panel__assist--portrait'}`} aria-labelledby="space-assist-heading" data-space-assist>
+          <h3 id="space-assist-heading" class="space-panel__assist-title">还想认识更多人？</h3>
+          <ul class="space-panel__assist-list">
+            {intros ? (
+              <AssistCard href="#intros" title="AI 帮我找人" note="按你的资料推荐，说明理由">
+                <path d="M12 3.5l1.6 4.4 4.4 1.6-4.4 1.6L12 15.5l-1.6-4.4L6 9.5l4.4-1.6L12 3.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+                <path d="M18.5 15l.7 1.8 1.8.7-1.8.7-.7 1.8-.7-1.8-1.8-.7 1.8-.7.7-1.8Z" fill="currentColor" />
+              </AssistCard>
+            ) : null}
+            {ask ? (
+              <AssistCard href="#ask" title="问问这面墙" note="一句话描述想找的人">
+                <path d="M4 11.5a8 7 0 1 1 3.6 5.9L4 19l1.1-3.4A6.7 6.7 0 0 1 4 11.5Z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+                <path d="M10 9.2a2 2 0 1 1 2.8 1.8c-.5.3-.8.7-.8 1.3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                <circle cx="12" cy="14.6" r="1" fill="currentColor" />
+              </AssistCard>
+            ) : null}
+            {/* 手机上标题行放不下“墙的群像”，入口在这里（桌面上在标题行） */}
+            {portrait ? (
+              <AssistCard href="#portrait" title="墙的群像" note="AI 归纳这面墙上都是谁" mobileOnly>
+                <circle cx="9" cy="8.5" r="3" fill="none" stroke="currentColor" stroke-width="1.8" />
+                <path d="M3.5 19a5.5 5.5 0 0 1 11 0" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+                <path d="M15.5 6a3 3 0 0 1 0 5.6M17 14.2a5.5 5.5 0 0 1 3.5 4.8" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+              </AssistCard>
+            ) : null}
+          </ul>
+        </section>
       ) : null}
     </div>
   </aside>

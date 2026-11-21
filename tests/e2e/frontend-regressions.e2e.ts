@@ -71,7 +71,7 @@ test('进度临时故障仍会重试恢复', async ({ page }) => {
   await expect(page.locator('[data-progress-label]')).toHaveText('恢复生成');
 });
 
-test('发送保持焦点、保留失败草稿，支持快捷键且不误发输入法组合', async ({ page }) => {
+test('发送保持焦点、保留失败草稿，Enter / Ctrl+Enter 发送、Shift+Enter 换行且不误发输入法组合', async ({ page }) => {
   let sends = 0;
   let release: (() => void) | undefined;
   await page.route('**/messages/test/items?*', route => route.fulfill({ json: { messages: [], hasMore: false } }));
@@ -85,8 +85,9 @@ test('发送保持焦点、保留失败草稿，支持快捷键且不误发输�
   await input.fill('第一条');
   await input.dispatchEvent('keydown', { key: 'Enter', ctrlKey: true, isComposing: true });
   expect(sends).toBe(0);
-  await input.press('Enter'); await expect(input).toHaveValue('第一条\n');
-  await input.press('Control+Enter');
+  await input.press('Shift+Enter'); await expect(input).toHaveValue('第一条\n');
+  expect(sends).toBe(0);
+  await input.press('Enter'); // 鼠标键盘设备：Enter 直接发送，Shift + Enter 才换行
   await expect.poll(() => sends).toBe(1);
   await expect(input).toBeFocused(); await expect(input).toBeEnabled();
   await expect(page.getByRole('button', { name: '发送中…' })).toBeDisabled();

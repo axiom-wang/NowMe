@@ -1,5 +1,5 @@
 import { CHAT_TEXT_MAX_LENGTH, type ChatHistory, type ConversationSummary, type ChatMessage } from '@nowme/contracts';
-import type { FC } from 'hono/jsx';
+import type { FC, PropsWithChildren } from 'hono/jsx';
 import { CsrfField } from './forms.js';
 import { HomeIcon } from './home-icons.js';
 import { ConversationSafety, type SafetyNotice } from './moderation.js';
@@ -27,13 +27,15 @@ export function formatConversationTime(value: string | null, now = new Date()): 
   return date.toLocaleDateString('zh-CN', { timeZone: 'Asia/Tokyo', ...(year(date) !== year(now) ? { year: 'numeric' as const } : {}), month: 'numeric', day: 'numeric' });
 }
 
-export const ConversationItem: FC<{ item: ConversationSummary; now?: Date }> = ({ item, now }) => (
-  <li class="conversation-item" data-kind={item.kind} data-unread={item.unread}>
-    <a href={`/messages/${item.id}`} class="conversation-link">
+export const ConversationItem: FC<{ item: ConversationSummary; now?: Date; active?: boolean }> = ({ item, now, active }) => (
+  <li class="conversation-item" data-kind={item.kind} data-unread={item.unread} data-id={item.id} data-active={active ? 'true' : undefined}>
+    <a href={`/messages/${item.id}`} class="conversation-link" aria-current={active ? 'page' : undefined}>
       <span class={`conversation-icon${item.kind === 'group' ? ' conversation-icon--group' : ''}`} aria-hidden="true">{item.avatarUrl ? <img src={item.avatarUrl} alt="" /> : item.kind === 'group' ? '群' : [...item.title][0]}</span>
-      <span class="conversation-copy"><strong>{item.title}</strong><span class="muted">{item.wallName}</span><span class="conversation-preview">{item.lastText ?? '还没有消息，来打个招呼吧'}</span></span>
-      {item.lastAt ? <time class="conversation-time" datetime={item.lastAt}>{formatConversationTime(item.lastAt, now)}</time> : null}
-      {item.unread > 0 ? <span class="message-badge" aria-label={`${item.unread} 条未读`}>{item.unread}</span> : null}
+      <span class="conversation-copy">
+        <span class="conversation-head"><strong>{item.title}</strong>{item.lastAt ? <time class="conversation-time" datetime={item.lastAt}>{formatConversationTime(item.lastAt, now)}</time> : null}</span>
+        {item.kind === 'direct' ? <span class="muted">{item.wallName}</span> : null}
+        <span class="conversation-foot"><span class="conversation-preview">{item.lastText ?? '还没有消息，来打个招呼吧'}</span>{item.unread > 0 ? <span class="message-badge" aria-label={`${item.unread} 条未读`}>{item.unread}</span> : null}</span>
+      </span>
     </a>
   </li>
 );
@@ -42,35 +44,37 @@ export function conversationCursor(item: ConversationSummary): string {
   return `${item.lastSequence}:${item.id}`;
 }
 
-export const MessagesView: FC<{
+export interface InboxModel {
   conversations: ConversationSummary[];
   hasMore: boolean;
-  paged: boolean;
+  paged?: boolean;
   walls: { id: string; name: string }[];
   now?: Date;
-}> = ({ conversations, hasMore, paged, walls, now }) => {
+}
+
+/** 左栏：所有私聊与群聊的会话列表（类似微信电脑端）。当前打开的会话高亮；它的未读角标在真正读到后（客户端标记已读）才消失。 */
+const InboxSidebar: FC<InboxModel & { activeId?: string }> = ({ conversations, hasMore, paged = false, walls, now, activeId }) => {
   const emptyTitle = walls.length > 0 ? '还没有聊天' : '还没有可以聊天的人';
   const emptyCopy = walls.length > 0 ? '去全员群打个招呼，或者在别人的页面点“想聊这个”，聊天就开始了。' : '加入一面墙之后，就能和墙上的人聊天了。';
   return (
-  <div class="container messages-page" data-messages-page>
-    <header class="messages-heading"><p class="eyebrow">和同一面墙上的人聊天</p><h1>消息</h1></header>
-    <div class="messages-toolbar">
-      <div class="inbox-filters" role="group" aria-label="筛选会话" data-inbox-filters hidden>
+    <section class="messages-sidebar" aria-label="聊天列表">
+      <header class="messages-sidebar__head">
+        {activeId ? <p class="messages-sidebar__title">消息</p> : <h1 class="messages-sidebar__title">消息</h1>}
+        <details class="start-chat" data-dismissable>
+          <summary class="btn btn--primary btn--small"><HomeIcon name="plus" />发起聊天</summary>
+          <div class="start-chat__menu">
+            <h2>从共同的墙开始</h2>
+            <p class="muted">先进某面墙的全员群；想私信谁，在群里点 TA 名字旁边的“私聊”。</p>
+            {walls.length ? <ul>{walls.map((wall) => <li><a href={`/messages/wall/${wall.id}`}><span>{wall.name}</span><HomeIcon name="arrow" /></a></li>)}</ul> : <p class="muted">你还没有加入任何一面墙。拿到邀请链接加入后，就能和墙上的人聊天。</p>}
+          </div>
+        </details>
+      </header>
+      <div class="inbox-filters" role="group" aria-label="筛选会话" data-inbox-filters data-pending>
         <button type="button" class="inbox-filter is-active" aria-pressed="true" data-inbox-filter="all">最近的聊天</button>
         <button type="button" class="inbox-filter" aria-pressed="false" data-inbox-filter="unread">未读消息 <span class="message-badge" data-inbox-unread hidden={!conversations.some((item) => item.unread > 0)}>{conversations.reduce((total, item) => total + item.unread, 0)}</span></button>
         <button type="button" class="inbox-filter" aria-pressed="false" data-inbox-filter="group">墙内群聊</button>
       </div>
-      <details class="start-chat" data-dismissable>
-        <summary class="btn btn--primary"><HomeIcon name="plus" />发起聊天</summary>
-        <div class="start-chat__menu">
-          <h2>从共同的墙开始</h2>
-          <p class="muted">先进某面墙的全员群；想私信谁，在群里点 TA 名字旁边的“私聊”。</p>
-          {walls.length ? <ul>{walls.map((wall) => <li><a href={`/messages/wall/${wall.id}`}><span>{wall.name}</span><HomeIcon name="arrow" /></a></li>)}</ul> : <p class="muted">你还没有加入任何一面墙。拿到邀请链接加入后，就能和墙上的人聊天。</p>}
-        </div>
-      </details>
-    </div>
-    <div class="inbox-layout">
-      <section class="card inbox" aria-label="会话列表" data-inbox={paged ? 'paged' : 'live'}>
+      <div class="inbox" data-inbox={paged ? 'paged' : 'live'}>
         <h2 class="visually-hidden">最近的聊天</h2>
         <div class="inbox-empty" role="status" data-inbox-empty data-empty-title={emptyTitle} data-empty-copy={emptyCopy} hidden={conversations.length > 0}>
           <span class="inbox-empty__icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M26 19a6 6 0 0 1-6 6H12l-7 4V11a6 6 0 0 1 6-6h9a6 6 0 0 1 6 6Z" /><path d="M11 12h10M11 17h7" /></svg></span>
@@ -78,16 +82,31 @@ export const MessagesView: FC<{
           <p class="muted" data-inbox-empty-copy>{emptyCopy}</p>
           <a class="btn btn--accent btn--small" data-inbox-empty-action href={walls[0] ? `/messages/wall/${walls[0].id}` : '/'}>{walls[0] ? '去全员群打个招呼' : '回到首页'}</a>
         </div>
-        <ul class="conversation-list" data-conversation-list>{conversations.map((item) => <ConversationItem item={item} now={now} />)}</ul>
+        <ul class="conversation-list" data-conversation-list>{conversations.map((item) => <ConversationItem item={item} now={now} active={item.id === activeId} />)}</ul>
         <p class="inbox-page-note muted" data-inbox-page-note hidden={!hasMore && !paged}>筛选只作用于当前显示的这些聊天；更早的在下面。</p>
-        <a class="btn btn--ghost" data-conversation-next hidden={!hasMore} href={hasMore && conversations.length ? `/messages?before=${conversationCursor(conversations.at(-1)!)}` : '/messages'}>更早的会话</a>
-        {paged ? <a class="btn btn--ghost" data-conversation-latest href="/messages">回到最新会话</a> : null}
-      </section>
-      <aside class="card inbox-walls"><h2>墙内全员群</h2>{walls.length === 0 ? <p class="muted">你还没有加入任何一面墙。拿到邀请链接加入后，就能和墙上的人聊天。</p> : <ul>{walls.map((wall) => <li><a href={`/messages/wall/${wall.id}`}><span>{wall.name}</span><HomeIcon name="arrow" /></a></li>)}</ul>}</aside>
-    </div>
-  </div>
+        <a class="btn btn--ghost btn--small" data-conversation-next hidden={!hasMore} href={hasMore && conversations.length ? `/messages?before=${conversationCursor(conversations.at(-1)!)}` : '/messages'}>更早的会话</a>
+        {paged ? <a class="btn btn--ghost btn--small" data-conversation-latest href="/messages">回到最新会话</a> : null}
+      </div>
+    </section>
   );
 };
+
+/** 微信电脑端式双栏：左栏会话列表，右侧是聊天窗口；窄屏退化成“列表页 / 聊天页”两个页面。 */
+const MessagesShell: FC<PropsWithChildren<{ view: 'list' | 'chat'; inbox: InboxModel; activeId?: string }>> = ({ view, inbox, activeId, children }) => (
+  <div class="container messages-shell" data-messages-page data-view={view}>
+    <InboxSidebar {...inbox} activeId={activeId} />
+    <div class="messages-main">{children}</div>
+  </div>
+);
+
+export const MessagesView: FC<InboxModel> = (inbox) => (
+  <MessagesShell view="list" inbox={inbox}>
+    <div class="messages-placeholder">
+      <span class="messages-placeholder__icon" aria-hidden="true"><svg viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M26 19a6 6 0 0 1-6 6H12l-7 4V11a6 6 0 0 1 6-6h9a6 6 0 0 1 6 6Z" /><path d="M11 12h10M11 17h7" /></svg></span>
+      <p>{inbox.conversations.length > 0 ? '选择左侧的聊天，开始说话' : inbox.walls.length > 0 ? '还没有聊天，从左侧的全员群开始第一句吧' : '加入一面墙之后，这里就能和墙上的人聊天了'}</p>
+    </div>
+  </MessagesShell>
+);
 
 export const MessageItem: FC<{ message: ChatMessage; userId: string }> = ({ message, userId }) => (
   <li class={`message${message.senderId === userId ? ' message--mine' : ''}`} data-sequence={message.sequence}>
@@ -107,13 +126,16 @@ export const ConversationView: FC<{
   members: { userId: string; nickname: string; avatarUrl?: string | null }[];
   /** 一对一私聊的举报 / 拉黑状态（contracts 15）；群聊为空。 */
   safety?: ConversationSafetyModel | null;
-}> = ({ summary, history, userId, csrf, clientId, draft, error, members, safety = null }) => (
-  <div class="container conversation-page" data-chat={summary.id} data-user-id={userId}>
-    <nav class="back-link" aria-label="返回"><a href="/messages">← 消息列表</a><a href={`/w/${summary.wallId}`}>回到墙上</a></nav>
+  /** 左栏会话列表。 */
+  inbox: InboxModel;
+}> = ({ summary, history, userId, csrf, clientId, draft, error, members, safety = null, inbox }) => (
+  <MessagesShell view="chat" inbox={inbox} activeId={summary.id}>
+  <div class="conversation-page" data-chat={summary.id} data-user-id={userId}>
     <section class="card conversation-panel">
       <header class="conversation-heading">
+        <nav class="conversation-heading__nav" aria-label="聊天导航"><a class="conversation-heading__back" href="/messages">← 消息列表</a><a href={`/w/${summary.wallId}`}>回到墙上</a></nav>
         <p class="eyebrow">{summary.kind === 'group' ? '全员群聊' : <><span title={summary.wallName}>{summary.wallName}</span> · 私信</>}</p>
-        <h1 title={summary.kind === 'group' ? summary.wallName : summary.title}>{summary.kind === 'group' ? summary.wallName : summary.title}</h1>
+        <h1 class="conversation-title" title={summary.kind === 'group' ? summary.wallName : summary.title}>{summary.kind === 'group' ? summary.wallName : summary.title}</h1>
         {summary.kind === 'group' ? <details class="chat-members"><summary>墙内成员 · {members.length} 人</summary><ul>{members.map((member) => <li><span>{member.avatarUrl ? <img class="chat-avatar" src={member.avatarUrl} alt="" loading="lazy" /> : null}{member.nickname}{member.userId === userId ? '（我）' : ''}</span>{member.userId !== userId ? <form method="post" action="/messages/direct"><CsrfField token={csrf} /><input type="hidden" name="wallId" value={summary.wallId} /><input type="hidden" name="userId" value={member.userId} /><button class="btn btn--ghost btn--small" type="submit" aria-label={`和${member.nickname}私聊`}>私聊</button></form> : null}</li>)}</ul></details> : null}
       </header>
       <div class="chat-history" data-chat-history tabindex={0} aria-label="聊天记录">
@@ -128,11 +150,12 @@ export const ConversationView: FC<{
         <CsrfField token={csrf} /><input type="hidden" name="clientId" value={clientId} />
         <label for="message-text">消息内容</label>
         <textarea id="message-text" name="text" rows={3} required data-max-length={CHAT_TEXT_MAX_LENGTH} placeholder="说点什么吧……" aria-describedby="chat-hint">{draft ?? ''}</textarea>
-        <span id="chat-hint" class="muted chat-hint">最多 {CHAT_TEXT_MAX_LENGTH} 字 <span class="chat-shortcut">· Ctrl / ⌘ + Enter 发送</span></span>
+        <span id="chat-hint" class="chat-hint muted">Enter 发送 · Shift + Enter 换行</span>
         <button type="submit" class="btn btn--accent">发送</button>
-        <p class="chat-status" role="status" aria-live="polite" data-chat-status>{error ?? (draft ? '开场白已经填好了，改成你自己的话再发送。' : '')}</p>
+        <p class="chat-status" role="status" aria-live="polite" data-chat-status>{error ?? ''}</p>
         <a href="/login" data-chat-login hidden>重新登录</a><a href="/messages" data-chat-back hidden>返回消息列表</a>
       </form>
     </section>
   </div>
+  </MessagesShell>
 );

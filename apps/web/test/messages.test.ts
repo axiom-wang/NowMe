@@ -104,6 +104,30 @@ describe('墙内聊天', () => {
     expect((await read(a, '/messages/list?before=bad')).status).toBe(400);
   });
 
+  it('会话列表 limit：覆盖已展开的部分；非法值返回 400；会话页保证当前会话在左栏里并高亮', async () => {
+    for (let i = 0; i < 55; i++) seedWall(t, a.userId, `墙${i}`);
+    const wide = await (await read(a, '/messages/list?limit=100')).json() as { conversations: ConversationSummary[]; hasMore: boolean };
+    expect(wide.conversations).toHaveLength(57);
+    expect(wide.hasMore).toBe(false);
+    const mid = await (await read(a, '/messages/list?limit=60')).json() as { conversations: ConversationSummary[]; hasMore: boolean };
+    expect(mid.conversations).toHaveLength(57);
+    for (const bad of ['0', '49', '501', 'abc', '-1', '1e2']) expect((await read(a, `/messages/list?limit=${bad}`)).status, bad).toBe(400);
+    // 排在第 50 之外的会话：会话页多取几页，让它出现在左栏并高亮
+    const first = await (await read(a, '/messages/list')).json() as { conversations: ConversationSummary[]; hasMore: boolean };
+    const old = wide.conversations.find((c) => !first.conversations.some((f) => f.id === c.id))!;
+    const html = await (await read(a, `/messages/${old.id}`)).text();
+    expect(html).toContain(`data-id="${old.id}" data-active="true"`);
+    expect(html).toContain('aria-current="page"');
+  });
+
+  it('当前会话的未读角标以服务端为准，不在页面里被藏掉；会话页左栏有筛选条占位且无隐藏闪动', async () => {
+    await send(a, direct, '未读测试');
+    const html = await (await read(b, `/messages/${direct}`)).text();
+    expect(html).toMatch(new RegExp(`data-id="${direct}" data-active="true"[^>]*>.*?message-badge`, 's'));
+    expect(html).toMatch(/data-inbox-filters[^>]*data-pending/);
+    expect(html).not.toMatch(/data-inbox-filters[^>]*\shidden/);
+  });
+
   it('私聊与群聊双向收发、跨用户显示昵称，刷新后保留历史', async () => {
     for (const id of [direct, group]) {
       expect((await send(a, id, '你好\n一起聊聊')).status).toBe(200);

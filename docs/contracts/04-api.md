@@ -86,7 +86,7 @@ interface RevisionSummary { id: string; number: number; status: 'accepted' | 're
 | 路由 | 输入 | 返回 |
 | --- | --- | --- |
 | `GET /messages` | 可选 `before=<lastSequence>:<conversationId>` | 会话列表页面；每页 50 个 |
-| `GET /messages/list` | 同上 | `{conversations: ConversationSummary[], hasMore}`；按最后消息序号倒序、ID 倒序排列；摘要正文最多 100 字符 |
+| `GET /messages/list` | 可选 `before`（同上）与 `limit`（50–500 的整数，缺省 50；客户端展开更多会话后，轮询用它覆盖已展开的部分） | `{conversations: ConversationSummary[], hasMore}`；按最后消息序号倒序、ID 倒序排列；摘要正文最多 100 字符；参数不合法返回 400 |
 | `GET /messages/unread` | 无 | `{unread: number}`，仅计有权访问会话中的他人未读消息 |
 | `GET /messages/wall/:wallId` | 无 | 303 进入墙内全员群 |
 | `POST /messages/direct` | 表单 `_csrf, wallId, userId` | 幂等创建或复用私聊，303 进入会话；不允许自己与自己聊天 |

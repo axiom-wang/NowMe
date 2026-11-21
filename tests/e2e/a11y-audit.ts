@@ -45,7 +45,8 @@ export function pageAudit(options: AuditOptions): string[] {
   const mains = all('main, [role="main"]');
   if (mains.length !== 1) report('landmark', `main 有 ${mains.length} 个`);
   if (all('body > header, body > [role="banner"]').length !== 1) report('landmark', '需要恰好一个顶层 header');
-  if (all('body > footer, body > [role="contentinfo"]').length !== 1) report('landmark', '需要恰好一个顶层 footer');
+  // 页脚只在首页显示（其他页面没有）：有的话只能有一个
+  if (all('body > footer, body > [role="contentinfo"]').length > 1) report('landmark', '顶层 footer 最多一个');
   const navs = all('nav');
   const navNames = navs.map((nav) => nav.getAttribute('aria-label') ?? nav.getAttribute('aria-labelledby') ?? '');
   if (navs.length > 1 && (navNames.some((name) => !name) || new Set(navNames).size !== navNames.length)) report('landmark', `多个 nav 需要各自不同的名称：${navNames.join(' | ')}`);

@@ -102,7 +102,6 @@ export const HomeView: FC<{ nickname: string; items: HomeItem[]; notice: HomeNot
       <section class="home-overview" aria-labelledby="home-heading">
         <div class="home-welcome">
           <h1 id="home-heading" class="home-welcome__title">你好，{nickname}！</h1>
-          <p class="home-welcome__lead">在 NOWMe，为自己做一页，挂在不同的墙上，和同好相遇。</p>
         </div>
         <aside class={`note ${pending.length ? 'note--yellow' : 'note--lime'} note--right home-reminder`}>
           <p class="note__label">{pending.length ? '待办' : '小纸条'}</p>
