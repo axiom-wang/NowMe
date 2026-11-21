@@ -36,9 +36,10 @@ test('AI 介绍：第一次进墙自动生成，起个头后只预填私聊', as
     if (message.type() === 'error') errors.push(message.text());
   });
   await viewer.page.goto(`/w/${wallId}`);
+  await viewer.page.getByRole('link', { name: 'AI 帮我找人', exact: true }).click();
   const intros = viewer.page.locator('#intros');
   await expect(viewer.page.locator('#intros.intros--ready')).toBeVisible({ timeout: 30_000 });
-  await expect(viewer.page).toHaveURL(new RegExp(`/w/${wallId}$`));
+  await expect(viewer.page).toHaveURL(new RegExp(`/w/${wallId}#intros$`));
   await expect(intros.locator('.intro-card')).toHaveCount(3);
   for (const target of targets) await expect(intros).toContainText(target.name);
   await expect(intros).toContainText('只有你能看到这些介绍');
@@ -59,7 +60,10 @@ test('AI 介绍：第一次进墙自动生成，起个头后只预填私聊', as
   for (const [width, mobile] of [[1280, false], [375, true]] as const) {
     await viewer.page.setViewportSize({ width, height: 900 });
     await viewer.page.evaluate(() => document.getAnimations().forEach((animation) => { if (animation.effect?.getComputedTiming().endTime !== Infinity) animation.finish(); }));
-    expect(await audit(viewer.page, { mobile }), `${width}px 墙页`).toEqual([]);
+    for (const colorScheme of ['light', 'dark'] as const) {
+      await viewer.page.emulateMedia({ colorScheme });
+      expect(await audit(viewer.page, { mobile }), `${width}px ${colorScheme} 墙页`).toEqual([]);
+    }
   }
 
   // 3. 让 AI 帮我起个头 → 成员页的“和 TA 聊什么”，顶部写着为什么介绍你们认识

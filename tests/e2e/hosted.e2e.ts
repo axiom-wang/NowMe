@@ -208,6 +208,7 @@ test('画像管理与第二面墙快速采访：手动添加、合并、只填�
     await expect(owner.page.getByRole('heading', { name: /长期画像/ })).toBeVisible();
   }
   const row = owner.page.locator('.profile-row').filter({ has: owner.page.locator('p').filter({ hasText: facts[0]! }) });
+  await row.locator('.profile-menu > summary').click();
   await row.getByText('编辑或合并', { exact: true }).click();
   await row.locator('[name="mergeId"]').selectOption({ label: facts[3]! });
   await row.locator('[name="text"]').fill('我做过一个独立小游戏，负责前端、剧情和音效');

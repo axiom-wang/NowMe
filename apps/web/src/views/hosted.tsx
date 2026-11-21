@@ -736,10 +736,11 @@ const ProfileRow: FC<{ entry: ProfileEntry; csrf: string; entries: ProfileEntry[
   <li class="profile-row">
     <span class="profile-category">{CATEGORY_LABEL[entry.category]}</span>
     <div><p>{entry.text}</p><p class="muted">适用：{scopeLabel(entry.scope)} · 来源：{entry.sourceWallId ? briefs.find((b) => b.wallId === entry.sourceWallId)?.wallName ?? '此前的墙' : entry.source === 'owner-file' ? '自己添加' : '早期采访'}</p>
-    <details><summary>编辑或合并</summary><ProfileEntryForm csrf={csrf} entry={entry} similar={similarEntries(entry, entries)} /></details></div>
+    </div>
     <details class="profile-menu" data-dismissable>
       <summary aria-label={`管理画像：${entry.text}`}><span aria-hidden="true">···</span></summary>
       <div class="popover profile-menu__panel">
+        <details class="profile-editor"><summary>编辑或合并</summary><ProfileEntryForm csrf={csrf} entry={entry} similar={similarEntries(entry, entries)} /></details>
         <p class="muted">{entry.confirmation === 'owner-stated' ? '你明确说过' : '你确认过'}<br />{formatDateTime(entry.updatedAt)}</p>
         <PostButton action="/account/profile/delete" csrf={csrf} label="删除这条画像" variant="danger" fields={{ entryId: entry.id }} confirm="删除这条画像？无法恢复。" />
       </div>

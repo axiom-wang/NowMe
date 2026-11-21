@@ -58,6 +58,7 @@ test.beforeEach(() => {
 });
 
 async function check(page: Page, visit: Visit, viewport: (typeof VIEWPORTS)[number], index: number): Promise<void> {
+  await page.emulateMedia({ colorScheme: process.env.NOWME_E2E_THEME === 'dark' ? 'dark' : 'light' });
   if (visit.path) await page.goto(visit.path);
   await visit.prepare?.(page);
   if (visit.expand) await page.evaluate(() => document.querySelectorAll<HTMLDetailsElement>('details:not([data-dismissable])').forEach((details) => (details.open = true)));

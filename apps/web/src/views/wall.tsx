@@ -145,33 +145,29 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
           <p class="my-page__text">{MY_PAGE_TEXT[myPage.state]}</p>
         </div>
         <div class="actions my-page__actions">
-          <a class={`btn ${published ? 'btn--on-dark' : 'btn--accent'}`} href={`/w/${wall.id}/me`}>
+          <a class={`btn ${published ? 'btn--ghost' : 'btn--primary'}`} href={`/w/${wall.id}/me`}>
             {published ? '去修改我的页面' : '去做我的页面'}
           </a>
           {myPage.href ? (
-            <a class="btn btn--on-dark" href={myPage.href}>
+            <a class="btn btn--ghost" href={myPage.href}>
               看看我的页面
             </a>
           ) : null}
           {model.questions.length > 0 ? (
-            <a class="btn btn--on-dark" href={`/w/${wall.id}/questions`}>
+            <a class="btn btn--ghost" href={`/w/${wall.id}/questions`}>
               我的回答
             </a>
           ) : null}
         </div>
       </section>
 
-      {intros}
-
-      <PortraitPanel wall={wall} state={model.portrait} shareText={portraitShare} organizer={model.role === 'organizer'} csrf={csrf} />
-
-      {ask}
-
       <section class="wall-members wall-board" aria-labelledby="members-heading" data-wall-board>
         <div class="section-head wall-board__head">
           <h2 id="members-heading" class="section-title display">
             墙上的人
           </h2>
+          {intros ? <a class="wall-board__assist-link" href="#intros">AI 帮我找人</a> : null}
+          {ask ? <a class="wall-board__assist-link" href="#ask">问问这面墙</a> : null}
           {cards.length > 0 ? (
             <>
               <span class="section-head__count" data-wall-count>
@@ -238,6 +234,11 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
           </div>
         )}
       </section>
+      <div class="wall-assist">
+        {intros ? <details class="wall-assist__section"><summary>AI 帮我认识几个人 <span>看看推荐与理由</span></summary>{intros}</details> : null}
+        {ask ? <details class="wall-assist__section"><summary>问问这面墙 <span>描述你想找的人</span></summary>{ask}</details> : null}
+        <PortraitPanel wall={wall} state={model.portrait} shareText={portraitShare} organizer={model.role === 'organizer'} csrf={csrf} />
+      </div>
     </div>
   );
 };

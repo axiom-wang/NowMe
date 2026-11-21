@@ -36,6 +36,7 @@ test('问墙：问一句找到人和原话，没人写到时如实说明，起�
 
   // 1. 问一句：回到“问墙”区块，找到栗子，附 TA 页面上的原话
   await viewer.page.goto(`/w/${wallId}`);
+  await viewer.page.locator('.wall-assist__section > summary').filter({ hasText: '问问这面墙' }).click();
   const ask = viewer.page.locator('#ask');
   await expect(ask).toContainText('墙上 3 位成员');
   await ask.getByLabel('用一句话说你想找什么样的人').fill('谁喜欢胶片？');
@@ -73,6 +74,7 @@ test('问墙：问一句找到人和原话，没人写到时如实说明，起�
 
   // 4. 点示例问题：墙上没人写到“做设计”，如实说没找到，并替换上一次提问
   await viewer.page.goto(`/w/${wallId}`);
+  await viewer.page.locator('.wall-assist__section > summary').filter({ hasText: '问问这面墙' }).click();
   await ask.getByRole('button', { name: '谁会做设计？' }).click();
   await expect(ask.locator('.ask__asked-text')).toHaveText('谁会做设计？', { timeout: 30_000 });
   await expect(ask).toContainText('没有人写到这件事');

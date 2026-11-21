@@ -237,3 +237,20 @@ document.querySelectorAll('form[data-demo-login]').forEach(function (form) {
     });
   });
 })();
+
+// Direct links to collapsed assistance also work after a form redirect.
+(function () {
+  function revealHash() {
+    var id;
+    try { id = decodeURIComponent(window.location.hash.slice(1)); } catch (_) { return; }
+    var target = id ? document.getElementById(id) : null;
+    if (!target) return;
+    var changed = false;
+    for (var parent = target.parentElement; parent; parent = parent.parentElement) {
+      if (parent instanceof HTMLDetailsElement && !parent.open) { parent.open = true; changed = true; }
+    }
+    if (changed) target.scrollIntoView({ block: 'start' });
+  }
+  revealHash();
+  window.addEventListener('hashchange', revealHash);
+})();

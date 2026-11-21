@@ -18,8 +18,8 @@
   overflow: hidden;
   padding: 24px 22px 26px;
   border-radius: var(--radius-xl);
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--inverse-bg);
+  color: var(--inverse-fg);
   background-image:
     radial-gradient(var(--on-ink-line) 1px, transparent 1.4px),
     radial-gradient(120% 80% at 100% 100%, color-mix(in srgb, var(--lime) 16%, transparent), transparent 60%);
@@ -32,16 +32,19 @@
   margin: 0 0 12px;
   font-size: clamp(1.75rem, 1.2rem + 2.6vw, 3.3rem);
   line-height: 1.16;
-  color: var(--paper);
+  color: var(--inverse-fg);
 }
 
 .auth__slogan mark {
+  --text: var(--object-ink);
+  --text-secondary: var(--object-muted);
+  --muted: var(--object-muted);
   display: inline-block;
   padding: 0 0.16em;
   margin: 0 0.04em;
-  border-radius: 8px;
+  border-radius: var(--radius-xs);
   background: var(--lime);
-  color: var(--ink);
+  color: var(--text);
   transform: rotate(-2deg);
 }
 
@@ -49,7 +52,7 @@
   max-width: 26em;
   margin: 0;
   color: var(--on-ink-muted);
-  font-size: 0.98rem;
+  font-size: var(--text-md);
 }
 
 .auth__stickers {
@@ -62,14 +65,14 @@
 .auth__card {
   margin: 0;
   padding: 26px 22px;
-  border: 1.5px solid var(--ink);
+  border: 1px solid var(--line-strong);
   border-radius: 6px 6px 6px 24px;
   box-shadow: var(--shadow-hard);
 }
 
 .auth__card h1 {
-  font-family: var(--font-display);
-  font-weight: 400;
+  font-family: var(--font-head);
+  font-weight: 700;
   font-size: 2rem;
   letter-spacing: 0;
   margin-bottom: 8px;
@@ -78,7 +81,7 @@
 .auth__step {
   margin: 0 0 14px;
   font-family: var(--font-mono);
-  font-size: 0.76rem;
+  font-size: var(--text-xs);
   color: var(--muted);
   letter-spacing: 0.02em;
 }
@@ -94,14 +97,14 @@
 
 .auth__alt {
   margin: 10px 0 0;
-  font-size: 0.9rem;
+  font-size: var(--text-sm);
   color: var(--muted);
 }
 
 .demo-login > .muted { margin-bottom: 1.25rem; }
-.demo-login__description { font-size: .78rem; line-height: 1.6; margin: .4rem 0 0; }
+.demo-login__description { font-size: var(--text-xs); line-height: 1.6; margin: .4rem 0 0; }
 
-@media (min-width: 900px) {
+@media (min-width: 1000px) {
   .auth {
     grid-template-columns: minmax(0, 1.15fr) minmax(0, 0.85fr);
     gap: 24px;
@@ -131,8 +134,8 @@
 
   .auth__stickers .sticker {
     position: absolute;
-    font-size: 1.02rem;
-    box-shadow: 3px 3px 0 color-mix(in srgb, var(--ink) 60%, transparent);
+    font-size: var(--text-md);
+    box-shadow: 3px 3px 0 color-mix(in srgb, var(--shadow-color) 60%, transparent);
   }
 
   .auth__stickers .sticker:nth-child(1) {
@@ -159,7 +162,7 @@
   }
 }
 
-@media (max-width: 599px) {
+@media (max-width: 639px) {
   .auth__lead {
     display: none;
   }
@@ -174,9 +177,9 @@
 
 .join {
   margin: 0 auto;
-  max-width: 560px;
+  max-width: 640px;
   padding-top: 40px;
-  border: 1.5px solid var(--ink);
+  border: 1px solid var(--line-strong);
   border-radius: 6px 6px 6px 24px;
   box-shadow: var(--shadow-hard), var(--shadow-note);
 }
@@ -188,10 +191,10 @@
   width: 120px;
   height: 26px;
   margin-left: -60px;
-  background-color: var(--scene, var(--ink));
+  background-color: var(--scene, var(--inverse-bg));
   background-image: radial-gradient(color-mix(in srgb, var(--scene-ink, var(--lime)) 40%, transparent) 1px, transparent 1.5px);
   background-size: 6px 6px;
-  border: 1.5px solid var(--ink);
+  border: 1px solid var(--line-strong);
   transform: rotate(-3deg);
 }
 
@@ -200,13 +203,13 @@
 }
 
 .join .chip {
-  background: var(--scene, var(--ink));
+  background: var(--scene, var(--inverse-bg));
   color: var(--scene-ink, var(--lime));
 }
 
 .join__desc {
   white-space: pre-line;
-  color: var(--ink-2);
+  color: var(--text-secondary);
 }
 
 .join .organizer-note {

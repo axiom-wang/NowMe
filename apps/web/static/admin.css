@@ -21,8 +21,8 @@
   min-height: 92px;
   padding: 14px;
   border: 1.5px solid var(--line);
-  border-radius: 16px;
-  background: var(--white);
+  border-radius: var(--radius);
+  background: var(--input-bg);
   cursor: pointer;
   line-height: 1.35;
   transition:
@@ -32,7 +32,7 @@
 }
 
 .scene-option:hover {
-  border-color: var(--ink);
+  border-color: var(--text);
 }
 
 .scene-option input {
@@ -47,35 +47,35 @@
 .scene-option__swatch {
   width: 30px;
   height: 30px;
-  border-radius: 9px;
-  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
   background-color: var(--scene);
   background-image: radial-gradient(color-mix(in srgb, var(--scene-ink) 40%, transparent) 1px, transparent 1.5px);
   background-size: 6px 6px;
 }
 
 .scene-option:has(input:checked) {
-  border-color: var(--ink);
+  border-color: var(--text);
   box-shadow: var(--shadow-hard);
   transform: translate(-1px, -1px);
 }
 
 .scene-option:has(input:focus-visible) {
-  outline: 2.5px solid var(--ink);
+  outline: 2.5px solid var(--text);
   outline-offset: 3px;
 }
 
 .scene-option__label {
   font-weight: 700;
-  font-size: 0.94rem;
+  font-size: var(--text-sm);
 }
 
 /* ------------------------------------------------------------------ */
 /* 组织者后台 */
 
 .admin-hero .chip {
-  background: var(--scene, var(--ink));
-  color: var(--scene-ink, var(--white));
+  background: var(--scene, var(--inverse-bg));
+  color: var(--scene-ink, var(--input-bg));
 }
 
 .admin-layout {
@@ -110,10 +110,10 @@
   display: block;
   min-width: 0;
   padding: 12px 14px;
-  border-radius: 12px;
-  background: var(--paper);
-  border: 1.5px dashed var(--paper-3);
-  font-size: 0.875rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg);
+  border: 1.5px dashed var(--divider);
+  font-size: var(--text-sm);
   word-break: break-all;
   user-select: all;
 }
@@ -125,9 +125,9 @@
   align-items: center;
   gap: 8px;
   padding: 14px;
-  border-radius: 18px;
-  background: var(--white);
-  border: 1.5px solid var(--ink);
+  border-radius: var(--radius-lg);
+  background: var(--input-bg);
+  border: 1px solid var(--line-strong);
   box-shadow: var(--shadow-hard);
   justify-self: center;
 }
@@ -140,8 +140,8 @@
 }
 
 .invite__qr figcaption {
-  font-size: 0.875rem;
-  font-weight: 650;
+  font-size: var(--text-sm);
+  font-weight: 700;
 }
 
 .stat-tiles {
@@ -153,19 +153,23 @@
 
 .stat-tile {
   padding: 14px 16px;
-  border-radius: 16px;
-  background: var(--paper);
+  border-radius: var(--radius);
+  background: var(--bg);
   border: 1px solid var(--line);
 }
 
 .stat-tile--accent {
+  color: var(--object-ink);
+  --text: var(--object-ink);
+  --text-secondary: var(--object-muted);
+  --muted: var(--object-muted);
   background: var(--lime);
-  border-color: var(--ink);
+  border-color: var(--text);
 }
 
 .stat-tile dt {
-  font-size: 0.875rem;
-  color: var(--ink-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 
 .stat-tile dd {
@@ -209,7 +213,7 @@
 }
 
 .member-row__name {
-  font-weight: 650;
+  font-weight: 700;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -218,7 +222,7 @@
 
 .member-row__meta {
   grid-column: 2;
-  font-size: 0.875rem;
+  font-size: var(--text-sm);
 }
 
 .member-row__action {
@@ -237,20 +241,20 @@
 }
 
 .danger-zone p {
-  font-size: 0.9rem;
-  color: var(--ink-2);
+  font-size: var(--text-sm);
+  color: var(--text-secondary);
 }
 
 /* 组织者上传的墙封面（与成员页面封面独立）。 */
-.wall-cover-settings__preview { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: 14px; margin: 16px 0; background: var(--paper-2); }
+.wall-cover-settings__preview { display: block; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; border-radius: var(--radius); margin: 16px 0; background: var(--bg-subtle); }
 .wall-cover-settings__delete { margin-top: 12px; }
 .reports__list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .reports__item { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 10px; }
-.reports__item h3 { margin: 0 0 4px; font-size: 1rem; }
+.reports__item h3 { margin: 0 0 4px; font-size: var(--text-md); }
 .reports__item p { margin: 0; }
 .reports__actions { display: flex; gap: 8px; }
 
-@media (min-width: 560px) {
+@media (min-width: 640px) {
   .scene-picker__options {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
@@ -261,7 +265,7 @@
   }
 }
 
-@media (min-width: 720px) {
+@media (min-width: 760px) {
   .invite {
     grid-template-columns: minmax(0, 1fr) auto;
     align-items: center;

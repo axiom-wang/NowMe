@@ -77,7 +77,7 @@ test('顶栏没有未读徽标空位，有新消息时才显示未读数', async
         const afterUnread = await geometry();
         expect(afterUnread.filter(({ selector }) => !selector.startsWith('.site-nav'))).toEqual(beforeUnread.filter(({ selector }) => !selector.startsWith('.site-nav')));
         const messageWidthWithBadge = afterUnread.filter(({ selector }) => selector === '.site-nav a')[1]!.width;
-        if (width > 760) expect(messageWidthWithBadge).toBeGreaterThan(messages!.width);
+        if (width >= 760) expect(messageWidthWithBadge).toBeGreaterThan(messages!.width);
         else expect(messageWidthWithBadge).toBe(messages!.width);
         afterReference ??= afterUnread;
         expect(afterUnread, `${width}px ${path} 有徽标时与首页`).toEqual(afterReference);
@@ -148,7 +148,7 @@ test('消息页：筛选与轮询保持同步，发起聊天入口和窄屏布�
       expect(await b.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
       const inboxBox = await b.page.locator('.inbox').boundingBox();
       const wallsBox = await b.page.locator('.inbox-walls').boundingBox();
-      if (width >= 540) expect(wallsBox!.x).toBeGreaterThan(inboxBox!.x + inboxBox!.width);
+      if (width >= 640) expect(wallsBox!.x).toBeGreaterThan(inboxBox!.x + inboxBox!.width);
       else expect(wallsBox!.y).toBeGreaterThan(inboxBox!.y);
       await b.page.screenshot({ path: testInfo.outputPath(`inbox-${width}.png`), fullPage: true });
     }

@@ -52,6 +52,7 @@ export function stylesheetsFor(path: string, bodyClass?: string, styles?: StyleB
 
 export interface LayoutProps {
   title: string;
+  origin?: string;
   auth: SessionAuth | null;
   demo?: boolean;
   /** 页面主体的额外 class（例如 `page--narrow`）。 */
@@ -99,6 +100,14 @@ export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; active?:
   <header class="site-header">
     <div class="site-header__inner">
       <Brand />
+      <label class="theme-picker">
+        <span class="visually-hidden">外观</span>
+        <select aria-label="外观" data-theme-picker>
+          <option value="system">跟随系统</option>
+          <option value="light">浅色</option>
+          <option value="dark">深色</option>
+        </select>
+      </label>
       {auth?.user.nickname ? <>
         <nav class="site-nav" aria-label="主导航">
           <a class={`site-nav__link${active === 'home' ? ' is-active' : ''}`} href="/" aria-current={active === 'home' ? 'page' : undefined}>我的</a>
@@ -121,7 +130,7 @@ export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; active?:
   </header>
 );
 
-export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyClass, progress, demo, path, styles, children }) => {
+export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyClass, progress, demo, path, styles, origin, children }) => {
   const signedIn = !!auth?.user.nickname;
   return (
     <>
@@ -131,7 +140,18 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
           <meta charset="utf-8" />
           <meta name="viewport" content={bodyClass === 'page--conversation' ? 'width=device-width, initial-scale=1, interactive-widget=resizes-content' : 'width=device-width, initial-scale=1'} />
           <meta name="referrer" content="same-origin" />
+          <meta name="theme-color" content="#f3f0e8" media="(prefers-color-scheme: light)" />
+          <meta name="theme-color" content="#171612" media="(prefers-color-scheme: dark)" />
+          <meta name="description" content="和 AI 一起，做一页有个性的自己，认识圈子里的人。" />
+          <meta property="og:title" content="NOWMe · 在圈子里，遇见有意思的人" />
+          <meta property="og:description" content="和 AI 一起，做一页有个性的自己，挂在圈子共同的墙上。" />
+          <meta property="og:type" content="website" />
+          <meta property="og:image" content={origin ? new URL(assetUrl('share-card.png'), origin).href : assetUrl('share-card.png')} />
+          <meta property="og:image:width" content="1200" />
+          <meta property="og:image:height" content="630" />
+          <link rel="icon" type="image/svg+xml" href={assetUrl('favicon.svg')} />
           <title>{title === 'NOWMe' ? title : `${title} · NOWMe`}</title>
+          <script src={assetUrl('theme.js')}></script>
           {stylesheetsFor(path ?? '', bodyClass, styles).map((name) => (
             <link rel="stylesheet" href={assetUrl(name)} />
           ))}
@@ -160,7 +180,7 @@ export function renderPage(
 ): Response | Promise<Response> {
   const auth = c.get('auth') ?? null;
   return c.html(
-    <Layout title={options.title} auth={auth} demo={c.get('demo')} bodyClass={options.bodyClass} progress={options.progress} path={c.req.path} styles={options.styles}>
+    <Layout title={options.title} origin={new URL(c.req.url).origin} auth={auth} demo={c.get('demo')} bodyClass={options.bodyClass} progress={options.progress} path={c.req.path} styles={options.styles}>
       {options.body}
     </Layout>,
     (options.status ?? 200) as 200,

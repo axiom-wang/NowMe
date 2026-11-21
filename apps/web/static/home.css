@@ -35,7 +35,7 @@
 .home-welcome__lead {
   margin: 0;
   max-width: 32em;
-  color: var(--ink-2);
+  color: var(--text-secondary);
   font-size: var(--text-md);
 }
 
@@ -52,7 +52,7 @@
 
 .home-reminder > p:not(.note__label) {
   margin: 0 0 var(--space-4);
-  color: var(--ink-2);
+  color: var(--text-secondary);
   font-size: var(--text-sm);
 }
 
@@ -76,12 +76,16 @@
 }
 
 .home-total {
+  color: var(--object-ink);
+  --text: var(--object-ink);
+  --text-secondary: var(--object-muted);
+  --muted: var(--object-muted);
   display: inline-grid;
   place-items: center;
   min-width: 34px;
   height: 30px;
   padding: 0 9px;
-  border: 1.5px solid var(--ink);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-pill);
   background: var(--lime);
   font: 700 1rem/1 var(--font-head);
@@ -92,7 +96,7 @@
   display: inline-flex;
   align-items: center;
   padding: 3px;
-  border: 1.5px solid var(--ink);
+  border: 1px solid var(--line-strong);
   border-radius: var(--radius-pill);
   background: var(--surface);
 }
@@ -105,7 +109,7 @@
   min-height: 36px;
   padding: 0 var(--space-4);
   border-radius: var(--radius-pill);
-  font-weight: 650;
+  font-weight: 700;
   text-decoration: none;
   white-space: nowrap;
   transition: background-color var(--dur-fast);
@@ -117,12 +121,12 @@
 }
 
 .home-filter:not(.is-active):hover {
-  background: var(--paper-2);
+  background: var(--bg-subtle);
 }
 
 .home-filter.is-active {
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--inverse-bg);
+  color: var(--inverse-fg);
 }
 
 .home-filter.is-active span {
@@ -158,18 +162,21 @@
   gap: var(--space-2);
   margin: 0 0 6px;
   padding: 6px 14px 6px 10px;
-  border-radius: 8px;
-  background: var(--ink);
-  color: var(--paper);
+  border-radius: var(--radius-xs);
+  background: var(--inverse-bg);
+  color: var(--inverse-fg);
   font-size: var(--text-md);
   box-shadow: var(--shadow-note);
   transform: rotate(-1.5deg);
 }
 
 .home-group--published .home-group__heading h3 {
+  --text: var(--object-ink);
+  --text-secondary: var(--object-muted);
+  --muted: var(--object-muted);
   background: var(--lime);
-  color: var(--ink);
-  box-shadow: inset 0 0 0 1.5px var(--ink), var(--shadow-note);
+  color: var(--text);
+  box-shadow: inset 0 0 0 1.5px var(--shadow-color), var(--shadow-note);
   transform: rotate(1deg);
 }
 
@@ -179,6 +186,9 @@
 }
 
 .home-group__count {
+  --text: var(--object-ink);
+  --text-secondary: var(--object-muted);
+  --muted: var(--object-muted);
   display: inline-grid;
   place-items: center;
   min-width: 24px;
@@ -186,18 +196,18 @@
   padding: 0 6px;
   border-radius: var(--radius-pill);
   background: var(--lime);
-  color: var(--ink);
+  color: var(--text);
   font: 700 var(--text-xs) / 1 var(--font-head);
 }
 
 .home-group--published .home-group__count {
-  background: var(--ink);
+  background: var(--inverse-bg);
   color: var(--lime);
 }
 
 .home-group__heading p {
   margin: 0;
-  color: var(--ink-2);
+  color: var(--text-secondary);
   font-size: var(--text-sm);
 }
 
@@ -240,7 +250,7 @@
   height: 20px;
   margin-left: -35px;
   background: var(--tape);
-  border: 1px solid color-mix(in srgb, var(--ink) 8%, transparent);
+  border: 1px solid color-mix(in srgb, var(--text) 8%, transparent);
   transform: rotate(-2deg);
 }
 
@@ -274,9 +284,9 @@
 .home-wall__cover {
   display: block;
   overflow: hidden;
-  border-radius: 10px;
-  background: var(--paper-2);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--ink) 8%, transparent);
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--shadow-color) 8%, transparent);
 }
 
 .home-wall__cover img {
@@ -302,7 +312,7 @@
 .home-wall__labels .chip {
   min-height: 24px;
   padding: 1px 10px;
-  font-size: var(--text-2xs);
+  font-size: var(--text-xs);
 }
 
 .home-wall__admin {
@@ -344,7 +354,7 @@
   margin-top: 4px;
   color: var(--warn);
   font-size: var(--text-xs);
-  font-weight: 600;
+  font-weight: 700;
 }
 
 .home-wall__actions {
@@ -363,7 +373,7 @@
 /* 这一栏空着：板子上留出的一块虚线空位 */
 .home-group__empty {
   padding: var(--space-8) var(--space-5);
-  border: 2px dashed color-mix(in srgb, var(--ink) 18%, transparent);
+  border: 2px dashed color-mix(in srgb, var(--text) 18%, transparent);
   border-radius: var(--radius-lg);
   background: color-mix(in srgb, var(--surface) 45%, transparent);
   text-align: center;
@@ -376,7 +386,7 @@
 
 .home-group__empty p {
   margin: 0;
-  color: var(--ink-2);
+  color: var(--text-secondary);
   font-size: var(--text-sm);
 }
 
@@ -401,7 +411,7 @@
 
 .ended-list__item {
   padding: 14px 16px;
-  border: 1.5px dashed var(--paper-3);
+  border: 1.5px dashed var(--divider);
   border-radius: var(--radius);
 }
 
@@ -414,8 +424,8 @@
 
 .ended-list__item h3 {
   margin: 0;
-  font-size: 1rem;
-  color: var(--ink-2);
+  font-size: var(--text-md);
+  color: var(--text-secondary);
 }
 
 .ended-list__item p {
@@ -426,7 +436,7 @@
 /* ------------------------------------------------------------------ */
 /* 响应式 */
 
-@media (max-width: 560px) {
+@media (max-width: 639px) {
   .home-toolbar {
     gap: var(--space-3);
   }
@@ -474,7 +484,7 @@
   }
 }
 
-@media (min-width: 960px) {
+@media (min-width: 1000px) {
   .home-groups {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-10);
@@ -492,4 +502,20 @@
   .home-wall {
     grid-template-columns: 104px minmax(0, 1fr);
   }
+}
+
+.home-filters { border-color: var(--line); }
+.home-filter.is-active { background: var(--selected-bg); color: var(--text); }
+.home-filter.is-active span { color: var(--muted); }
+.home-total { border: 0; color: var(--object-ink); box-shadow: none; }
+.home-group--published .home-group__heading h3 { box-shadow: var(--shadow-note); }
+@media (max-width: 639px) {
+  .home-wall__admin { font-size: var(--text-sm); }
+  .home-empty a { display: inline-flex; align-items: center; min-height: 44px; }
+}
+@media (max-width: 639px) {
+  .home-group__empty a { display: inline-flex; align-items: center; min-height: 44px; }
+}
+@media (max-width: 639px) {
+  .home-wall h3 a { display: flex; align-items: center; min-height: 44px; }
 }
