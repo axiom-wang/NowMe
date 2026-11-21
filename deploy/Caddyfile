@@ -10,20 +10,24 @@
 
 # 正式环境：主站
 https://124.222.53.43 {
+	encode zstd gzip
 	reverse_proxy web:3000
 }
 
 # 正式环境：用户页面托管
 https://124.222.53.43:8443 {
+	encode zstd gzip
 	reverse_proxy pages:4000
 }
 
 # 演示环境：主站（一键体验登录）
 https://124.222.53.43:8444 {
+	encode zstd gzip
 	reverse_proxy demo:3000
 }
 
 # 演示环境：用户页面托管
 https://124.222.53.43:8445 {
+	encode zstd gzip
 	reverse_proxy demo:4000
 }
