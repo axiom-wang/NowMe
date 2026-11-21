@@ -129,7 +129,7 @@
   font-weight: 700;
 }
 
-.profile-edit-form input:not([type='file']) {
+.profile-edit-form input[type='text'] {
   min-width: 0;
   width: 100%;
 }
@@ -141,12 +141,18 @@
 
 .profile-edit-form .profile-remove-avatar {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   font-weight: 400;
 }
 
 .profile-remove-avatar input {
-  width: auto;
+  width: 20px;
+  height: 20px;
+  flex: 0 0 20px;
+}
+
+.profile-remove-avatar span {
+  min-width: 0;
 }
 
 .profile-section-heading {

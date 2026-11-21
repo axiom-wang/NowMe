@@ -769,7 +769,7 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
           <p id="nickname-help" class="muted">1–24 个字。昵称和头像会显示在账号导航和同墙聊天中。</p>
           <ImagePicker id="profile-avatar-file" name="avatar" label="头像" describedBy="avatar-help" />
           <p id="avatar-help" class="muted">支持 PNG、JPEG、WebP，2 MB 以内；保存时自动居中裁成正方形。</p>
-          {avatarVersion ? <label class="profile-remove-avatar"><input type="checkbox" name="removeAvatar" value="1" />移除当前头像，恢复昵称首字</label> : null}
+          {avatarVersion ? <label class="check profile-remove-avatar"><input type="checkbox" name="removeAvatar" value="1" /><span>移除当前头像，恢复昵称首字</span></label> : null}
           <div><button type="submit" class="btn btn--primary btn--small">保存资料</button></div>
         </form>
       </details>

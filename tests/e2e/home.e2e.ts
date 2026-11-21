@@ -101,5 +101,21 @@ test('首页筛选、账号菜单、封面上传更换与恢复默认，在桌�
   await page.getByRole('button', { name: '保存资料' }).click();
   await expect(page.getByText('个人资料已保存。')).toBeVisible();
   await expect(page.locator('.profile-avatar img')).toBeVisible();
+  await page.getByText('编辑资料', { exact: true }).click();
+  const removeAvatar = page.getByRole('checkbox', { name: '移除当前头像，恢复昵称首字' });
+  for (const width of [320, 390, 768, 1440]) {
+    await page.setViewportSize({ width, height: 900 });
+    const checkboxBox = (await removeAvatar.boundingBox())!;
+    const textBox = (await page.locator('.profile-remove-avatar span').boundingBox())!;
+    expect(checkboxBox.width, `${width}px 复选框保持正常大小`).toBe(20);
+    expect(textBox.width, `${width}px 文字有足够空间`).toBeGreaterThan(120);
+    expect(textBox.height, `${width}px 文字正常横排`).toBeLessThan(60);
+    expect(textBox.x).toBeGreaterThan(checkboxBox.x + checkboxBox.width);
+    expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+  }
+  await removeAvatar.check();
+  await expect(removeAvatar).toBeChecked();
+  await removeAvatar.uncheck();
+
   expect(errors).toEqual([]);
 });
