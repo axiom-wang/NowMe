@@ -36,7 +36,7 @@ export const DEMO_TEST_IDENTITY = '22 岁，数字媒体专业大四学生，喜
 export const DEMO_EXTRA_WALLS: readonly DemoWallPlan[] = [
   {
     slug: 'ai', name: 'AI 共创实验室 · 周末造点东西', sceneType: 'hackathon', theme: 'lab',
-    description: '10 个好奇的人，把脑洞变成能玩的原型。有人写代码，有人做设计，也有人带着一个值得解决的小问题来。演示人物均为虚构。',
+    description: '10 个好奇的人，把脑洞变成能玩的原型。有人写代码，有人做设计，也有人带着一个值得解决的小问题来。',
     note: '说说你能做什么，也说说你想找谁。周末见到能跑的 Demo。',
     colors: ['#c8f560', '#83d5ff', '#ffbd87', '#e7b0ff', '#96ecc9'],
     profiles: [
@@ -54,7 +54,7 @@ export const DEMO_EXTRA_WALLS: readonly DemoWallPlan[] = [
   },
   {
     slug: 'trail', name: '山野轻徒步 · 一起去透气', sceneType: 'club', theme: 'trail',
-    description: '不拼配速，不赶路。找几位步调相近的人，从公园绿道走到山脚，在自然里吃顿简单的午饭。演示人物均为虚构。',
+    description: '不拼配速，不赶路。找几位步调相近的人，从公园绿道走到山脚，在自然里吃顿简单的午饭。',
     note: '路线、时间、天气提前说清楚，照顾彼此的节奏。',
     colors: ['#c8dc8b', '#eed194', '#aacdcd', '#d7bddc', '#c5d3a8'],
     profiles: [

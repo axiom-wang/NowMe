@@ -8,15 +8,9 @@
  */
 import type { FC } from 'hono/jsx';
 import { COVER_CSS_HEIGHT, COVER_CSS_WIDTH } from '@nowme/contracts';
-import { formatDateTime } from '../format.js';
-import { INTRO_KIND_LABEL, type IntroCardView, type IntroPanel, type IntroView } from '../services/intro.js';
+import { INTRO_KIND_LABEL, type IntroCardView, type IntroPanel } from '../services/intro.js';
 import { CsrfField } from './forms.js';
 import { initialOf } from './layout.js';
-
-function sourceText(sources: IntroView['sources']): string {
-  const used = [sources.page ? '你已发布的页面' : '', sources.brief ? '你确认过的采访' : ''].filter(Boolean);
-  return `用到了：${used.join('、') || '你的资料'}，和大家公开在墙上的页面。`;
-}
 
 const IntroCard: FC<{ pick: IntroCardView; csrf: string; index: number }> = ({ pick, csrf, index }) => (
   <li class={`intro-card intro-card--${pick.kind}`}>
@@ -107,9 +101,6 @@ export const IntroPanelView: FC<{ wallId: string; panel: IntroPanel; csrf: strin
               <IntroCard pick={pick} csrf={csrf} index={index} />
             ))}
           </ol>
-          <p class="intros__foot">
-            只有你能看到这些介绍，TA 们不会收到任何通知。“你 / TA”后面是两边页面上的原文，AI 不会凭空编理由。{sourceText(panel.view.sources)} 生成于 {formatDateTime(panel.view.createdAt)}。
-          </p>
           <div class="intros__tools">
             <GenerateForm wallId={wallId} csrf={csrf} tool label={panel.newcomers > 0 ? `墙上新来了 ${panel.newcomers} 位，再看看` : '换一批'} />
             <form method="post" action={`/w/${wallId}/intros/clear`}>

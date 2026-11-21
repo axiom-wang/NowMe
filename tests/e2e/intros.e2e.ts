@@ -42,7 +42,7 @@ test('AI 介绍：第一次进墙自动生成，起个头后只预填私聊', as
   await expect(viewer.page).toHaveURL(new RegExp(`/w/${wallId}#intros$`));
   await expect(intros.locator('.intro-card')).toHaveCount(3);
   for (const target of targets) await expect(intros).toContainText(target.name);
-  await expect(intros).toContainText('只有你能看到这些介绍');
+  await expect(intros.locator('.intros__foot')).toHaveCount(0);
   await expect(intros.locator('.intro-quote').first()).toBeVisible();
   await expect(viewer.page.locator('.wall-card__talk--intro')).toHaveCount(3);
   for (const width of [1280, 375]) {

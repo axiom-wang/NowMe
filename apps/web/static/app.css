@@ -1973,31 +1973,7 @@ input[type='checkbox'] {
   gap: var(--space-2);
 }
 
-.page-frame__caption {
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  gap: var(--space-2);
-  max-width: 375px;
-  font-size: var(--text-xs);
-  line-height: 1.5;
-  text-align: left;
-}
 
-.page-frame__caption::before {
-  color: var(--object-ink);
-  --text: var(--object-ink);
-  --text-secondary: var(--object-muted);
-  --muted: var(--object-muted);
-  content: '';
-  flex: none;
-  width: 8px;
-  height: 8px;
-  margin-top: 0.42em;
-  border-radius: 50%;
-  background: var(--lime);
-  box-shadow: 0 0 0 1.5px var(--shadow-color);
-}
 
 
 .page-frame__stage-bar {
@@ -2133,7 +2109,7 @@ figure.page-frame.page-frame--stage {
   transform-origin: 0 0;
 }
 
-.page-frame--stage :is(.page-frame__open, .page-frame__caption) {
+.page-frame--stage .page-frame__open {
   display: none;
 }
 
@@ -2738,9 +2714,6 @@ figure.page-frame.page-frame--stage {
     box-shadow: 0 0 0 1px var(--line);
   }
 
-  :is(.member-layout, .ws-preview, .public-page) .page-frame__caption {
-    padding-inline: var(--page-gutter);
-  }
 }
 
 

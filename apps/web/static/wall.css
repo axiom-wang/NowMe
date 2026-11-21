@@ -1424,14 +1424,6 @@ html.nm-stage-open .member-layout__frame {
   margin: 0;
 }
 
-.intros__foot {
-  margin: 14px 0 0;
-  padding-top: 12px;
-  border-top: 1px dashed var(--line-strong);
-  font-size: var(--text-sm);
-  line-height: 1.6;
-  color: var(--muted);
-}
 
 .intros__tools {
   display: flex;
@@ -1489,7 +1481,6 @@ html.nm-stage-open .member-layout__frame {
 .intros.is-busy .intros__list,
 .intros.is-busy .intros__lead,
 .intros.is-busy .intros__start,
-.intros.is-busy .intros__foot,
 .intros.is-busy .intros__tools {
   opacity: 0.35;
   pointer-events: none;

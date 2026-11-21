@@ -84,6 +84,5 @@ export const PageFrame: FC<PageFrameProps> = ({ ticket, title, stage }) => (
         重新加载页面
       </button>
     </div>
-    <figcaption class="page-frame__caption muted">页面运行在独立域名的沙箱里：不能联网、不能读取你的登录状态、不能跳转本页。</figcaption>
   </figure>
 );

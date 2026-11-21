@@ -73,6 +73,9 @@ if (!reuse) {
 
 if (reuse) await ensureDemoClubPages(web, (message) => console.log(`[demo] ${message}`));
 seedDemoAvatars(web.deps);
+// 复用的演示数据也更新展示文案，不必清空重建墙和页面。
+db.prepare("UPDATE walls SET description = replace(description, ?, '') WHERE instr(description, ?) > 0")
+  .run('演示人物均为虚构。', '演示人物均为虚构。');
 
 let modelReady = false;
 try { modelReady = provisionDemoModels(web, process.env); } catch { fail('演示模型预置失败。请检查 .env.local 或服务端环境变量及 NOWME_AI_ENCRYPTION_KEY；不会输出 Key。'); }

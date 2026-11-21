@@ -162,7 +162,6 @@ const TalkPanel: FC<{ base: string; name: string; csrf: string; panel: Icebreake
             <button type="submit" class="btn btn--accent talk__go">
               帮我找话题
             </button>
-            <span class="talk__hint">大约十几秒 · 结果只有你能看到</span>
           </form>
         </>
       ) : (
@@ -243,9 +242,7 @@ export const MemberPageView: FC<{ model: MemberPageModel; csrf: string; icebreak
             )}
             {own ? (
               <p class="muted topics__note">这是你自己的页面。别人点“想聊这个”，会带着你确认过的开场白，在站内私信里找你。</p>
-            ) : (
-              <p class="muted topics__note">点“想聊这个”，会把话题带到站内私信里。开场白可以改成你自己的话再发。</p>
-            )}
+            ) : null}
             {!own && contact && card.hooks[0] ? <form method="post" action={`${base}/contact`}><CsrfField token={csrf} /><input type="hidden" name="contactHookId" value={card.hooks[0].id} /><button type="submit" class="btn btn--ghost btn--small">查看公开联系方式</button></form> : null}
           </section>
           {!own && safety ? <PageSafety base={base} csrf={csrf} name={card.displayName} reported={safety.reported} notice={safety.notice} error={safety.error} /> : null}
