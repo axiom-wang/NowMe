@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "叶知秋",
+  "tagline": "前端写到能让数据跳动，想找会做后端和画图标的人",
+  "hooks": [
+    {
+      "id": "can-help-chart",
+      "kind": "can-help",
+      "text": "我能把接口数据做成实时图表",
+      "opener": "嗨，你那个数据是从哪来的接口？我能帮你把它画成实时图表，要一起看看吗？"
+    },
+    {
+      "id": "find-backend",
+      "kind": "looking-for",
+      "text": "找会做后端或画图标的队友",
+      "opener": "我在找会做后端或画图标的队友，看你的方向挺合适，要不要聊聊分工？"
+    },
+    {
+      "id": "build-bus-board",
+      "kind": "want-to-build",
+      "text": "想做校门口公交到站实时看板",
+      "opener": "校门口公交到站看板这个想法很具体，你觉得应该先从哪一路车接数据？"
+    }
+  ]
+}

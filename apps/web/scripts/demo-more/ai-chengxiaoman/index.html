@@ -1,0 +1,142 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>程小满 · AI 共创实验室</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+:root{--board:#2c4a3d;--board-deep:#213a2f;--chalk:#f1efe6;--chalk-dim:#b9c9bd;--yellow:#f6d770;--pink:#f5a7bf;--wood:#8a6a4a;--nm-font-display:var(--nm-font-smiley-sans);--nm-font-body:var(--nm-font-lxgw-wenkai)}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{min-height:100vh;background:#e9e4d6;font:400 16px/1.9 var(--nm-font-body);color:var(--chalk);overflow-x:hidden}
+p,h1,h2,ul,figure{margin:0}
+.frame{max-width:720px;margin:0 auto;padding:16px 14px 24px}
+.board{position:relative;background:radial-gradient(120% 90% at 30% 10%,rgba(255,255,255,.07),transparent 60%),radial-gradient(90% 70% at 90% 100%,rgba(0,0,0,.25),transparent 70%),linear-gradient(160deg,var(--board),var(--board-deep));border:14px solid var(--wood);border-radius:4px;box-shadow:0 10px 0 #5f4731,inset 0 0 40px rgba(0,0,0,.35);padding:22px 20px 26px}
+.board::after{content:"";position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(88deg,rgba(255,255,255,.025) 0 2px,transparent 2px 9px);opacity:.8}
+.board>*{position:relative;z-index:1}
+.chalk-tag{font:400 13px/1.4 var(--nm-font-display);color:var(--chalk-dim);letter-spacing:.06em}
+.board-title{display:grid;gap:6px;padding-bottom:14px;border-bottom:2px dashed rgba(241,239,230,.45)}
+h1{font:400 46px/1.15 var(--nm-font-display);letter-spacing:.04em;color:var(--chalk);text-shadow:1px 1px 0 rgba(0,0,0,.2)}
+.role{font-size:14px;color:var(--chalk-dim)}
+.headline{font:400 26px/1.5 var(--nm-font-display);color:var(--yellow);margin-top:10px}
+.tagline{font-size:14px;color:var(--chalk-dim)}
+.chalk-lesson{padding:18px 0;border-bottom:1px solid rgba(241,239,230,.25)}
+.lesson-head{font:400 19px/1.4 var(--nm-font-display);color:var(--chalk);margin-bottom:6px;display:flex;align-items:center;gap:8px}
+.lesson-head svg{width:34px;height:34px;flex:none}
+.chalk-lesson p{font-size:16px;line-height:1.95}
+.chalk-lesson p+p{margin-top:10px;color:var(--chalk-dim)}
+.arrow{display:flex;align-items:center;gap:10px;margin-top:12px;font-size:14px;color:var(--pink)}
+.arrow svg{width:90px;height:26px;flex:none}
+.kid-quiz{padding:18px 0;border-bottom:1px solid rgba(241,239,230,.25)}
+.quiz-title{font:400 19px/1.4 var(--nm-font-display);color:var(--chalk)}
+.quiz-title span{color:var(--pink);font-size:15px;margin-left:6px}
+.quiz-tiles{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+.tile{position:relative;aspect-ratio:1/1;border:2px dashed rgba(241,239,230,.6);border-radius:6px;display:grid;place-items:center;overflow:hidden}
+.tile svg{width:86%;height:86%}
+.tile b{position:absolute;left:8px;top:6px;font:400 17px/1 var(--nm-font-display);color:var(--yellow)}
+.tile i{position:absolute;right:8px;bottom:6px;font:400 12px/1 var(--nm-font-body);font-style:normal;color:var(--chalk-dim)}
+.question{margin-top:12px;font-size:15px;line-height:1.8;color:var(--chalk-dim)}
+.question strong{font:400 18px/1.5 var(--nm-font-display);color:var(--chalk);display:block;margin-bottom:4px}
+.duty{padding:18px 0 4px}
+.duty-list{list-style:none;padding:0;margin:8px 0 0;display:grid;gap:8px}
+.duty-list li{display:grid;grid-template-columns:auto 1fr;gap:8px;align-items:start;font-size:16px;line-height:1.7}
+.duty-list .star{color:var(--yellow);font-size:18px;line-height:1.4}
+.duty-list .tag{font:400 12px/1.8 var(--nm-font-display);color:var(--pink);letter-spacing:.04em;border:1px solid var(--pink);border-radius:20px;padding:0 8px;white-space:nowrap}
+.duty-list li:nth-child(1) .tag{color:#9de0c0;border-color:#9de0c0}
+.duty-list li:nth-child(3) .tag{color:var(--yellow);border-color:var(--yellow)}
+.cta{font-size:14px;color:var(--chalk-dim);margin-top:14px}
+.corner{position:relative;z-index:1;margin-top:16px;display:flex;justify-content:space-between;align-items:center;gap:10px;font:400 14px/1.4 var(--nm-font-display);color:var(--chalk-dim)}
+.corner b{color:var(--yellow);font-weight:400}
+.eraser{position:absolute;right:26px;top:20px;width:110px;height:40px;background:linear-gradient(90deg,rgba(255,255,255,.06),rgba(255,255,255,.14) 50%,rgba(255,255,255,.04));transform:rotate(-8deg);filter:blur(.5px);pointer-events:none;z-index:0;border-radius:2px}
+@media (min-width:700px){
+  .frame{max-width:960px;padding:28px 24px 36px}
+  .board{padding:34px 40px 36px}
+  h1{font-size:72px}
+  .headline{font-size:36px}
+  .board-title{grid-template-columns:1fr 1fr;align-items:end;column-gap:30px}
+  .board-title>.chalk-tag{grid-column:1/-1;margin-bottom:-2px}
+  .chalk-lesson{display:grid;grid-template-columns:1fr 1fr;column-gap:36px;padding:26px 0}
+  .lesson-head{grid-column:1/-1}
+  .kid-quiz{display:grid;grid-template-columns:1fr 1fr;column-gap:36px;padding:26px 0}
+  .quiz-title{grid-column:1}
+  .quiz-tiles{grid-column:1;grid-row:2;margin-top:0}
+  .question{grid-column:2;grid-row:1/3;align-self:center;margin-top:0}
+  .duty{display:grid;grid-template-columns:1fr 1fr;column-gap:36px;padding-top:26px}
+  .duty>.chalk-tag{grid-column:1/-1}
+  .corner{grid-column:1/-1}
+  .eraser{right:60px;top:30px}
+}
+</style>
+</head>
+<body>
+<main class="frame">
+  <div class="board">
+    <div class="eraser" aria-hidden="true"></div>
+    <header class="board-title" data-nm-id="board-title">
+      <p class="chalk-tag">周末 · AI 启蒙课 · 今日板书</p>
+      <div>
+        <h1>程小满</h1>
+        <p class="role">教育学大四 · 周末给小学生上 AI 启蒙课</p>
+      </div>
+      <div>
+        <p class="headline">十岁的孩子也能听懂的 AI。</p>
+        <p class="tagline">教育学大四，周末给小学生讲 AI，想做一个分辨 AI 图片的小游戏。</p>
+      </div>
+    </header>
+
+    <section class="chalk-lesson" data-nm-id="chalk-lesson">
+      <div>
+        <h2 class="lesson-head">
+          <svg viewBox="0 0 40 40" aria-hidden="true"><path d="M20 4 L24 15 L36 16 L26 23 L30 35 L20 28 L10 35 L14 23 L4 16 L16 15 Z" fill="none" stroke="#f6d770" stroke-width="2.2" stroke-linejoin="round"/></svg>
+          复杂的东西，讲成一句话
+        </h2>
+        <p>我每个周末给小学生上一节 AI 启蒙课。我相信再复杂的概念，都能被讲成一句十岁孩子能复述的话。</p>
+        <p>这学期的板书都是我画的：机器人、箭头、星星。讲完一个概念，就让孩子用手在黑板上指一指。</p>
+      </div>
+      <div>
+        <p class="arrow">
+          <svg viewBox="0 0 90 26" aria-hidden="true"><path d="M4 13 C30 4 58 22 84 13" fill="none" stroke="#f5a7bf" stroke-width="2.4" stroke-linecap="round"/><path d="M76 6 L86 13 L76 20" fill="none" stroke="#f5a7bf" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          能听懂 → 能说出来 → 能自己找一找
+        </p>
+        <p>我能把复杂概念讲到十岁孩子能懂，欢迎来旁听一节。</p>
+      </div>
+    </section>
+
+    <section class="kid-quiz" data-nm-id="kid-quiz">
+      <div>
+        <p class="quiz-title">今日小测<span>示意</span></p>
+        <div class="quiz-tiles">
+          <figure class="tile" aria-label="图甲：粉笔画的简笔机器人（示意）">
+            <b>甲</b>
+            <svg viewBox="0 0 120 120" aria-hidden="true"><g fill="none" stroke="#f1efe6" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="28" y="36" width="64" height="54" rx="8"/><circle cx="48" cy="60" r="6"/><circle cx="72" cy="60" r="6"/><path d="M50 78 Q60 84 70 78"/><path d="M60 36 L60 22"/><circle cx="60" cy="18" r="4"/><path d="M28 60 L16 60 M92 60 L104 60"/></g></svg>
+            <i>示意</i>
+          </figure>
+          <figure class="tile" aria-label="图乙：粉笔画的简笔机器人，线条略有不同（示意）">
+            <b>乙</b>
+            <svg viewBox="0 0 120 120" aria-hidden="true"><g fill="none" stroke="#f5a7bf" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><rect x="26" y="40" width="68" height="50" rx="22"/><circle cx="46" cy="62" r="5"/><circle cx="74" cy="62" r="5"/><path d="M48 78 L72 78"/><path d="M60 40 L60 26"/><path d="M52 26 L68 26"/><path d="M26 66 L14 74 M94 66 L106 74"/></g></svg>
+            <i>示意</i>
+          </figure>
+        </div>
+      </div>
+      <div class="question">
+        <strong>哪一张是 AI 画的？</strong>
+        <p>我想做教小朋友分辨 AI 图片的小游戏：先看一看，再说一说为什么。</p>
+      </div>
+    </section>
+
+    <section class="duty" data-nm-id="duty-corner">
+      <p class="chalk-tag">值日生 · 下次要带的东西</p>
+      <ul class="duty-list">
+        <li><span class="star">★</span><span>我能把复杂概念讲到十岁孩子能懂<span class="tag">可以来问</span></span></li>
+        <li><span class="star">★</span><span>我想做教小朋友分辨 AI 图片的小游戏<span class="tag">想做</span></span></li>
+        <li><span class="star">★</span><span>找会做互动的开发，一起把小测搬进网页<span class="tag">在找</span></span></li>
+      </ul>
+      <p class="cta">在页面外点「想聊这个」，从一个你觉得最难讲清楚的概念开始。</p>
+    </section>
+
+    <footer class="corner"><span>值日生：<b>程小满</b></span><span>擦干净再走 / NOWMe</span></footer>
+  </div>
+</main>
+</body>
+</html>

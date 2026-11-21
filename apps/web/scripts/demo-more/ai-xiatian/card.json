@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "夏天",
+  "tagline": "大一新生，什么都想学，书包里永远有零食",
+  "hooks": [
+    {
+      "id": "buy-and-test",
+      "kind": "can-help",
+      "text": "我能帮大家买饭、试玩、记问题",
+      "opener": "夏天你好！我看到你能帮大家买饭、试玩、记问题，我们的 Demo 正需要人测试，要不要来一起试？"
+    },
+    {
+      "id": "teach-while-build",
+      "kind": "looking-for",
+      "text": "找愿意边做边教的队友",
+      "opener": "夏天你好！你说想第一次完整参与做 Demo，我们正好边做边教，要不要加入？"
+    },
+    {
+      "id": "first-demo",
+      "kind": "want-to-build",
+      "text": "想第一次完整做出一个 Demo",
+      "opener": "夏天你好！第一次做 Demo 最需要的是不怕问的队友，你想先负责哪一小块？"
+    }
+  ]
+}

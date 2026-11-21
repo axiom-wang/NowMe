@@ -6,6 +6,7 @@ import { seedDemoAvatars } from './demo-avatars.js';
  *   程野、方棠、祝一一用 demo-people/ 里真实生成的页面）。最后一名成员保持“已提交未发布”。组织者工具的数据见 demo-organizer.ts。
  * - 社团墙“山海摄影社 · 2026 秋季招新”：栗子、贺川、麦冬三位拍照的人，加上体验成员江予安与温溪两页。
  * - AI 共创与山野轻徒步墙各 10 人、6 页，体验成员保留空白工作区。
+ * - 第二批人物（demo-more.ts）：四面墙各把人数扩到两倍，每人一页独立设计的已发布页面；复用启动时也会补齐。
  * - 四个全员群和虚构私聊：经过聊天服务写入历史消息与部分已读位置。
  * 每名成员都走真实提交管线：生成 Agent 指令 → `/api/agent/exchange` 换凭证 → `/api/agent/revisions` 提交
  * （服务端校验 + 渲染），再以示例 `card.json` 的内容发布。
@@ -27,7 +28,8 @@ import { buildDemoProfile, DEMO_EXTRA_WALLS, DEMO_TEST_EMAIL, DEMO_TEST_NAME, pr
 import { DEMO_AI_PUBLISHED_INDICES } from './demo-ai/index.js';
 import { DEMO_TRAIL_PUBLISHED_INDICES } from './demo-trail/index.js';
 import { buildDemoClubProfile, DEMO_CLUB_ADDITIONS } from './demo-club.js';
-import { seedDemoOrganizerTools } from './demo-organizer.js';
+import { saveDemoAdditionAnswers, seedDemoOrganizerTools, writeDemoPortrait } from './demo-organizer.js';
+import { DEMO_ADDITIONS, DEMO_MORE_DIR, type DemoAdditionWall } from './demo-more.js';
 import { DEMO_CHATS, type DemoChatWallKey, type Session } from './demo-chats.js';
 
 export const DEMO_DOMAIN = 'demo.nowme.test';
@@ -39,9 +41,10 @@ export const DEMO_CLUB_WALL_NAME = '山海摄影社 · 2026 秋季招新';
 export const DEMO_PEOPLE_DIR = fileURLToPath(new URL('./demo-people/', import.meta.url));
 
 interface DemoMemberPlan {
-  /** 页面目录名：默认在 Skill 示例页里找；`people` 为 true 时在 demo-people/ 里找。 */
+  /** 页面目录名：默认在 Skill 示例页里找；`people` 为 true 时在 demo-people/ 里找；给了 `root` 就在 root 里找。 */
   dir: string;
   people?: boolean;
+  root?: string;
   profile?: { files: Record<string, string>; displayName: string };
   email: string;
   /** 发布时是否公开联系方式。 */
@@ -90,14 +93,16 @@ export interface DemoSeed {
   club: { wall: Wall; inviteUrl: string; members: DemoMember[] };
   tester: { email: string; nickname: string; userId: string };
   extraWalls: { wall: Wall; inviteUrl: string; members: DemoWallMember[] }[];
+  /** 第二批人物，按墙分组（顺序同 DEMO_ADDITIONS）。 */
+  additions: Record<DemoAdditionWall, DemoMember[]>;
   chat: { groups: number; directs: number; messages: number };
 }
 
 /** Membership creates a page slot; an empty workspace has no revision or publication. */
 export type DemoWallMember = Omit<DemoMember, 'revisionId'> & { revisionId: string | null };
 
-function readExample(plan: Pick<DemoMemberPlan, 'dir' | 'people'>): { files: Record<string, string>; displayName: string } {
-  const root = join(plan.people ? DEMO_PEOPLE_DIR : EXAMPLES_DIR, plan.dir);
+function readExample(plan: Pick<DemoMemberPlan, 'dir' | 'people' | 'root'>): { files: Record<string, string>; displayName: string } {
+  const root = join(plan.root ?? (plan.people ? DEMO_PEOPLE_DIR : EXAMPLES_DIR), plan.dir);
   const files: Record<string, string> = {};
   for (const entry of readdirSync(root)) {
     if (entry === 'DESIGN.md') continue;
@@ -198,6 +203,8 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
     extraWalls.push({ wall: extraWall, inviteUrl: `${config.webOrigin}/join/${extraWall.inviteCode}`, members: extraMembers });
   }
 
+  const additions = await ensureDemoWallAdditions(web, log);
+
   seedDemoAvatars(deps);
   seedDemoPersonalData(deps, tester.userId, []);
   seedDemoOrganizerTools(deps, wall, { organizerId: organizer.userId, testerId: tester.userId, members });
@@ -216,7 +223,7 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
     members,
     newcomer,
     club: { wall: clubWall, inviteUrl: `${config.webOrigin}/join/${clubWall.inviteCode}`, members: clubMembers },
-    tester, extraWalls, chat,
+    tester, extraWalls, additions, chat,
   };
 }
 
@@ -241,6 +248,56 @@ export async function ensureDemoClubPages(web: WebApp, log: (message: string) =>
       dir: person.id, email: person.email, profile: buildDemoClubProfile(index), publish: true,
       contactPublic: false, contact: { channel: 'email', value: person.email },
     }, log));
+  }
+  return added;
+}
+
+/** 找到四面演示墙（黑客松与摄影社由组织者小乐创建，另两面由各自名单里的最后一位创建）。 */
+function findDemoWalls(deps: WebApp['deps']): Partial<Record<DemoAdditionWall, Wall>> {
+  const byOrganizer = (email: string, name: string): Wall | undefined => {
+    const organizer = deps.repos.users.findByEmail(email);
+    return (organizer && deps.repos.walls.findOpenByOrganizerAndName(organizer.id, name)) || undefined;
+  };
+  const extra = (slug: 'ai' | 'trail'): Wall | undefined => {
+    const plan = DEMO_EXTRA_WALLS.find((entry) => entry.slug === slug)!;
+    return byOrganizer(profileEmail(plan, plan.profiles.length - 1), plan.name);
+  };
+  return {
+    hackathon: byOrganizer(`organizer@${DEMO_DOMAIN}`, DEMO_WALL_NAME),
+    club: byOrganizer(`organizer@${DEMO_DOMAIN}`, DEMO_CLUB_WALL_NAME),
+    ai: extra('ai'),
+    trail: extra('trail'),
+  };
+}
+
+/**
+ * 第二批人物：新建与复用的演示数据共用。只给还没有任何版本的人提交并发布，绝不覆盖已有版本；
+ * 黑客松墙有人新加入时补上必答题回答，并按墙上现在的人重写保存的群像统计。
+ */
+export async function ensureDemoWallAdditions(web: WebApp, log: (message: string) => void = () => {}): Promise<Record<DemoAdditionWall, DemoMember[]>> {
+  const { deps } = web;
+  const walls = findDemoWalls(deps);
+  const added: Record<DemoAdditionWall, DemoMember[]> = { hackathon: [], club: [], ai: [], trail: [] };
+  for (const person of DEMO_ADDITIONS) {
+    const wall = walls[person.wall];
+    if (!wall) continue;
+    let user = deps.repos.users.findByEmail(person.email);
+    if (!user) {
+      user = deps.repos.users.create({ id: generateId('usr'), email: person.email, nickname: person.name, createdAt: deps.now().toISOString() });
+      deps.repos.users.recordConsent(user.id, LEGAL_VERSION, deps.now().toISOString()); // 种子账号视为已确认协议
+    }
+    const own = findOwnPage(deps.repos, user.id, wall.id);
+    if (own && deps.repos.revisions.listForPage(own.page.id).length > 0) continue;
+    added[person.wall].push(await submitAndPublish(web, wall, user.id, {
+      dir: person.dir, root: DEMO_MORE_DIR, email: person.email, publish: true,
+      contactPublic: person.contactPublic, contact: { channel: 'email', value: person.email },
+    }, log));
+  }
+  const total = Object.values(added).reduce((sum, list) => sum + list.length, 0);
+  if (total > 0) log(`第二批人物已上墙：${total} 页`);
+  if (walls.hackathon && added.hackathon.length > 0) {
+    saveDemoAdditionAnswers(deps, walls.hackathon);
+    writeDemoPortrait(deps, walls.hackathon, walls.hackathon.organizerId);
   }
   return added;
 }

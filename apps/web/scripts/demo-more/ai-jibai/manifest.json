@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "jetbrains-mono", "weights": [400, 700] },
+    { "id": "noto-serif-sc", "weights": [400, 900] }
+  ],
+  "extraChars": "",
+  "blocks": ["case-file", "transcript", "findings", "clearance", "seal"],
+  "generator": { "agent": "nowme-demo" }
+}

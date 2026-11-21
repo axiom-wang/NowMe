@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "medium",
+  "fonts": [
+    { "id": "smiley-sans", "weights": [400] },
+    { "id": "jetbrains-mono", "weights": [400, 700] }
+  ],
+  "extraChars": "",
+  "blocks": ["player-card", "quest-list", "party-map", "npc-talk", "save-point"],
+  "generator": { "agent": "nowme-demo" }
+}

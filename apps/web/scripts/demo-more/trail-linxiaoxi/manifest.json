@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "lxgw-wenkai", "weights": [400] },
+    { "id": "inter", "weights": [400] }
+  ],
+  "extraChars": "",
+  "blocks": ["window-sill", "rain-question", "bamboo-trail", "umbrella-sound", "glass-footer"],
+  "generator": { "agent": "nowme-demo" }
+}

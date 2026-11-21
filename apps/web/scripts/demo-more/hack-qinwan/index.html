@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>秦宛 · 无障碍标识牌 · NOWMe 演示黑客松</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+  :root {
+    --nm-font-display: var(--nm-font-noto-sans-sc);
+    --nm-font-body: var(--nm-font-noto-sans-sc);
+    --nm-font-code: var(--nm-font-inter);
+    --sign: #ffd60a;
+    --bg: #000000;
+    --text: #ffffff;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--nm-font-body);
+    font-weight: 400;
+    font-size: 17px;
+    line-height: 1.7;
+    overflow-x: hidden;
+  }
+  h1, h2, h3, strong, b { font-weight: 900; margin: 0; }
+  .wrap { max-width: 560px; margin: 0 auto; padding: 18px 18px 40px; }
+  .label { font-weight: 900; letter-spacing: 0.04em; }
+
+  /* 入口标识：整块黄底黑字 */
+  .entrance {
+    position: relative;
+    padding: 22px 20px 26px;
+    background: var(--sign);
+    color: var(--bg);
+    border: 6px solid var(--sign);
+  }
+  .entrance .dots {
+    position: absolute; left: 0; right: 0; top: 0; height: 26px;
+    background-image: radial-gradient(circle, #000 2.4px, transparent 3px);
+    background-size: 14px 13px;
+    background-position: 6px 4px;
+    opacity: 0.85;
+  }
+  .entrance__top { position: relative; margin-top: 24px; display: flex; align-items: center; gap: 12px; }
+  .entrance__icon { flex: none; width: 58px; height: 58px; border: 5px solid var(--bg); border-radius: 50%; display: grid; place-items: center; }
+  .entrance__icon svg { display: block; width: 36px; height: 36px; }
+  .entrance__word { font-size: 17px; font-weight: 900; }
+  h1 { position: relative; margin-top: 16px; font-size: 64px; line-height: 1.1; font-weight: 900; letter-spacing: 0.03em; }
+  .entrance__role { position: relative; margin: 10px 0 0; font-size: 17px; font-weight: 900; }
+  .entrance__tag { position: relative; margin: 14px 0 0; padding-top: 14px; border-top: 4px solid var(--bg); font-size: 19px; font-weight: 900; line-height: 1.5; }
+  .arrow { position: relative; margin-top: 16px; font-size: 15px; font-weight: 900; display: flex; align-items: center; gap: 10px; }
+  .arrow svg { flex: none; width: 56px; height: 20px; }
+
+  /* 每块都是一块标识牌 */
+  .sign { margin-top: 22px; padding: 18px 18px 20px; border: 5px solid var(--sign); }
+  .sign__no { display: inline-block; padding: 2px 10px; background: var(--sign); color: var(--bg); font-family: var(--nm-font-code); font-size: 15px; font-weight: 900; }
+  .sign h2 { margin-top: 12px; font-size: 28px; line-height: 1.3; color: var(--sign); }
+  .sign p { margin: 10px 0 0; font-size: 17px; }
+  .sign__hr { margin: 16px 0 0; height: 0; border-top: 3px solid var(--text); }
+
+  /* 坡道示意 */
+  .ramp { margin: 16px 0 0; }
+  .ramp svg { display: block; width: 100%; height: auto; }
+  .ramp text { font-size: 15px; font-weight: 900; fill: var(--sign); }
+  .ramp .small { font-family: var(--nm-font-body); font-weight: 400; font-size: 14px; fill: var(--text); }
+
+  /* 记录表 */
+  .facts { margin: 14px 0 0; padding: 0; list-style: none; }
+  .facts li { display: grid; grid-template-columns: 1fr auto; gap: 8px; padding: 12px 0; border-bottom: 3px solid var(--text); font-size: 17px; }
+  .facts li:last-child { border-bottom: 0; }
+  .facts b { color: var(--sign); font-size: 22px; font-weight: 900; }
+
+  /* 检查清单 */
+  .checks { margin: 14px 0 0; padding: 0; list-style: none; }
+  .checks li { display: flex; gap: 12px; align-items: baseline; padding: 10px 0; font-size: 17px; border-bottom: 3px solid var(--text); }
+  .checks li:last-child { border-bottom: 0; }
+  .checks span.key { flex: none; min-width: 2.8em; padding: 2px 8px; background: var(--text); color: var(--bg); font-family: var(--nm-font-code); font-size: 14px; font-weight: 900; text-align: center; }
+
+  /* 反色的一块：想做的事 */
+  .invert { margin-top: 22px; padding: 18px; background: var(--text); color: var(--bg); border: 5px solid var(--text); }
+  .invert h2 { font-size: 26px; line-height: 1.35; color: var(--bg); }
+  .invert p { margin: 10px 0 0; font-size: 17px; }
+
+  /* 出口标识 */
+  .exit { margin-top: 26px; padding: 20px 18px; border: 6px solid var(--sign); }
+  .exit p { margin: 0; font-size: 19px; font-weight: 900; line-height: 1.6; color: var(--sign); }
+  .exit__foot { margin-top: 14px !important; font-size: 14px !important; font-weight: 400 !important; color: var(--text) !important; }
+
+  @media (min-width: 700px) {
+    .wrap { max-width: 900px; padding: 36px 40px 56px; }
+    .entrance { display: grid; grid-template-columns: 1.1fr 1fr; column-gap: 36px; padding: 40px 36px 36px; }
+    .entrance .dots { height: 36px; }
+    .entrance__top { grid-column: 1 / -1; }
+    .entrance h1 { font-size: 112px; grid-column: 1 / -1; }
+    .entrance__role { grid-column: 1; margin-top: 0; }
+    .entrance__tag { grid-column: 2; margin: 0; padding-top: 0; border-top: 0; align-self: end; font-size: 22px; }
+    .arrow { grid-column: 1 / -1; }
+    .sign { display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px; padding: 26px 28px; }
+    .sign__no { grid-column: 1 / -1; justify-self: start; }
+    .sign h2 { grid-column: 1 / -1; }
+    .sign > p { grid-column: 1; }
+    .sign > .facts, .sign > .checks, .sign > .ramp { grid-column: 2; margin-top: 0; }
+    .sign__hr { grid-column: 1 / -1; }
+    .invert { display: grid; grid-template-columns: 1fr 1fr; column-gap: 32px; }
+    .invert h2 { grid-column: 1; }
+    .invert p { grid-column: 2; margin-top: 0; }
+  }
+</style>
+</head>
+<body>
+<main class="wrap">
+
+  <header class="entrance" data-nm-id="entrance-sign">
+    <div class="dots" aria-hidden="true"></div>
+    <div class="entrance__top">
+      <span class="entrance__icon" aria-hidden="true">
+        <svg viewBox="0 0 36 36"><circle cx="18" cy="18" r="16" fill="none" stroke="#000" stroke-width="3"/><path d="M8 26 L24 26 L24 14" fill="none" stroke="#000" stroke-width="3.2" stroke-linejoin="round"/><circle cx="26" cy="9" r="3" fill="#000"/></svg>
+      </span>
+      <span class="entrance__word">无障碍标识（示意）</span>
+    </div>
+    <h1>秦宛</h1>
+    <p class="entrance__role">社工专业大三 · 前端自学中</p>
+    <p class="entrance__tag">想让每张地图都能被每个人读懂。</p>
+    <div class="arrow" aria-hidden="true">
+      <svg viewBox="0 0 56 20"><path d="M2 10 H48" stroke="#000" stroke-width="4"/><path d="M40 2 L54 10 L40 18 Z" fill="#000"/></svg>
+      <span>往下看：我走过的路，和我想做的事</span>
+    </div>
+  </header>
+
+  <section class="sign" data-nm-id="ramp-route">
+    <span class="sign__no">No.1</span>
+    <h2>坡道记录：三栋教学楼</h2>
+    <p>我用卷尺和手机，把校园通道一段段量过、拍过、写下来。</p>
+    <figure class="ramp">
+      <svg viewBox="0 0 320 150" role="img" aria-label="坡道坡度示意图（示意）">
+        <path d="M18 128 H300" stroke="#fff" stroke-width="4"/>
+        <path d="M18 128 L296 58 L296 128" fill="none" stroke="#ffd60a" stroke-width="5" stroke-linejoin="round"/>
+        <path d="M250 96 L290 96" stroke="#fff" stroke-width="2"/>
+        <text x="28" y="22" class="small">示意图，坡度以 1:12 为参照</text>
+        <text x="28" y="48">坡 1 : 12</text>
+        <text x="96" y="146" class="small">水平</text>
+        <text x="186" y="118" class="small">台阶为零</text>
+      </svg>
+    </figure>
+    <ul class="facts">
+      <li>教学楼入口<b>3 栋</b></li>
+      <li>遇到的台阶<b>11 处</b></li>
+      <li>有坡道的入口<b>4 处</b></li>
+      <li>按钮高度超过 1.2 米<b>2 处</b></li>
+    </ul>
+  </section>
+
+  <section class="sign" data-nm-id="screen-check">
+    <span class="sign__no">No.2</span>
+    <h2>读屏与键盘：我能帮你查</h2>
+    <p>我能帮你做读屏和键盘可用性检查。一个页面能不能用，不能只看着好不好看，我会照着下面几项过一遍。</p>
+    <ul class="checks">
+      <li><span class="key">TAB</span>只用键盘，能不能走完所有按钮</li>
+      <li><span class="key">READ</span>读屏念出的名字，和看到的一样吗</li>
+      <li><span class="key">CONT</span>文字和底色的对比，够不够看清</li>
+    </ul>
+  </section>
+
+  <section class="invert" data-nm-id="want-map">
+    <span class="label">No.3 · 想做的事</span>
+    <h2>想做轮椅也能走完的校园地图</h2>
+    <p>每一段路都标出坡度、门宽和台阶，走之前就知道哪里要绕。</p>
+  </section>
+
+  <section class="exit" data-nm-id="exit-sign">
+    <p>我在找会做地图或路线的队友。</p>
+    <p class="exit__foot">在页面外点「想聊这个」，从“找会做地图或路线的队友”开始。</p>
+    <p class="exit__foot">秦宛 · 社工专业大三 · NOWMe 演示黑客松 · 页面不放联系方式</p>
+  </section>
+
+</main>
+</body>
+</html>

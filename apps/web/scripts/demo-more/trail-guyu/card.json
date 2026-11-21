@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "谷雨",
+  "tagline": "按节气出门，每个节气走一次，路边的花都记下来",
+  "hooks": [
+    {
+      "id": "solar-term-flowers",
+      "kind": "ask-me",
+      "text": "这个节气路边会开什么花",
+      "opener": "你好！在山野轻徒步墙上看到你按节气出门，想问问这个节气路边一般会开什么花，你记过吗？"
+    },
+    {
+      "id": "one-term-one-walk",
+      "kind": "want-to-try",
+      "text": "想试一次“一个节气走一次”",
+      "opener": "嗨，我也想试试“一个节气走一次”，要不要先从下一个节气约一段短路？"
+    },
+    {
+      "id": "walk-diary",
+      "kind": "obsessed",
+      "text": "沉迷写行走日记",
+      "opener": "看到你沉迷写行走日记，你一般是走完当天写，还是边走边记？我也想看看你的写法。"
+    }
+  ]
+}

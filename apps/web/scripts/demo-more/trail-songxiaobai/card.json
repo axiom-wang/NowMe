@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "宋小白",
+  "tagline": "带狗徒步，狗叫豆包，每一步都看它的脚和心情",
+  "hooks": [
+    {
+      "id": "dog-trip-prep",
+      "kind": "ask-me",
+      "text": "带狗出门要准备什么",
+      "opener": "你好！在山野轻徒步墙上看到你带狗徒步，想问问带狗出门一般要准备什么，你的清单能分享吗？"
+    },
+    {
+      "id": "dog-friendly-creek",
+      "kind": "want-to-try",
+      "text": "想试一次狗狗友好的溪边路线",
+      "opener": "嗨，我也想试试狗狗友好的溪边路线，豆包最喜欢哪一段水边？"
+    },
+    {
+      "id": "dog-photos",
+      "kind": "obsessed",
+      "text": "沉迷给豆包拍照",
+      "opener": "看到你沉迷给豆包拍照，它最上镜的是哪个姿势？我也想看看你的相册。"
+    }
+  ]
+}

@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>白露 · 用户研究 · 访谈后的便利贴墙</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+  :root {
+    --paper: #f2ead8;
+    --cork: #e6d6b4;
+    --ink: #2d2a26;
+    --pen: #1f3b73;
+    --mark: #d4574a;
+    --y: #ffe27a;
+    --p: #ffb8c8;
+    --g: #bfe9d3;
+    --b: #bcd8ff;
+    --font: var(--nm-font-lxgw-wenkai);
+  }
+  html, body { background: var(--paper); color: var(--ink); }
+  body {
+    font-family: var(--font); font-weight: 400; font-size: 15px; line-height: 1.8;
+    background-image: radial-gradient(rgba(120, 88, 48, 0.12) 1px, transparent 1.4px);
+    background-size: 9px 9px;
+  }
+  h1, h2, h3, p, ul { margin: 0; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 18px 60px; }
+
+  .note {
+    position: relative; padding: 14px 15px 16px; border-radius: 2px;
+    box-shadow: 0 8px 14px -6px rgba(60, 40, 10, 0.35), 0 1px 0 rgba(255, 255, 255, 0.4) inset;
+  }
+  .note--y { background: var(--y); }
+  .note--p { background: var(--p); }
+  .note--g { background: var(--g); }
+  .note--b { background: var(--b); }
+  .note--r1 { transform: rotate(-1.4deg); }
+  .note--r2 { transform: rotate(1.1deg); }
+  .note--r3 { transform: rotate(-0.6deg); }
+  .note--r4 { transform: rotate(1.8deg); }
+
+  /* 胶带 */
+  .tape { position: absolute; top: -10px; left: 50%; width: 74px; height: 20px; margin-left: -37px;
+    background: rgba(255, 255, 255, 0.55); transform: rotate(-3deg); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
+
+  /* ---- 封面 ---- */
+  .cover { margin: 26px 0 0; padding: 30px 22px 26px; background: var(--y); transform: rotate(-1deg); }
+  .cover__kicker { font-size: 13px; color: var(--pen); }
+  .cover__name { margin-top: 10px; font-size: 56px; font-weight: 500; line-height: 1.1; letter-spacing: 0.04em; }
+  .cover__role { margin-top: 10px; font-size: 15px; }
+  .cover__line { margin-top: 18px; padding-top: 14px; border-top: 2px dashed rgba(45, 42, 38, 0.5); font-size: 18px; line-height: 1.6; }
+  .cover__line u { text-decoration: none; background: linear-gradient(transparent 60%, rgba(255, 138, 110, 0.6) 60%); }
+  .cover__sign { margin-top: 10px; text-align: right; font-size: 13px; color: var(--pen); }
+  .arrow-svg { display: block; width: 110px; margin: 10px 0 0 auto; }
+
+  /* ---- 访谈引语 ---- */
+  .quotes { margin-top: 44px; }
+  .quotes__head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; }
+  .quotes__head h2 { font-size: 24px; font-weight: 500; }
+  .quotes__head span { font-size: 13px; color: var(--pen); }
+  .quotes__grid { display: grid; gap: 16px; margin-top: 18px; }
+  .quote { font-size: 15px; line-height: 1.75; }
+  .quote small { display: block; margin-top: 8px; font-size: 12px; color: rgba(45, 42, 38, 0.7); }
+  .quote mark { background: none; color: var(--mark); font-weight: 500; text-decoration: underline wavy var(--mark); text-underline-offset: 4px; }
+
+  /* ---- 归类：三簇 ---- */
+  .clusters { margin-top: 48px; }
+  .clusters h2 { font-size: 24px; font-weight: 500; }
+  .clusters > p { margin-top: 6px; font-size: 14px; color: rgba(45, 42, 38, 0.8); }
+  .cluster { position: relative; margin-top: 26px; padding: 22px 16px 16px; border: 2px dashed rgba(31, 59, 115, 0.35); border-radius: 18px; }
+  .cluster__label { position: absolute; top: -14px; left: 14px; padding: 2px 12px; background: var(--paper); color: var(--pen); font-size: 14px; font-weight: 500; }
+  .cluster__pile { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .cluster__pile .note { font-size: 14px; line-height: 1.6; padding: 10px 11px 12px; }
+  .cluster__verdict { margin-top: 16px; font-size: 17px; line-height: 1.6; color: var(--pen); }
+  .cluster__verdict b { font-weight: 500; text-decoration: underline; text-underline-offset: 4px; }
+
+  /* ---- 工具草图 ---- */
+  .tool { margin-top: 52px; }
+  .tool h2 { font-size: 24px; font-weight: 500; }
+  .tool > p { margin-top: 6px; font-size: 14px; color: rgba(45, 42, 38, 0.8); }
+  .sketch { margin-top: 18px; padding: 18px 14px 12px; background: #fbf6ea; border: 1px solid rgba(31, 59, 115, 0.3); border-radius: 4px; }
+  .sketch svg { display: block; width: 100%; height: auto; }
+  .sketch__cap { margin-top: 6px; font-size: 12px; color: rgba(45, 42, 38, 0.65); text-align: right; }
+
+  /* ---- 收尾 ---- */
+  .ping { margin-top: 52px; padding: 18px 18px 20px; transform: rotate(0.8deg); }
+  .ping p { font-size: 16px; line-height: 1.8; }
+  .ping__foot { margin-top: 10px; font-size: 13px; color: rgba(45, 42, 38, 0.7); }
+
+  @media (min-width: 700px) {
+    .wrap { max-width: 880px; }
+    .quotes__grid { grid-template-columns: 1fr 1fr 1fr; }
+    .cluster__pile { grid-template-columns: 1fr 1fr 1fr; }
+    .cover__name { font-size: 76px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="note note--y cover" data-nm-id="cover-note">
+    <span class="tape" aria-hidden="true"></span>
+    <p class="cover__kicker">访谈后整理 · NOWMe 演示黑客松</p>
+    <h1 class="cover__name">白露</h1>
+    <p class="cover__role">用户研究 · 心理学研二</p>
+    <p class="cover__line">20 分钟访谈，我习惯<u>先听，再把话理成能做的事</u>。</p>
+    <p class="cover__sign">— 白露手写</p>
+    <svg class="arrow-svg" viewBox="0 0 110 50" aria-hidden="true">
+      <defs><marker id="head-bailu" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#1f3b73"/></marker></defs>
+      <path d="M8,10 C40,2 70,4 96,30" fill="none" stroke="#1f3b73" stroke-width="2" stroke-linecap="round" marker-end="url(#head-bailu)"/>
+      <text x="6" y="46" font-size="12" fill="#1f3b73">往下看：引语</text>
+    </svg>
+  </header>
+
+  <section class="quotes" data-nm-id="quotes-wall">
+    <div class="quotes__head">
+      <h2>访谈里的几句话</h2>
+      <span>原话，已去掉姓名</span>
+    </div>
+    <div class="quotes__grid">
+      <div class="note note--p note--r1">
+        <span class="tape" aria-hidden="true"></span>
+        <p class="quote">“开学一周了，我连学生会在哪一层都不知道，<mark>问学长又怕打扰</mark>。”<small>P03 · 大一新生</small></p>
+      </div>
+      <div class="note note--g note--r2">
+        <p class="quote">“报名表我填了三次，最后还是没去。<mark>第一次去怕没人认识我</mark>。”<small>P05 · 大一新生</small></p>
+      </div>
+      <div class="note note--b note--r3">
+        <p class="quote">“我不想先报名，我想<mark>先做一件小事</mark>，看看合不合我。”<small>P07 · 大二</small></p>
+      </div>
+      <div class="note note--y note--r4">
+        <p class="quote">“最好能直接告诉我哪个社团周三晚上有活动。”<small>P08 · 大一新生</small></p>
+      </div>
+    </div>
+  </section>
+
+  <section class="clusters" data-nm-id="clusters">
+    <h2>归类后，三簇</h2>
+    <p>我能帮你把访谈理成结论：八位受访者的话贴到墙上，按“他卡在哪一步”成簇。</p>
+
+    <div class="cluster">
+      <span class="cluster__label">A · 找不到入口</span>
+      <div class="cluster__pile">
+        <div class="note note--y note--r1"><p>不知道社团在哪</p></div>
+        <div class="note note--p note--r2"><p>信息散在各处</p></div>
+      </div>
+      <p class="cluster__verdict">结论：新生需要一个<b>按时间排好的入口</b>，而不是一张长长的社团目录。</p>
+    </div>
+
+    <div class="cluster">
+      <span class="cluster__label">B · 怕第一次尴尬</span>
+      <div class="cluster__pile">
+        <div class="note note--g note--r3"><p>怕没人认识</p></div>
+        <div class="note note--b note--r4"><p>怕问错问题</p></div>
+        <div class="note note--p note--r1"><p>想要一个见面理由</p></div>
+      </div>
+      <p class="cluster__verdict">结论：第一次见面最好<b>有一件具体的事可以一起做</b>，话题会自己出来。</p>
+    </div>
+
+    <div class="cluster">
+      <span class="cluster__label">C · 想先试一下</span>
+      <div class="cluster__pile">
+        <div class="note note--b note--r2"><p>先做一件小事</p></div>
+        <div class="note note--y note--r3"><p>合不合再决定</p></div>
+      </div>
+      <p class="cluster__verdict">结论：报名是大决定，<b>体验一次</b>才是新生愿意迈出的那一步。</p>
+    </div>
+  </section>
+
+  <section class="tool" data-nm-id="tool-idea">
+    <h2>想做帮新生找对口社团的小工具</h2>
+    <p>输入“我周三晚上有空，想认识人”，它给出两三个能去的活动，并告诉你第一次去要问什么。</p>
+    <figure class="sketch">
+      <svg viewBox="0 0 320 200" role="img" aria-label="小工具草图示意">
+        <defs><marker id="head-tool" markerWidth="8" markerHeight="8" refX="6" refY="4" orient="auto"><path d="M0,0 L8,4 L0,8 Z" fill="#d4574a"/></marker></defs>
+        <rect x="18" y="16" width="130" height="34" rx="8" fill="#ffe27a" stroke="#2d2a26" stroke-width="1.5"/>
+        <text x="30" y="38" font-size="13" fill="#2d2a26">“周三晚上想认识人”</text>
+        <path d="M90 52 L90 74" stroke="#d4574a" stroke-width="2" marker-end="url(#head-tool)"/>
+        <rect x="18" y="80" width="150" height="30" rx="6" fill="#bfe9d3" stroke="#2d2a26" stroke-width="1.5"/>
+        <text x="28" y="100" font-size="12.5" fill="#2d2a26">周三 19:00 · 手工小组</text>
+        <rect x="18" y="118" width="150" height="30" rx="6" fill="#ffb8c8" stroke="#2d2a26" stroke-width="1.5"/>
+        <text x="28" y="138" font-size="12.5" fill="#2d2a26">周四 18:30 · 读书会</text>
+        <path d="M190 120 L240 80" stroke="#1f3b73" stroke-width="1.5" stroke-dasharray="4 4" fill="none"/>
+        <rect x="186" y="60" width="124" height="66" rx="4" fill="#fbf6ea" stroke="#1f3b73" stroke-width="1.5"/>
+        <text x="196" y="82" font-size="12" fill="#1f3b73">第一次去可以问：</text>
+        <text x="196" y="102" font-size="12" fill="#2d2a26">“平时怎么安排活动？”</text>
+        <text x="196" y="116" font-size="12" fill="#2d2a26">“新人一般做什么？”</text>
+        <ellipse cx="272" cy="160" rx="42" ry="20" fill="none" stroke="#d4574a" stroke-width="2"/>
+        <text x="246" y="165" font-size="12" fill="#d4574a">先试一次</text>
+        <text x="18" y="184" font-size="12" fill="#2d2a26">草图示意，还没做出来</text>
+      </svg>
+      <figcaption class="sketch__cap">白露 · 草图</figcaption>
+    </figure>
+  </section>
+
+  <footer class="note note--g ping" data-nm-id="ping">
+    <p>想一起做这个小工具？找愿意被我追问的开发，在页面外点「想聊这个」，从你最想问的那个问题开始。</p>
+    <p class="ping__foot">白露 · NOWMe 演示黑客松 · 页面不放联系方式</p>
+  </footer>
+
+</div>
+</body>
+</html>

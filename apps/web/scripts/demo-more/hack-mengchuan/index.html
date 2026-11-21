@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>孟川 · 嵌入式硬件 · 电路板丝印</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+  :root {
+    --pcb: #0d3b2b;
+    --pcb-deep: #082a1f;
+    --copper: #c98a4b;
+    --copper-hi: #e7b07a;
+    --silk: #f4f1e6;
+    --silk-mute: rgba(244, 241, 230, 0.6);
+    --pad: #d9b26f;
+    --font-en: var(--nm-font-space-grotesk);
+    --font-cn: var(--nm-font-noto-sans-sc);
+  }
+  html, body { background: var(--pcb-deep); color: var(--silk); }
+  body {
+    font-family: var(--font-cn); font-weight: 400; font-size: 15px; line-height: 1.75;
+    background-color: var(--pcb);
+    background-image:
+      linear-gradient(rgba(201, 138, 75, 0.07) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(201, 138, 75, 0.07) 1px, transparent 1px);
+    background-size: 14px 14px;
+  }
+  h1, h2, h3, p, ul, dl, dd { margin: 0; }
+  ul { padding: 0; list-style: none; }
+  .wrap { position: relative; max-width: 720px; margin: 0 auto; padding: 0 20px 60px; }
+
+  /* 丝印字：白色、细、等宽式英文编号 */
+  .silk { font-family: var(--font-en); font-weight: 400; letter-spacing: 0.08em; color: var(--silk-mute); font-size: 12px; text-transform: uppercase; }
+  .ref { font-family: var(--font-en); font-weight: 700; font-size: 13px; letter-spacing: 0.06em; color: var(--silk); }
+
+  /* 元件框：白色丝印轮廓 */
+  .comp {
+    position: relative; margin-top: 46px; padding: 22px 18px 18px;
+    border: 1.5px solid var(--silk); border-radius: 8px;
+    background: rgba(8, 42, 31, 0.55);
+  }
+  .comp__ref { position: absolute; top: -12px; left: 14px; padding: 0 8px; background: var(--pcb); }
+  .comp__pin { position: absolute; top: 50%; width: 10px; height: 10px; margin-top: -5px; border-radius: 50%; background: var(--pad); box-shadow: 0 0 0 2px var(--pcb-deep); }
+  .comp__pin--l { left: -6px; }
+  .comp__pin--r { right: -6px; }
+
+  /* 铜色走线：上一个元件到下一个元件 */
+  .trace { position: relative; width: 3px; height: 46px; margin: 0 auto; background: var(--copper); }
+  .trace::before, .trace::after { content: ""; position: absolute; left: 50%; width: 12px; height: 12px; margin-left: -6px; border-radius: 50%; background: var(--pad); border: 2px solid var(--pcb-deep); }
+  .trace::before { top: -6px; }
+  .trace::after { bottom: -6px; }
+
+  /* ---- 板子标题（U1 主控） ---- */
+  .hero { margin-top: 26px; padding: 22px 20px 24px; border: 1.5px solid var(--silk); border-radius: 10px; background: rgba(8, 42, 31, 0.6); }
+  .hero__top { display: flex; justify-content: space-between; gap: 10px; }
+  .hero h1 { margin-top: 20px; font-family: var(--font-cn); font-weight: 700; font-size: 54px; line-height: 1.1; letter-spacing: 0.1em; color: var(--silk); }
+  .hero__role { margin-top: 10px; font-size: 14px; color: var(--silk-mute); }
+  .chip { margin-top: 22px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 10px; }
+  .chip__body { padding: 12px 10px; border: 1.5px solid var(--silk); border-radius: 4px; background: var(--pcb-deep); text-align: center; }
+  .chip__body b { display: block; font-family: var(--font-en); font-weight: 700; font-size: 15px; color: var(--silk); letter-spacing: 0.08em; }
+  .chip__body span { display: block; font-size: 12px; color: var(--silk-mute); }
+  .chip__pins { display: grid; gap: 6px; }
+  .chip__pins i { display: block; width: 14px; height: 8px; background: var(--pad); }
+  .chip__pins i:nth-child(odd) { margin-left: -4px; }
+  .chip__pins i:nth-child(even) { margin-left: 4px; }
+  .legs { display: grid; gap: 6px; }
+  .legs i { display: block; height: 8px; width: 22px; background: var(--pad); }
+
+  .hero__line { margin-top: 18px; font-size: 16px; color: var(--silk); }
+  .hero__line em { font-style: normal; color: var(--copper-hi); }
+
+  /* ---- 元件清单：能帮的事 ---- */
+  .bom ul { display: grid; gap: 14px; margin-top: 4px; }
+  .bom li { display: grid; grid-template-columns: 58px 1fr; gap: 12px; align-items: start; }
+  .bom li .ref { padding-top: 2px; }
+  .bom li p { font-size: 15px; color: var(--silk); }
+  .bom li small { display: block; margin-top: 2px; font-family: var(--font-en); font-size: 11.5px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--silk-mute); }
+  .bom h2 { font-family: var(--font-en); font-weight: 700; font-size: 18px; letter-spacing: 0.06em; color: var(--silk); }
+
+  /* ---- 项目：快递提醒盒（示意图） ---- */
+  .proj h2 { margin-top: 8px; font-size: 24px; font-weight: 700; line-height: 1.35; color: var(--silk); }
+  .proj > p { margin-top: 8px; color: var(--silk-mute); }
+  .sch { margin-top: 16px; padding: 14px 10px 10px; border: 1px dashed var(--silk-mute); border-radius: 8px; }
+  .sch svg { display: block; width: 100%; height: auto; }
+  .sch__cap { margin-top: 6px; font-family: var(--font-en); font-size: 11px; letter-spacing: 0.06em; color: var(--silk-mute); text-transform: uppercase; }
+
+  /* ---- 找的队友：针脚 ---- */
+  .pins { margin-top: 4px; display: grid; gap: 10px; }
+  .pins__row { display: grid; grid-template-columns: 52px 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border: 1px solid var(--silk-mute); border-radius: 6px; }
+  .pins__row .ref { font-size: 12px; }
+  .pins__row p { font-size: 15px; color: var(--silk); }
+  .pins__row span { font-family: var(--font-en); font-size: 11px; letter-spacing: 0.06em; color: var(--copper-hi); text-transform: uppercase; }
+
+  /* ---- 收尾：焊盘 ---- */
+  .end { margin-top: 44px; padding: 18px 18px 20px; border: 1.5px solid var(--silk); border-radius: 10px; }
+  .end p { font-size: 15px; color: var(--silk); }
+  .end__foot { margin-top: 10px; font-size: 12px; color: var(--silk-mute); }
+
+  @media (min-width: 700px) {
+    .wrap { max-width: 880px; }
+    .hero h1 { font-size: 72px; }
+    .bom ul { grid-template-columns: 1fr 1fr 1fr; }
+    .pins { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero" data-nm-id="board-hero">
+    <div class="hero__top">
+      <span class="silk">PCB-01 · NOWMe 演示黑客松</span>
+      <span class="silk">48H</span>
+    </div>
+    <h1>孟川</h1>
+    <p class="hero__role">嵌入式 / 硬件 · 电子信息大四</p>
+
+    <div class="chip" aria-hidden="true">
+      <div class="legs"><i></i><i></i><i></i></div>
+      <div class="chip__body"><b>U1</b><span>主控 · 快递提醒盒</span></div>
+      <div class="legs"><i></i><i></i><i></i></div>
+    </div>
+
+    <p class="hero__line">桌上永远有一把烙铁，<em>板子能亮</em>就是我最高兴的时候。</p>
+  </header>
+
+  <div class="trace" aria-hidden="true"></div>
+
+  <section class="comp bom" data-nm-id="parts-list">
+    <span class="comp__ref ref">BOM</span>
+    <h2>我能给队伍的元件</h2>
+    <ul>
+      <li><span class="ref">R1</span><div><p>我能帮你把传感器和板子接起来</p><small>接线、供电、通信，一步步对</small></div></li>
+      <li><span class="ref">U2</span><div><p>做过门口到件提醒</p><small>快递到了会亮灯、推一条提醒</small></div></li>
+      <li><span class="ref">C3</span><div><p>把硬件跑通，再交给界面</p><small>先让板子稳定，再谈好看</small></div></li>
+    </ul>
+  </section>
+
+  <div class="trace" aria-hidden="true"></div>
+
+  <section class="comp proj" data-nm-id="project-box">
+    <span class="comp__pin comp__pin--l" aria-hidden="true"></span>
+    <span class="comp__pin comp__pin--r" aria-hidden="true"></span>
+    <span class="comp__ref ref">J1</span>
+    <h2>快递到了提醒盒</h2>
+    <p>宿舍门口放一个小盒子，包裹一到就亮灯、推一条提醒。这一版我做过。想把快递提醒盒接进校园小程序。</p>
+
+    <figure class="sch">
+      <svg viewBox="0 0 320 170" role="img" aria-label="快递提醒盒电路示意图">
+        <g stroke="#c98a4b" stroke-width="2.5" fill="none" stroke-linejoin="round">
+          <path d="M70 40 H120"/><path d="M200 40 H250"/><path d="M160 60 V110 H250"/><path d="M70 120 H120"/>
+        </g>
+        <g fill="#e7b07a"><circle cx="70" cy="40" r="4"/><circle cx="250" cy="40" r="4"/><circle cx="250" cy="110" r="4"/><circle cx="70" cy="120" r="4"/></g>
+        <g stroke="#f4f1e6" stroke-width="1.5" fill="none">
+          <rect x="12" y="22" width="58" height="36" rx="3"/>
+          <rect x="12" y="102" width="58" height="36" rx="3"/>
+          <rect x="120" y="22" width="80" height="120" rx="4"/>
+          <rect x="250" y="22" width="60" height="36" rx="3"/>
+          <rect x="250" y="92" width="60" height="36" rx="3"/>
+        </g>
+        <g font-family="Space Grotesk, sans-serif" font-size="13" fill="#f4f1e6" letter-spacing="0.5">
+          <text x="18" y="44">S1</text><text x="18" y="124">S2</text>
+          <text x="128" y="40">U1</text><text x="128" y="60">MCU</text>
+          <text x="256" y="44">LED1</text><text x="256" y="114">J1</text>
+        </g>
+        <g font-family="Noto Sans SC, sans-serif" font-size="13" fill="rgba(244,241,230,0.7)">
+          <text x="12" y="16">门口感应</text><text x="120" y="162">提醒逻辑</text>
+          <text x="250" y="16">灯</text><text x="250" y="148">小程序</text>
+        </g>
+        <text x="12" y="160" font-family="Space Grotesk, sans-serif" font-size="13" fill="rgba(244,241,230,0.7)">示意，非实拍</text>
+      </svg>
+      <figcaption class="sch__cap">Schematic · 示意图</figcaption>
+    </figure>
+  </section>
+
+  <div class="trace" aria-hidden="true"></div>
+
+  <section class="comp" data-nm-id="wanted-pins">
+    <span class="comp__ref ref">P1–P2</span>
+    <h2 style="font-family: var(--font-en); font-weight: 700; font-size: 18px; letter-spacing: 0.06em; color: var(--silk);">缺的针脚</h2>
+    <div class="pins" style="margin-top: 16px;">
+      <div class="pins__row"><span class="ref">P1</span><p>找会写小程序界面的队友</p><span>待接</span></div>
+      <div class="pins__row"><span class="ref">P2</span><p>一起定数据从哪进来</p><span>待接</span></div>
+    </div>
+  </section>
+
+  <footer class="end" data-nm-id="solder-note">
+    <p>想一起焊一块板子？在页面外点「想聊这个」，从一个元件开始聊。</p>
+    <p class="end__foot">孟川 · NOWMe 演示黑客松 · 页面不放联系方式</p>
+  </footer>
+
+</div>
+</body>
+</html>

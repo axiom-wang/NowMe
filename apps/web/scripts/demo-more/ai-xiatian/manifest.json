@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "jetbrains-mono", "weights": [400, 700] },
+    { "id": "noto-sans-sc", "weights": [400, 700] }
+  ],
+  "extraChars": "",
+  "blocks": ["receipt-head", "item-list", "in-bag", "total", "barcode-tail"],
+  "generator": { "agent": "nowme-demo" }
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "instrument-serif", "weights": [400] },
+    { "id": "noto-serif-sc", "weights": [400, 700] }
+  ],
+  "extraChars": "",
+  "blocks": ["prelude-title", "movement-theme", "piano-roll", "coda-hooks"],
+  "generator": { "agent": "nowme-demo" }
+}

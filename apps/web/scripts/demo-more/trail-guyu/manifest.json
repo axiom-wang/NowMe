@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "noto-serif-sc", "weights": [400, 900] }
+  ],
+  "extraChars": "",
+  "blocks": ["jieqi-cover", "yi-ji", "flower-by-road", "once-per-jieqi", "walk-diary", "almanac-footer"],
+  "generator": { "agent": "nowme-demo" }
+}

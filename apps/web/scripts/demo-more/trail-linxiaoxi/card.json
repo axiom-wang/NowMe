@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "林小溪",
+  "tagline": "雨天也想出门，研究轻便雨具",
+  "hooks": [
+    {
+      "id": "rain-walk",
+      "kind": "ask-me",
+      "text": "可以来问我：雨天走路怎么不湿鞋",
+      "opener": "你好，看到你想问雨天走路怎么不湿鞋，我最近正在试几样轻便雨具，可以一起聊聊。"
+    },
+    {
+      "id": "bamboo-trail",
+      "kind": "want-to-try",
+      "text": "我也想试：小雨里的竹林步道",
+      "opener": "你好，你也想去小雨里走竹林步道吗？我在找一起慢慢走的人，要不要聊聊？"
+    },
+    {
+      "id": "umbrella-sound",
+      "kind": "obsessed",
+      "text": "我在沉迷：听雨打在伞上的声音",
+      "opener": "你好，我也常常收了伞还想再走一段，你平时雨天出门会在意什么呀？"
+    }
+  ]
+}

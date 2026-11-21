@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "noto-serif-sc", "weights": [400, 700] },
+    { "id": "instrument-serif", "weights": [400] }
+  ],
+  "extraChars": "",
+  "blocks": ["dawn-0530", "sunrise-route", "sky-colors", "thermos-walk", "gold-finish"],
+  "generator": { "agent": "nowme-demo" }
+}

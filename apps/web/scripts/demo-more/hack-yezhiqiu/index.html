@@ -1,0 +1,204 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>叶知秋 · 前端可视化 · 车站到站翻牌屏</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+  :root {
+    --sea: #0b1a2e;
+    --panel: #102540;
+    --tile: #17365c;
+    --tile-dark: #0c2140;
+    --amber: #ffb020;
+    --amber-soft: rgba(255, 176, 32, 0.55);
+    --paper: #e9eef6;
+    --mute: #8fa3bf;
+    --line: rgba(255, 176, 32, 0.28);
+    --font-cn: var(--nm-font-noto-sans-sc);
+    --font-mono: var(--nm-font-jetbrains-mono);
+  }
+  html, body { background: var(--sea); color: var(--paper); }
+  body { font-family: var(--font-cn); font-size: 15px; line-height: 1.75; font-weight: 400; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 0 20px 56px; }
+  .mono { font-family: var(--font-mono); font-weight: 400; }
+
+  /* ---- 顶部翻牌屏 ---- */
+  .sign {
+    position: relative; margin: 0 -20px; padding: 22px 20px 26px;
+    background:
+      radial-gradient(rgba(255, 176, 32, 0.07) 1px, transparent 1.6px) 0 0 / 5px 5px,
+      linear-gradient(180deg, #0f2440, #0b1a2e 70%);
+    border-bottom: 2px solid var(--line);
+  }
+  .sign__bar { display: flex; justify-content: space-between; gap: 10px; font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: var(--mute); }
+  .sign__bar b { font-weight: 800; color: var(--amber); }
+  .sign__name { margin-top: 26px; display: flex; align-items: flex-end; gap: 10px; }
+  .tile {
+    position: relative; width: 66px; height: 92px; border-radius: 8px;
+    background: linear-gradient(180deg, #1d4170 0 49%, #07172e 49% 51%, #17365c 51% 100%);
+    box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.06), 0 8px 18px rgba(0, 0, 0, 0.45);
+    color: var(--amber); font-family: var(--font-cn); font-weight: 900; font-size: 52px; line-height: 92px; text-align: center;
+  }
+  .tile::before, .tile::after {
+    content: ""; position: absolute; top: 50%; width: 8px; height: 8px; margin-top: -4px; border-radius: 50%; background: var(--sea);
+  }
+  .tile::before { left: -4px; }
+  .tile::after { right: -4px; }
+  .sign__role { margin-top: 18px; font-size: 13px; color: var(--mute); }
+  .sign__role em { font-style: normal; color: var(--paper); }
+
+  .board { margin-top: 24px; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: rgba(8, 18, 34, 0.7); }
+  .board__head, .board__row { display: grid; grid-template-columns: 52px 1fr 64px; gap: 8px; padding: 8px 12px; font-family: var(--font-mono); font-size: 12px; }
+  .board__head { background: var(--amber); color: #1a1205; font-weight: 800; letter-spacing: 0.06em; }
+  .board__row { border-top: 1px dashed rgba(255, 176, 32, 0.22); color: var(--paper); }
+  .board__row span:first-child { color: var(--amber); font-weight: 800; }
+  .board__row .late { color: #7ee0a8; }
+  .board__row .wait { color: var(--amber); }
+
+  .next {
+    margin-top: 22px; padding: 14px 16px; border-radius: 8px; background: var(--amber); color: #1a1205;
+    font-weight: 900; font-size: 22px; line-height: 1.4;
+  }
+  .next small { display: block; margin-top: 2px; font-family: var(--font-mono); font-size: 12px; font-weight: 400; letter-spacing: 0.06em; }
+
+  /* ---- 线路：每个区块是一个站 ---- */
+  .route { position: relative; margin: 34px 0 0 8px; padding-left: 22px; border-left: 2px dashed var(--amber-soft); }
+  .stop { position: relative; padding: 0 0 36px; }
+  .stop:last-child { padding-bottom: 0; }
+  .stop::before {
+    content: ""; position: absolute; left: -30px; top: 4px; width: 14px; height: 14px; border-radius: 50%;
+    background: var(--sea); border: 3px solid var(--amber);
+  }
+  .stop__label { font-family: var(--font-mono); font-size: 11px; letter-spacing: 0.08em; color: var(--amber); }
+  .stop h2 { margin-top: 4px; font-size: 22px; font-weight: 900; line-height: 1.35; color: #fff4dc; }
+  .stop p { margin-top: 8px; color: #c9d4e4; }
+
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+  .tags span {
+    padding: 2px 10px; border-radius: 999px; border: 1px solid var(--amber-soft); color: var(--amber); font-size: 13px;
+  }
+
+  .facts { margin-top: 14px; border-top: 1px solid var(--line); }
+  .facts div { display: grid; grid-template-columns: 74px 1fr; gap: 10px; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 14px; }
+  .facts dt { font-family: var(--font-mono); font-size: 12px; color: var(--mute); padding-top: 2px; }
+  .facts dd { margin: 0; color: var(--paper); }
+
+  .chart { margin-top: 16px; padding: 12px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); }
+  .chart__cap { display: flex; justify-content: space-between; font-family: var(--font-mono); font-size: 11px; color: var(--mute); }
+  .chart svg { display: block; width: 100%; height: auto; margin-top: 6px; }
+
+  .need { margin-top: 14px; display: grid; gap: 10px; }
+  .need__card { padding: 12px 14px; border-radius: 10px; background: var(--panel); border-left: 4px solid var(--amber); }
+  .need__card b { display: block; font-family: var(--font-mono); font-size: 11px; font-weight: 400; color: var(--mute); letter-spacing: 0.06em; }
+  .need__card span { display: block; margin-top: 2px; font-size: 16px; font-weight: 900; color: #fff4dc; }
+
+  .end { margin-top: 36px; padding: 18px 16px 20px; border: 2px dashed var(--amber-soft); border-radius: 12px; }
+  .end__hint { font-size: 14px; color: #c9d4e4; }
+  .end__hint strong { color: var(--amber); font-weight: 900; }
+  .end__foot { margin-top: 12px; font-family: var(--font-mono); font-size: 11px; color: var(--mute); }
+
+  @media (min-width: 700px) {
+    .wrap { max-width: 760px; }
+    .sign { padding: 30px 40px 34px; }
+    .sign__name .tile { width: 84px; height: 116px; font-size: 66px; line-height: 116px; }
+    .stop h2 { font-size: 26px; }
+    .need { grid-template-columns: 1fr 1fr; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="sign" data-nm-id="departure-board">
+    <div class="sign__bar">
+      <span>NOWMe 演示黑客松 · 到站牌</span>
+      <b>48H</b>
+    </div>
+    <h1 class="sign__name">
+      <span class="tile">叶</span>
+      <span class="tile">知</span>
+      <span class="tile">秋</span>
+    </h1>
+    <p class="sign__role">前端 / 可视化开发 · <em>软件工程大三</em></p>
+
+    <div class="board" role="table" aria-label="今日发车">
+      <div class="board__head" role="row"><span>车次</span><span>目的地</span><span>状态</span></div>
+      <div class="board__row" role="row"><span>01</span><span>校门口公交看板</span><span class="late">准点</span></div>
+      <div class="board__row" role="row"><span>02</span><span>接口对接好了吗</span><span class="late">已到</span></div>
+      <div class="board__row" role="row"><span>03</span><span>找后端的队友</span><span class="wait">候车</span></div>
+    </div>
+
+    <p class="next">下一站：找到队友<small>NEXT STOP / 周六白天 · 周六通宵都能来</small></p>
+  </header>
+
+  <main class="route">
+
+    <section class="stop" data-nm-id="route-stack">
+      <p class="stop__label">STOP 01 · 技术站</p>
+      <h2>能把数据画成会动的线</h2>
+      <p>写过三个课程小工具，最喜欢的一件事是：把一串接口返回的数字，变成一张别人看一眼就懂的图。</p>
+      <div class="tags" aria-label="技能">
+        <span>前端页面</span><span>数据图表</span><span>接口对接</span><span>响应式布局</span>
+      </div>
+    </section>
+
+    <section class="stop" data-nm-id="route-live-bus">
+      <p class="stop__label">STOP 02 · 项目站</p>
+      <h2>想做校门口公交到站实时看板</h2>
+      <p>接口每 30 秒给一次到站时间，我想把它画成一块真正能看的板：哪一路快到了、哪一路还在路上，早八前扫一眼就走。</p>
+
+      <dl class="facts">
+        <div><dt>解决什么</dt><dd>早八前 3 分钟才知道车来不来</dd></div>
+        <div><dt>我负责</dt><dd>前端页面与实时图表</dd></div>
+        <div><dt>还缺</dt><dd>后端接口，和一组画得干净的图标</dd></div>
+      </dl>
+
+      <figure class="chart">
+        <figcaption class="chart__cap"><span>到站时间走势</span><span>示意，非实时数据</span></figcaption>
+        <svg viewBox="0 0 320 150" role="img" aria-label="到站时间走势示意图">
+          <g stroke="rgba(255,176,32,0.14)" stroke-width="1">
+            <line x1="30" y1="20" x2="310" y2="20"/><line x1="30" y1="60" x2="310" y2="60"/>
+            <line x1="30" y1="100" x2="310" y2="100"/><line x1="30" y1="130" x2="310" y2="130" stroke="rgba(255,176,32,0.4)"/>
+          </g>
+          <g font-family="JetBrains Mono, monospace" font-size="14" fill="#8fa3bf">
+            <text x="4" y="24">8</text><text x="4" y="64">6</text><text x="4" y="104">4</text><text x="4" y="134">2</text>
+            <text x="30" y="146">07:30</text><text x="150" y="146">07:45</text><text x="262" y="146">08:00</text>
+          </g>
+          <polyline fill="none" stroke="#ffb020" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"
+            points="30,112 60,96 90,104 120,72 150,84 180,58 210,70 240,40 270,52 310,26"/>
+          <polyline fill="none" stroke="#7fb6ff" stroke-width="1.5" stroke-dasharray="4 4"
+            points="30,126 60,120 90,118 120,110 150,104 180,98 210,96 240,90 270,88 310,84"/>
+          <g fill="#ffb020">
+            <circle cx="180" cy="58" r="4"/><circle cx="310" cy="26" r="4"/>
+          </g>
+          <g font-family="JetBrains Mono, monospace" font-size="14" fill="#fff4dc">
+            <text x="118" y="50">7 路 · 2 分</text>
+            <text x="216" y="14">12 路 · 6 分</text>
+          </g>
+        </svg>
+      </figure>
+    </section>
+
+    <section class="stop" data-nm-id="route-need">
+      <p class="stop__label">STOP 03 · 换乘站</p>
+      <h2>这一站，我在等人</h2>
+      <div class="need">
+        <div class="need__card"><span>找会做后端或画图标的队友</span></div>
+        <div class="need__card"><span>我能把接口数据做成实时图表</span></div>
+      </div>
+    </section>
+
+    <section class="stop" data-nm-id="terminal-ping">
+      <p class="stop__label">终点站</p>
+      <div class="end">
+        <p class="end__hint">想一起跑一趟？在页面外点 <strong>「想聊这个」</strong>，从路线图里挑一站开始。</p>
+        <p class="end__foot">叶知秋 · NOWMe 演示黑客松 · 页面不放联系方式</p>
+      </div>
+    </section>
+
+  </main>
+</div>
+</body>
+</html>

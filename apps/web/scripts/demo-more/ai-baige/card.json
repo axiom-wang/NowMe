@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "白鸽",
+  "tagline": "法学院研一，关注 AI 伦理与隐私，想把用户协议翻成大白话",
+  "hooks": [
+    {
+      "id": "help-privacy",
+      "kind": "can-help",
+      "text": "我能帮你检查隐私与授权问题",
+      "opener": "你好！你们的小工具要碰用户数据吧？我能帮你检查隐私与授权问题，想先聊聊吗？"
+    },
+    {
+      "id": "build-plain-terms",
+      "kind": "want-to-build",
+      "text": "想做把用户协议翻译成大白话的工具",
+      "opener": "嗨，我在做一个把用户协议翻成大白话的工具，你觉得这个方向有人会用吗？"
+    },
+    {
+      "id": "find-frontend",
+      "kind": "looking-for",
+      "text": "找会做前端的队友，一起把协议变成清单",
+      "opener": "你好！看到你在找做前端的队友，我想把协议变成清单，要不要一起试试？"
+    }
+  ]
+}

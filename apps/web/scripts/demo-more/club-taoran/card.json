@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "陶然",
+  "tagline": "新闻学大一新社员，只有一台偏蓝的二手卡片机",
+  "hooks": [
+    {
+      "id": "ask-street",
+      "kind": "ask-me",
+      "text": "扫街时怎么不尴尬地拍陌生人，可以来问我",
+      "opener": "陶然你好，你说扫街时怎么不尴尬地拍陌生人，我也卡在这一步，能一起聊聊吗？"
+    },
+    {
+      "id": "try-one-street",
+      "kind": "want-to-try",
+      "text": "想试一次只用卡片机扫一整条街",
+      "opener": "陶然你好，看到你想只用卡片机扫一整条街，我也想试试，要不要约一次？"
+    },
+    {
+      "id": "date-stamp",
+      "kind": "obsessed",
+      "text": "我沉迷给照片加日期戳",
+      "opener": "陶然你好，墙上说你沉迷给照片加日期戳，这个习惯我也想听你讲讲。"
+    }
+  ]
+}

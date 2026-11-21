@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "noto-sans-sc", "weights": [400, 700] },
+    { "id": "space-grotesk", "weights": [400] }
+  ],
+  "extraChars": "",
+  "blocks": ["surface-soil", "roadside-stones", "pebble-collection", "ridge-path", "bedrock-line"],
+  "generator": { "agent": "nowme-demo" }
+}

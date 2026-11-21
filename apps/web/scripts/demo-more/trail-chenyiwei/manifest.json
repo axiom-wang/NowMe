@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "lxgw-wenkai", "weights": [400, 500] }
+  ],
+  "extraChars": "",
+  "blocks": ["postcard-front", "postcard-message", "family-trip", "tea-break", "postcard-signature"],
+  "generator": { "agent": "nowme-demo" }
+}

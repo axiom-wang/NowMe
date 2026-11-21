@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "许多",
+  "tagline": "视觉传达大三，负责社团公众号排版和月底小展海报",
+  "hooks": [
+    {
+      "id": "pick-and-layout",
+      "kind": "ask-me",
+      "text": "可以来问我怎么选片和排版",
+      "opener": "许多，你好！我的照片很多但不知道怎么选、怎么排，能请你看看吗？"
+    },
+    {
+      "id": "member-booklet",
+      "kind": "want-to-try",
+      "text": "想试做一本社员合集小册子",
+      "opener": "许多，我也想参与做社员合集小册子，你之前排版的经验可以教我吗？"
+    },
+    {
+      "id": "grid-obsession",
+      "kind": "obsessed",
+      "text": "我在沉迷用一根网格线决定整张海报",
+      "opener": "许多，我看到你在沉迷用网格线排海报，能聊聊你最喜欢的一张是怎么排的吗？"
+    }
+  ]
+}

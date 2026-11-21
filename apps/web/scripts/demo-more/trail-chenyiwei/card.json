@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "陈一苇",
+  "tagline": "常带爸妈一起走，在休息点泡一壶茶",
+  "hooks": [
+    {
+      "id": "parents-route",
+      "kind": "ask-me",
+      "text": "可以来问我：怎么安排适合长辈的路线",
+      "opener": "你好，看到你也常带家里人一起走，我正想找适合长辈的路线，能聊聊吗？"
+    },
+    {
+      "id": "family-hike",
+      "kind": "want-to-try",
+      "text": "我也想试：三代人一起轻徒步",
+      "opener": "你好，我想试一次三代人的轻徒步，你们那边有没有合适的路线可以推荐？"
+    },
+    {
+      "id": "tea-break",
+      "kind": "obsessed",
+      "text": "我在沉迷：在休息点泡一壶茶",
+      "opener": "你好，我在休息点泡茶的习惯停不下来，你走路时最喜欢带什么喝的？"
+    }
+  ]
+}

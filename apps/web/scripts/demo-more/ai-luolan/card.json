@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "罗兰",
+  "tagline": "平面设计师转 AI 视觉，爱把颜色讲成故事",
+  "hooks": [
+    {
+      "id": "palette-brand",
+      "kind": "can-help",
+      "text": "我能帮你定配色和字体",
+      "opener": "罗兰你好！看到你能帮队伍定配色、字体和整套视觉，我们的小工具界面还很素，能请你看一眼吗？"
+    },
+    {
+      "id": "find-frontend",
+      "kind": "looking-for",
+      "text": "找会做前端的伙伴",
+      "opener": "罗兰你好！你的色卡很有气质，我是做前端的，想找一个懂视觉的伙伴一起做“照片配色”。"
+    },
+    {
+      "id": "photo-palette",
+      "kind": "want-to-build",
+      "text": "想做上传照片生成整套配色的工具",
+      "opener": "罗兰你好！上传一张照片就生成整套配色，这个点子很直观，你想先从哪类照片开始试？"
+    }
+  ]
+}

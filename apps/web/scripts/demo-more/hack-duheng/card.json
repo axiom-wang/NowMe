@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "杜衡",
+  "tagline": "让你的 Demo 周日早上还活着：部署、监控、修线上问题",
+  "hooks": [
+    {
+      "id": "can-help-ops",
+      "kind": "can-help",
+      "text": "我能帮你部署、监控，修线上问题",
+      "opener": "你好！看到你说能帮我们部署、监控，修线上问题，我们的 Demo 正担心周日早上出状况，聊聊？"
+    },
+    {
+      "id": "find-frontend",
+      "kind": "looking-for",
+      "text": "找做前端的人一起做报名页",
+      "opener": "嗨，我是做前端的，看到你在找人一起做报名页，我们可以先看看报名流程怎么画。"
+    },
+    {
+      "id": "build-signup",
+      "kind": "want-to-build",
+      "text": "想做一个给社团用的极简报名系统",
+      "opener": "你好，你想做一个给社团用的极简报名系统，我正好想试试，要不要先列个功能清单？"
+    }
+  ]
+}

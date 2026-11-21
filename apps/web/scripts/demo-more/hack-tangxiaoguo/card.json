@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "唐小果",
+  "tagline": "能画一套吉祥物，也想做个会安慰人的番茄钟，找能动起来的开发",
+  "hooks": [
+    {
+      "id": "can-help-mascot",
+      "kind": "can-help",
+      "text": "我能一晚上画完一套吉祥物",
+      "opener": "你们那个 Demo 要是缺吉祥物或开场小动画，我可以一晚上画出一版给你看。"
+    },
+    {
+      "id": "find-animator",
+      "kind": "looking-for",
+      "text": "找愿意把动画接进前端的开发",
+      "opener": "我画的小动画想接进网页里跑起来，你有没有兴趣一起把它做成能动的？"
+    },
+    {
+      "id": "build-comfort-timer",
+      "kind": "want-to-build",
+      "text": "想做一个会安慰人的番茄钟",
+      "opener": "会安慰人的番茄钟这个想法很可爱，你觉得它最需要说的一句话是什么？"
+    }
+  ]
+}

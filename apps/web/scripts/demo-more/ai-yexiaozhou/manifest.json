@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "inter", "weights": [400, 700] },
+    { "id": "noto-sans-sc", "weights": [400, 700] }
+  ],
+  "extraChars": "",
+  "blocks": ["trigger", "process-node", "output-node", "handoff", "run-log"],
+  "generator": { "agent": "nowme-demo" }
+}

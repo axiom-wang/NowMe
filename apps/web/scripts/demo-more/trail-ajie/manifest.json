@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "space-grotesk", "weights": [400, 700] },
+    { "id": "noto-sans-sc", "weights": [400, 700] }
+  ],
+  "extraChars": "",
+  "blocks": ["profile-header", "km-0-ask", "km-2-lake", "km-4-profile", "profile-footer"],
+  "generator": { "agent": "nowme-demo" }
+}

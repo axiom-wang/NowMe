@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>袁野 · 山野轻徒步</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+:root{--or:#c2510f;--or-soft:#fde8da;--green:#1f7a4d;--ink:#1c1c1c;--line:#e6d9cc;--nm-font-body:var(--nm-font-noto-sans-sc);--nm-font-display:var(--nm-font-noto-sans-sc)}
+body{margin:0;background:#fff4ea;color:var(--ink);font:16px/1.8 var(--nm-font-body);overflow-x:hidden}
+h1,p,figure,ul{margin:0}
+h1{font-family:var(--nm-font-display);font-weight:700;font-size:44px;line-height:1.2;letter-spacing:.02em}
+.sheet{max-width:1000px;margin:0 auto;background:#fff;border:2px solid var(--ink);box-shadow:6px 6px 0 var(--or);display:flex;flex-direction:column}
+.head{background:var(--or);color:#fff;padding:24px 22px 26px;display:flex;flex-direction:column;gap:14px}
+.kicker{font-family:var(--nm-font-inter);font-size:13px;letter-spacing:.08em}
+.role{font-size:17px}
+.lead{font-size:18px;font-weight:700;line-height:1.6}
+.exit-sign{display:flex;align-items:center;gap:12px;width:max-content;max-width:100%;padding:10px 14px 10px 10px;background:var(--green);color:#fff;border-radius:6px}
+.exit-sign svg{display:block;width:48px;height:48px;flex:0 0 auto}
+.exit-sign figcaption{font-size:14px}
+.block{padding:24px 22px 26px;border-top:1px dashed var(--line)}
+.hook{font-size:20px;line-height:1.5;font-weight:700;margin-bottom:12px}
+.body{font-size:16px;margin-bottom:6px}
+.checklist{list-style:none;padding:0;margin:0}
+.checklist li{display:flex;gap:10px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line);font-size:16px}
+.box{flex:0 0 22px;width:22px;height:22px;margin-top:2px;border:2px solid var(--ink);border-radius:3px;position:relative;box-sizing:border-box}
+.box.on{background:var(--green);border-color:var(--green)}
+.box.on::after{content:"";position:absolute;left:5px;top:0;width:6px;height:12px;border-right:3px solid #fff;border-bottom:3px solid #fff;transform:rotate(45deg)}
+.no{font-family:var(--nm-font-inter);font-weight:700;font-size:14px;color:var(--or);min-width:24px;padding-top:1px}
+.chips{list-style:none;padding:0;margin:14px 0 0;display:flex;flex-wrap:wrap;gap:10px}
+.chips li{padding:6px 14px;background:var(--or-soft);color:#7a3408;border:1px solid var(--or);border-radius:999px;font-size:15px}
+.foot{background:#fff4ea;padding:22px;border-top:2px solid var(--ink)}
+.closing{font-size:17px;font-weight:700;line-height:1.6}
+.sign{font-size:14px;margin-top:10px;color:#5b4a3e}
+@media (min-width:700px){
+  .sheet{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .head{grid-column:1 / -1;flex-direction:row;justify-content:space-between;align-items:flex-end;padding:34px 40px}
+  .head-text{display:flex;flex-direction:column;gap:10px}
+  h1{font-size:76px}
+  .block{padding:30px 36px 32px}
+  .block:nth-of-type(odd){border-right:1px dashed var(--line)}
+  .block:nth-of-type(2){border-top:1px dashed var(--line)}
+  .foot{grid-column:1 / -1;display:flex;flex-direction:column;gap:6px}
+  .hook{font-size:24px}
+}
+</style>
+</head>
+<body>
+<main class="sheet">
+  <header class="head" data-nm-id="safety-header">
+    <div class="head-text">
+      <p class="kicker">山野轻徒步 · 出发前安全检查卡</p>
+      <h1>袁野</h1>
+      <p class="role">户外急救志愿者，护理学大四。</p>
+      <p class="lead">出门前，先把三件小事过一遍。</p>
+    </div>
+    <figure class="exit-sign">
+      <svg viewBox="0 0 48 48" role="img" aria-label="一个人跑向出口门的示意图">
+        <circle cx="13" cy="11" r="4.5" fill="#fff"/>
+        <path d="M15 18L21 28L14 37M21 28L31 30M19 21L29 24M15 18L10 30" fill="none" stroke="#fff" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+        <rect x="33" y="6" width="9" height="36" fill="none" stroke="#fff" stroke-width="2.2"/>
+        <path d="M30 24H38" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+      </svg>
+      <figcaption>出口方向 · 示意</figcaption>
+    </figure>
+  </header>
+
+  <section class="block" data-nm-id="first-aid-pack">
+    <p class="hook">可以来问我：背包里该带哪些急救用品</p>
+    <ul class="checklist">
+      <li><span class="box on"></span><span class="no">01</span><span>创可贴与无菌纱布</span></li>
+      <li><span class="box on"></span><span class="no">02</span><span>保暖毯与备用外套</span></li>
+      <li><span class="box"></span><span class="no">03</span><span>口服补液盐与常用药</span></li>
+      <li><span class="box"></span><span class="no">04</span><span>手机、充电宝与纸质地图</span></li>
+    </ul>
+  </section>
+
+  <section class="block" data-nm-id="beginner-talk">
+    <p class="hook">我也想试：给新手的户外安全小讲座</p>
+    <p class="body">讲三件事：怎么看天气再出门、怎么留言给同伴、脚扭伤以后第一步做什么。想找一个有耐心的人一起备讲义。</p>
+    <ul class="checklist">
+      <li><span class="box"></span><span class="no">05</span><span>天气判断</span></li>
+      <li><span class="box"></span><span class="no">06</span><span>留言与集合时间</span></li>
+      <li><span class="box"></span><span class="no">07</span><span>扭伤后的处理顺序</span></li>
+    </ul>
+  </section>
+
+  <section class="block" data-nm-id="list-habit">
+    <p class="hook">我在沉迷：把各种出门清单整理清楚</p>
+    <p class="body">装备清单、天气清单、路线清单，每次出门前过一遍。清单写得越细，出门时越少慌。</p>
+    <ul class="chips">
+      <li>装备清单</li>
+      <li>天气清单</li>
+      <li>路线清单</li>
+    </ul>
+  </section>
+
+  <footer class="foot" data-nm-id="safety-footer">
+    <p class="closing">在页面外点「想聊这个」，从出发前的三件小事开始。</p>
+    <p class="sign">袁野 · 山野轻徒步</p>
+  </footer>
+</main>
+</body>
+</html>

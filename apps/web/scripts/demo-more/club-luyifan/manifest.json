@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "jetbrains-mono", "weights": [400, 700] },
+    { "id": "noto-sans-sc", "weights": [400, 700] }
+  ],
+  "extraChars": "",
+  "blocks": ["contact-sheet-head", "ask-me", "crossing-crowds", "ride-along", "say-hi"],
+  "generator": { "agent": "nowme-demo" }
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "程小满",
+  "tagline": "教育学大四，周末给小学生讲 AI，想做分辨 AI 图片的小游戏",
+  "hooks": [
+    {
+      "id": "help-explain",
+      "kind": "can-help",
+      "text": "我能把复杂概念讲到十岁孩子能懂",
+      "opener": "你好！你做的那个 AI 功能，我能帮你把原理讲成十岁孩子也能懂的话，要不要聊聊？"
+    },
+    {
+      "id": "build-quiz-game",
+      "kind": "want-to-build",
+      "text": "我想做教小朋友分辨 AI 图片的小游戏",
+      "opener": "嗨，我想做一个教小朋友分辨 AI 图片的小游戏，你觉得他们会喜欢“找一找”这种玩法吗？"
+    },
+    {
+      "id": "find-interaction-dev",
+      "kind": "looking-for",
+      "text": "找会做互动的开发",
+      "opener": "你好！看到你们在找会做互动的开发，我这边有一个小测的草图，想请你看看能不能做成网页。"
+    }
+  ]
+}

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "齐夏",
+  "tagline": "先画图再建模，把杂乱的记录洗成能用的小模型",
+  "hooks": [
+    {
+      "id": "can-help-clean",
+      "kind": "can-help",
+      "text": "我能帮你做数据清洗和小模型",
+      "opener": "嗨，看到你在墙上说能帮做数据清洗和小模型，我们这边的数据正好有点乱，方便聊聊吗？"
+    },
+    {
+      "id": "find-storyteller",
+      "kind": "looking-for",
+      "text": "找会把结果讲成故事的产品或设计",
+      "opener": "你好，我是做产品的，看到你在找会把结果讲成故事的人，我想听听你的图书馆座位预测做到哪一步了。"
+    },
+    {
+      "id": "build-seat-finder",
+      "kind": "want-to-build",
+      "text": "想做一个预测图书馆哪层有空位的小工具",
+      "opener": "你那个预测图书馆哪层有空位的想法很具体，你觉得第一版先做哪一个功能？"
+    }
+  ]
+}

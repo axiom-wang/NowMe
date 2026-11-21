@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "medium",
+  "fonts": [
+    { "id": "space-grotesk", "weights": [500, 700] },
+    { "id": "noto-sans-sc", "weights": [400, 700] }
+  ],
+  "extraChars": "",
+  "blocks": ["wire-hero", "iso-gallery", "signal-hooks", "studio-notes", "loop-invite"],
+  "generator": { "agent": "nowme-demo" }
+}

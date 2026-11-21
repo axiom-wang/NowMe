@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "黎明",
+  "tagline": "物理系大三，沉迷拍星轨，常在郊外守一整晚",
+  "hooks": [
+    {
+      "id": "tripod-long-exposure",
+      "kind": "ask-me",
+      "text": "可以来问我三脚架和长曝光参数",
+      "opener": "黎明，你好！我想拍星轨但不知道三脚架和曝光时间怎么选，能请教你一下吗？"
+    },
+    {
+      "id": "night-out-together",
+      "kind": "want-to-try",
+      "text": "想找人一起去郊外守一整晚",
+      "opener": "黎明，我也想试试守一整晚拍星轨，周末你有空一起去郊外吗？"
+    },
+    {
+      "id": "star-trail-obsession",
+      "kind": "obsessed",
+      "text": "我在沉迷拍星轨",
+      "opener": "黎明，我看到你在沉迷拍星轨，最喜欢的那张星轨是哪次拍的？"
+    }
+  ]
+}

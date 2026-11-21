@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>何夕 · 拉伸动作卡 · 山野轻徒步</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+:root{--hx-bg:#e4ecdc;--hx-card:#f4f8ee;--hx-ink:#2d3b30;--hx-figure:#3f5a43;--hx-sage:#6f8f6c;--hx-mat:#c9dcc0;--hx-deep:#4a6a4a;--hx-muted:#607262;--hx-line:#b4c6a9;--nm-font-body:var(--nm-font-lxgw-wenkai);--nm-font-display:var(--nm-font-inter)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--hx-bg);color:var(--hx-ink)}
+body{font:400 16px/1.85 var(--nm-font-body)}
+h1,h2,p,figure{margin:0;font-weight:400}
+main{max-width:980px;margin:0 auto;padding:22px 18px 28px}
+.hx-sym{position:absolute;width:0;height:0;overflow:hidden}
+.hx-kicker{font-family:var(--nm-font-display);font-size:12px;font-weight:700;letter-spacing:.12em;color:var(--hx-deep);text-transform:uppercase}
+.hx-cover{display:grid;grid-template-columns:1fr;gap:16px;padding:6px 0 18px}
+.hx-cover h1{font-size:56px;line-height:1.1;letter-spacing:.04em}
+.hx-cover .hx-tag{font-size:19px;color:var(--hx-deep);margin-top:6px}
+.hx-cover .hx-role{font-size:14px;color:var(--hx-muted);margin-top:6px}
+.hx-cover .hx-lead{font-size:15px;margin-top:12px;max-width:24em}
+.hx-seq{background:var(--hx-card);border-radius:24px;padding:14px 12px 12px;border:1px solid var(--hx-line)}
+.hx-seq-title{font-family:var(--nm-font-display);font-size:12px;font-weight:700;letter-spacing:.08em;color:var(--hx-deep);margin-bottom:10px}
+.hx-seq-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.hx-seq-row figure{text-align:center}
+.hx-seq-row svg,.hx-fig2 svg{display:block;width:100%;height:auto;background:#fff;border-radius:16px}
+.hx-seq-row figcaption{font-size:13px;color:var(--hx-deep);margin-top:6px}
+.hx-seq-row figcaption span{font-family:var(--nm-font-display);font-size:11px;color:var(--hx-muted);margin-left:2px}
+.hx-cards{display:grid;grid-template-columns:1fr;gap:14px}
+.hx-card{background:var(--hx-card);border-radius:24px;padding:18px 18px 20px;display:grid;grid-template-columns:118px 1fr;gap:4px 16px;align-items:start;border:1px solid var(--hx-line)}
+.hx-card>*:not(.hx-fig2){grid-column:2}
+.hx-card.hx-breath{display:block}
+.hx-card .hx-fig2{grid-row:1/4;padding:0}
+.hx-card .hx-step{font-family:var(--nm-font-display);font-size:12px;font-weight:700;color:var(--hx-sage);letter-spacing:.08em}
+.hx-card h2{font-size:21px;line-height:1.5;margin-top:4px}
+.hx-card p.hx-body{font-size:15px;color:var(--hx-ink);margin-top:6px}
+.hx-card .hx-hold{font-family:var(--nm-font-display);font-size:13px;color:var(--hx-deep);margin-top:10px}
+.hx-card .hx-hold b{font-weight:700}
+.hx-breath{position:relative;text-align:center;padding:20px 16px 22px}
+.hx-breath h2{font-size:21px;line-height:1.5}
+.hx-breath .hx-ring{position:relative;width:150px;height:150px;margin:14px auto 10px}
+.hx-breath .hx-ring .hx-circle{position:absolute;inset:0;border-radius:50%;border:2px solid var(--hx-sage);background:radial-gradient(circle,#dbe8d0 0%,#eef4e8 70%);animation:hx-breathe 10s ease-in-out infinite}
+.hx-breath .hx-ring .hx-num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--nm-font-display)}
+.hx-breath .hx-ring .hx-num b{font-size:40px;line-height:1;font-weight:700;color:var(--hx-deep)}
+.hx-breath .hx-ring .hx-num span{font-size:12px;color:var(--hx-muted);margin-top:4px}
+.hx-breath .hx-count{display:flex;justify-content:center;gap:10px;font-family:var(--nm-font-display);font-size:13px;color:var(--hx-muted)}
+.hx-breath .hx-count span{padding:4px 10px;border:1px solid var(--hx-line);border-radius:999px;background:var(--hx-card)}
+@keyframes hx-breathe{0%,100%{transform:scale(.86)}50%{transform:scale(1)}}
+.hx-foot{margin-top:18px;padding-top:14px;border-top:1px solid var(--hx-line);font-size:14px;line-height:1.8;color:var(--hx-muted)}
+.hx-foot strong{font-weight:400;color:var(--hx-ink)}
+@media (min-width:700px){
+  main{padding:40px 40px 44px}
+  .hx-cover{grid-template-columns:1fr 1.15fr;gap:24px 40px;align-items:center;padding:10px 0 26px}
+  .hx-cover h1{font-size:96px}
+  .hx-cover .hx-tag{font-size:24px}
+  .hx-seq{padding:20px 20px 18px}
+  .hx-seq-title{font-size:13px}
+  .hx-seq-row{gap:14px}
+  .hx-seq-row figcaption{font-size:15px}
+  .hx-cards{grid-template-columns:1fr 1fr 1fr;align-items:stretch}
+  .hx-card{grid-template-columns:1fr;gap:10px}
+  .hx-card>*:not(.hx-fig2){grid-column:auto}
+  .hx-card .hx-fig2{grid-row:auto}
+  .hx-card h2{font-size:24px}
+  .hx-breath{grid-column:1/-1}
+  .hx-foot{display:flex;justify-content:space-between;gap:20px;font-size:15px}
+}
+</style>
+</head>
+<body>
+<svg class="hx-sym" aria-hidden="true" focusable="false">
+  <defs>
+    <symbol id="hx-stand" viewBox="0 0 120 150">
+      <path d="M24 84C12 64 14 38 34 24" fill="none" stroke="#6f8f6c" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 8"/>
+      <path d="M34 24L26 22M34 24L31 32" fill="none" stroke="#6f8f6c" stroke-width="3" stroke-linecap="round"/>
+      <g fill="none" stroke="#3f5a43" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M60 46V88" stroke-width="16"/>
+        <path d="M60 52L44 84M60 52L76 84" stroke-width="9"/>
+        <path d="M60 90L50 134M60 90L70 134" stroke-width="12"/>
+      </g>
+      <circle cx="60" cy="24" r="12" fill="#3f5a43"/>
+      <rect x="18" y="137" width="84" height="9" rx="4.5" fill="#c9dcc0"/>
+    </symbol>
+    <symbol id="hx-fold" viewBox="0 0 120 150">
+      <path d="M22 64C30 36 52 26 70 40" fill="none" stroke="#6f8f6c" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 8"/>
+      <path d="M70 40L62 36M70 40L68 48" fill="none" stroke="#6f8f6c" stroke-width="3" stroke-linecap="round"/>
+      <g fill="none" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M36 70L20 134" stroke="#5d7a5f" stroke-width="12"/>
+        <path d="M42 72L32 136" stroke="#3f5a43" stroke-width="12"/>
+        <path d="M36 70L76 94" stroke="#3f5a43" stroke-width="16"/>
+        <path d="M76 94L98 128" stroke="#3f5a43" stroke-width="9"/>
+      </g>
+      <circle cx="94" cy="104" r="11" fill="#3f5a43"/>
+      <rect x="12" y="137" width="96" height="9" rx="4.5" fill="#c9dcc0"/>
+    </symbol>
+    <symbol id="hx-side" viewBox="0 0 120 150">
+      <path d="M30 90C18 60 30 22 54 10" fill="none" stroke="#6f8f6c" stroke-width="3" stroke-linecap="round" stroke-dasharray="1 8"/>
+      <path d="M54 10L46 12M54 10L56 18" fill="none" stroke="#6f8f6c" stroke-width="3" stroke-linecap="round"/>
+      <g fill="none" stroke="#3f5a43" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M60 92L40 136" stroke-width="12"/>
+        <path d="M60 92L80 136" stroke-width="12"/>
+        <path d="M60 92L72 52" stroke-width="16"/>
+        <path d="M72 52L60 10" stroke-width="9"/>
+        <path d="M72 52L96 70" stroke-width="9"/>
+      </g>
+      <circle cx="86" cy="36" r="11" fill="#3f5a43"/>
+      <rect x="22" y="137" width="76" height="9" rx="4.5" fill="#c9dcc0"/>
+    </symbol>
+  </defs>
+</svg>
+<main>
+  <header class="hx-cover" data-nm-id="card-cover">
+    <div>
+      <p class="hx-kicker">山野轻徒步 · 拉伸动作卡</p>
+      <h1>何夕</h1>
+      <p class="hx-tag">走完，再伸一伸。</p>
+      <p class="hx-role">瑜伽老师 · 徒步后在草地上拉伸</p>
+      <p class="hx-lead">一套可以照做的卡片，每张一个动作，配一次呼吸。慢慢来，不追求柔软，只追求舒服。</p>
+    </div>
+    <figure class="hx-seq">
+      <p class="hx-seq-title">三个动作，一口气做完</p>
+      <div class="hx-seq-row">
+        <figure>
+          <svg viewBox="0 0 120 150" role="img" aria-label="山式：双脚并拢站在垫子上，双臂自然下垂，左侧虚线箭头表示呼吸拉长"><use href="#hx-stand" width="120" height="150"/></svg>
+          <figcaption>山式 <span>站</span></figcaption>
+        </figure>
+        <figure>
+          <svg viewBox="0 0 120 150" role="img" aria-label="前屈：身体向前折，双手朝垫子，背部上方虚线箭头表示背部拉长"><use href="#hx-fold" width="120" height="150"/></svg>
+          <figcaption>前屈 <span>折</span></figcaption>
+        </figure>
+        <figure>
+          <svg viewBox="0 0 120 150" role="img" aria-label="侧伸：一手上举，身体向另一侧延展，左侧虚线箭头表示伸展方向"><use href="#hx-side" width="120" height="150"/></svg>
+          <figcaption>侧伸 <span>展</span></figcaption>
+        </figure>
+      </div>
+    </figure>
+  </header>
+
+  <div class="hx-cards">
+    <section class="hx-card" data-nm-id="pose-hamstring">
+      <div class="hx-fig2">
+        <svg viewBox="0 0 120 150" role="img" aria-label="前屈的动作示意：身体向前折，双手朝垫子，背部上方虚线箭头表示背部拉长"><use href="#hx-fold" width="120" height="150"/></svg>
+      </div>
+      <p class="hx-step">第 1 张 · 前屈</p>
+      <h2>走完怎么拉伸不酸痛</h2>
+      <p class="hx-body">先站直，吸气拉长脊柱，再慢慢向前折。膝盖微弯，手够得到就停，够不到就放松。每个动作停住，数到十，呼气。</p>
+      <p class="hx-hold">保持 <b>10</b> 次呼吸 · 不要弹震</p>
+    </section>
+
+    <section class="hx-card" data-nm-id="pose-grass">
+      <div class="hx-fig2">
+        <svg viewBox="0 0 120 150" role="img" aria-label="侧伸的动作示意：一手上举，身体向一侧延展，左侧虚线箭头表示伸展方向"><use href="#hx-side" width="120" height="150"/></svg>
+      </div>
+      <p class="hx-step">第 2 张 · 侧伸</p>
+      <h2>想试一次山脚草坪的拉伸小课</h2>
+      <p class="hx-body">找一块平整的草坪，铺上薄垫子。一侧手臂向上伸，身体慢慢向另一侧延展，双脚踩稳，视线跟着手走。两侧各做一次。</p>
+      <p class="hx-hold">每侧 <b>5</b> 次呼吸 · 草地上就能做</p>
+    </section>
+
+    <section class="hx-card hx-breath" data-nm-id="breath-count">
+      <p class="hx-step">第 3 张 · 呼吸计数</p>
+      <h2>慢慢呼吸</h2>
+      <div class="hx-ring" aria-hidden="true">
+        <div class="hx-circle"></div>
+        <div class="hx-num"><b>4</b><span>吸 · 停 · 呼</span></div>
+      </div>
+      <div class="hx-count"><span>吸 4</span><span>停 4</span><span>呼 6</span></div>
+      <p class="hx-body" style="margin-top:12px">跟着圆圈的呼吸节奏，吸气时数四下，呼气时数六下。不用看表，也不用一次做完。</p>
+    </section>
+  </div>
+
+  <footer class="hx-foot" data-nm-id="card-footer">
+    <span><strong>何夕</strong> · 山野轻徒步 · 拉伸动作卡</span>
+    <span>在页面外点「想聊这个」，从山脚的草坪开始。</span>
+  </footer>
+</main>
+</body>
+</html>

@@ -1,0 +1,25 @@
+{
+  "schemaVersion": 1,
+  "displayName": "卢一帆",
+  "tagline": "城市规划研一，骑车穿小巷扫街，专拍路口的人群",
+  "hooks": [
+    {
+      "id": "good-light-streets",
+      "kind": "ask-me",
+      "text": "可以来问我城里哪些街区光线好",
+      "opener": "卢一帆，你好！我想找光线好的街区拍照，你骑车扫街时走过哪些地方？"
+    },
+    {
+      "id": "crossing-crowds",
+      "kind": "obsessed",
+      "text": "我在沉迷拍路口的人群",
+      "opener": "卢一帆，我也喜欢拍路口的人，你最好的一张路口照片是在哪拍的？"
+    },
+    {
+      "id": "ride-with-me",
+      "kind": "want-to-try",
+      "text": "想找人一起骑车穿小巷扫街",
+      "opener": "卢一帆，周末你想一起骑车穿小巷扫街吗？我可以一起去，带上相机就行。"
+    }
+  ]
+}

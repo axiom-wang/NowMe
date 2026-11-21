@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "lxgw-wenkai", "weights": [400, 500] }
+  ],
+  "extraChars": "",
+  "blocks": ["cover-note", "quotes-wall", "clusters", "tool-idea", "ping"],
+  "generator": { "agent": "nowme-demo" }
+}

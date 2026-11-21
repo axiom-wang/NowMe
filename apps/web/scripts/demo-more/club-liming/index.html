@@ -1,0 +1,218 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>黎明 · 山海摄影社</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+  :root {
+    --sky: #070d22;
+    --ink: #e8edfb;
+    --dim: #8f9bc4;
+    --amber: #f7c873;
+    --line: rgba(232, 237, 251, 0.16);
+    --serif: var(--nm-font-noto-serif-sc);
+    --latin: var(--nm-font-instrument-serif);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    min-height: 100vh;
+    background-color: var(--sky);
+    background-image:
+      radial-gradient(1px 1px at 18px 34px, #ffffff 50%, transparent 51%),
+      radial-gradient(1px 1px at 96px 128px, #cfe3ff 50%, transparent 51%),
+      radial-gradient(1.2px 1.2px at 150px 22px, #ffffff 50%, transparent 51%),
+      radial-gradient(1px 1px at 64px 88px, #ffe9b8 50%, transparent 51%),
+      radial-gradient(1px 1px at 178px 150px, #ffffff 50%, transparent 51%),
+      radial-gradient(1px 1px at 230px 60px, #cfe3ff 50%, transparent 51%),
+      linear-gradient(180deg, #070d22 0%, #0c1838 100%);
+    background-size: 240px 200px, 240px 200px, 240px 200px, 240px 200px, 240px 200px, 240px 200px, auto;
+    color: var(--ink);
+    font-family: var(--serif);
+    font-size: 15px;
+    line-height: 1.8;
+  }
+  .page { max-width: 560px; margin: 0 auto; padding: 18px 20px 56px; }
+
+  .meta {
+    display: flex; justify-content: space-between; gap: 12px;
+    font-family: var(--latin); font-size: 15px; color: var(--dim);
+    padding-bottom: 8px; border-bottom: 1px solid var(--line);
+  }
+
+  /* 首屏：星轨绕北极星 */
+  .hero { padding-top: 20px; }
+  .hero-body { display: block; }
+  .eyebrow { margin: 0; font-size: 13px; color: var(--dim); letter-spacing: 0.06em; }
+  .name { margin: 4px 0 0; font-size: 64px; line-height: 1.05; font-weight: 700; letter-spacing: 0.08em; }
+  .en { margin: 4px 0 0; font-family: var(--latin); font-size: 22px; color: var(--amber); }
+  .chip {
+    display: inline-block; margin: 14px 0 0; padding: 3px 14px;
+    border: 1px solid var(--amber); border-radius: 999px;
+    font-size: 13px; color: var(--amber);
+  }
+  .lede { margin: 14px 0 0; font-size: 15px; color: #c9d2ee; }
+  .trails { display: block; width: 100%; height: auto; margin-top: 12px; }
+  .trails text { font-family: var(--latin); font-size: 10px; fill: var(--amber); }
+  .pole-glow { fill: var(--amber); opacity: 0.18; }
+  .pole { fill: var(--amber); }
+
+  /* 区块：观测日志的一页 */
+  .entry { margin-top: 34px; padding-top: 16px; border-top: 1px solid var(--line); }
+  .entry__no { display: block; font-family: var(--latin); font-size: 15px; color: var(--amber); }
+  .entry h2 { margin: 2px 0 0; font-size: 20px; line-height: 1.45; font-weight: 700; }
+  .entry__note { margin: 6px 0 0; font-size: 13px; color: var(--dim); }
+
+  /* 观测记录：点线引导的台账 */
+  .ledger { margin: 14px 0 0; padding: 0; }
+  .ledger__row { display: flex; align-items: baseline; gap: 8px; padding: 7px 0; }
+  .ledger dt { flex: none; font-size: 13px; color: var(--dim); }
+  .ledger__lead { flex: 1; min-width: 12px; border-bottom: 1px dotted rgba(232, 237, 251, 0.35); transform: translateY(-4px); }
+  .ledger dd { margin: 0; text-align: right; font-size: 14.5px; }
+  .ledger__row--result dd { color: var(--amber); }
+
+  /* 问我 */
+  .asks { margin: 12px 0 0; padding: 0; list-style: none; counter-reset: ask; }
+  .asks li { position: relative; padding: 10px 0 10px 40px; border-bottom: 1px solid var(--line); font-size: 14.5px; }
+  .asks li::before {
+    counter-increment: ask; content: counter(ask, decimal-leading-zero);
+    position: absolute; left: 0; top: 11px;
+    font-family: var(--latin); font-size: 18px; color: var(--amber);
+  }
+  .asks b { font-weight: 700; color: #ffffff; }
+
+  /* 想一起守的夜晚：时间线 */
+  .night { position: relative; margin: 14px 0 0; padding: 0 0 0 22px; list-style: none; }
+  .night::before { content: ""; position: absolute; left: 5px; top: 8px; bottom: 8px; width: 1px; background: var(--line); }
+  .night li { position: relative; padding: 2px 0 14px; font-size: 14.5px; }
+  .night li::before {
+    content: ""; position: absolute; left: -22px; top: 8px;
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--sky); border: 1.5px solid var(--amber);
+  }
+  .night time { display: block; font-family: var(--latin); font-size: 17px; color: var(--amber); }
+  .night li:last-child::before { background: var(--amber); }
+  .night-note { margin: 2px 0 0; font-size: 13px; color: var(--dim); }
+
+  /* 结尾 */
+  .signoff { margin-top: 40px; padding: 18px 0 0; border-top: 1px solid var(--line); text-align: center; }
+  .signoff p { margin: 0; }
+  .signoff__cta { font-size: 15px; color: #ffffff; }
+  .signoff__sign { margin-top: 10px; font-family: var(--latin); font-size: 17px; color: var(--dim); }
+
+  @media (min-width: 700px) {
+    .page { max-width: 880px; padding: 28px 32px 72px; }
+    .hero-body { display: grid; grid-template-columns: 1fr 1.05fr; gap: 28px; align-items: center; }
+    .hero .trails { margin-top: 0; }
+    .name { font-size: 96px; }
+    .en { font-size: 28px; }
+    .entry-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 36px; }
+    .entry-grid > .entry { margin-top: 34px; }
+    .night { margin-top: 16px; }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <div class="meta" aria-hidden="false">
+    <span>山海摄影社 · 2026 秋季</span>
+    <span>观测日志 001</span>
+  </div>
+
+  <header class="hero" data-nm-id="star-trail-hero">
+    <div class="hero-body">
+      <div>
+        <p class="eyebrow">物理系 · 大三 · 天文爱好者</p>
+        <h1 class="name">黎明</h1>
+        <p class="en">Star trails · 240 frames</p>
+        <p class="chip">我在沉迷拍星轨</p>
+        <p class="lede">星星本身拍不出什么，要让它们绕着北极星转上两个小时，才会留下一圈圈弧。我一晚上按几百次快门，拼出来的那一张，是我见过最安静的东西。</p>
+      </div>
+      <svg class="trails" viewBox="0 0 360 200" role="img" aria-label="星轨示意：一组同心弧线绕着北极星，外圈标着曝光时间刻度">
+        <circle class="pole-glow" cx="180" cy="30" r="12"/>
+        <path d="M215.5 36.3 A36 36 0 0 1 144.5 36.3" stroke="#e8edfb" stroke-opacity="0.28" stroke-width="1.1" fill="none"/>
+        <path d="M239.1 40.4 A60 60 0 0 1 120.9 40.4" stroke="#e8edfb" stroke-opacity="0.40" stroke-width="1.1" fill="none" stroke-dasharray="26 5 60 4 14 5"/>
+        <path d="M262.7 44.6 A84 84 0 0 1 97.3 44.6" stroke="#e8edfb" stroke-opacity="0.52" stroke-width="1.1" fill="none"/>
+        <path d="M286.4 48.8 A108 108 0 0 1 73.6 48.8" stroke="#e8edfb" stroke-opacity="0.64" stroke-width="1.1" fill="none" stroke-dasharray="26 5 60 4 14 5"/>
+        <path d="M310.0 52.9 A132 132 0 0 1 50.0 52.9" stroke="#e8edfb" stroke-opacity="0.76" stroke-width="1.1" fill="none"/>
+        <path d="M327.7 56.0 A150 150 0 0 1 32.3 56.0" stroke="#e8edfb" stroke-opacity="0.88" stroke-width="1.6" fill="none" stroke-dasharray="26 5 60 4 14 5"/>
+        <circle cx="216.9" cy="77.3" r="1.5" fill="#fff"/>
+        <circle cx="138.0" cy="102.7" r="1.5" fill="#fff"/>
+        <circle cx="262.7" cy="99.4" r="1.5" fill="#fff"/>
+        <circle cx="166.2" cy="161.3" r="1.5" fill="#fff"/>
+        <circle cx="50.1" cy="105.0" r="1.5" fill="#fff"/>
+        <circle cx="107.3" cy="72.0" r="1.5" fill="#fff"/>
+        <circle cx="143.1" cy="77.3" r="1.5" fill="#fff"/>
+        <circle cx="302.4" cy="79.4" r="1.5" fill="#fff"/>
+        <line x1="326.7" y1="61.2" x2="333.6" y2="62.6" stroke="#f7c873" stroke-width="1.2"/>
+        <text x="342.4" y="67.5" text-anchor="middle">30s</text>
+        <line x1="302.9" y1="116.0" x2="308.6" y2="120.1" stroke="#f7c873" stroke-width="1.2"/>
+        <text x="316.0" y="128.2" text-anchor="middle">1m</text>
+        <line x1="255.0" y1="159.9" x2="258.5" y2="166.0" stroke="#f7c873" stroke-width="1.2"/>
+        <text x="263.0" y="176.8" text-anchor="middle">2m</text>
+        <line x1="193.1" y1="179.4" x2="193.7" y2="186.4" stroke="#f7c873" stroke-width="1.2"/>
+        <text x="194.5" y="198.4" text-anchor="middle">4m</text>
+        <line x1="128.7" y1="171.0" x2="126.3" y2="177.5" stroke="#f7c873" stroke-width="1.2"/>
+        <text x="123.2" y="189.0" text-anchor="middle">8m</text>
+        <line x1="73.9" y1="136.1" x2="69.0" y2="141.0" stroke="#f7c873" stroke-width="1.2"/>
+        <text x="62.6" y="150.4" text-anchor="middle">15m</text>
+        <line x1="40.9" y1="86.2" x2="34.4" y2="88.8" stroke="#f7c873" stroke-width="1.2"/>
+        <text x="26.1" y="95.2" text-anchor="middle">30m</text>
+        <circle class="pole" cx="180" cy="30" r="3"/>
+      </svg>
+    </div>
+  </header>
+
+  <div class="entry-grid">
+
+    <section class="entry" data-nm-id="exposure-log">
+      <span class="entry__no">No.001 · 一次观测</span>
+      <h2>拍一张星轨要多久</h2>
+      <p class="entry__note">表里的数字都是那一晚的记录。</p>
+      <dl class="ledger">
+        <div class="ledger__row"><dt>日期</dt><span class="ledger__lead"></span><dd>10 月 18 日 · 城郊田埂</dd></div>
+        <div class="ledger__row"><dt>光线</dt><span class="ledger__lead"></span><dd>没有路灯，只有银河</dd></div>
+        <div class="ledger__row"><dt>镜头</dt><span class="ledger__lead"></span><dd>24 mm，f/2.8</dd></div>
+        <div class="ledger__row"><dt>感光度</dt><span class="ledger__lead"></span><dd>ISO 200</dd></div>
+        <div class="ledger__row"><dt>单张</dt><span class="ledger__lead"></span><dd>30 秒 × 240 张</dd></div>
+        <div class="ledger__row ledger__row--result"><dt>结果</dt><span class="ledger__lead"></span><dd>北极星那一圈，拼完是一整个圆</dd></div>
+      </dl>
+    </section>
+
+    <section class="entry" data-nm-id="ask-me">
+      <span class="entry__no">No.002 · 可以来问我</span>
+      <h2>可以来问我三脚架和长曝光参数</h2>
+      <ol class="asks">
+        <li><b>三脚架</b>：风大的夜里选重一点的，比人稳。</li>
+        <li><b>长曝光</b>：先拍 30 秒试一张，亮了再加，别一上来就拉满。</li>
+        <li><b>没有快门线</b>：用两秒延时，手不碰机器，星轨就不糊。</li>
+      </ol>
+    </section>
+
+    <section class="entry" data-nm-id="night-watch">
+      <span class="entry__no">No.003 · 想一起去</span>
+      <h2>想找人一起去郊外守一整晚</h2>
+      <p class="entry__note">一个人守太久会困，两个人轮流看机器就行。</p>
+      <ol class="night">
+        <li><time>19:30</time>在田埂入口集合，手电先关掉，眼睛要慢慢适应黑。</li>
+        <li><time>21:00</time>支好三脚架，拍第一张 30 秒，先看看天是不是够黑。</li>
+        <li><time>23:00</time>银河从东边升起来，换成 60 秒，这时候最值得守。</li>
+        <li><time>02:00</time>露水起来了，擦镜头，喝点热的，轮流睡十分钟。</li>
+        <li><time>04:30</time>东边发白，收工。星轨正好拼完，就是这一晚的答案。</li>
+      </ol>
+      <p class="night-note">以上是计划，实际通常会晚一点。</p>
+    </section>
+
+  </div>
+
+  <footer class="signoff" data-nm-id="say-hi">
+    <p class="signoff__cta">在页面外点「想聊这个」，从星轨开始。</p>
+    <p class="signoff__sign">— 黎明，于一个没有路灯的晚上</p>
+  </footer>
+
+</div>
+</body>
+</html>

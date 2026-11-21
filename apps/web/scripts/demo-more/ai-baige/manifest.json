@@ -1,0 +1,12 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "noto-serif-sc", "weights": [400, 900] }
+  ],
+  "extraChars": "",
+  "blocks": ["preamble", "art-stance", "art-scope", "art-service", "art-proposal"],
+  "generator": { "agent": "nowme-demo" }
+}

@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "jetbrains-mono", "weights": [400, 800] },
+    { "id": "noto-sans-sc", "weights": [400, 900] }
+  ],
+  "extraChars": "",
+  "blocks": ["departure-board", "route-stack", "route-live-bus", "route-need", "terminal-ping"],
+  "generator": { "agent": "nowme-demo" }
+}

@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>苏墨 · AI 共创实验室</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+:root{--bg:#1b0f31;--panel:#271846;--line:#5ef2ff;--lilac:#d8cdf2;--dim:#9385b8;--pink:#ff6fd8;--nm-font-body:var(--nm-font-noto-sans-sc);--nm-font-display:var(--nm-font-space-grotesk)}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:radial-gradient(120% 60% at 80% 0%,#33195a 0%,var(--bg) 60%);color:var(--lilac);font:400 15px/1.8 var(--nm-font-body);overflow-x:hidden}
+p,h1,h2,ul,figure{margin:0}
+svg{display:block;max-width:100%;height:auto}
+.wrap{max-width:760px;margin:0 auto;padding:0 20px}
+.topbar{display:flex;justify-content:space-between;align-items:center;padding:18px 0;font:500 12px/1 var(--nm-font-display);letter-spacing:.14em;text-transform:uppercase;color:var(--dim)}
+.topbar b{color:var(--line);font-weight:500}
+.hero{position:relative;padding:8px 0 26px}
+.hero-art{position:relative;aspect-ratio:4/3;margin:0 -20px}
+.hero-art svg{position:absolute;inset:0;width:100%;height:100%}
+.cube-wrap{position:absolute;left:50%;top:50%;width:250px;height:250px;margin:-125px 0 0 -125px;transform-origin:50% 50%;animation:turn 36s linear infinite}
+.cube-wrap svg{width:100%;height:100%}
+@keyframes turn{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+.hero-cap{position:absolute;left:20px;bottom:6px;font:500 11px/1.4 var(--nm-font-display);letter-spacing:.12em;color:var(--dim)}
+.hero-cap span{color:var(--line)}
+.name-row{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px 14px;margin-top:4px}
+h1{font:700 42px/1.1 var(--nm-font-display);color:#fff;letter-spacing:-.02em}
+.role{font-size:13px;color:var(--line);letter-spacing:.04em}
+.headline{font:500 22px/1.5 var(--nm-font-display);color:#fff;margin-top:14px}
+.tagline{font-size:14px;color:var(--dim);margin-top:6px}
+.gallery{padding:12px 0 26px}
+.label{font:500 11px/1 var(--nm-font-display);letter-spacing:.14em;text-transform:uppercase;color:var(--pink);margin-bottom:12px}
+.tiles{display:grid;grid-template-columns:1fr;gap:14px}
+.tile{position:relative;background:var(--panel);border:1px solid rgba(94,242,255,.28);padding:12px 12px 14px}
+.tile svg{width:100%;height:auto}
+.tile figcaption{display:flex;justify-content:space-between;margin-top:8px;font:500 12px/1.4 var(--nm-font-display);color:var(--dim)}
+.tile figcaption b{font-weight:500;color:var(--line)}
+.tile h2{font:700 18px/1.5 var(--nm-font-body);color:#fff;margin-top:10px}
+.tile p{font-size:13px;color:var(--dim)}
+.signal{padding:22px 0 24px;border-top:1px solid rgba(94,242,255,.35)}
+.signal p.lead{font:700 22px/1.5 var(--nm-font-body);color:#fff}
+.signal-list{list-style:none;padding:0;margin:14px 0 0;display:grid;gap:10px}
+.signal-list li{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;padding:12px 14px;background:rgba(94,242,255,.06);border-left:2px solid var(--line)}
+.signal-list .k{font:500 11px/1.9 var(--nm-font-display);letter-spacing:.1em;color:var(--line);text-transform:uppercase}
+.signal-list .v{font-size:16px;color:#fff}
+.bio{padding:20px 0 24px;border-top:1px solid rgba(255,111,216,.35)}
+.bio p+p{margin-top:10px}
+.bio .work{color:var(--dim);font-size:14px}
+.loop{padding:20px 0 34px;border-top:1px solid rgba(94,242,255,.35)}
+.cta{font-size:13px;color:var(--dim);margin-top:12px}
+footer{display:flex;justify-content:space-between;gap:12px;padding:14px 0 26px;border-top:1px solid rgba(216,205,242,.16);font:500 11px/1.4 var(--nm-font-display);color:var(--dim);letter-spacing:.06em}
+@media (prefers-reduced-motion: reduce){.cube-wrap{animation:none}}
+@media (min-width:700px){
+  .wrap{max-width:1040px;padding:0 40px}
+  .hero{display:grid;grid-template-columns:1.1fr .9fr;column-gap:36px;align-items:center;padding:24px 0 40px}
+  .hero-art{order:2;margin:0}
+  .hero-body{order:1}
+  .cube-wrap{width:360px;height:360px;margin:-180px 0 0 -180px}
+  .hero-cap{left:0}
+  h1{font-size:64px}
+  .headline{font-size:30px}
+  .gallery{display:grid;grid-template-columns:1fr 1.3fr;column-gap:30px;padding-top:30px}
+  .gallery>.label{grid-column:1/-1}
+  .tiles{grid-template-columns:1fr 1fr}
+  .tile:first-child{grid-column:1/-1}
+  .signal{display:grid;grid-template-columns:1fr 1fr;column-gap:36px;padding-top:30px}
+  .signal>p.lead{grid-column:1}
+  .signal-list{grid-column:2;grid-row:1/3;margin-top:0}
+  .bio{display:grid;grid-template-columns:1fr 1fr;column-gap:36px;padding-top:30px}
+  .bio>.label{grid-column:1/-1}
+  .loop{padding-top:30px}
+  .loop p.lead{font-size:26px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="topbar"><span>生成几何 / 创意编程</span><b>AI 共创实验室</b></header>
+  <section class="hero" data-nm-id="wire-hero">
+    <div class="hero-body">
+      <div class="name-row"><h1>苏墨</h1><span class="role">创意编程 · 数字媒体大三</span></div>
+      <p class="headline">用代码画会动的几何。</p>
+      <p class="tagline">数字媒体大三，把几何写成会呼吸的画面，想把一段话变成一座小城。</p>
+    </div>
+    <figure class="hero-art" aria-label="等距网格上旋转的霓虹线框立方体（示意）">
+      <svg viewBox="0 0 400 300" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+        <defs>
+          <pattern id="isoGrid" width="40" height="23" patternUnits="userSpaceOnUse">
+            <path d="M0 11.5 L20 0 L40 11.5 L20 23 Z" fill="none" stroke="#5ef2ff" stroke-opacity=".22" stroke-width="1"/>
+          </pattern>
+        </defs>
+        <rect x="0" y="0" width="400" height="300" fill="url(#isoGrid)"/>
+        <path d="M0 230 L400 90" stroke="#ff6fd8" stroke-opacity=".5" stroke-width="1" fill="none"/>
+      </svg>
+      <div class="cube-wrap">
+        <svg viewBox="0 0 200 200" aria-hidden="true">
+          <g fill="none" stroke="#5ef2ff" stroke-width="2" stroke-linejoin="round">
+            <path d="M100 30 L160 65 L160 135 L100 170 L40 135 L40 65 Z"/>
+            <path d="M40 65 L100 100 L160 65"/>
+            <path d="M100 100 L100 170"/>
+          </g>
+          <g fill="none" stroke="#ff6fd8" stroke-width="1" stroke-opacity=".7">
+            <path d="M100 0 L100 200"/>
+            <path d="M0 100 L200 100"/>
+          </g>
+          <circle cx="100" cy="100" r="3" fill="#fff"/>
+        </svg>
+      </div>
+      <figcaption class="hero-cap"><span>● </span>等距网格 / 示意</figcaption>
+    </figure>
+  </section>
+  <section class="gallery" data-nm-id="iso-gallery">
+    <p class="label">作品 · 线框</p>
+    <div class="tiles">
+      <figure class="tile">
+        <svg viewBox="0 0 320 180" aria-label="一段动效的几何变形（示意）">
+          <rect width="320" height="180" fill="#1f1140"/>
+          <g fill="none" stroke="#5ef2ff" stroke-width="1.4">
+            <path d="M40 120 L100 85 L160 120 L100 155 Z"/>
+            <path d="M100 85 L100 40 L160 5 L160 80 L100 120"/>
+            <path d="M160 120 L220 85 L280 120 L220 155 Z"/>
+            <path d="M220 85 L220 40 L280 5 L280 80 L220 120"/>
+            <path d="M40 120 L40 150 L100 176 L100 146"/>
+          </g>
+          <g stroke="#ff6fd8" stroke-width="1" stroke-opacity=".5" fill="none">
+            <path d="M0 150 L320 150"/>
+          </g>
+        </svg>
+        <figcaption><b>01 · 开场几何</b><span>示意</span></figcaption>
+        <h2>几条线，三秒钟</h2>
+        <p>同一组立方体，只改一个参数，画面就换了一个样子。</p>
+      </figure>
+      <figure class="tile">
+        <svg viewBox="0 0 320 180" aria-label="一排高低起伏的线框楼房（示意）">
+          <rect width="320" height="180" fill="#1f1140"/>
+          <g fill="none" stroke="#5ef2ff" stroke-width="1.3">
+            <path d="M30 150 L60 130 L60 90 L90 75 L90 150"/>
+            <path d="M100 150 L100 60 L130 45 L160 60 L160 150"/>
+            <path d="M170 150 L170 105 L205 85 L205 150"/>
+            <path d="M215 150 L215 40 L250 20 L280 40 L280 150"/>
+          </g>
+          <path d="M20 150 L300 150" stroke="#ff6fd8" stroke-opacity=".6" fill="none"/>
+        </svg>
+        <figcaption><b>02 · 一段话的小城</b><span>示意</span></figcaption>
+        <h2>句子越长，楼越高</h2>
+        <p>把文字的长短和标点换成建筑的高度，还在试。</p>
+      </figure>
+    </div>
+  </section>
+  <section class="signal" data-nm-id="signal-hooks">
+    <p class="lead">Demo 的开场，<br>交给我来画几秒钟。</p>
+    <ul class="signal-list">
+      <li><span class="k">can-help</span><span class="v">我能帮你做一段酷炫的 Demo 开场动效</span></li>
+      <li><span class="k">want-to-build</span><span class="v">想做把一段话变成小城的生成艺术</span></li>
+      <li><span class="k">looking-for</span><span class="v">找愿意把动效接进前端的队友</span></li>
+    </ul>
+  </section>
+  <section class="bio" data-nm-id="studio-notes">
+    <p class="label">关于我</p>
+    <div>
+      <p>我在数字媒体系学创意编程，代码对我来说更像画笔。最常画的是几何：一个立方体，换个角度，就是一整页。</p>
+      <p class="work">这学期的作品都在做同一件事：让几何随着输入轻轻变形。下一步想试试，把一段文字的句子长度和标点换成楼的高度。</p>
+    </div>
+  </section>
+  <section class="loop" data-nm-id="loop-invite">
+    <p class="lead">线框会转，<br>人也可以一起转起来。</p>
+    <p class="cta">在页面外点「想聊这个」，从你最想让 Demo 第一秒就惊艳的那个画面开始。</p>
+  </section>
+  <footer><span>创意编程 · 生成几何 · 动效</span><span>苏墨 / NOWMe</span></footer>
+</div>
+</body>
+</html>

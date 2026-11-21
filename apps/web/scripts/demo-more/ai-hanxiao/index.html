@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>韩笑 · AI 共创实验室</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+:root{--paper:#f4efdf;--ink:#2a2620;--muted:#7d7360;--staff:#4a4236;--accent:#b5523b;--teal:#3f7f7a;--gold:#c9973a;--nm-font-body:var(--nm-font-noto-serif-sc);--nm-font-display:var(--nm-font-instrument-serif)}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{background:var(--paper);color:var(--ink);font:400 15px/1.9 var(--nm-font-body);overflow-x:hidden}
+p,h1,h2,ul,ol,figure{margin:0}
+.score{max-width:680px;margin:0 auto;padding:18px 18px 24px}
+.score-top{display:flex;justify-content:space-between;gap:12px;font:italic 400 14px/1.4 var(--nm-font-display);color:var(--muted);padding-bottom:10px}
+.score-top b{font-style:normal;color:var(--accent)}
+.prelude{padding:18px 0 22px;border-top:3px solid var(--staff)}
+.prelude h1{font:400 58px/1.05 var(--nm-font-display);letter-spacing:.01em;color:var(--ink);padding:6px 0 0 4px}
+.staff-notes{display:flex;gap:10px;margin-top:4px;align-items:flex-end}
+.staff-notes svg{width:38px;height:auto}
+.role{font-size:14px;color:var(--muted);margin-top:6px}
+.headline{font-size:22px;line-height:1.6;font-weight:700;margin-top:14px}
+.tagline{font-size:14px;color:var(--muted);margin-top:6px}
+.movement{padding:20px 0 22px;border-top:1px solid var(--staff)}
+.mv-no{font:400 22px/1 var(--nm-font-display);color:var(--accent);display:flex;align-items:center;gap:10px;margin-bottom:10px}
+.mv-no::after{content:"";flex:1;height:5px;background:linear-gradient(to bottom,transparent 0 0,var(--staff) 0 1px,transparent 1px 2px,var(--staff) 2px 3px,transparent 3px 4px,var(--staff) 4px 5px,transparent 5px 6px)}
+.movement p+p{margin-top:8px}
+.movement .sub{color:var(--muted)}
+.roll{padding:20px 0 22px;border-top:1px solid var(--staff)}
+.roll-box{position:relative;height:250px;margin-top:10px;background-color:#fbf8ee;border:1px solid var(--staff);background-image:linear-gradient(to bottom,rgba(74,66,54,.18) 1px,transparent 1px);background-size:100% 20.8px;overflow:hidden}
+.roll-box i{position:absolute;height:14px;border-radius:7px}
+.roll-cap{font-size:12px;color:var(--muted);margin-top:8px;display:flex;justify-content:space-between}
+.roll-cap span:last-child{font-family:var(--nm-font-display);font-style:italic}
+.coda{padding:22px 0 26px;border-top:3px solid var(--staff)}
+.coda-list{list-style:none;padding:0;margin:10px 0 0;display:grid;gap:10px}
+.coda-list li{display:grid;grid-template-columns:28px 1fr;gap:8px;padding:10px 0;border-bottom:1px dotted var(--muted);font-size:16px;line-height:1.7}
+.coda-list .n{font:italic 400 18px/1.4 var(--nm-font-display);color:var(--teal)}
+.coda-list .kind{display:block;font:italic 400 13px/1.4 var(--nm-font-display);color:var(--gold)}
+.cta{font-size:14px;color:var(--muted);margin-top:14px}
+footer{display:flex;justify-content:space-between;gap:12px;border-top:1px solid var(--staff);padding-top:10px;font:italic 400 13px/1.4 var(--nm-font-display);color:var(--muted)}
+@media (min-width:700px){
+  .score{max-width:960px;padding:30px 36px 36px}
+  .prelude{display:grid;grid-template-columns:1.2fr 1fr;column-gap:36px;align-items:end;padding-top:26px}
+  .prelude h1{font-size:110px}
+  .prelude>div:last-child{padding-bottom:6px}
+  .headline{font-size:28px;line-height:1.5}
+  .movement{display:grid;grid-template-columns:1fr 1fr;column-gap:36px;padding-top:26px}
+  .movement>.mv-no{grid-column:1/-1}
+  .roll{display:grid;grid-template-columns:1fr 1.4fr;column-gap:36px;padding-top:26px}
+  .roll>.mv-no{grid-column:1/-1}
+  .roll-box{height:300px}
+  .coda{display:grid;grid-template-columns:1fr 1fr;column-gap:36px;padding-top:26px}
+  .coda>.mv-no{grid-column:1/-1}
+  .coda-list{grid-column:1}
+  .coda .cta{grid-column:2;grid-row:2;align-self:center;font-size:17px}
+}
+</style>
+</head>
+<body>
+<main class="score">
+  <header class="score-top"><span>Ⅰ 前奏 · 乐谱纸</span><b>AI 共创实验室</b></header>
+  <section class="prelude" data-nm-id="prelude-title">
+    <div>
+      <h1>韩笑</h1>
+      <div class="staff-notes" aria-hidden="true">
+        <svg viewBox="0 0 120 60"><g fill="none" stroke="#4a4236" stroke-width="1"><path d="M0 14H120M0 22H120M0 30H120M0 38H120M0 46H120"/></g><g fill="#b5523b"><ellipse cx="20" cy="38" rx="5" ry="4" transform="rotate(-18 20 38)"/><ellipse cx="50" cy="30" rx="5" ry="4" transform="rotate(-18 50 30)"/><ellipse cx="80" cy="22" rx="5" ry="4" transform="rotate(-18 80 22)"/><ellipse cx="108" cy="30" rx="5" ry="4" transform="rotate(-18 108 30)"/></g><g stroke="#b5523b" stroke-width="1.5"><path d="M24 38V14M54 30V6M84 22V-2M112 30V6"/></g></svg>
+      </div>
+      <p class="role">音乐学院作曲系大二</p>
+    </div>
+    <div>
+      <p class="headline">AI 伴奏，我改到自己的版本。</p>
+      <p class="tagline">用 AI 生成伴奏，再自己改；想做哼一段旋律就生成和弦的工具。</p>
+    </div>
+  </section>
+  <section class="movement" data-nm-id="movement-theme">
+    <p class="mv-no">Ⅱ 主题</p>
+    <div>
+      <p>我在作曲系学的是“写一段自己的旋律”，所以拿到 AI 生成的伴奏，第一件事是删掉、再改。</p>
+      <p class="sub">我的做法：先让 AI 给出一版和弦走向，再把其中不顺耳的那一小节重新写一遍，保留最好的一个音。</p>
+    </div>
+  </section>
+  <section class="roll" data-nm-id="piano-roll">
+    <p class="mv-no">Ⅲ 变奏</p>
+    <div>
+      <p>钢琴卷帘示意：每一条色块是一个音，横向是时间，纵向是音高。</p>
+      <div class="roll-box" role="img" aria-label="钢琴卷帘色块示意，共三条旋律线（示意）">
+        <i style="left:4%;top:22px;width:22%;background:#b5523b"></i>
+        <i style="left:28%;top:52px;width:14%;background:#c9973a"></i>
+        <i style="left:44%;top:80px;width:20%;background:#3f7f7a"></i>
+        <i style="left:66%;top:44px;width:26%;background:#b5523b"></i>
+        <i style="left:6%;top:150px;width:12%;background:#3f7f7a"></i>
+        <i style="left:20%;top:176px;width:18%;background:#c9973a"></i>
+        <i style="left:40%;top:202px;width:30%;background:#b5523b"></i>
+        <i style="left:72%;top:170px;width:20%;background:#3f7f7a"></i>
+      </div>
+      <p class="roll-cap"><span>示意 · 一段伴奏</span><span>Ⅲ / 4</span></p>
+    </div>
+  </section>
+  <section class="coda" data-nm-id="coda-hooks">
+    <p class="mv-no">Ⅳ 尾声</p>
+    <div>
+      <ol class="coda-list">
+        <li><span class="n">①</span><span><span class="kind">can-help</span>我能帮 Demo 配一段原创背景音乐和音效</span></li>
+        <li><span class="n">②</span><span><span class="kind">want-to-build</span>想做哼一段旋律就生成和弦的工具</span></li>
+        <li><span class="n">③</span><span><span class="kind">looking-for</span>找会做音频接口的开发</span></li>
+      </ol>
+      <p class="cta">在页面外点「想聊这个」，哼一小段你最近循环的旋律给我听。</p>
+    </div>
+  </section>
+  <footer><span>作曲 · 伴奏 · 和弦</span><span>韩笑 / NOWMe</span></footer>
+</main>
+</body>
+</html>

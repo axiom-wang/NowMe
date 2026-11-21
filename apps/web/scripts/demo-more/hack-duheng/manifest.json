@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "space-grotesk", "weights": [400, 700] },
+    { "id": "noto-sans-sc", "weights": [400, 700] }
+  ],
+  "extraChars": "",
+  "blocks": ["status-summary", "svc-deploy", "svc-monitor", "svc-ops", "svc-signup", "incidents", "exit-note"],
+  "generator": { "agent": "nowme-demo" }
+}

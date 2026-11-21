@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "hackathon",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "noto-serif-sc", "weights": [400, 700] },
+    { "id": "jetbrains-mono", "weights": [400, 700] }
+  ],
+  "extraChars": "",
+  "blocks": ["seed-bag", "plant-tag", "orchard-notes", "batch-offer", "seed-bottom"],
+  "generator": { "agent": "nowme-demo" }
+}

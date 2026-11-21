@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "smiley-sans", "weights": [400] },
+    { "id": "lxgw-wenkai", "weights": [400] }
+  ],
+  "extraChars": "",
+  "blocks": ["booth", "ask-me", "window-light", "obsessed", "foot"],
+  "generator": { "agent": "nowme-demo" }
+}

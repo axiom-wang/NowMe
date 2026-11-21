@@ -9,6 +9,7 @@
 import type { AppDeps } from '../src/context.js';
 import type { Wall } from '../src/db/walls.js';
 import { wallQueries } from '../src/db/wall-queries.js';
+import { DEMO_ADDITIONS } from './demo-more.js';
 import { answersForWall, questionStats, saveAnswers, saveQuestions } from '../src/services/wall-questions.js';
 
 export const DEMO_QUESTIONS = [
@@ -53,6 +54,28 @@ export function seedDemoOrganizerTools(
     if (!userId) throw new Error(`演示数据异常：找不到回答必答题的成员 ${slug}`);
     saveAnswers(deps, wall.id, userId, new Map([[role.id, [roleChoice]], [time.id, [...timeChoices]]]));
   }
+  saveDemoAdditionAnswers(deps, wall);
+  writeDemoPortrait(deps, wall, people.organizerId);
+}
+
+/** 第二批黑客松成员（demo-more.ts）的回答；已经答过的人不覆盖。没有题目时什么也不做。 */
+export function saveDemoAdditionAnswers(deps: Pick<AppDeps, 'db' | 'repos' | 'now'>, wall: Wall): void {
+  const [role, time] = deps.repos.questions.listForWall(wall.id);
+  if (!role || !time) return;
+  const answered = new Set((deps.db.prepare('SELECT DISTINCT user_id AS id FROM wall_answers WHERE wall_id = ?').all(wall.id) as { id: string }[]).map((row) => row.id));
+  for (const person of DEMO_ADDITIONS) {
+    if (person.wall !== 'hackathon' || !person.answers) continue;
+    const user = deps.repos.users.findByEmail(person.email);
+    if (!user || answered.has(user.id)) continue;
+    const [roleChoice, timeChoices] = person.answers;
+    saveAnswers(deps, wall.id, user.id, new Map([[role.id, [roleChoice]], [time.id, [...timeChoices]]]));
+  }
+}
+
+/** 保存的群像文案配上墙上当前的发布与按回答的统计（墙上人变了就重写一次，文案不变）。 */
+export function writeDemoPortrait(deps: Pick<AppDeps, 'db' | 'repos' | 'now'>, wall: Wall, organizerId: string): void {
+  const questions = deps.repos.questions.listForWall(wall.id);
+  if (questions.length === 0) return;
   const entries = wallQueries(deps.db).listPublished(wall.id);
   deps.repos.portraits.replace({
     wallId: wall.id,
@@ -63,7 +86,7 @@ export function seedDemoOrganizerTools(
     }),
     sources: entries.map((entry) => entry.publicationId),
     pageCount: entries.length,
-    createdBy: people.organizerId,
+    createdBy: organizerId,
     createdAt: deps.now().toISOString(),
   });
 }

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>宋小白 · 狗牌与爪印 · 山野轻徒步</title>
+<link rel="stylesheet" href="/_nowme/kit/v1/nowme.css">
+<style>
+:root{--sx-bg:#f7e9bd;--sx-card:#fff6d9;--sx-ink:#3b2a1a;--sx-brown:#8a5a2b;--sx-orange:#e07b2c;--sx-brass:#c99b43;--sx-muted:#7c6444;--sx-rule:#d9bf7d;--nm-font-body:var(--nm-font-lxgw-wenkai);--nm-font-display:var(--nm-font-smiley-sans)}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--sx-bg);color:var(--sx-ink)}
+body{font:400 16px/1.85 var(--nm-font-body)}
+h1,h2,p,figure{margin:0;font-weight:400}
+main{max-width:980px;margin:0 auto;padding:20px 18px 28px;overflow:hidden}
+.sx-paw{display:block;width:24px;height:24px;fill:var(--sx-brown);opacity:.55}
+.sx-steps{display:flex;justify-content:center;gap:0;margin:10px 0 2px;height:34px}
+.sx-steps .sx-paw{margin:0 6px}
+.sx-steps .sx-paw:nth-child(odd){transform:translateY(-6px)}
+.sx-hero{display:grid;grid-template-columns:1fr;gap:18px;align-items:center;padding:6px 0 10px}
+.sx-tag{position:relative;justify-self:center;width:min(100%,300px);aspect-ratio:1.55/1;background:linear-gradient(135deg,#e3bd66,var(--sx-brass) 55%,#b98a33);border-radius:28px;padding:22px 22px 20px;box-shadow:0 6px 0 #a3742b,0 14px 24px rgba(59,42,26,.18);color:#4a2f14}
+.sx-tag::before{content:"";position:absolute;left:50%;top:10px;width:18px;height:18px;margin-left:-9px;border-radius:50%;background:var(--sx-bg);box-shadow:inset 0 0 0 3px #a3742b}
+.sx-tag-name{font-family:var(--nm-font-display);font-size:58px;line-height:1;margin-top:14px;letter-spacing:.02em}
+.sx-tag-sub{font-size:14px;margin-top:6px;color:#4a2f14}
+.sx-tag-line{font-size:14px;margin-top:10px;padding-top:8px;border-top:1.5px dashed #6b4a1c}
+.sx-head h1{font-family:var(--nm-font-display);font-size:44px;line-height:1.1}
+.sx-head p.sx-role{font-size:14px;color:var(--sx-muted);margin-top:6px}
+.sx-head p.sx-tagline{font-size:17px;margin-top:10px;line-height:1.7}
+.sx-dog{width:100%;max-width:240px;justify-self:center}
+.sx-dog svg{display:block;width:100%;height:auto}
+.sx-dog figcaption{font-size:12px;color:var(--sx-muted);text-align:center;margin-top:4px}
+.sx-card{background:var(--sx-card);border-radius:22px;padding:20px 20px 22px;box-shadow:0 3px 0 var(--sx-rule)}
+.sx-card .sx-no{font-family:var(--nm-font-display);font-size:14px;color:var(--sx-orange)}
+.sx-pi{width:16px;height:16px;fill:var(--sx-orange);vertical-align:-2px;margin-right:4px}
+.sx-card h2{font-family:var(--nm-font-display);font-size:28px;line-height:1.3;margin:6px 0 10px}
+.sx-card p{font-size:16px}
+.sx-bone{display:inline-block;margin-top:14px;padding:6px 18px;border-radius:999px;background:#fff;border:2px solid var(--sx-brown);font-size:14px;color:var(--sx-brown)}
+.sx-bones{display:flex;flex-wrap:wrap;gap:10px;margin:0;padding:0;list-style:none}
+.sx-bones li{padding:8px 18px;border-radius:999px;background:var(--sx-brass);color:#3b2a1a;font-size:14px;box-shadow:0 2px 0 #8a5a2b}
+.sx-foot{margin-top:24px;font-size:14px;line-height:1.8;color:var(--sx-muted);text-align:center}
+.sx-foot strong{font-family:var(--nm-font-display);font-weight:400;color:var(--sx-ink);font-size:17px}
+.sx-scene{display:grid;grid-template-columns:1fr;gap:6px}
+@media (min-width:700px){
+  main{padding:40px 44px 44px}
+  .sx-hero{grid-template-columns:1.05fr .95fr;gap:30px;padding:10px 0 20px}
+  .sx-head h1{font-size:76px}
+  .sx-head p.sx-tagline{font-size:21px}
+  .sx-tag{justify-self:start;width:300px}
+  .sx-tag-name{font-size:62px}
+  .sx-dog{max-width:330px;justify-self:end}
+  .sx-steps{height:40px;margin-top:0}
+  .sx-steps .sx-paw{width:30px;height:30px;margin:0 12px}
+  .sx-scene{grid-template-columns:1fr 1fr}
+  .sx-scene .sx-card:nth-child(2){margin-top:36px}
+  .sx-scene .sx-card:nth-child(3){margin-top:-6px}
+  .sx-card h2{font-size:32px}
+  .sx-bone{font-size:15px}
+  .sx-foot{display:flex;justify-content:space-between;text-align:left;gap:20px}
+}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="sx-paw" viewBox="0 0 24 24">
+      <ellipse cx="12" cy="16" rx="6.2" ry="5.4"/>
+      <circle cx="5" cy="9" r="2.6"/><circle cx="9.5" cy="4.8" r="2.6"/><circle cx="14.5" cy="4.8" r="2.6"/><circle cx="19" cy="9" r="2.6"/>
+    </symbol>
+  </defs>
+</svg>
+<main>
+  <header class="sx-hero sx-head" data-nm-id="dog-tag">
+    <div class="sx-tag" aria-label="狗牌：豆包，跟着我，我带你走">
+      <p class="sx-tag-sub">豆包 · 小白的狗</p>
+      <p class="sx-tag-name">豆包</p>
+      <p class="sx-tag-line">跟着我，我带你走</p>
+    </div>
+    <div>
+      <h1>宋小白</h1>
+      <p class="sx-role">带狗徒步的人 · 狗叫“豆包”</p>
+      <p class="sx-tagline">带着狗走山路，每一步都要看它的脚，也要看它的心情。</p>
+      <div class="sx-steps" aria-hidden="true">
+        <svg class="sx-paw"><use href="#sx-paw"/></svg>
+        <svg class="sx-paw"><use href="#sx-paw"/></svg>
+        <svg class="sx-paw"><use href="#sx-paw"/></svg>
+      </div>
+    </div>
+    <figure class="sx-dog">
+      <svg viewBox="0 0 220 200" role="img" aria-label="原创小狗插画：一只耳朵软软垂下的棕白小狗，戴着红色项圈，吐着舌头">
+        <ellipse cx="110" cy="176" rx="72" ry="12" fill="#e7c776"/>
+        <path d="M58 70c-18 4-26 32-18 52 5 12 16 16 24 10 6-5 4-30-6-62z" fill="#8a5a2b"/>
+        <path d="M162 70c18 4 26 32 18 52-5 12-16 16-24 10-6-5-4-30 6-62z" fill="#8a5a2b"/>
+        <circle cx="110" cy="100" r="54" fill="#fff6d9"/>
+        <path d="M56 92c4-26 26-38 54-38s50 12 54 38c-8-6-14-8-18-6-10-4-64-4-74 0-4-2-10 0-16 6z" fill="#c97a3a"/>
+        <ellipse cx="90" cy="104" rx="6" ry="7" fill="#3b2a1a"/>
+        <ellipse cx="130" cy="104" rx="6" ry="7" fill="#3b2a1a"/>
+        <circle cx="92" cy="101" r="2" fill="#fff6d9"/><circle cx="132" cy="101" r="2" fill="#fff6d9"/>
+        <ellipse cx="110" cy="122" rx="9" ry="6.5" fill="#3b2a1a"/>
+        <path d="M110 128v6" stroke="#3b2a1a" stroke-width="2.4" stroke-linecap="round"/>
+        <path d="M104 134q6 8 12 0z" fill="#e0654a"/>
+        <path d="M80 136q30 16 60 0" fill="none" stroke="#e0654a" stroke-width="7" stroke-linecap="round"/>
+        <circle cx="110" cy="148" r="7" fill="#c99b43"/>
+        <path d="M100 150q10 6 20 0" fill="none" stroke="#8a5a2b" stroke-width="2"/>
+      </svg>
+      <figcaption>原创插画 · 示意，不是豆包的实拍照</figcaption>
+    </figure>
+  </header>
+
+  <div class="sx-scene">
+    <section class="sx-card" data-nm-id="leash-ask">
+      <p class="sx-no"><svg class="sx-pi" aria-hidden="true"><use href="#sx-paw"/></svg>第一个爪印 · 可以来问我</p>
+      <h2>带狗出门要准备什么</h2>
+      <p>水、碗、牵引绳、小袋子，还有一块能让它坐下来的毯子。我自己的清单贴在门口，出门前照着过一遍。</p>
+      <span class="sx-bone">第一步：先看天气和路况</span>
+    </section>
+
+    <section class="sx-card" data-nm-id="creek-route">
+      <p class="sx-no"><svg class="sx-pi" aria-hidden="true"><use href="#sx-paw"/></svg>第二个爪印 · 我也想试</p>
+      <h2>想试一次狗狗友好的溪边路线</h2>
+      <p>水边有石头和浅滩，豆包最喜欢。路线要选能让它自己走、也能停下来喝水的那种，不追求远。</p>
+      <span class="sx-bone">浅滩、缓坡、能喝水</span>
+    </section>
+
+    <section class="sx-card" data-nm-id="photo-roll">
+      <p class="sx-no"><svg class="sx-pi" aria-hidden="true"><use href="#sx-paw"/></svg>第三个爪印 · 我在沉迷</p>
+      <h2>沉迷给豆包拍照</h2>
+      <p>它在草丛里探头，在石头上坐得端正，每次回头看我的那一下，我都要按快门。相册里几乎全是它。</p>
+      <span class="sx-bone">拍得最多的一张：溪边的回头</span>
+    </section>
+
+    <section class="sx-card" data-nm-id="bone-tags">
+      <p class="sx-no"><svg class="sx-pi" aria-hidden="true"><use href="#sx-paw"/></svg>骨头形标签 · 豆包的清单</p>
+      <ul class="sx-bones">
+        <li>水碗</li><li>牵引绳</li><li>小零食</li><li>小毛巾</li>
+      </ul>
+      <p style="margin-top:14px">这些是我每次出门都会带的。路上遇到别的狗，先问一句“能不能打个招呼”。</p>
+    </section>
+  </div>
+
+  <footer class="sx-foot">
+    <span><strong>宋小白</strong> · 山野轻徒步 · 带狗徒步</span>
+    <span>在页面外点「想聊这个」，从一条溪边小路开始。</span>
+  </footer>
+</main>
+</body>
+</html>

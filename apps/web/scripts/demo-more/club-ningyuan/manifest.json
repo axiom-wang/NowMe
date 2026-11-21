@@ -1,0 +1,13 @@
+{
+  "schemaVersion": 1,
+  "sceneType": "club",
+  "kitVersion": "1",
+  "motionLevel": "calm",
+  "fonts": [
+    { "id": "noto-serif-sc", "weights": [400, 700] },
+    { "id": "jetbrains-mono", "weights": [400] }
+  ],
+  "extraChars": "",
+  "blocks": ["ledger-head", "cabinet", "ask-me", "want-to-try", "obsessed", "foot"],
+  "generator": { "agent": "nowme-demo" }
+}
