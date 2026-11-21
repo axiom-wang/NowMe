@@ -349,25 +349,51 @@ const ReviewForm: FC<{ model: CreateViewModel; brief: StructuredBrief; briefMd: 
         <label class="field"><span>不想展示的信息</span><input type="text" name="hidden" maxlength={300} value={brief.boundaries.hidden.join('；')} /></label>
         <p class="muted">联系方式不写进页面；没有提供的学校、经历不会猜测。</p>
       </section>
-      <section class="card">
-        <h2>这是 AI 眼中的你</h2>
-        <p class="muted">每一句都可以改写或划掉。确认之后才会开始做页面，页面上的每一句话都能在这里找到出处。</p>
+      <section class="card aiview" data-aiview>
+        <header class="aiview__head">
+          <div>
+            <h2>这是 AI 眼中的你</h2>
+            <p class="muted">每一句都可以改写或划掉。确认之后才开始做页面，页面上的每一句话都能在这里找到出处。</p>
+          </div>
+          <p class="aiview__count" data-aiview-count>共 {brief.aiView.length} 句</p>
+        </header>
         {brief.mustHaveMissing.length > 0 ? (
-          <Notice tone="warning">
-            还缺这些信息：{brief.mustHaveMissing.map((item) => item.reason).join('；')}。你可以直接确认，缺的部分不会出现在页面上（不会编造）。
-          </Notice>
+          <div class="aiview-missing" role="note" aria-labelledby="aiview-missing-title">
+            <span class="aiview-missing__icon" aria-hidden="true">!</span>
+            <div>
+              <p class="aiview-missing__title" id="aiview-missing-title">还缺这些信息</p>
+              <ul class="aiview-missing__list">
+                {brief.mustHaveMissing.map((item) => <li>{item.reason}</li>)}
+              </ul>
+              <p class="aiview-missing__foot">可以直接确认：缺的部分不会出现在页面上，AI 不会编造。</p>
+            </div>
+          </div>
         ) : null}
-        <ol class="hosted-aiview">
-          {brief.aiView.map((sentence, index) => (
-            <li>
-              <details><summary>{sentence} <small>点开改写</small></summary><textarea class="hosted-review-text" name={`ai_${index}`} rows={3} maxlength={120} aria-label={`第 ${index + 1} 句`}>{sentence}</textarea></details>
-              {model.overview.brief?.followups?.questions[index] ? <ReviewFollowup question={model.overview.brief.followups.questions[index]!} answer={model.overview.brief.followups.pending ? model.overview.brief.followups.answers[model.overview.brief.followups.questions[index]!.id] : undefined} /> : null}
-              <label class="check">
-                <input type="checkbox" name={`ai_${index}_drop`} value="1" checked={pending?.aiView[index]?.drop} />
-                <span>划掉</span>
-              </label>
-            </li>
-          ))}
+        <ol class="hosted-aiview aiview__list">
+          {brief.aiView.map((sentence, index) => {
+            const question = model.overview.brief?.followups?.questions[index];
+            return (
+              <li class="aiview-item">
+                <span class="aiview-item__num" aria-hidden="true">{String(index + 1).padStart(2, '0')}</span>
+                <div class="aiview-item__body">
+                  <details class="aiview-edit">
+                    <summary>
+                      <span class="aiview-item__text" data-aiview-text>{sentence}</span>
+                      <span class="aiview-pill aiview-pill--edit"><HomeIcon name="pencil" /><span class="aiview-pill__closed">改写</span><span class="aiview-pill__open">收起</span></span>
+                    </summary>
+                    <textarea class="hosted-review-text" name={`ai_${index}`} rows={3} maxlength={120} aria-label={`第 ${index + 1} 句`}>{sentence}</textarea>
+                  </details>
+                </div>
+                <label class="aiview-pill aiview-drop">
+                  <input type="checkbox" name={`ai_${index}_drop`} value="1" checked={pending?.aiView[index]?.drop} />
+                  <span class="visually-hidden">划掉第 {index + 1} 句</span>
+                  <span class="aiview-drop__off" aria-hidden="true">划掉</span>
+                  <span class="aiview-drop__on" aria-hidden="true">已划掉</span>
+                </label>
+                {question ? <div class="aiview-item__more"><ReviewFollowup question={question} answer={model.overview.brief?.followups?.pending ? model.overview.brief.followups.answers[question.id] : undefined} /></div> : null}
+              </li>
+            );
+          })}
         </ol>
       </section>
       <section class="card">

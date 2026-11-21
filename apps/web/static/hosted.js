@@ -1,6 +1,25 @@
 /* 创作页的渐进增强：原生表单仍可独立完成采访，不在本地持久化素材。 */
 (function () {
   'use strict';
+  // “AI 眼中的你”：改写后收起时显示新句子；句数随划掉更新。
+  var aiview = document.querySelector('[data-aiview]');
+  if (aiview) {
+    var aiCount = aiview.querySelector('[data-aiview-count]');
+    var aiItems = Array.from(aiview.querySelectorAll('.aiview-item'));
+    var updateAiCount = function () {
+      var dropped = aiItems.filter(function (item) { var box = item.querySelector('.aiview-drop input'); return box && box.checked; }).length;
+      if (aiCount) aiCount.textContent = '共 ' + aiItems.length + ' 句' + (dropped ? ' · 划掉 ' + dropped : '');
+    };
+    aiItems.forEach(function (item) {
+      var area = item.querySelector('textarea');
+      var text = item.querySelector('[data-aiview-text]');
+      var box = item.querySelector('.aiview-drop input');
+      if (area && text) area.addEventListener('input', function () { text.textContent = area.value.trim() || area.defaultValue; });
+      if (box) box.addEventListener('change', updateAiCount);
+    });
+    updateAiCount();
+  }
+
   var form = document.querySelector('[data-interview]');
   if (!form) return;
 

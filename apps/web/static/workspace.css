@@ -783,15 +783,85 @@
   padding-left: 1.2em;
 }
 
-.hosted-aiview,
 .hosted-hooks {
   display: grid;
   gap: 12px;
   padding-left: 1.4em;
 }
 
-.hosted-aiview .check {
-  width: fit-content;
+/* “这是 AI 眼中的你”：逐句核对。每句一行：编号 / 句子（可展开改写、补例子）/ 划掉。 */
+.aiview { padding: clamp(20px, 3vw, 30px); border-radius: var(--radius-lg); }
+.aiview__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; margin-bottom: 20px; }
+.aiview__head h2 { margin: 0 0 6px; font-size: var(--text-xl); line-height: 1.35; letter-spacing: -.02em; }
+.aiview__head .muted { margin: 0; max-width: 46em; font-size: var(--text-sm); line-height: 1.8; }
+.aiview__count { flex: none; margin: 4px 0 0; padding: 3px 10px; border: 1px solid var(--line); border-radius: var(--radius-pill); color: var(--muted); font: 500 var(--text-xs) / 1.6 var(--font-mono); white-space: nowrap; font-variant-numeric: tabular-nums; }
+
+.aiview-missing { display: flex; gap: 12px; margin: 0 0 20px; padding: 14px 16px; border: 1px solid var(--warn-line); border-radius: var(--radius); background: var(--warn-bg); color: var(--warn); font-size: var(--text-sm); line-height: 1.7; }
+.aiview-missing__icon { flex: none; display: grid; place-items: center; width: 20px; height: 20px; margin-top: 1px; border-radius: 50%; background: var(--warn); color: var(--warn-bg); font-weight: 700; font-size: 13px; line-height: 1; }
+.aiview-missing__title { margin: 0 0 4px; font-weight: 700; }
+.aiview-missing__list { margin: 0; padding-left: 1.1em; }
+.aiview-missing__list li + li { margin-top: 2px; }
+.aiview-missing__list li::marker { color: color-mix(in srgb, var(--warn) 60%, transparent); }
+.aiview-missing__foot { margin: 8px 0 0; padding-top: 8px; border-top: 1px dashed var(--warn-line); opacity: .85; }
+
+.aiview__list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); overflow: hidden; }
+.aiview-item { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: start; gap: 4px 14px; padding: 14px 16px; transition: background-color var(--dur-fast); }
+.aiview-item + .aiview-item { border-top: 1px solid var(--line); }
+.aiview-item:hover, .aiview-item:focus-within { background: color-mix(in srgb, var(--bg-subtle) 35%, transparent); }
+.aiview-item__num { min-width: 2ch; padding-top: 3px; color: var(--lime-ink); font: 500 12px / 1.9 var(--font-mono); font-variant-numeric: tabular-nums; }
+.aiview-item__body { min-width: 0; }
+.aiview-item__more { grid-column: 2 / -1; min-width: 0; }
+
+.aiview-edit > summary { display: flex; align-items: flex-start; gap: 12px; min-height: 0; padding: 0; list-style: none; cursor: pointer; }
+.aiview-edit > summary::-webkit-details-marker { display: none; }
+.aiview-item__text { flex: 1; min-width: 0; font-size: var(--text-base); line-height: 1.75; overflow-wrap: anywhere; }
+.aiview-edit[open] > summary { justify-content: flex-end; margin-bottom: 8px; }
+.aiview-edit[open] .aiview-item__text { display: none; }
+.aiview-edit textarea { width: 100%; margin: 0; padding: 10px 12px; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--bg); font-size: var(--text-base); line-height: 1.75; }
+
+.aiview-pill { flex: none; display: inline-flex; align-items: center; gap: 5px; min-height: 30px; padding: 3px 10px; border: 1px solid var(--line); border-radius: var(--radius-pill); background: var(--surface); color: var(--muted); font-size: var(--text-xs); font-weight: 500; line-height: 1.4; white-space: nowrap; cursor: pointer; transition: color var(--dur-fast), border-color var(--dur-fast), background-color var(--dur-fast); }
+.aiview-pill .home-icon { width: 13px; height: 13px; }
+.aiview-pill:hover, .aiview-edit > summary:hover .aiview-pill { border-color: var(--text); color: var(--text); }
+.aiview-edit > summary:focus-visible { outline: 2.5px solid var(--text); outline-offset: 4px; border-radius: var(--radius-xs); }
+.aiview-pill__open, .aiview-edit[open] .aiview-pill__closed { display: none; }
+.aiview-edit[open] .aiview-pill__open { display: inline; }
+.aiview-edit[open] .aiview-pill--edit { border-color: var(--text); color: var(--text); }
+
+.aiview-drop { position: relative; }
+.aiview-drop input { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; opacity: 0; cursor: pointer; }
+.aiview-drop:has(input:focus-visible) { outline: 2.5px solid var(--text); outline-offset: 2px; }
+.aiview-drop__on, .aiview-drop:has(input:checked) .aiview-drop__off { display: none; }
+.aiview-drop:has(input:checked) .aiview-drop__on { display: inline; }
+.aiview-drop:has(input:checked) { border-color: var(--bad); background: var(--bad-bg); color: var(--bad); }
+.aiview-item:has(.aiview-drop input:checked) .aiview-item__text { color: var(--muted); text-decoration: line-through; text-decoration-color: var(--bad); text-decoration-thickness: 1.5px; }
+.aiview-item:has(.aiview-drop input:checked) :is(.aiview-item__num, .aiview-pill--edit, .create-writein) { opacity: .45; }
+
+.aiview-item .create-writein { margin-top: 2px; }
+.aiview-item .create-writein > summary { display: inline-block; min-height: 0; padding: 2px 0; font-size: var(--text-xs); line-height: 1.7; list-style: none; }
+.aiview-item .create-writein > summary::-webkit-details-marker { display: none; }
+.aiview-item .create-writein > summary::before { content: '+'; display: inline-block; width: 1.2em; color: var(--lime-ink); font-weight: 700; }
+.aiview-item .create-writein[open] > summary::before { content: '−'; }
+.aiview-item .create-writein > summary:hover { color: var(--text); }
+.aiview-item .create-writein .hosted-question { margin: 6px 0 4px; }
+
+@media (max-width: 759px) {
+  .aiview { padding: 18px 16px; }
+  .aiview__head { flex-direction: column; gap: 8px; margin-bottom: 16px; }
+  .aiview__head h2 { font-size: var(--text-lg); }
+  .aiview__count { order: -1; margin: 0; }
+  .aiview-missing { padding: 12px 14px; }
+  .aiview__list { margin-inline: -4px; }
+  .aiview-item { gap: 4px 10px; padding: 12px; }
+  .aiview-item__num { padding-top: 11px; }
+  /* 手机：整句可点，句尾只留铅笔图标；划掉留在右侧，给句子最多宽度。 */
+  .aiview-edit > summary { display: block; min-height: 44px; padding-block: 10px; }
+  .aiview-edit:not([open]) .aiview-pill--edit { display: inline-flex; vertical-align: -2px; min-height: 0; margin-left: 6px; padding: 0; border: 0; background: none; color: var(--lime-ink); }
+  .aiview-edit:not([open]) .aiview-pill--edit .home-icon { width: 15px; height: 15px; }
+  .aiview-edit:not([open]) .aiview-pill__closed { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+  .aiview-edit[open] > summary { display: flex; padding-block: 0; min-height: 44px; align-items: center; margin-bottom: 4px; }
+  .aiview-pill { min-height: 36px; font-size: var(--text-sm); }
+  .aiview-drop { min-height: 44px; padding-inline: 12px; }
+  .aiview-item .create-writein > summary { min-height: 44px; padding-block: 10px; font-size: var(--text-sm); }
 }
 
 .hosted-hooks li {
