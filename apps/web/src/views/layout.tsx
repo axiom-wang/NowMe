@@ -182,7 +182,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
           <a class="skip-link" href="#main">跳到主要内容</a>
           <SiteHeader auth={auth} demo={demo} demoUrl={demoUrl} path={path} active={bodyClass === 'page--data' ? 'data' : bodyClass === 'page--messages' || bodyClass === 'page--conversation' ? 'messages' : bodyClass === 'page--home' ? 'home' : undefined} />
           <main id="main" class="site-main" tabindex={-1}>{children}</main>
-          <Footer />
+          {bodyClass === 'page--landing' ? <Footer /> : null}
         </body>
       </html>
     </>

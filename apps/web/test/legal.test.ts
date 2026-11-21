@@ -11,7 +11,7 @@ afterEach(async () => {
 });
 
 describe('/terms 与 /privacy', () => {
-  it('不需要登录；带版本号；页脚在登录页和站内页都有链接', async () => {
+  it('不需要登录；带版本号；品牌与协议页脚只出现在 landing page', async () => {
     t = createTestWeb();
     for (const path of ['/terms', '/privacy']) {
       const response = await get(t, path);
@@ -20,9 +20,16 @@ describe('/terms 与 /privacy', () => {
       expect(html).toContain(`版本 ${LEGAL_VERSION}`);
       expect(html).toContain('<!doctype html>');
     }
-    const login = await (await get(t, '/login')).text();
-    expect(login).toContain('href="/terms"');
-    expect(login).toContain('href="/privacy"');
+    const landing = await (await get(t, '/')).text();
+    expect(landing).toContain('<footer class="site-footer">');
+    expect(landing).toContain('挂在圈子共同的墙上。');
+    for (const path of ['/login', '/terms', '/privacy']) {
+      expect(await (await get(t, path)).text()).not.toContain('<footer');
+    }
+    const member = await login(t, 'footer@example.com', '小林');
+    expect(await (await get(t, '/', { cookie: member.cookie })).text()).not.toContain('<footer');
+    expect(landing).toContain('href="/terms"');
+    expect(landing).toContain('href="/privacy"');
   });
 
   it('用户协议写明年龄、AI 协助生成、内容检查、点数、注销入口', async () => {
@@ -77,7 +84,9 @@ describe('用户页面展示', () => {
     const publicHtml = await (await get(t, `/s/${token}`)).text();
     expect(publicHtml).not.toContain('data-ai-badge');
     expect(publicHtml).not.toContain('AI 协助生成');
-    expect(publicHtml).toContain('href="/terms"');
+    expect(publicHtml).not.toContain('<footer');
+    expect(wallHtml).not.toContain('<footer');
+    expect(memberHtml).not.toContain('<footer');
 
     // 移除提示不影响 iframe 的受限 sandbox，也不改写用户页面文件
     expect(memberHtml).toMatch(/<iframe[^>]*sandbox="allow-scripts"/);
