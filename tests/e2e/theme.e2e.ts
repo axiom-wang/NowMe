@@ -36,7 +36,11 @@ test('所有功能页面在深浅两色下均可访问，手机无溢出，成�
   const paths = ['/', '/messages', '/account/data', '/account/ai', '/account/credits', '/account/delete', '/walls/new', '/skill', '/terms', '/privacy', '/missing-theme-page', `/w/${wallId}`, `/w/${wallId}/admin`, `/w/${wallId}/questions`, `/w/${wallId}/me`, `/w/${wallId}/me/create`, `/messages/wall/${wallId}`];
   const contrastProblems: string[] = [];
   for (const theme of ['light', 'dark']) {
+    await page.locator('.account-menu > summary').click();
+    await expect(page.locator('.account-menu__panel [data-theme-picker]')).toBeVisible();
+    await expect(page.locator('.site-header__inner > .theme-picker')).toHaveCount(0);
     await page.getByRole('combobox', { name: '外观', exact: true }).selectOption(theme);
+    await page.keyboard.press('Escape');
     for (const width of [320, 390, 768, 1440]) {
       await page.setViewportSize({ width, height: 900 });
       for (const path of paths) {

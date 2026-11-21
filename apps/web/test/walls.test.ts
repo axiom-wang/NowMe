@@ -347,7 +347,7 @@ describe('墙（W13）、成员页与想聊这个（W14）', () => {
   it('写明上墙人数与成员总数；卡片够多才出现搜索框', async () => {
     publishedMember(t, wall, { name: '成员0' });
     const few = await (await get(t, `/w/${wall.id}`, { cookie: viewer.cookie })).text();
-    expect(few).toMatch(/data-wall-count-note>位已上墙<\/span>/);
+    expect(few).toMatch(/data-wall-count-note[^>]*>位已上墙<\/span>/);
     expect(few).toMatch(/data-wall-summary[\s\S]*共 \d+ 位成员/);
     expect(few).not.toContain('data-wall-search');
     for (let index = 1; index < 4; index += 1) publishedMember(t, wall, { name: `成员${index}` });

@@ -95,19 +95,23 @@ const Footer: FC = () => (
   </footer>
 );
 
+const ThemePicker: FC<{ menu?: boolean }> = ({ menu = false }) => (
+  <label class="theme-picker">
+    <span class={menu ? undefined : 'visually-hidden'}>外观</span>
+    <select aria-label="外观" data-theme-picker>
+      <option value="system">跟随系统</option>
+      <option value="light">浅色</option>
+      <option value="dark">深色</option>
+    </select>
+  </label>
+);
+
 /** 主站共用顶栏；访客显示品牌与“登录”，登录后显示导航与账号菜单。 */
 export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; active?: 'home' | 'messages' | 'data'; path?: string }> = ({ auth, demo, active, path }) => (
   <header class="site-header">
     <div class="site-header__inner">
       <Brand />
-      <label class="theme-picker">
-        <span class="visually-hidden">外观</span>
-        <select aria-label="外观" data-theme-picker>
-          <option value="system">跟随系统</option>
-          <option value="light">浅色</option>
-          <option value="dark">深色</option>
-        </select>
-      </label>
+      {!auth?.user.nickname ? <ThemePicker /> : null}
       {auth?.user.nickname ? <>
         <nav class="site-nav" aria-label="主导航">
           <a class={`site-nav__link${active === 'home' ? ' is-active' : ''}`} href="/" aria-current={active === 'home' ? 'page' : undefined}>我的</a>
@@ -117,6 +121,7 @@ export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; active?:
         <details class="account-menu" data-dismissable>
           <summary class="user-chip" aria-label={`账号菜单：${auth.user.nickname}`}><span class="avatar avatar--sm" aria-hidden="true">{auth.user.avatarVersion ? <img src={`/account/avatar?v=${auth.user.avatarVersion}`} alt="" /> : initialOf(auth.user.nickname ?? '')}</span><span class="user-chip__name">{auth.user.nickname}</span><HomeIcon name="chevron" /></summary>
           <div class="popover account-menu__panel">
+            <ThemePicker menu />
             {!demo ? <a href="/account/credits">点数</a> : null}
             {!demo ? <a href="/account/ai">AI 设置</a> : null}
             {demo ? <a href="/login">切换身份</a> : null}

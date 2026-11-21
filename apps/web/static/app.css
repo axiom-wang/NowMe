@@ -2812,3 +2812,6 @@ a:hover { text-decoration-color: var(--accent-text); }
   .site-footer, .site-footer__legal { font-size: var(--text-sm); }
   .site-main p, .site-main p a { font-size: max(14px, 1em); }
 }
+
+.account-menu__panel .theme-picker { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 4px 10px 12px; margin-bottom: 4px; border-bottom: 1px solid var(--line); font-size: var(--text-sm); color: var(--text); }
+.account-menu__panel .theme-picker select { min-width: 108px; }
