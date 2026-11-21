@@ -23,6 +23,7 @@ export function sessionLoader(deps: Pick<AppDeps, 'repos' | 'now' | 'demo' | 'co
   return async (c, next) => {
     const auth = isApiPath(c.req.path) ? null : loadSession(deps, readSessionToken(c, deps.config));
     c.set('demo', !!deps.demo);
+    c.set('demoUrl', deps.demo ? null : deps.config.demoUrl);
     c.set('auth', auth && deps.demo && !demoAccountFor(auth.user.email) ? null : auth);
     return next();
   };

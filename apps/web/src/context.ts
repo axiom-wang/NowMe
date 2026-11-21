@@ -27,7 +27,7 @@ import type { OwnerEditService } from './services/owner-edit.js';
 import type { TicketIssuer } from './services/tickets.js';
 
 /** 主站运行配置（contracts 0.1、4.3、4.4）。`ticketSecret` 已解析（`resolveTicketSecret`）。 */
-export type WebConfig = Pick<NowmeConfig, 'webOrigin' | 'pagesOrigin' | 'dataDir' | 'agentTokenTtlHours' | 'isProduction' | 'hosted' | 'skillMarket' | 'mail' | 'trustProxyHops' | 'billing' | 'moderation' | 'contactEmail' | 'worker'> & {
+export type WebConfig = Pick<NowmeConfig, 'webOrigin' | 'pagesOrigin' | 'dataDir' | 'agentTokenTtlHours' | 'isProduction' | 'hosted' | 'skillMarket' | 'demoUrl' | 'mail' | 'trustProxyHops' | 'billing' | 'moderation' | 'contactEmail' | 'worker'> & {
   ticketSecret: string;
 };
 
@@ -86,6 +86,8 @@ export type AppEnv = {
     /** 会话（主站页面与表单；Agent API 不加载会话）。 */
     auth: SessionAuth | null;
     demo: boolean;
+    /** 顶栏 Demo 入口地址；演示模式与未配置时为 null。 */
+    demoUrl: string | null;
     /** `requireForm` 解析后的表单字段。 */
     form: FormFields;
     /** `requireForm({ multipartFiles })` 解析出的上传文件（托管采访的图片）。 */

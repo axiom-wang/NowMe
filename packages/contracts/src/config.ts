@@ -89,6 +89,11 @@ export interface NowmeConfig {
    * 安装页与 install.md 多显示一种安装方式；都不设为 null。
    */
   skillMarket: SkillMarketConfig | null;
+  /**
+   * 演示环境入口（contracts 10.1）：`NOWME_DEMO_URL`，https 绝对地址。设置后正式站顶栏固定显示“Demo”链接；
+   * 不设为 null。演示环境自己不设置它。
+   */
+  demoUrl: string | null;
   /** 后台任务进程（contracts 13）：渲染与 AI 任务在主站进程内跑（inline）还是交给独立的 worker（separate）。 */
   worker: WorkerConfig;
 }
@@ -451,6 +456,22 @@ export function loadSkillMarketConfig(env: Env): SkillMarketConfig | null {
   return { label, command };
 }
 
+/** `NOWME_DEMO_URL`：只接受 https 绝对地址，不带账号口令；空值为 null。 */
+export function loadDemoUrl(env: Env): string | null {
+  const raw = nonEmpty(env.NOWME_DEMO_URL);
+  if (raw === undefined) return null;
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    throw new ConfigError(`NOWME_DEMO_URL 不是有效的网址：${raw}`);
+  }
+  if (url.protocol !== 'https:' || url.username || url.password) {
+    throw new ConfigError('NOWME_DEMO_URL 必须是 https 地址，且不能带账号口令');
+  }
+  return url.href;
+}
+
 /** 读取配置并校验。默认值见 contracts 0.1。不读写文件。 */
 export function loadConfig(env: Env = process.env): NowmeConfig {
   const webOrigin = parseOrigin(env, 'NOWME_WEB_ORIGIN', DEFAULT_WEB_ORIGIN);
@@ -509,6 +530,7 @@ export function loadConfig(env: Env = process.env): NowmeConfig {
     isProduction: env.NODE_ENV === 'production',
     hosted: loadHostedConfig(env, env.NODE_ENV === 'production'),
     skillMarket: loadSkillMarketConfig(env),
+    demoUrl: loadDemoUrl(env),
     worker: loadWorkerConfig(env),
   };
 }

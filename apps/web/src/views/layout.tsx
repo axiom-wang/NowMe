@@ -55,6 +55,8 @@ export interface LayoutProps {
   origin?: string;
   auth: SessionAuth | null;
   demo?: boolean;
+  /** 顶栏 Demo 入口（`NOWME_DEMO_URL`）；null 或演示模式不显示。 */
+  demoUrl?: string | null;
   /** 页面主体的额外 class（例如 `page--narrow`）。 */
   bodyClass?: string;
   /** 页面上有生成进度（加载 `progress.js`：SSE 实时进度，退回轮询；contracts 18，不用 meta refresh）。 */
@@ -107,7 +109,10 @@ const ThemePicker: FC<{ menu?: boolean }> = ({ menu = false }) => (
 );
 
 /** 主站共用顶栏；访客显示品牌与“登录”，登录后显示导航与账号菜单。 */
-export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; active?: 'home' | 'messages' | 'data'; path?: string }> = ({ auth, demo, active, path }) => (
+export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; demoUrl?: string | null; active?: 'home' | 'messages' | 'data'; path?: string }> = ({ auth, demo, demoUrl, active, path }) => {
+  const demoHref = demoUrl && !demo ? demoUrl : null;
+  const showLogin = !auth && !(path ?? '').startsWith('/login');
+  return (
   <header class="site-header">
     <div class="site-header__inner">
       <Brand />
@@ -117,25 +122,31 @@ export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; active?:
           <a class={`site-nav__link${active === 'home' ? ' is-active' : ''}`} href="/" aria-current={active === 'home' ? 'page' : undefined}>我的</a>
           <a class={`site-nav__link${active === 'messages' ? ' is-active' : ''}`} href="/messages" aria-current={active === 'messages' ? 'page' : undefined}><span>消息</span><span class="message-badge" data-message-unread hidden aria-label="未读消息"></span></a>
           <a class={`site-nav__link${active === 'data' ? ' is-active' : ''}`} href="/account/data" aria-current={active === 'data' ? 'page' : undefined}>我的资料</a>
+          {demoHref ? <a class="site-nav__link site-nav__demo" href={demoHref} rel="noopener">Demo</a> : null}
         </nav>
         <details class="account-menu" data-dismissable>
           <summary class="user-chip" aria-label={`账号菜单：${auth.user.nickname}`}><span class="avatar avatar--sm" aria-hidden="true">{auth.user.avatarVersion ? <img src={`/account/avatar?v=${auth.user.avatarVersion}`} alt="" /> : initialOf(auth.user.nickname ?? '')}</span><span class="user-chip__name">{auth.user.nickname}</span><HomeIcon name="chevron" /></summary>
           <div class="popover account-menu__panel">
             <ThemePicker menu />
+            {demoHref ? <a class="account-menu__demo" href={demoHref} rel="noopener">Demo</a> : null}
             {!demo ? <a href="/account/credits">点数</a> : null}
             {!demo ? <a href="/account/ai">AI 设置</a> : null}
             {demo ? <a href="/login">切换身份</a> : null}
             <form method="post" action="/logout"><CsrfField token={auth.session.csrfToken} /><button type="submit">退出登录</button></form>
           </div>
         </details>
-      </> : !auth && !(path ?? '').startsWith('/login') ? (
-        <a class="btn btn--primary btn--small site-header__login" href="/login">{demo ? '体验' : '登录'}</a>
+      </> : demoHref || showLogin ? (
+        <div class="site-header__actions">
+          {demoHref ? <a class="btn btn--ghost btn--small site-header__demo" href={demoHref} rel="noopener">Demo</a> : null}
+          {showLogin ? <a class="btn btn--primary btn--small site-header__login" href="/login">{demo ? '体验' : '登录'}</a> : null}
+        </div>
       ) : null}
     </div>
   </header>
-);
+  );
+};
 
-export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyClass, progress, demo, path, styles, origin, children }) => {
+export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyClass, progress, demo, demoUrl, path, styles, origin, children }) => {
   const signedIn = !!auth?.user.nickname;
   return (
     <>
@@ -169,7 +180,7 @@ export const Layout: FC<PropsWithChildren<LayoutProps>> = ({ title, auth, bodyCl
         </head>
         <body class={bodyClass ? `site ${bodyClass}` : 'site'}>
           <a class="skip-link" href="#main">跳到主要内容</a>
-          <SiteHeader auth={auth} demo={demo} path={path} active={bodyClass === 'page--data' ? 'data' : bodyClass === 'page--messages' || bodyClass === 'page--conversation' ? 'messages' : bodyClass === 'page--home' ? 'home' : undefined} />
+          <SiteHeader auth={auth} demo={demo} demoUrl={demoUrl} path={path} active={bodyClass === 'page--data' ? 'data' : bodyClass === 'page--messages' || bodyClass === 'page--conversation' ? 'messages' : bodyClass === 'page--home' ? 'home' : undefined} />
           <main id="main" class="site-main" tabindex={-1}>{children}</main>
           <Footer />
         </body>
@@ -185,7 +196,7 @@ export function renderPage(
 ): Response | Promise<Response> {
   const auth = c.get('auth') ?? null;
   return c.html(
-    <Layout title={options.title} origin={new URL(c.req.url).origin} auth={auth} demo={c.get('demo')} bodyClass={options.bodyClass} progress={options.progress} path={c.req.path} styles={options.styles}>
+    <Layout title={options.title} origin={new URL(c.req.url).origin} auth={auth} demo={c.get('demo')} demoUrl={c.get('demoUrl')} bodyClass={options.bodyClass} progress={options.progress} path={c.req.path} styles={options.styles}>
       {options.body}
     </Layout>,
     (options.status ?? 200) as 200,

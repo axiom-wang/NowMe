@@ -72,8 +72,18 @@ describe('loadConfig', () => {
         interviewDailyCalls: 20,
       },
       skillMarket: null,
+      demoUrl: null,
       worker: { mode: 'inline', aiConcurrency: 2, shutdownGraceMs: 30_000 },
     });
+  });
+
+  it('演示入口：NOWME_DEMO_URL 只接受 https 地址，非法值与带账号口令的地址报错，空值为 null', () => {
+    expect(loadConfig({}).demoUrl).toBeNull();
+    expect(loadConfig({ NOWME_DEMO_URL: '  ' }).demoUrl).toBeNull();
+    expect(loadConfig({ NOWME_DEMO_URL: 'https://124.222.53.43:8444' }).demoUrl).toBe('https://124.222.53.43:8444/');
+    for (const bad of ['http://124.222.53.43:8444', 'javascript:alert(1)', 'demo.example.com', 'https://user:pw@demo.example.com', '//demo.example.com']) {
+      expect(() => loadConfig({ NOWME_DEMO_URL: bad }), bad).toThrow(ConfigError);
+    }
   });
 
   it('Skill 市场渠道：两个变量同时设置才生效；只设一个、多行或过长都报错', () => {
