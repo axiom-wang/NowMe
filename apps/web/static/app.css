@@ -1671,19 +1671,6 @@ input[type='checkbox'] {
   vertical-align: middle;
 }
 
-.ai-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  padding: 1px 8px;
-  border: 1px solid var(--divider);
-  border-radius: var(--radius-pill);
-  font-size: var(--text-xs);
-  line-height: 1.6;
-  color: var(--muted);
-  background: transparent;
-  white-space: nowrap;
-}
 
 /* ------------------------------------------------------------------ */
 /* 步骤条：每一步是一张小纸片；做完的打上墨色勾，当前这步是歪着的柠檬绿便签 */
@@ -2012,9 +1999,6 @@ input[type='checkbox'] {
   box-shadow: 0 0 0 1.5px var(--shadow-color);
 }
 
-.page-frame__ai {
-  margin: 0;
-}
 
 .page-frame__stage-bar {
   display: none;
@@ -2153,9 +2137,6 @@ figure.page-frame.page-frame--stage {
   display: none;
 }
 
-.page-frame--stage .page-frame__ai {
-  flex: none;
-}
 
 /* ------------------------------------------------------------------ */
 /* 校验报告 */

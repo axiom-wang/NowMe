@@ -23,6 +23,6 @@ Kit 调用 `parent.postMessage({ type: 'nowme:open-link', url }, '*')`。主站�
 
 ## 5.3 展示模式与墙内连播
 
-成员页、公开链接页与工作区预览的 `PageFrame` 都有“放大看”：舞台铺满窗口，并尝试对主站的 `figure` 请求全屏；不支持或拒绝全屏时固定舞台仍可使用。iframe 始终保持 **375×667 逻辑视口**，只通过 `transform: scale(...)` 整体等比缩放，不提供更宽视口。进入与退出只改外层 class 和 CSSOM 自定义属性，**不移动、不重建 iframe**，避免二次 `load` 被 5.2 误判；AI 协助生成标识保留，沙箱、票据与页面 CSP 不变。
+成员页、公开链接页与工作区预览的 `PageFrame` 都有“放大看”：舞台铺满窗口，并尝试对主站的 `figure` 请求全屏；不支持或拒绝全屏时固定舞台仍可使用。iframe 始终保持 **375×667 逻辑视口**，只通过 `transform: scale(...)` 整体等比缩放，不提供更宽视口。进入与退出只改外层 class 和 CSSOM 自定义属性，**不移动、不重建 iframe**，避免二次 `load` 被 5.2 误判；沙箱、票据与页面 CSP 不变。
 
 只有成员页提供“上一位 / 下一位”和方向键连播。切换通过 `GET /w/:wallId/p/:pageId/stage` 重新授权并取当前发布票据，用 `cloneNode(false)` 继承原 iframe 属性后替换；新节点从 0 计算 `load`，不解除全屏，也不增加浏览器历史。顺序为 `listPublished` 的 `published_at, rowid`，过滤与查看者互相拉黑的人，首尾循环；单人墙不显示切换按钮。接口失败保留当前页；退出时若已切到别人，跳转到对应成员页。iframe 不加 `allow` / `allowfullscreen`，用户页面自己不能发起全屏。

@@ -86,9 +86,8 @@
   function setStageScale(root) {
     if (!root.classList.contains('page-frame--stage')) return;
     var bar = root.querySelector('[data-nm-stage-bar]');
-    var badge = root.querySelector('.page-frame__ai');
     var availableWidth = Math.max(1, root.clientWidth - 32);
-    var availableHeight = Math.max(1, root.clientHeight - (bar ? bar.offsetHeight : 0) - (badge ? badge.offsetHeight : 0) - 56);
+    var availableHeight = Math.max(1, root.clientHeight - (bar ? bar.offsetHeight : 0) - 56);
     var scale = Math.min(availableWidth / 375, availableHeight / 667);
     root.style.setProperty('--nm-stage-scale', String(scale));
   }

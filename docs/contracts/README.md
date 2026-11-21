@@ -26,7 +26,7 @@
 | [13](13-job-queue.md) | 后台任务进程与任务队列：进程划分、租约、进度事件、重启语义 |
 | [14](14-account-deletion-export.md) | 账号注销与数据导出（S11） |
 | [15](15-reports-blocking.md) | 举报、拉黑、停用账号与平台运营命令（S12） |
-| [16](16-content-safety-terms.md) | 内容安全检查、AI 协助生成标识、用户协议 / 隐私政策与年龄确认 |
+| [16](16-content-safety-terms.md) | 内容安全检查、用户页面生成说明、用户协议 / 隐私政策与年龄确认 |
 | [17](17-operations.md) | 运维：容器、备份与日志（细节见 [deploy.md](../deploy.md)） |
 | [18](18-generation-progress.md) | 生成进度与完成通知：默认路线、SSE 实时进度、完成提醒邮件 |
 | [19](19-organizer-tools.md) | 组织者工具（S13）：必答题、完成度与提醒、墙的群像 |

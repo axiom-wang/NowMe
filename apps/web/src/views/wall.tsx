@@ -11,7 +11,6 @@ import type { PageDisplayState } from '../db/publications.js';
 import type { WallCard, WallModel } from '../services/wall-view.js';
 import { Notice } from './forms.js';
 import { PAGE_STATE_LABEL } from './home.js';
-import { AiBadge } from './ai-badge.js';
 import { initialOf } from './layout.js';
 import { answerKeys, CardAnswerTags, PortraitPanel, WallFilters } from './organizer-tools.js';
 
@@ -71,7 +70,6 @@ const WallCardItem: FC<{ item: WallCard }> = ({ item }) => {
         ) : null}
         <span class="wall-card__body">
           <span class="wall-card__name">{item.card.displayName}</span>
-          <AiBadge />
           {item.card.tagline ? <span class="wall-card__tagline">{item.card.tagline}</span> : null}
           <CardAnswerTags answers={item.answers} />
           {rest.length > 0 ? <span class="wall-card__more">还想聊 {rest.length} 个话题</span> : null}

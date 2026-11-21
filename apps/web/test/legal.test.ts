@@ -1,4 +1,4 @@
-/** 用户协议、隐私政策（contracts 16.3）与“AI 协助生成”标识（contracts 16.2）。 */
+/** 用户协议、隐私政策（contracts 16.3）与用户页面展示（contracts 16.2）。 */
 import { afterEach, describe, expect, it } from 'vitest';
 import { LEGAL_VERSION, LOGIN_CODE_TTL_SECONDS, SESSION_TTL_SECONDS } from '@nowme/contracts';
 import { connectAgent, createTestWeb, get, login, seedMember, seedWall, type TestWeb } from './helpers.js';
@@ -53,8 +53,8 @@ describe('/terms 与 /privacy', () => {
   });
 });
 
-describe('“AI 协助生成”标识', () => {
-  it('墙上的卡片、成员页的页面框、公开链接页都有；用户页面本身的 HTML 不动', async () => {
+describe('用户页面展示', () => {
+  it('墙卡片、成员页与公开链接页不显示生成标识；沙箱与页面内容不变', async () => {
     t = createTestWeb();
     const owner = await login(t, 'owner@example.com', '林舟');
     const viewer = await login(t, 'viewer@example.com', '访客');
@@ -67,19 +67,19 @@ describe('“AI 协助生成”标识', () => {
     const token = await enablePublicLink(t, owner, wall.id, page.id);
 
     const wallHtml = await (await get(t, `/w/${wall.id}`, { cookie: viewer.cookie })).text();
-    expect(wallHtml).toMatch(/wall-card[\s\S]*data-ai-badge[\s\S]*AI 协助生成/);
+    expect(wallHtml).not.toContain('data-ai-badge');
+    expect(wallHtml).not.toContain('AI 协助生成');
 
     const memberHtml = await (await get(t, `/w/${wall.id}/p/${page.id}`, { cookie: viewer.cookie })).text();
-    expect(memberHtml).toContain('data-ai-badge');
-    expect(memberHtml).toContain('AI 协助生成');
-    expect(memberHtml).toContain('本人确认后发布');
+    expect(memberHtml).not.toContain('data-ai-badge');
+    expect(memberHtml).not.toContain('AI 协助生成');
 
     const publicHtml = await (await get(t, `/s/${token}`)).text();
-    expect(publicHtml).toContain('data-ai-badge');
-    expect(publicHtml).toContain('AI 协助生成');
+    expect(publicHtml).not.toContain('data-ai-badge');
+    expect(publicHtml).not.toContain('AI 协助生成');
     expect(publicHtml).toContain('href="/terms"');
 
-    // 标识在主站的外壳里，iframe 仍然只有受限的 sandbox，页面文件没有被改写
+    // 移除提示不影响 iframe 的受限 sandbox，也不改写用户页面文件
     expect(memberHtml).toMatch(/<iframe[^>]*sandbox="allow-scripts"/);
     const files = t.repos.revisions.findById(revision.id);
     expect(files?.renderedText ?? '').not.toContain('AI 协助生成');

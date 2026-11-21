@@ -456,9 +456,6 @@
   min-width: 0;
 }
 
-.wall-card__body > .ai-badge {
-  align-self: flex-start;
-}
 
 .wall-card__name {
   font-family: var(--font-head);
