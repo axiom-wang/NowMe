@@ -7,7 +7,6 @@
  */
 import type { FC } from 'hono/jsx';
 import { ASK_LIMITS, COVER_CSS_HEIGHT, COVER_CSS_WIDTH } from '@nowme/contracts';
-import { formatDateTime } from '../format.js';
 import type { AskCardView, AskPanel, AskView } from '../services/ask.js';
 import { CsrfField } from './forms.js';
 import { initialOf } from './layout.js';
@@ -85,7 +84,6 @@ const AskForm: FC<{ wallId: string; csrf: string; suggestions: readonly string[]
         ))}
       </p>
     ) : null}
-    <p class="ask__hint">大约十几秒 · 只有你能看到你问了什么</p>
   </form>
 );
 
@@ -114,9 +112,6 @@ const AskAnswer: FC<{ wallId: string; view: AskView; csrf: string }> = ({ wallId
         <a href={`/messages/wall/${wallId}`}>全员群</a>里直接问一句。
       </p>
     )}
-    <p class="intros__foot ask__foot">
-      只有你能看到这次提问和结果，被找到的人不会收到任何通知。“TA”后面是对方页面上的原话，AI 不会替别人编；它只读公开的页面，也可能有遗漏。问于 {formatDateTime(view.createdAt)}。
-    </p>
     <div class="intros__tools">
       <form method="post" action={`/w/${wallId}/ask/clear`}>
         <CsrfField token={csrf} />

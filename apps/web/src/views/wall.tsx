@@ -7,7 +7,6 @@
  */
 import type { Child, FC } from 'hono/jsx';
 import { COVER_CSS_HEIGHT, COVER_CSS_WIDTH } from '@nowme/contracts';
-import type { PageDisplayState } from '../db/publications.js';
 import type { WallCard, WallModel } from '../services/wall-view.js';
 import { Notice } from './forms.js';
 import { PAGE_STATE_LABEL } from './home.js';
@@ -23,12 +22,6 @@ const NOTICE_TEXT: Record<WallNotice, string> = {
   joined: '加入成功。先逛逛墙上的人；想好了，再去做你自己的一页，不用着急。',
   rejoined: '欢迎回来。你原来的页面没有自动挂回墙上；想让大家再看到，需要你自己重新发布一下。',
   blocked: '已拉黑。你们互相看不到对方的页面，也不能再私信；TA 不会收到通知。想反悔的话，可以在“我的资料”里解除。',
-};
-
-const MY_PAGE_TEXT: Record<PageDisplayState, string> = {
-  unpublished: '你的页面还没挂上墙，墙上的人暂时看不到你。和 AI 聊几句，就能做出来。',
-  withdrawn: '你的页面已经从墙上撤下。想让大家再看到，随时可以重新发布。',
-  published: '你的页面已经挂在墙上了，墙上的人都能看到。',
 };
 
 /** 卡片的检索文字（名字、一行介绍、全部接话点、必答题的回答），给墙上的搜索用。 */
@@ -140,7 +133,6 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
               {PAGE_STATE_LABEL[myPage.state]}
             </span>
           </div>
-          <p class="my-page__text">{MY_PAGE_TEXT[myPage.state]}</p>
         </div>
         <div class="actions my-page__actions">
           <a class={`btn ${published ? 'btn--ghost' : 'btn--primary'}`} href={`/w/${wall.id}/me`}>
@@ -174,9 +166,8 @@ export const WallView: FC<{ model: WallModel; sceneLabel: string; notice: WallNo
               {ask ? <a class="wall-board__assist-link" href="#ask">问问这面墙</a> : null}
             </div> : null}
           </div>
-          {cards.length > 0 ? <div class="wall-board__meta section-head__note" data-wall-summary>
+          {cards.length > 0 && model.memberCount > cards.length ? <div class="wall-board__meta section-head__note" data-wall-summary>
             {model.memberCount > cards.length ? <span>共 {model.memberCount} 位成员</span> : null}
-            <span>每次进来顺序都不一样</span>
           </div> : null}
           {cards.length >= WALL_SEARCH_MIN_CARDS ? (
             <label class="wall-search">

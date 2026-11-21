@@ -81,7 +81,7 @@ const WallGroup: FC<{ published: boolean; items: HomeItem[] }> = ({ published, i
   <section class={`home-group home-group--${published ? 'published' : 'pending'}`} aria-labelledby={published ? 'published-heading' : 'pending-heading'}>
     <div class="home-group__heading">
       <h3 id={published ? 'published-heading' : 'pending-heading'}><HomeIcon name={published ? 'check' : 'pending'} />{published ? '已发布的页面' : '待完成的页面'} <span class="home-group__count">{items.length}</span></h3>
-      <p>{published ? '你的页面已发布，随时可以回访或更新内容。' : '这些墙上你的页面还未发布，继续创作吧！'}</p>
+      {!published ? <p>这些墙上你的页面还未发布，继续创作吧！</p> : null}
     </div>
     {items.length ? <ul class="home-group__list">{items.map((item) => <ActiveItem item={item} />)}</ul> : (
       <div class="home-group__empty">

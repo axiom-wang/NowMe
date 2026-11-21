@@ -128,7 +128,7 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
   const { wall } = createWall(deps, {
     organizerId: organizer.userId,
     name: DEMO_WALL_NAME,
-    description: '周末 48 小时，找到能一起熬夜的队友。这是演示用的墙，里面的人都是虚构的。',
+    description: '周末 48 小时，找到能一起熬夜的队友。',
     sceneType: 'hackathon',
     organizerNote: '先挂上自己的一页，再去墙上找人聊',
   });
@@ -154,7 +154,7 @@ export async function seedDemo(web: WebApp, log: (message: string) => void = () 
   const { wall: clubWall } = createWall(deps, {
     organizerId: organizer.userId,
     name: DEMO_CLUB_WALL_NAME,
-    description: '每周六早上扫街，月底一起冲洗胶片办小展。新社员、老社员都在这里挂一页，让大家先认识你。这是演示用的墙，里面的人都是虚构的。',
+    description: '每周六早上扫街，月底一起冲洗胶片办小展。新社员、老社员都在这里挂一页，让大家先认识你。',
     sceneType: 'club',
     organizerNote: '新同学写写想拍什么，老社员写写可以来问你什么',
   });

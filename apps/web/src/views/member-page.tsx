@@ -6,7 +6,7 @@
  */
 import type { FC } from 'hono/jsx';
 import type { IcebreakerLink } from '../hosted/icebreaker.js';
-import type { IcebreakerPanel, IcebreakerView } from '../services/icebreaker.js';
+import type { IcebreakerPanel } from '../services/icebreaker.js';
 import { INTRO_KIND_LABEL } from '../services/intro.js';
 import type { IntroKind } from '../db/intros.js';
 import type { ChatModel, MemberPageModel } from '../services/wall-view.js';
@@ -47,11 +47,6 @@ const TalkPair: FC<{ theirInitial: string }> = ({ theirInitial }) => (
     <span class="talk__who talk__who--them">{theirInitial}</span>
   </span>
 );
-
-function sourceText(sources: IcebreakerView['sources']): string {
-  const used = [sources.page ? '你已发布的页面' : '', sources.brief ? '你确认过的采访' : ''].filter(Boolean);
-  return used.length > 0 ? `用到了：${used.join('、')}，和 TA 公开在墙上的页面。` : '你还没有自己的页面，这次只读了 TA 公开在墙上的页面。';
-}
 
 /**
  * 和 TA 聊什么（contracts 11）：查看者请 AI 读两个人的页面，找连接点、起草开场白。
@@ -131,10 +126,6 @@ const TalkPanel: FC<{ base: string; name: string; csrf: string; panel: Icebreake
               </li>
             ))}
           </ol>
-          <p class="talk__foot">
-            只有你能看到。{sourceText(view.sources)}
-            {view.links.length > 0 ? '引号里的话都是从你们页面里原样摘出来的。' : ''}点“用这句开聊”只会把它填进输入框，改成你的语气再发。
-          </p>
           <div class="talk__tools">
             <form method="post" action={`${base}/icebreaker`} data-busy-label="正在重新读你们俩的页面…">
               <CsrfField token={csrf} />
@@ -240,9 +231,6 @@ export const MemberPageView: FC<{ model: MemberPageModel; csrf: string; icebreak
                 {own ? '你的页面还没有留话题。回到“我的页面”，让 AI 帮你加几个别人容易开口的话题。' : 'TA 还没有留话题。可以直接发私信，或者让 AI 帮你找个开头。'}
               </p>
             )}
-            {own ? (
-              <p class="muted topics__note">这是你自己的页面。别人点“想聊这个”，会带着你确认过的开场白，在站内私信里找你。</p>
-            ) : null}
             {!own && contact && card.hooks[0] ? <form method="post" action={`${base}/contact`}><CsrfField token={csrf} /><input type="hidden" name="contactHookId" value={card.hooks[0].id} /><button type="submit" class="btn btn--ghost btn--small">查看公开联系方式</button></form> : null}
           </section>
           {!own && safety ? <PageSafety base={base} csrf={csrf} name={card.displayName} reported={safety.reported} notice={safety.notice} error={safety.error} /> : null}
@@ -296,7 +284,6 @@ export const ChatView: FC<{ model: ChatModel }> = ({ model }) => (
           </button>
         </div>
       </div>
-      <p class="muted chat__tip">这句开场白是 TA 自己确认过的；你可以改成自己的语气再发。</p>
       <p class="chat__back">
         <a href={`/w/${model.wall.id}`}>回到墙上继续逛 →</a>
       </p>

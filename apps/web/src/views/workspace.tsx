@@ -708,7 +708,6 @@ const RevisionsSection: FC<{ model: WorkspaceModel }> = ({ model }) =>
   model.revisions.length === 0 ? null : (
     <section class="card ws-revisions" aria-labelledby="revisions-heading">
       <h2 id="revisions-heading">做过的每一版</h2>
-      <p class="muted">每次生成、修改或交回都会多一版；没做成的那一版不会影响已有的。</p>
       <ol class="revisions">
         {model.revisions.map((revision, index) => (
           <RevisionItem model={model} revision={revision} latest={index === 0} />

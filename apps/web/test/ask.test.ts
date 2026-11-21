@@ -142,7 +142,7 @@ describe('墙上的流程', () => {
     expect(after).toContain('全栈偏后端，想找一位会做视觉和交互的设计');
     expect(after.match(/class="intro-card ask-card"/g)).toHaveLength(1);
     expect(after).toContain(`/w/${w.wall.id}/p/${w.targets[0]!.member.page.id}/icebreaker`);
-    expect(after).toContain('只有你能看到这次提问和结果');
+    expect(after).not.toContain('只有你能看到这次提问和结果');
   });
 
   it('点示例问题：用示例的文字提问（输入框可以是空的）', async () => {

@@ -64,7 +64,6 @@ const GenerateForm: FC<{ wallId: string; csrf: string; label: string; auto?: boo
     <button type="submit" class={tool ? 'intros__tool' : 'btn btn--accent intros__go'}>
       {label}
     </button>
-    {tool ? null : <span class="intros__hint">大约十几秒 · 只有你能看到</span>}
   </form>
 );
 

@@ -375,7 +375,8 @@ describe('墙（W13）、成员页与想聊这个（W14）', () => {
     if (!mine || !myPage) throw new Error('缺少成员关系');
     publishPage(t, { membership: mine, page: myPage }, '小白');
     const html = await (await get(t, `/w/${wall.id}`, { cookie: viewer.cookie })).text();
-    expect(html).toContain('你的页面已经挂在墙上了');
+    expect(html).toContain('已发布');
+    expect(html).not.toContain('my-page__text');
     expect(html).toContain(`href="/w/${wall.id}/p/${myPage.id}"`);
     expect(html).toContain('wall-card__me');
   });
@@ -535,7 +536,7 @@ describe('墙（W13）、成员页与想聊这个（W14）', () => {
     expect(response.status).toBe(200);
     const html = await response.text();
     expect(html).toContain('我的页面');
-    expect(html).toContain('这是你自己的页面');
+    expect(html).not.toContain('这是你自己的页面');
     expect(html).not.toContain('/chat"');
     expect(iframesOf(html)).toHaveLength(1);
     const chat = await postForm(t, `/w/${wall.id}/p/${ownerPage.id}/chat`, { _csrf: owner.csrf, hookId: 'can-help' }, { cookie: owner.cookie });

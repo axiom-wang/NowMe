@@ -12,7 +12,7 @@ const CARDS = [
 ];
 
 const WALL_HTML = `<section class="wall-board" data-wall-board>
-  <div class="section-head wall-board__head"><div class="wall-board__heading"><h2 class="section-title">墙上的人</h2><span class="wall-board__population"><span class="section-head__count" data-wall-count>4</span><span class="section-head__note" data-wall-count-note>位已上墙</span></span><div class="wall-board__tools"><a class="wall-board__assist-link" href="#intros">AI 帮我找人</a><a class="wall-board__assist-link" href="#ask">问问这面墙</a></div></div><div class="wall-board__meta" data-wall-summary><span>共 10 位成员</span><span>每次进来顺序都不一样</span></div>
+  <div class="section-head wall-board__head"><div class="wall-board__heading"><h2 class="section-title">墙上的人</h2><span class="wall-board__population"><span class="section-head__count" data-wall-count>4</span><span class="section-head__note" data-wall-count-note>位已上墙</span></span><div class="wall-board__tools"><a class="wall-board__assist-link" href="#intros">AI 帮我找人</a><a class="wall-board__assist-link" href="#ask">问问这面墙</a></div></div><div class="wall-board__meta" data-wall-summary><span>共 10 位成员</span></div>
     <label class="wall-search"><input type="search" data-wall-search /></label></div>
   <button type="button" aria-pressed="false" data-filter="0:0">设计</button>
   <button type="button" hidden data-filter-clear>清除筛选</button>

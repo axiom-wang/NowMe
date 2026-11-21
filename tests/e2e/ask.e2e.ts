@@ -47,7 +47,7 @@ test('问墙：问一句找到人和原话，没人写到时如实说明，起�
   await expect(ask.locator('.ask-card')).toHaveCount(1);
   await expect(ask.locator('.ask-card')).toContainText('栗子');
   await expect(ask.locator('.ask-card q')).toContainText('胶片');
-  await expect(ask).toContainText('只有你能看到这次提问和结果');
+  await expect(ask.locator('.ask__foot')).toHaveCount(0);
   for (const [width, mobile] of [[1280, false], [375, true]] as const) {
     await viewer.page.setViewportSize({ width, height: 900 });
     expect(await viewer.page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${width}px 墙不溢出`).toBe(true);
