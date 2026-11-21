@@ -202,10 +202,6 @@ const LocalAgentBlock: FC<{ model: WorkspaceModel; standalone?: boolean }> = ({ 
           </dd>
         </div>
         <SkillVersionFact model={model} />
-        <div>
-          <dt>最近一次交回</dt>
-          <dd>{model.lastSubmittedAt ? formatDateTime(model.lastSubmittedAt) : <span class="muted">还没有交回过</span>}</dd>
-        </div>
         {connection.pendingInstructionExpiresAt ? (
           <div>
             <dt>待使用的指令</dt>
@@ -276,7 +272,6 @@ const MoreWays: FC<{ model: WorkspaceModel }> = ({ model }) => {
     <details class="card more-ways" id="more-ways" open={open}>
       <summary>
         <span class="more-ways__title">更多方式</span>
-        <span class="muted more-ways__hint">用自己的模型 Key，或你自己电脑上的 AI 助手</span>
       </summary>
       <div class="more-ways__body">
         <OwnKeyBlock model={model} />
