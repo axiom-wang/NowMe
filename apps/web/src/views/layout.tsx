@@ -95,15 +95,29 @@ const Footer: FC = () => (
   </footer>
 );
 
-const ThemePicker: FC<{ menu?: boolean }> = ({ menu = false }) => (
-  <label class="theme-picker">
-    <span class={menu ? undefined : 'visually-hidden'}>外观</span>
-    <select aria-label="外观" data-theme-picker>
-      <option value="system">跟随系统</option>
-      <option value="light">浅色</option>
-      <option value="dark">深色</option>
-    </select>
-  </label>
+const THEME_OPTIONS = [
+  { value: 'system', label: '跟随系统', icon: 'monitor' },
+  { value: 'light', label: '浅色', icon: 'sun' },
+  { value: 'dark', label: '深色', icon: 'moon' },
+] as const;
+
+const ThemePicker: FC = () => (
+  <details class="theme-picker" data-theme-picker data-dismissable hidden>
+    <summary class="theme-picker__trigger" aria-label="外观" title="外观">
+      {THEME_OPTIONS.map(({ value, icon }) => (
+        <span data-theme-icon={value} aria-hidden="true"><HomeIcon name={icon} /></span>
+      ))}
+    </summary>
+    <div class="popover" role="group" aria-label="颜色主题">
+      {THEME_OPTIONS.map(({ value, label, icon }) => (
+        <button class="theme-picker__option" type="button" data-theme-option={value} aria-pressed={value === 'system' ? 'true' : 'false'}>
+          <HomeIcon name={icon} />
+          <span>{label}</span>
+          <span class="theme-picker__selection" aria-hidden="true"><HomeIcon name="check" /></span>
+        </button>
+      ))}
+    </div>
+  </details>
 );
 
 /** 主站共用顶栏；访客显示品牌与“登录”，登录后显示导航与账号菜单。 */
@@ -111,24 +125,25 @@ export const SiteHeader: FC<{ auth: SessionAuth | null; demo?: boolean; active?:
   <header class="site-header">
     <div class="site-header__inner">
       <Brand />
-      {!auth?.user.nickname ? <ThemePicker /> : null}
-      {auth?.user.nickname ? <>
+      {auth?.user.nickname ? (
         <nav class="site-nav" aria-label="主导航">
           <a class={`site-nav__link${active === 'home' ? ' is-active' : ''}`} href="/" aria-current={active === 'home' ? 'page' : undefined}>我的</a>
           <a class={`site-nav__link${active === 'messages' ? ' is-active' : ''}`} href="/messages" aria-current={active === 'messages' ? 'page' : undefined}><span>消息</span><span class="message-badge" data-message-unread hidden aria-label="未读消息"></span></a>
           <a class={`site-nav__link${active === 'data' ? ' is-active' : ''}`} href="/account/data" aria-current={active === 'data' ? 'page' : undefined}>我的资料</a>
         </nav>
+      ) : null}
+      <ThemePicker />
+      {auth?.user.nickname ? (
         <details class="account-menu" data-dismissable>
           <summary class="user-chip" aria-label={`账号菜单：${auth.user.nickname}`}><span class="avatar avatar--sm" aria-hidden="true">{auth.user.avatarVersion ? <img src={`/account/avatar?v=${auth.user.avatarVersion}`} alt="" /> : initialOf(auth.user.nickname ?? '')}</span><span class="user-chip__name">{auth.user.nickname}</span><HomeIcon name="chevron" /></summary>
           <div class="popover account-menu__panel">
-            <ThemePicker menu />
             {!demo ? <a href="/account/credits">点数</a> : null}
             {!demo ? <a href="/account/ai">AI 设置</a> : null}
             {demo ? <a href="/login">切换身份</a> : null}
             <form method="post" action="/logout"><CsrfField token={auth.session.csrfToken} /><button type="submit">退出登录</button></form>
           </div>
         </details>
-      </> : !auth && !(path ?? '').startsWith('/login') ? (
+      ) : !auth && !(path ?? '').startsWith('/login') ? (
         <a class="btn btn--primary btn--small site-header__login" href="/login">{demo ? '体验' : '登录'}</a>
       ) : null}
     </div>
