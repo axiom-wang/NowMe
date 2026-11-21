@@ -200,8 +200,7 @@
 
 .profile-menu > summary,
 .profile-help > summary,
-.profile-more > summary,
-.profile-clear > summary {
+.profile-more > summary {
   list-style: none;
 }
 
@@ -301,14 +300,10 @@
   color: var(--muted);
 }
 
-.profile-clear > summary {
-  width: fit-content;
-  cursor: pointer;
-}
 
 .profile-clear .inline-form {
   display: block;
-  margin-top: var(--space-3);
+  margin: 0;
 }
 
 /* 空着的一格：虚线框 */

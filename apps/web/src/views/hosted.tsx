@@ -792,7 +792,7 @@ export const MyDataView: FC<{ accountLinks?: boolean; nickname: string; avatarVe
             <summary class="btn btn--ghost btn--small"><span class="profile-more__closed">展开全部 {profile.length} 条</span><span class="profile-more__open">收起画像</span><HomeIcon name="chevron" /></summary>
             <ul class="profile-list">{profile.slice(6).map((entry) => <ProfileRow entry={entry} csrf={csrf} entries={profile} briefs={briefs} />)}</ul>
           </details> : null}
-          <details class="profile-clear"><summary>管理全部画像</summary><PostButton action="/account/profile/delete" csrf={csrf} label="全部删除" variant="danger" fields={{ all: '1' }} confirm="删除全部长期画像？无法恢复。" /></details>
+          <div class="profile-clear"><PostButton action="/account/profile/delete" csrf={csrf} label="全部删除" variant="danger" fields={{ all: '1' }} confirm="删除全部长期画像？无法恢复。" /></div>
         </>
       )}
     </section>
